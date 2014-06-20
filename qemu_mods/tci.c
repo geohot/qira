@@ -457,6 +457,7 @@ uint32_t GLOBAL_change_size;
 #define IS_VALID 0x80000000
 #define IS_WRITE 0x40000000
 #define IS_MEM   0x20000000
+#define IS_START 0x10000000
 
 void init_QIRA(CPUArchState *env) {
   QIRA_DEBUG("init QIRA called\n");
@@ -585,6 +586,9 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
 #ifdef QIRA_TRACKING
     if (unlikely(GLOBAL_QIRA_did_init == 0)) init_QIRA(env);
     GLOBAL_changelist_number++;
+    CPUState *cpu = ENV_GET_CPU(env);
+    qemu_log("set changelist %d at %x\n", GLOBAL_changelist_number, cpu->current_tb->pc);
+    add_change(cpu->current_tb->pc, 0, IS_START);
 #endif
 
     long tcg_temps[CPU_TEMP_BUF_NLONGS];

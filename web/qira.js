@@ -1,7 +1,7 @@
 Change = new Meteor.Collection("change");
 Program = new Meteor.Collection("program");
 
-var PC = 0x20;
+var X86REGS = ['EAX', 'EBX', 'ECX', 'EDX', 'ESP', 'EBP', 'ESI', 'EDI'];
 
 function p(a) {
   console.log(a);
@@ -61,7 +61,7 @@ if (Meteor.isClient) {
 
   Template.changelist.currentchanges = function() {
     var clnum = Session.get('clnum');
-    return Change.find({clnum: clnum}, {sort: {address: 1}, limit:10});
+    return Change.find({clnum: clnum}, {sort: {address: 1}, limit:20});
   };
 
   Template.changelist.iaddr = function() { return hex(Session.get('iaddr')); };
@@ -70,7 +70,7 @@ if (Meteor.isClient) {
 
   Template.changelist.icllist = function() {
     var iaddr = Session.get('iaddr');
-    return Change.find({data: iaddr, address: PC, type: "W"}, {sort: {clnum: 1},limit:10})
+    return Change.find({address: iaddr, type: "I"}, {sort: {clnum: 1},limit:10})
   };
 
   Template.changelist.dcllist = function() {
@@ -106,11 +106,19 @@ if (Meteor.isClient) {
   });
 
   Template.change.handleaddress = function () {
-    if (this.address == PC && this.type == "W") {
-      p("new iaddr is "+hex(this.data));
-      Session.set("iaddr", this.data);
+    if (this.type == "I") {
+      p("new iaddr is "+hex(this.address));
+      Session.set("iaddr", this.address);
     }
-    return hex(this.address);
+    if (this.type == "R" || this.type == "W") {
+      if (this.address < 0x20) {
+        return X86REGS[this.address/4];
+      } else {
+        return hex(this.address);
+      }
+    } else {
+      return hex(this.address);
+    }
   };
 
   Template.change.handledata = function () {
@@ -138,7 +146,7 @@ if (Meteor.isServer) {
 
   Meteor.publish('dat_clnum', function(clnum){
     // can only return as many as in the changelist
-    return Change.find({clnum: clnum}, {sort: {address: 1}, limit:10});
+    return Change.find({clnum: clnum}, {sort: {address: 1}, limit:20});
   });
 
   Meteor.publish('instruction_iaddr', function(iaddr){
@@ -147,8 +155,7 @@ if (Meteor.isServer) {
 
   Meteor.publish('dat_iaddr', function(iaddr){
     // fetch the static info about the range
-    return Change.find({data: iaddr, address: PC, type: "W"}, {sort: {clnum: 1}, limit:10})
-    //return Program.find({address: PC, type: "W", clnum
+    return Change.find({address: iaddr, type: "I"}, {sort: {clnum: 1}, limit:10})
   });
 
   Meteor.publish('dat_daddr', function(daddr){

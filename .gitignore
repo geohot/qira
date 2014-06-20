@@ -1,3 +1,4 @@
 web/.meteor
 .*.swp
+tests/a.out
 

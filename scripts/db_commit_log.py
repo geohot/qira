@@ -8,6 +8,7 @@ dat = open("/tmp/qira_log").read()
 IS_VALID = 0x80000000
 IS_WRITE = 0x40000000
 IS_MEM =   0x20000000
+IS_START = 0x10000000
 SIZE_MASK = 0xFF
 
 print "building database data"
@@ -19,7 +20,9 @@ for i in range(0, len(dat), 0x18):
   if not flags & IS_VALID:
     break
 
-  if flags & IS_WRITE and flags & IS_MEM:
+  if flags & IS_START:
+    typ = "I"
+  elif flags & IS_WRITE and flags & IS_MEM:
     typ = "S"
   elif not flags & IS_WRITE and flags & IS_MEM:
     typ = "L"
