@@ -1,7 +1,7 @@
 Change = new Meteor.Collection("change");
 Program = new Meteor.Collection("program");
 
-var X86REGS = ['EAX', 'EBX', 'ECX', 'EDX', 'ESP', 'EBP', 'ESI', 'EDI'];
+var X86REGS = ['EAX', 'EBX', 'ECX', 'EDX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'];
 
 function p(a) {
   console.log(a);
@@ -111,7 +111,7 @@ if (Meteor.isClient) {
       Session.set("iaddr", this.address);
     }
     if (this.type == "R" || this.type == "W") {
-      if (this.address < 0x20) {
+      if (this.address < (X86REGS.length*4)) {
         return X86REGS[this.address/4];
       } else {
         return hex(this.address);
