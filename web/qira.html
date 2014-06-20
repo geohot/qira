@@ -1,13 +1,90 @@
 <head>
   <title>qira</title>
+
+  <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.2/jquery.mobile-1.4.2.min.css">
+  <script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
+  <script src="http://code.jquery.com/mobile/1.4.2/jquery.mobile-1.4.2.min.js"></script>
 </head>
 
 <body>
-  {{> hello}}
+<div id="timeline">
+{{> timeline}}
+</div>
+<div id="cfg">
+{{> cfg}}
+</div>
+<div id="rightpanel">
+<div id="clviewer">
+{{> changelist}}
+</div>
+<!--
+<div id="regviewer">
+regviewer
+</div>-->
+<div id="hexeditor">
+hexeditor
+</div>
+</div>
+<!--{{> hello}}-->
 </body>
 
-<template name="hello">
-  <h1>Hello World!</h1>
-  {{greeting}}
-  <input type="button" value="Click" />
+<template name="cfg">
+<table>
+{{#each lineardump}}
+  <tr>
+  <td class="address {{isiaddr}}">{{hexaddress}}</td>
+  <td>{{instruction}}</td></tr>
+{{/each}}
+</table>
 </template>
+
+<template name="changelist">
+  <table id="bigcltable">
+  <tr><td>
+  iaddr<br/>{{iaddr}}
+  <br/>instruction
+  <table class="cltable">
+  {{#each icllist}}
+    {{> cl}}
+  {{/each}}
+  </table>
+  </td><td>
+  daddr<br/>{{daddr}}
+  <table class="cltable">
+  {{#each dcllist}}
+    {{> cl}}
+  {{/each}}
+  </table>
+  </td><td>
+  clnum {{clnum}}
+  <table class="cltable">
+  {{#each currentchanges}}
+    {{> change}}
+  {{/each}}
+  </table>
+  </td></tr></table>
+</template>
+
+<template name="cl">
+  <tr><td class="change">{{clnum}}</td><td>{{type}}</td></tr>
+</template>
+
+<template name="change">
+  <tr>
+    {{#if is_mem}}
+      <td class="address">{{handleaddress}}</td>
+    {{else}}
+      <td>{{handleaddress}}</td>
+    {{/if}}
+    <td>{{type}}</td>
+    <td>{{handledata}}</td>
+  </tr>
+</template>
+
+<template name="timeline"> 
+  <div id="cl_selector_box">
+  <input type="range" id="cl_selector" value="1" min="1" max="1">
+  </div>
+  {{max_clnum}}
+</template>
+

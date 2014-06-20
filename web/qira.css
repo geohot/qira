@@ -1,1 +1,78 @@
-/* CSS declarations go here */
+#timeline {
+  width: 100%;
+  height: 50px;
+  background-color: gray;
+  border: 1px solid black;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+#cfg {
+  background-color: #FFFFCC;
+  width: calc(100% - 700px);
+  height: 100%;
+  position: fixed;
+  border: 1px solid black;
+}
+
+#rightpanel {
+  right: 0px;
+  width: 700px;
+  height: 100%;
+  position: fixed;
+  background-color: #FFCCCC;
+  border: 1px solid black;
+}
+
+#clviewer {
+  height: 300px;
+  border: 1px solid gray;
+  background-color: #9999FF;
+}
+
+#regviewer {
+  height: 80px;
+  border: 1px solid gray;
+}
+
+#hexeditor {
+  height: 100%;
+  border: 1px solid gray;
+  background-color: #FFFF55;
+}
+
+#cl_selector {
+  font-size: 14px;
+  width: 50px;
+}
+
+.ui-slider-track {
+  margin-left: 80px !important;
+  margin-right: 40px !important;
+}
+
+.address {
+  color: pink;
+}
+
+.change {
+  color: yellow;
+}
+
+td {
+  font-family: monospace;
+}
+
+body {
+  margin: 0px 0px 0px 0px;
+  height: 100%;
+}
+
+#bigcltable td {
+  border: 1px solid black;
+}
+
+.highlight {
+  background-color: #FF7777;
+}
+

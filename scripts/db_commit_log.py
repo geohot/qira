@@ -33,11 +33,14 @@ for i in range(0, len(dat), 0x18):
     d['data'] = data
   ds.append(d)
 
-coll = db.tinychange
+#coll = db.tinychange
+coll = db.change
 print "doing db insert"
 coll.drop()
 coll.insert(ds)
 print "db insert done, building indexes"
+coll.ensure_index("data")
+coll.ensure_index([("data", 1), ("address", 1)])
 coll.ensure_index("address")
 coll.ensure_index("clnum")
 coll.ensure_index([("address", 1), ("type", 1)])
