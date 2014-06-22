@@ -25,7 +25,7 @@
 }
 
 #clviewer {
-  height: 400px;
+  height: 320px;
   border: 1px solid gray;
   background-color: #9999FF;
 }
@@ -75,4 +75,11 @@ body {
 .highlight {
   background-color: #FF7777;
 }
+
+.reg {
+  display: inline-block;
+  width: 140px;
+  font-family: monospace;
+}
+
 

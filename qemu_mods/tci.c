@@ -432,9 +432,9 @@ static bool tci_compare64(uint64_t u0, uint64_t u1, TCGCond condition)
 // prototypes
 void init_QIRA(CPUArchState *env);
 void add_change(target_ulong addr, uint64_t data, uint32_t flags);
-void track_load(target_ulong a, int size);
+void track_load(target_ulong a, uint64_t data, int size);
 void track_store(target_ulong a, uint64_t data, int size);
-void track_read(target_ulong base, target_ulong offset, int size);
+void track_read(target_ulong base, target_ulong offset, target_ulong data, int size);
 void track_write(target_ulong base, target_ulong offset, target_ulong data, int size);
 
 // struct storing change data
@@ -497,9 +497,9 @@ void add_change(target_ulong addr, uint64_t data, uint32_t flags) {
   ++GLOBAL_change_count;
 }
 
-void track_load(target_ulong addr, int size) {
+void track_load(target_ulong addr, uint64_t data, int size) {
   QIRA_DEBUG("load: 0x%x:%d\n", addr, size);
-  add_change(addr, 0, IS_MEM | size);
+  add_change(addr, data, IS_MEM | size);
 }
 
 void track_store(target_ulong addr, uint64_t data, int size) {
@@ -507,10 +507,10 @@ void track_store(target_ulong addr, uint64_t data, int size) {
   add_change(addr, data, IS_MEM | IS_WRITE | size);
 }
 
-void track_read(target_ulong base, target_ulong offset, int size) {
+void track_read(target_ulong base, target_ulong offset, target_ulong data, int size) {
   if ((int)offset < 0) return;
-  QIRA_DEBUG("read: %x+%x:%d\n", base, offset, size);
-  add_change(offset, 0, size);
+  QIRA_DEBUG("read: %x+%x:%d = %x\n", base, offset, size, data);
+  add_change(offset, data, size);
 }
 
 void track_write(target_ulong base, target_ulong offset, target_ulong data, int size) {
@@ -519,12 +519,13 @@ void track_write(target_ulong base, target_ulong offset, target_ulong data, int 
   add_change(offset, data, IS_WRITE | size);
 }
 
-#define R(x,y) (track_load(x,y),x)
+// careful, this does it twice, MMIO?
+#define R(x,y,z) (track_load(x,(uint64_t)y,z),y)
 #define W(x,y,z) (track_store(x,(uint64_t)y,z),x)
 
 #else
 
-#define R(x,y) x
+#define R(x,y,z) y
 #define W(x,y,z) x
 #define track_read(x,y,z) ;
 #define track_write(w,x,y,z) ;
@@ -563,13 +564,13 @@ void track_write(target_ulong base, target_ulong offset, target_ulong data, int 
 # define qemu_st_beq(X) \
     helper_be_stq_mmu(env, taddr, X, mmuidx, (uintptr_t)tb_ptr)
 #else
-# define qemu_ld_ub      ldub_p(g2h(R(taddr,8)))
-# define qemu_ld_leuw    lduw_le_p(g2h(R(taddr,16)))
-# define qemu_ld_leul    (uint32_t)ldl_le_p(g2h(R(taddr,32)))
-# define qemu_ld_leq     ldq_le_p(g2h(R(taddr,64)))
-# define qemu_ld_beuw    lduw_be_p(g2h(R(taddr,16)))
-# define qemu_ld_beul    (uint32_t)ldl_be_p(g2h(R(taddr,32)))
-# define qemu_ld_beq     ldq_be_p(g2h(R(taddr,64)))
+# define qemu_ld_ub      R(taddr, ldub_p(g2h(taddr)), 8)
+# define qemu_ld_leuw    R(taddr, lduw_le_p(g2h(taddr)), 16)
+# define qemu_ld_leul    R(taddr, (uint32_t)ldl_le_p(g2h(taddr)), 32)
+# define qemu_ld_leq     R(taddr, ldq_le_p(g2h(taddr)), 64)
+# define qemu_ld_beuw    R(taddr, lduw_be_p(g2h(taddr)), 16)
+# define qemu_ld_beul    R(taddr, (uint32_t)ldl_be_p(g2h(taddr)), 32)
+# define qemu_ld_beq     R(taddr, ldq_be_p(g2h(taddr)), 64)
 # define qemu_st_b(X)    stb_p(g2h(W(taddr,X,8)), X)
 # define qemu_st_lew(X)  stw_le_p(g2h(W(taddr,X,16)), X)
 # define qemu_st_lel(X)  stl_le_p(g2h(W(taddr,X,32)), X)
@@ -724,7 +725,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
             t0 = *tb_ptr++;
             t1 = tci_read_r(&tb_ptr);
             t2 = tci_read_s32(&tb_ptr);
-            track_read(t1, t2, 32);
+            track_read(t1, t2, *(uint32_t *)(t1 + t2), 32);
             tci_write_reg32(t0, *(uint32_t *)(t1 + t2));
             break;
         case INDEX_op_st8_i32:

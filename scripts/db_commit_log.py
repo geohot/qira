@@ -1,25 +1,16 @@
-import struct
 from pymongo import MongoClient
+from qira_log import *
 
 db = MongoClient('localhost', 3001).meteor
 
-dat = open("/tmp/qira_log").read()
-
-IS_VALID = 0x80000000
-IS_WRITE = 0x40000000
-IS_MEM =   0x20000000
-IS_START = 0x10000000
-SIZE_MASK = 0xFF
+print "reading log"
+dat = read_log("/tmp/qira_log")
 
 print "building database data"
 
 ds = []
 
-for i in range(0, len(dat), 0x18):
-  (address, data, clnum, flags) = struct.unpack("QQII", dat[i:i+0x18])
-  if not flags & IS_VALID:
-    break
-
+for (address, data, clnum, flags) in dat:
   if flags & IS_START:
     typ = "I"
   elif flags & IS_WRITE and flags & IS_MEM:
@@ -32,8 +23,7 @@ for i in range(0, len(dat), 0x18):
     typ = "R"
 
   d = {'address': address, 'type': typ, 'size': flags&SIZE_MASK, 'clnum': clnum}
-  if flags & IS_WRITE:
-    d['data'] = data
+  d['data'] = data
   ds.append(d)
 
 #coll = db.tinychange

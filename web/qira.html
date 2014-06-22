@@ -4,6 +4,7 @@
   <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.2/jquery.mobile-1.4.2.min.css">
   <script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
   <script src="http://code.jquery.com/mobile/1.4.2/jquery.mobile-1.4.2.min.js"></script>
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js"></script>
 </head>
 
 <body>
@@ -17,12 +18,11 @@
 <div id="clviewer">
 {{> changelist}}
 </div>
-<!--
 <div id="regviewer">
 regviewer
-</div>-->
+</div>
 <div id="hexeditor">
-hexeditor
+<div id="hexdump"></div>
 </div>
 </div>
 <!--{{> hello}}-->
