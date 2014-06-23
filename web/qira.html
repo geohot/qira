@@ -1,9 +1,6 @@
 <head>
   <title>qira</title>
-
   <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.2/jquery.mobile-1.4.2.min.css">
-  <script src="http://code.jquery.com/mobile/1.4.2/jquery.mobile-1.4.2.min.js"></script>
-  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js"></script>
 </head>
 
 <body>
@@ -24,18 +21,35 @@ regviewer
 <div id="hexdump"></div>
 </div>
 </div>
-<!--{{> hello}}-->
 </body>
 
+<!--
 <template name="cfg">
-<table>
 {{#each lineardump}}
-  <tr>
-  <td class="address {{isiaddr}}">{{hexaddress}}</td>
-  <td>{{instruction}}</td></tr>
+  <div class="instruction">
+    <div class="change {{ischange}}">{{clnum}}</div>
+    <span class="address {{isiaddr}}">{{hexaddress}}</span>
+    {{instruction}}
+  </div>
 {{/each}}
-</table>
 </template>
+-->
+
+<template name="cfg">
+{{#each blocks}}
+  <!--block {{clstart}}-{{clend}} from {{hexstart}}-{{hexend}}-->
+  <div class="block">
+    {{#each instructions}}
+      <div class="instruction">
+        <div class="change {{ischange}}">{{clnum}}</div>
+        <span class="address {{isiaddr}}">{{hexaddress}}</span>
+        {{instruction}}
+      </div>
+    {{/each}}
+  </div><br/>
+{{/each}}
+</template>
+
 
 <template name="changelist">
   <table id="bigcltable">
@@ -48,7 +62,7 @@ regviewer
   {{/each}}
   </table>
   </td><td>
-  daddr<br/>{{daddr}}
+  daddr<br/><input value={{daddr}} id="daddr_input" />
   <table class="cltable">
   {{#each dcllist}}
     {{> cl}}

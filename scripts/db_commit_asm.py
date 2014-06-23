@@ -8,10 +8,9 @@ for d in dat:
   if ":  " in d:
     (addr, inst) = d.split(":  ")
     addr = int(addr, 16)
-    print addr, inst
+    #print addr, inst
     d = {'address': addr, 'instruction': inst}
     ds.append(d)
-
 
 # DWARF data will go here too
 coll = db.program

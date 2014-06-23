@@ -1,4 +1,5 @@
 Change = new Meteor.Collection("change");
+Blocks = new Meteor.Collection("blocks");
 Program = new Meteor.Collection("program");
 
 Meteor.startup(function () {
@@ -15,7 +16,24 @@ Meteor.publish('dat_clnum', function(clnum){
 });
 
 Meteor.publish('instruction_iaddr', function(iaddr){
-  return Program.find({address: {$gt: iaddr-0x50, $lt: iaddr+0x100}}, {sort: {address:1}});
+  // this doesn't work...
+  //return Program.find({address: {$gt: iaddr-0x100, $lt: iaddr+0x100}}, {sort: {address:1}});
+});
+
+Meteor.publish('instructions', function(clnum) {
+  //return Change.find({clnum: {$gt: clnum-0x10, $lt: clnum+0x18}, type: "I"}, {sort: {clnum:1}});
+  var BEFORE = clnum-0x10;
+  var AFTER = clnum+0x28;
+  var changes = Change.find({clnum: {$gt: BEFORE, $lt: AFTER}, type: "I"});
+  var cblocks = Blocks.find({clend: {$gt: BEFORE}, clstart: {$lt: AFTER}});
+  //cblocks.forEach(function(post) { console.log(post); });
+  var query = [];
+  changes.forEach(function(post) {
+    query.push({address: post.address});
+  });
+  var progdat = Program.find({$or: query});
+  // we need to send the program data back here as well...
+  return [changes, cblocks, progdat];
 });
 
 Meteor.publish('dat_iaddr', function(iaddr){

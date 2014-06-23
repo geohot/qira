@@ -72,7 +72,8 @@ def regevent(m):
   X86REGS = ['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP']
   ret = {}
   for i in range(0, len(X86REGS)):
-    ret[X86REGS[i]] = regs.daddr[i*4].fetch(m['clnum'])
+    if i*4 in regs.daddr:
+      ret[X86REGS[i]] = regs.daddr[i*4].fetch(m['clnum'])
   emit('registers', ret)
 
 if __name__ == '__main__':

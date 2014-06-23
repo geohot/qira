@@ -426,6 +426,7 @@ static bool tci_compare64(uint64_t u0, uint64_t u1, TCGCond condition)
 #include <fcntl.h>
 #include <sys/mman.h>
 
+
 #define QIRA_DEBUG(...) {}
 //#define QIRA_DEBUG qemu_log
 
@@ -453,11 +454,14 @@ uint32_t GLOBAL_changelist_number = 0;
 uint32_t GLOBAL_qira_log_fd;
 uint32_t GLOBAL_change_count = 0;
 uint32_t GLOBAL_change_size;
+uint32_t GLOBAL_basic_block_ended = 0;
 
-#define IS_VALID 0x80000000
-#define IS_WRITE 0x40000000
-#define IS_MEM   0x20000000
-#define IS_START 0x10000000
+#define IS_VALID      0x80000000
+#define IS_WRITE      0x40000000
+#define IS_MEM        0x20000000
+#define IS_START      0x10000000
+
+#define END_BASIC_BLOCK() GLOBAL_basic_block_ended = 1;
 
 void init_QIRA(CPUArchState *env) {
   QIRA_DEBUG("init QIRA called\n");
@@ -466,6 +470,7 @@ void init_QIRA(CPUArchState *env) {
   GLOBAL_change_size = 1;
   GLOBAL_QIRA_did_init = 1;
   GLOBAL_change_count = 0;
+
   if(ftruncate(GLOBAL_qira_log_fd, GLOBAL_change_size * sizeof(struct change))) {
     perror("ftruncate");
   }
@@ -530,6 +535,8 @@ void track_write(target_ulong base, target_ulong offset, target_ulong data, int 
 #define track_read(x,y,z) ;
 #define track_write(w,x,y,z) ;
 
+#define END_BASIC_BLOCK() ;
+
 #endif
 
 
@@ -588,8 +595,11 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
     if (unlikely(GLOBAL_QIRA_did_init == 0)) init_QIRA(env);
     GLOBAL_changelist_number++;
     CPUState *cpu = ENV_GET_CPU(env);
-    qemu_log("set changelist %d at %x\n", GLOBAL_changelist_number, cpu->current_tb->pc);
-    add_change(cpu->current_tb->pc, 0, IS_START);
+    TranslationBlock *tb = cpu->current_tb;
+
+    qemu_log("set changelist %d at %x\n", GLOBAL_changelist_number, tb->pc);
+    add_change(tb->pc, GLOBAL_basic_block_ended, IS_START);
+    GLOBAL_basic_block_ended = 0;
 #endif
 
     long tcg_temps[CPU_TEMP_BUF_NLONGS];
@@ -602,6 +612,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
 
     for (;;) {
         TCGOpcode opc = tb_ptr[0];
+        //printf("exec : %d\n", opc);
 #if !defined(NDEBUG)
         uint8_t op_size = tb_ptr[1];
         uint8_t *old_code_ptr = tb_ptr;
@@ -665,11 +676,13 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
                                           tci_read_reg(TCG_REG_R5));
             tci_write_reg(TCG_REG_R0, tmp64);
 #endif
+            //END_BASIC_BLOCK();
             break;
         case INDEX_op_br:
             label = tci_read_label(&tb_ptr);
             assert(tb_ptr == old_code_ptr + op_size);
             tb_ptr = (uint8_t *)label;
+            //END_BASIC_BLOCK();
             continue;
         case INDEX_op_setcond_i32:
             t0 = *tb_ptr++;
@@ -1240,6 +1253,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
         case INDEX_op_goto_tb:
             t0 = tci_read_i32(&tb_ptr);
             assert(tb_ptr == old_code_ptr + op_size);
+            //printf("goto_tb: %lx\n", t0);
             tb_ptr += (int32_t)t0;
             continue;
         case INDEX_op_qemu_ld_i32:
@@ -1389,5 +1403,12 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
         assert(tb_ptr == old_code_ptr + op_size);
     }
 exit:
+#ifdef QIRA_TRACKING
+    if (next_tb != 0) {
+      //printf("next_tb: %lx\n", next_tb);
+      END_BASIC_BLOCK();
+      return 0;
+    }
+#endif
     return next_tb;
 }

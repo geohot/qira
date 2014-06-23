@@ -1,4 +1,5 @@
 Change = new Meteor.Collection("change");
+Blocks = new Meteor.Collection("blocks");
 Program = new Meteor.Collection("program");
 
 // bitops make numbers negative
@@ -67,7 +68,7 @@ function do_socket(callme) {
       //p(msg);
       html = "";
       for (i in msg) {
-        html += "<div class=reg>"+i+": "+hex(msg[i])+"</div>";
+        html += "<div class=reg daddr="+msg[i]+">"+i+": "+hex(msg[i])+"</div>";
       }
       $("#regviewer")[0].innerHTML = html;
     });
@@ -138,13 +139,49 @@ Template.cfg.isiaddr = function() {
   if (this.address == iaddr) return "highlight";
   else return "";
 }
+Template.cfg.ischange = function() {
+  var clnum = Session.get('clnum');
+  if (this.clnum == clnum) return "highlight";
+  else return "";
+}
 
 Template.cfg.hexaddress = function() { return hex(this.address)+": "; };
+Template.cfg.hexstart = function() { return hex(this.start); };
+Template.cfg.hexend = function() { return hex(this.end); };
+
+Template.cfg.instruction = function() {
+  te = Program.findOne({address: this.address});
+  if (te !== undefined) {
+    return te.instruction;
+  }
+};
+
+Template.cfg.instructions = function() {
+  //p(this.clstart + " " + this.clend);
+  var changes = Change.find({clnum: {$gte: this.clstart, $lte: this.clend}, type: "I"}, {sort: {clnum: 1}});
+  var query = [];
+  /*changes.forEach(function(post) {
+    //p(post);
+    query.push({address: post.address});
+  });*/
+  //var progdat = Program.find({$or: query}, {sort: {address: 1}});
+  //return progdat;
+  return changes;
+}
+
+Template.cfg.blocks = function() {
+  var clnum = Session.get('clnum');
+  var BEFORE = clnum-0x10;
+  var AFTER = clnum+0x28;
+  var cblocks = Blocks.find({clend: {$gt: BEFORE}, clstart: {$lt: AFTER}}, {sort: {clstart: 1}});
+  return cblocks;
+};
 
 Template.cfg.lineardump = function() {
-  var iaddr = Session.get('iaddr');
-  if (iaddr !== undefined) {
-    return Program.find({address: {$gt: iaddr-0x30, $lt: iaddr+0x80}}, {sort: {address:1}});
+  //var iaddr = Session.get('iaddr');
+  var clnum = Session.get('clnum');
+  if (clnum !== undefined) {
+    return Change.find({clnum: {$gt: clnum-0x10, $lt: clnum+0x18}, type: "I"}, {sort: {clnum:1}});
   }
 };
 
@@ -197,6 +234,18 @@ Template.cl.events({
   }
 });
 
+Template.changelist.events({
+  'change #daddr_input': function() {
+    if ($("#daddr_input")[0].value == "") {
+      Session.set('daddr', undefined);
+      return;
+    }
+    var daddr = parseInt($("#daddr_input")[0].value, 16);
+    p("new daddr is "+daddr);
+    Session.set('daddr', daddr);
+  }
+});
+
 Template.change.events({
   'click .address': function() {
     p("new daddr is "+hex(this.address));
@@ -208,14 +257,17 @@ Template.cfg.events({
   'click .address': function() {
     p("new iaddr from click is "+hex(this.address));
     Session.set('iaddr', this.address);
+  },
+  'click .change': function() {
+    Session.set('clnum', this.clnum);
   }
 });
 
 Template.change.handleaddress = function () {
-  if (this.type == "I") {
+  /*if (this.type == "I") {
     p("new iaddr is "+hex(this.address));
     Session.set('iaddr', this.address);
-  }
+  }*/
   if (this.type == "R" || this.type == "W") {
     if (this.address < (X86REGS.length*4)) {
       return X86REGS[this.address/4];
@@ -229,13 +281,16 @@ Template.change.handleaddress = function () {
 
 Template.change.handledata = function () {
   return hex(this.data);
-};  
+};
 
 Deps.autorun(function(){ Meteor.subscribe('dat_iaddr', Session.get("iaddr")); });
 Deps.autorun(function(){ Meteor.subscribe('dat_daddr', Session.get("daddr")); });
-Deps.autorun(function(){ Meteor.subscribe('dat_clnum', Session.get("clnum")); });
+/*Deps.autorun(function(){ Meteor.subscribe('dat_clnum', Session.get("clnum")); });
 Deps.autorun(function(){ Meteor.subscribe('hexedit_daddr', Session.get("daddr"), Session.get("clnum")); });
-Deps.autorun(function(){ Meteor.subscribe('instruction_iaddr', Session.get("iaddr")); });
+Deps.autorun(function(){ Meteor.subscribe('instruction_iaddr', Session.get("iaddr")); });*/
+
+Deps.autorun(function(){ Meteor.subscribe('dat_clnum', Session.get("clnum")); });
+Deps.autorun(function(){ Meteor.subscribe('instructions', Session.get("clnum")); });
 
 Meteor.subscribe('max_clnum');
 
