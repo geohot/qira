@@ -13,7 +13,8 @@ class Address:
       if clnum in this.backing:
         return this.backing[clnum]
       clnum -= 1
-    return 0xAA   # canary
+    # if the change is before it was written to
+    return 0   # canary
 
   def commit(this, clnum, dat):
     this.backing[clnum] = dat
