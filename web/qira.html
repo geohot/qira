@@ -38,7 +38,7 @@ regviewer
 <template name="cfg">
 {{#each blocks}}
   <!--block {{clstart}}-{{clend}} from {{hexstart}}-{{hexend}}-->
-  <div class="block">
+  <div class="block" style="margin-left: {{ddepth}}px">
     {{#each instructions}}
       <div class="instruction">
         <div class="change {{ischange}}">{{clnum}}</div>

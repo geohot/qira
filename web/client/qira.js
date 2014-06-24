@@ -169,10 +169,14 @@ Template.cfg.instructions = function() {
   return changes;
 }
 
+Template.cfg.ddepth = function() {
+  return this.depth * 60;
+};
+
 Template.cfg.blocks = function() {
   var clnum = Session.get('clnum');
   var BEFORE = clnum-0x10;
-  var AFTER = clnum+0x28;
+  var AFTER = clnum+0x30;
   var cblocks = Blocks.find({clend: {$gt: BEFORE}, clstart: {$lt: AFTER}}, {sort: {clstart: 1}});
   return cblocks;
 };

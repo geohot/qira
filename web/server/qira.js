@@ -23,7 +23,7 @@ Meteor.publish('instruction_iaddr', function(iaddr){
 Meteor.publish('instructions', function(clnum) {
   //return Change.find({clnum: {$gt: clnum-0x10, $lt: clnum+0x18}, type: "I"}, {sort: {clnum:1}});
   var BEFORE = clnum-0x10;
-  var AFTER = clnum+0x28;
+  var AFTER = clnum+0x30;
   var changes = Change.find({clnum: {$gt: BEFORE, $lt: AFTER}, type: "I"});
   var cblocks = Blocks.find({clend: {$gt: BEFORE}, clstart: {$lt: AFTER}});
   //cblocks.forEach(function(post) { console.log(post); });

@@ -42,11 +42,31 @@ int sum_of_1_through_10() {
   return i;
 }
 
+int control_flow(int a) {
+  if (a) return 6;
+  else return 4;
+}
+
+int nest2() {
+  return 25;
+}
+
+int nest1() {
+  return nest2();
+}
+
+int nest() {
+  return nest1();
+}
+
 int main() {
-  int ret;
+  int ret = 0;
   int tmp[] = {345,43,22,2,3,6,78,7,7};
 
-  ret = sum_of_1_through_10();
+  ret += control_flow(1);
+  ret += control_flow(0);
+  ret += nest();
+  ret += sum_of_1_through_10();
   ret += recurse_countdown(10);
   ret += fib(4);
   ret += bubble_sort(tmp, sizeof(tmp)/sizeof(int));

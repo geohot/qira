@@ -3,12 +3,14 @@
   display: inline-block;
   border: 1px solid black;
   padding: 2px;
-  margin: 5px;
+  margin-top: 5px;
   text-align: left;
+  font-size: 11px;
 }
-input {
+#daddr_input {
   border: 1px solid black !important;
   font-family: monospace !important;
+  font-size: 8px !important;
 }
 
 #timeline {
@@ -26,7 +28,8 @@ input {
   height: 100%;
   position: fixed;
   border: 1px solid black;
-  text-align: center;
+  padding-left: 20px;
+  /*text-align: center;*/
 }
 
 #rightpanel {
