@@ -59,6 +59,11 @@ int nest() {
   return nest1();
 }
 
+void memcpy(char *dest, char *src, int len) {
+  int i;
+  for (i=0;i<len;i++) i[dest] = i[src];
+}
+
 int main() {
   int ret = 0;
   int tmp[] = {345,43,22,2,3,6,78,7,7};

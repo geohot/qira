@@ -21,7 +21,7 @@ def do_function_analysis(dat):
       #print map(hex, fxn_stack), clnum, "cancel"
     if address in fxn_stack:
       idx = fxn_stack.index(address)
-      fxn.append((cl_stack[idx],(clnum-1)))
+      fxn.append({"clstart":cl_stack[idx],"clend":(clnum-1)})
       fxn_stack = fxn_stack[0:idx]
       cancel_stack = cancel_stack[0:idx]
       cl_stack = cl_stack[0:idx]
@@ -38,7 +38,7 @@ def do_function_analysis(dat):
 def get_depth(fxns, clnum):
   d = 0
   for f in fxns:
-    if clnum >= f[0] and clnum <= f[1]:
+    if clnum >= f['clstart'] and clnum <= f['clend']:
       d += 1
   return d
 

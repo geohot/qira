@@ -1,7 +1,10 @@
 Change = new Meteor.Collection("change");
 Blocks = new Meteor.Collection("blocks");
 Loops = new Meteor.Collection("loops");
+Fxns = new Meteor.Collection("fxns");
 Program = new Meteor.Collection("program");
+
+function p(a) { console.log(a); }
 
 Meteor.startup(function () {
 });
@@ -21,24 +24,33 @@ Meteor.publish('instruction_iaddr', function(iaddr){
   //return Program.find({address: {$gt: iaddr-0x100, $lt: iaddr+0x100}}, {sort: {address:1}});
 });
 
-Meteor.publish('instructions', function(clnum) {
-  //return Change.find({clnum: {$gt: clnum-0x10, $lt: clnum+0x18}, type: "I"}, {sort: {clnum:1}});
+Meteor.publish('instructions', function(clnum, collapsed) {
   var BEFORE = clnum-0x10;
-  var cblocks = Blocks.find({clend: {$gt: BEFORE}}, {limit: 20});
+  var and = [{clend: {$gt: BEFORE}}];
+  for (var i = 0; i < collapsed.length; i++) {
+    and.push({$or: [{clstart: {$lt: collapsed[i][0]}}, {clend: {$gt: collapsed[i][1]}}]});
+  }
+
+  //return Change.find({clnum: {$gt: clnum-0x10, $lt: clnum+0x18}, type: "I"}, {sort: {clnum:1}});
+  var cblocks = Blocks.find({$and: and}, {limit: 20});
   //cblocks.forEach(function(post) { console.log(post); });
 
   // build the changelist fetching query from the blocks
   var query = [];
   var lquery = [];
+  var fquery = [];
   cblocks.forEach(function(post) { 
     lquery.push({blockstart: post.blockidx});
     query.push({clnum: {$gte: post.clstart, $lte: post.clend}})
-  })
+    fquery.push({clstart: {$gte: post.clstart}, clend: {$lte: post.clend}})
+  });
   if (query.length == 0) { console.log("cl query failed"); return; }
 
   // limit here should be the onscreen blocks
   var changes = Change.find({$or: query, type: "I"}, {sort: {clnum: 1}, limit: 0x50});
   var loops = Loops.find({$or: lquery});
+  //var fxns = Fxns.find({$or: fquery});
+  var fxns = Fxns.find(); // bad
 
   // build the address fetching query from the changelists
   var query = [];
@@ -46,7 +58,7 @@ Meteor.publish('instructions', function(clnum) {
   if (query.length == 0) { console.log("ins query failed"); return; }
   var progdat = Program.find({$or: query});
   // we need to send the program data back here as well...
-  return [changes, cblocks, progdat, loops];
+  return [changes, cblocks, progdat, loops, fxns];
 });
 
 Meteor.publish('dat_iaddr', function(iaddr){

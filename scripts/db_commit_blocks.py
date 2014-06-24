@@ -81,6 +81,15 @@ blocks.append({'clstart': cchange[0], 'clend': last[0], 'start': cchange[1], 'en
 
 (blocks, loops) = do_loop_analysis(blocks)
 
+coll = db.fxns
+print "doing fxns insert"
+coll.drop()
+coll.insert(fxns)
+print "db insert done, building indexes"
+coll.ensure_index("clstart")
+coll.ensure_index("clend")
+print "indexes built"
+
 coll = db.loops
 print "doing loops insert"
 coll.drop()

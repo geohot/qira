@@ -78,6 +78,10 @@
   margin-right: 40px !important;
 }
 
+.collapse {
+  color: #888888;
+}
+
 .address {
   color: #880000;
 }

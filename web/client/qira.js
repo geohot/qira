@@ -1,15 +1,16 @@
 Change = new Meteor.Collection("change");
 Blocks = new Meteor.Collection("blocks");
 Loops = new Meteor.Collection("loops");
+Fxns = new Meteor.Collection("fxns");
 Program = new Meteor.Collection("program");
 
 // bitops make numbers negative
 
 var X86REGS = ['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'];
 
-function p(a) {
-  console.log(a);
-}
+Session.setDefault("collapsed", []);
+
+function p(a) { console.log(a); }
 
 function hex(a) {
   if (a == undefined) {
@@ -101,6 +102,7 @@ Deps.autorun(function() {
   json['clnum'] = Session.get('clnum');
   json['iaddr'] = Session.get('iaddr');
   json['daddr'] = Session.get('daddr');
+  json['collapsed'] = Session.get('collapsed');
   var hash = JSON.stringify(json);
   //p("updating hash to "+hash);
   window.location.hash = hash;
@@ -139,6 +141,26 @@ Template.cfg.loopcnt = function() {
   var tmp = Loops.findOne({"blockstart": {$lte: this.blockidx}, "blockend": {$gte: this.blockidx}});
   if (tmp) {
     return "run "+tmp.count+" times";
+  }
+  return "";
+}
+
+Template.cfg.fxncollapse = function() {
+  //p(this.clend);
+  var tmp = Fxns.findOne({"clstart": this.clend+1});
+  if (tmp) {
+    var collapsed = Session.get("collapsed");
+    var i = 0;
+    for (i = 0; i < collapsed.length; i++) {
+      if (collapsed[i][0] == tmp.clstart && collapsed[i][1] == tmp.clend) {
+        break;
+      }
+    }
+    if(i < collapsed.length) {
+      return "expand to "+(tmp.clend+1);
+    } else {
+      return "collapse to "+(tmp.clend+1);
+    }
   }
   return "";
 }
@@ -208,7 +230,8 @@ Template.cfg.ddepth = function() {
 Template.cfg.blocks = function() {
   var clnum = Session.get('clnum');
   var BEFORE = clnum-0x10;
-  var cblocks = Blocks.find({clend: {$gt: BEFORE}}, {sort: {clstart: 1}, limit: 20});
+  //var cblocks = Blocks.find({clend: {$gt: BEFORE}}, {sort: {clstart: 1}, limit: 20});
+  var cblocks = Blocks.find({}, {sort: {clstart: 1}});
   return cblocks;
 };
 
@@ -295,6 +318,22 @@ Template.cfg.events({
   },
   'click .change': function() {
     Session.set('clnum', this.clnum);
+  },
+  'click .collapse': function() {
+    var tmp = Fxns.findOne({"clstart": this.clend+1});
+    var newc = Session.get("collapsed");
+    var nc = [tmp.clstart, tmp.clend];
+    var i;
+    for (i = 0; i < newc.length; i++) if (nc[0] == newc[i][0] && nc[1] == newc[i][1]) break;
+    p(newc);
+    p(i);
+    if (i == newc.length) {
+      newc.push(nc);
+      Session.set("collapsed", newc);
+    } else {
+      newc.splice(i, 1);
+      Session.set("collapsed", newc);
+    }
   }
 });
 
@@ -325,7 +364,7 @@ Deps.autorun(function(){ Meteor.subscribe('hexedit_daddr', Session.get("daddr"),
 Deps.autorun(function(){ Meteor.subscribe('instruction_iaddr', Session.get("iaddr")); });*/
 
 Deps.autorun(function(){ Meteor.subscribe('dat_clnum', Session.get("clnum")); });
-Deps.autorun(function(){ Meteor.subscribe('instructions', Session.get("clnum")); });
+Deps.autorun(function(){ Meteor.subscribe('instructions', Session.get("clnum"), Session.get("collapsed")); });
 
 Meteor.subscribe('max_clnum');
 
