@@ -1,5 +1,6 @@
 Change = new Meteor.Collection("change");
 Blocks = new Meteor.Collection("blocks");
+Loops = new Meteor.Collection("loops");
 Program = new Meteor.Collection("program");
 
 // bitops make numbers negative
@@ -134,16 +135,33 @@ Deps.autorun(function() {
   }
 });
 
+Template.cfg.loopcnt = function() {
+  var tmp = Loops.findOne({"blockstart": {$lte: this.blockidx}, "blockend": {$gte: this.blockidx}});
+  if (tmp) {
+    return "run "+tmp.count+" times";
+  }
+  return "";
+}
+
+Template.cfg.isloop = function() {
+  var tmp = Loops.findOne({"blockstart": {$lte: this.blockidx}, "blockend": {$gte: this.blockidx}});
+  if (tmp) {
+    return "blockloop";
+  }
+  return "";
+};
+
 Template.cfg.isiaddr = function() {
   var iaddr = Session.get('iaddr');
   if (this.address == iaddr) return "highlight";
   else return "";
 }
+
 Template.cfg.ischange = function() {
   var clnum = Session.get('clnum');
   if (this.clnum == clnum) return "highlight";
   else return "";
-}
+};
 
 Template.cfg.hexaddress = function() { return hex(this.address)+": "; };
 Template.cfg.hexstart = function() { return hex(this.start); };
@@ -153,6 +171,20 @@ Template.cfg.instruction = function() {
   te = Program.findOne({address: this.address});
   if (te !== undefined) {
     return te.instruction;
+  }
+};
+
+Template.cfg.comment = function() {
+  te = Program.findOne({address: this.address});
+  if (te !== undefined && te.comment != undefined) {
+    return " // "+te.comment;
+  }
+};
+
+Template.cfg.name = function() {
+  te = Program.findOne({address: this.address});
+  if (te !== undefined && te.name != undefined) {
+    return te.name;
   }
 };
 
@@ -176,8 +208,7 @@ Template.cfg.ddepth = function() {
 Template.cfg.blocks = function() {
   var clnum = Session.get('clnum');
   var BEFORE = clnum-0x10;
-  var AFTER = clnum+0x30;
-  var cblocks = Blocks.find({clend: {$gt: BEFORE}, clstart: {$lt: AFTER}}, {sort: {clstart: 1}});
+  var cblocks = Blocks.find({clend: {$gt: BEFORE}}, {sort: {clstart: 1}, limit: 20});
   return cblocks;
 };
 

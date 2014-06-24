@@ -35,7 +35,6 @@ def do_function_analysis(dat):
     last_instruction = address
   return fxn
 
-
 def get_depth(fxns, clnum):
   d = 0
   for f in fxns:

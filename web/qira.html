@@ -38,12 +38,15 @@ regviewer
 <template name="cfg">
 {{#each blocks}}
   <!--block {{clstart}}-{{clend}} from {{hexstart}}-{{hexend}}-->
-  <div class="block" style="margin-left: {{ddepth}}px">
+  <div class="block {{isloop}}" id="block_{{blockidx}}" style="margin-left: {{ddepth}}px">
+    {{loopcnt}}
     {{#each instructions}}
+      <div class="name">{{name}}</div>
       <div class="instruction">
         <div class="change {{ischange}}">{{clnum}}</div>
         <span class="address {{isiaddr}}">{{hexaddress}}</span>
         {{instruction}}
+        <span class="comment">{{comment}}</span>
       </div>
     {{/each}}
   </div><br/>

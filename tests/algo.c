@@ -68,8 +68,8 @@ int main() {
   ret += nest();
   ret += sum_of_1_through_10();
   ret += recurse_countdown(10);
-  ret += fib(4);
-  ret += bubble_sort(tmp, sizeof(tmp)/sizeof(int));
+  //ret += fib(4);
+  //ret += bubble_sort(tmp, sizeof(tmp)/sizeof(int));
   return ret;
 }
 

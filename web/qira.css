@@ -6,6 +6,16 @@
   margin-top: 5px;
   text-align: left;
   font-size: 11px;
+  font-family: monospace;
+}
+.blockloop {
+  background-color: #f8e8ff;
+}
+.name {
+  color: blue;
+}
+.comment {
+  color: purple;
 }
 #daddr_input {
   border: 1px solid black !important;
@@ -69,7 +79,7 @@
 }
 
 .address {
-  color: pink;
+  color: #880000;
 }
 
 .change {

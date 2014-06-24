@@ -8,6 +8,7 @@ db = MongoClient('localhost', 3001).meteor
 print "reading log"
 dat = read_log("/tmp/qira_log")
 fxns = do_function_analysis(dat)
+print fxns
 
 print "building blocks data"
 
@@ -78,7 +79,15 @@ for (address, data, clnum, flags) in dat:
 
 blocks.append({'clstart': cchange[0], 'clend': last[0], 'start': cchange[1], 'end': last[1], 'depth': get_depth(fxns, cchange[0])})
 
-do_loop_analysis(blocks)
+(blocks, loops) = do_loop_analysis(blocks)
+
+coll = db.loops
+print "doing loops insert"
+coll.drop()
+coll.insert(loops)
+print "db insert done, building indexes"
+coll.ensure_index("blockidx")
+print "indexes built"
 
 coll = db.blocks
 print "doing db insert"

@@ -1,5 +1,6 @@
 Change = new Meteor.Collection("change");
 Blocks = new Meteor.Collection("blocks");
+Loops = new Meteor.Collection("loops");
 Program = new Meteor.Collection("program");
 
 Meteor.startup(function () {
@@ -23,17 +24,29 @@ Meteor.publish('instruction_iaddr', function(iaddr){
 Meteor.publish('instructions', function(clnum) {
   //return Change.find({clnum: {$gt: clnum-0x10, $lt: clnum+0x18}, type: "I"}, {sort: {clnum:1}});
   var BEFORE = clnum-0x10;
-  var AFTER = clnum+0x30;
-  var changes = Change.find({clnum: {$gt: BEFORE, $lt: AFTER}, type: "I"});
-  var cblocks = Blocks.find({clend: {$gt: BEFORE}, clstart: {$lt: AFTER}});
+  var cblocks = Blocks.find({clend: {$gt: BEFORE}}, {limit: 20});
   //cblocks.forEach(function(post) { console.log(post); });
+
+  // build the changelist fetching query from the blocks
   var query = [];
-  changes.forEach(function(post) {
-    query.push({address: post.address});
-  });
+  var lquery = [];
+  cblocks.forEach(function(post) { 
+    lquery.push({blockstart: post.blockidx});
+    query.push({clnum: {$gte: post.clstart, $lte: post.clend}})
+  })
+  if (query.length == 0) { console.log("cl query failed"); return; }
+
+  // limit here should be the onscreen blocks
+  var changes = Change.find({$or: query, type: "I"}, {sort: {clnum: 1}, limit: 0x50});
+  var loops = Loops.find({$or: lquery});
+
+  // build the address fetching query from the changelists
+  var query = [];
+  changes.forEach(function(post) { query.push({address: post.address}); });
+  if (query.length == 0) { console.log("ins query failed"); return; }
   var progdat = Program.find({$or: query});
   // we need to send the program data back here as well...
-  return [changes, cblocks, progdat];
+  return [changes, cblocks, progdat, loops];
 });
 
 Meteor.publish('dat_iaddr', function(iaddr){
