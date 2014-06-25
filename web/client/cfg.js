@@ -12,7 +12,17 @@ Template.cfg.fxncollapse = function() {
     var collapsed = Session.get("collapsed");
 
     if(collapsedIndexOf([tmp.clstart, tmp.clend], collapsed) != -1) {
-      return "expand to "+(tmp.clend+1);
+      var tmp2 = Change.findOne({"clnum":tmp.clstart});
+      var tmp3 = undefined;
+      if (tmp2 !== undefined) {
+        var tmp3 = Program.findOne({address: tmp2.address});
+      }
+      
+      if (tmp3 !== undefined) {
+        return "expand "+tmp3.name+" to "+(tmp.clend+1);
+      } else {
+        return "expand to "+(tmp.clend+1);
+      }
     } else {
       return "collapse to "+(tmp.clend+1);
     }
@@ -111,4 +121,15 @@ Template.cfg.events({
 });
 
 Deps.autorun(function(){ Meteor.subscribe('instructions', Session.get("clnum"), Session.get("collapsed")); });
+Meteor.subscribe('loops');
+var fxn_sub = Meteor.subscribe('fxns', {onReady: function() {
+  p("function ready");
+  var tmp = Fxns.find();
+  var newc = [];
+  tmp.forEach(function(post) {
+    newc.push([post.clstart, post.clend]);
+  });
+  Session.set("collapsed", newc);
+}});
+
 

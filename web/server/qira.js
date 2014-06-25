@@ -22,7 +22,17 @@ Meteor.publish('instruction_iaddr', function(iaddr){
   //return Program.find({address: {$gt: iaddr-0x100, $lt: iaddr+0x100}}, {sort: {address:1}});
 });
 
+Meteor.publish('loops', function() {
+  return Loops.find();
+});
+
+Meteor.publish('fxns', function() {
+  var fxns = Fxns.find(); // bad
+  return fxns;
+});
+
 Meteor.publish('instructions', function(clnum, collapsed) {
+
   var BEFORE = clnum-0x10;
   var and = [{clend: {$gt: BEFORE}}];
   for (var i = 0; i < collapsed.length; i++) {
@@ -35,20 +45,14 @@ Meteor.publish('instructions', function(clnum, collapsed) {
 
   // build the changelist fetching query from the blocks
   var query = [];
-  var lquery = [];
-  var fquery = [];
   cblocks.forEach(function(post) { 
-    lquery.push({blockstart: post.blockidx});
-    query.push({clnum: {$gte: post.clstart, $lte: post.clend}})
-    fquery.push({clstart: {$gte: post.clstart}, clend: {$lte: post.clend}})
+    // get one past the end of each visible block
+    query.push({clnum: {$gte: post.clstart, $lte: (post.clend+1)}})
   });
   if (query.length == 0) { console.log("cl query failed"); return; }
 
   // limit here should be the onscreen blocks
   var changes = Change.find({$or: query, type: "I"}, {sort: {clnum: 1}, limit: 0x50});
-  var loops = Loops.find({$or: lquery});
-  //var fxns = Fxns.find({$or: fquery});
-  var fxns = Fxns.find(); // bad
 
   // build the address fetching query from the changelists
   var query = [];
@@ -56,7 +60,7 @@ Meteor.publish('instructions', function(clnum, collapsed) {
   if (query.length == 0) { console.log("ins query failed"); return; }
   var progdat = Program.find({$or: query});
   // we need to send the program data back here as well...
-  return [changes, cblocks, progdat, loops, fxns];
+  return [changes, cblocks, progdat];
 });
 
 Meteor.publish('dat_iaddr', function(iaddr){

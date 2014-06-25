@@ -6,7 +6,6 @@ Program = new Meteor.Collection("program");
 
 // bitops make numbers negative
 
-
 Meteor.startup(function () {
   Session.setDefault("collapsed", []);
 });
@@ -26,64 +25,6 @@ window.onmousewheel = function(e) {
     }
   }
 };
-
-var socket = undefined;
-function do_socket(callme) {
-  if (socket == undefined) {
-    p('connecting');
-    socket = io.connect('http://localhost:3002');
-    socket.on('connect', function() {
-      p("socket connected");
-      callme();
-    });
-    socket.on('memory', function(msg) {
-      //p(msg);
-      var dat = atob(msg['raw'])
-      // render the hex editor
-      var addr = msg['address'];
-      html = "<table><tr>";
-      for (var i = 0; i < dat.length; i++) {
-        if ((i&0xF) == 0) html += "</tr><tr><td>"+hex(addr+i)+":</td>";
-        if ((i&0x3) == 0) html += "<td></td>";
-        var me = dat.charCodeAt(i).toString(16);
-        if (me.length == 1) me = "0" + me;
-        if (addr+i == Session.get('daddr')) {
-          html += '<td class="highlight">'+me+"</td>";
-        } else {
-          html += "<td>"+me+"</td>";
-        }
-      }
-      html += "</tr></table>";
-      $("#hexdump")[0].innerHTML = html;
-    });
-    socket.on('registers', function(msg) {
-      //p(msg);
-      html = "";
-      for (i in msg) {
-        html += "<div class=reg daddr="+msg[i]+">"+i+": "+hex(msg[i])+"</div>";
-      }
-      $("#regviewer")[0].innerHTML = html;
-    });
-  } else {
-    callme();
-  }
-}
-
-Deps.autorun(function() {
-  var daddr = Session.get('daddr');
-  var clnum = Session.get('clnum');
-  do_socket(function() {
-    socket.emit('getmemory',
-      {"clnum":clnum-1, "address":(daddr-0x20)-(daddr-0x20)%0x10, "len":0x100});
-  });
-});
-
-Deps.autorun(function() {
-  var clnum = Session.get('clnum');
-  do_socket(function() {
-    socket.emit('getregisters', {"clnum":clnum-1});
-  });
-});
 
 // there should be a library for this
 Deps.autorun(function() {
@@ -123,27 +64,22 @@ Deps.autorun(function() {
   var max_clnum = Session.get("max_clnum");
   if (cl_selector.length > 0) {
     cl_selector[0].value = clnum;
-    cl_selector[0].max = max_clnum;
     cl_selector.slider('refresh');
   }
 });
 
-
-Template.timeline.max_clnum = function() {
+Meteor.subscribe('max_clnum', {onReady: function() {
   post = Change.findOne({}, {sort: {clnum: -1}});
-  if (post != undefined) {
-    Session.setDefault("clnum", post.clnum);
-    Session.set("max_clnum", post.clnum);
-  }
-};
 
-Template.timeline.rendered = function() {
-  $('#cl_selector').on("change", function(e) {
+  Session.setDefault("clnum", post.clnum);
+  Session.set("max_clnum", post.clnum);
+
+  var cl_selector = $('#cl_selector');
+  cl_selector[0].max = post.clnum;
+  cl_selector.on("change", function(e) {
     var val = parseInt($('#cl_selector')[0].value);
-    //p("change "+val);
     Session.set('clnum', val);
   });
-};
-
-Meteor.subscribe('max_clnum');
+  cl_selector.slider('refresh');
+}});
 

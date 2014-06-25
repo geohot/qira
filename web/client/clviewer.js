@@ -40,7 +40,7 @@ Template.change.is_mem = function() {
 };
 
 Template.change.events({
-  'click .address': function() {
+  'click .daddress': function() {
     p("new daddr is "+hex(this.address));
     Session.set('daddr', this.address);
   },

@@ -5,7 +5,9 @@
 
 <body>
 <div id="timeline">
-{{> timeline}}
+<div id="cl_selector_box">
+<input type="range" id="cl_selector" value="1" min="1" max="1">
+</div>
 </div>
 <div id="cfg">
 {{> cfg}}
@@ -15,7 +17,8 @@
 {{> changelist}}
 </div>
 <div id="regviewer">
-regviewer
+<!--regviewer-->
+<!--{{> regviewer}}-->
 </div>
 <div id="hexeditor">
 <div id="hexdump"></div>
@@ -23,11 +26,12 @@ regviewer
 </div>
 </body>
 
-<template name="timeline"> 
-  <div id="cl_selector_box">
-  <input type="range" id="cl_selector" value="1" min="1" max="1">
+<template name="regviewer">
+{{#each regs}}
+  <div class="reg">
+  {{name}}: <span class="daddress">{{hexvalue}}</span>
   </div>
-  {{max_clnum}}
+{{/each}}
 </template>
 
 <template name="cfg">
@@ -87,7 +91,7 @@ regviewer
 <template name="change">
   <tr>
     {{#if is_mem}}
-      <td class="address">{{handleaddress}}</td>
+      <td class="daddress">{{handleaddress}}</td>
     {{else}}
       <td>{{handleaddress}}</td>
     {{/if}}
@@ -95,5 +99,4 @@ regviewer
     <td>{{handledata}}</td>
   </tr>
 </template>
-
 

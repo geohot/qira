@@ -1,11 +1,21 @@
 #!/bin/sh
 set -e
-cd tests
-gcc -m32 -nostdlib -static -g algo.c
-cd ../
+
+#BIN=../tests/ctf/simple
+SRC=../tests/hello.c
+#SRC=../tests/algo.c
+
+if [ $SRC != "" ]; then
+  cd tests
+  #gcc -m32 -nostdlib -static -g algo.c
+  gcc -m32 -static -g $SRC
+  BIN=../tests/a.out
+  cd ../
+fi
+
 cd scripts
-./run_qemu.sh
-python db_commit_asm.py ../tests/a.out ../tests/algo.c
+echo "hello" | ./run_qemu.sh $BIN
+python db_commit_asm.py $BIN $SRC
 python db_commit_log.py
 python db_commit_blocks.py
 python memory_server.py
