@@ -4,8 +4,6 @@ Loops = new Meteor.Collection("loops");
 Fxns = new Meteor.Collection("fxns");
 Program = new Meteor.Collection("program");
 
-function p(a) { console.log(a); }
-
 Meteor.startup(function () {
 });
 

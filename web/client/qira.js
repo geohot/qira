@@ -6,20 +6,10 @@ Program = new Meteor.Collection("program");
 
 // bitops make numbers negative
 
-var X86REGS = ['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'];
 
-Session.setDefault("collapsed", []);
-
-function p(a) { console.log(a); }
-
-function hex(a) {
-  if (a == undefined) {
-    return "";
-  } else {
-    if (a < 0) a += 0x100000000;
-    return "0x"+a.toString(16);
-  }
-}
+Meteor.startup(function () {
+  Session.setDefault("collapsed", []);
+});
 
 window.onmousewheel = function(e) {
   if (e.target.id == "cfg" || $(e.target).parents("#cfg").length > 0) {
@@ -47,7 +37,7 @@ function do_socket(callme) {
       callme();
     });
     socket.on('memory', function(msg) {
-      p(msg);
+      //p(msg);
       var dat = atob(msg['raw'])
       // render the hex editor
       var addr = msg['address'];
@@ -78,6 +68,7 @@ function do_socket(callme) {
     callme();
   }
 }
+
 Deps.autorun(function() {
   var daddr = Session.get('daddr');
   var clnum = Session.get('clnum');
@@ -137,111 +128,6 @@ Deps.autorun(function() {
   }
 });
 
-Template.cfg.loopcnt = function() {
-  var tmp = Loops.findOne({"blockstart": {$lte: this.blockidx}, "blockend": {$gte: this.blockidx}});
-  if (tmp) {
-    return "run "+tmp.count+" times";
-  }
-  return "";
-}
-
-Template.cfg.fxncollapse = function() {
-  //p(this.clend);
-  var tmp = Fxns.findOne({"clstart": this.clend+1});
-  if (tmp) {
-    var collapsed = Session.get("collapsed");
-    var i = 0;
-    for (i = 0; i < collapsed.length; i++) {
-      if (collapsed[i][0] == tmp.clstart && collapsed[i][1] == tmp.clend) {
-        break;
-      }
-    }
-    if(i < collapsed.length) {
-      return "expand to "+(tmp.clend+1);
-    } else {
-      return "collapse to "+(tmp.clend+1);
-    }
-  }
-  return "";
-}
-
-Template.cfg.isloop = function() {
-  var tmp = Loops.findOne({"blockstart": {$lte: this.blockidx}, "blockend": {$gte: this.blockidx}});
-  if (tmp) {
-    return "blockloop";
-  }
-  return "";
-};
-
-Template.cfg.isiaddr = function() {
-  var iaddr = Session.get('iaddr');
-  if (this.address == iaddr) return "highlight";
-  else return "";
-}
-
-Template.cfg.ischange = function() {
-  var clnum = Session.get('clnum');
-  if (this.clnum == clnum) return "highlight";
-  else return "";
-};
-
-Template.cfg.hexaddress = function() { return hex(this.address)+": "; };
-Template.cfg.hexstart = function() { return hex(this.start); };
-Template.cfg.hexend = function() { return hex(this.end); };
-
-Template.cfg.instruction = function() {
-  te = Program.findOne({address: this.address});
-  if (te !== undefined) {
-    return te.instruction;
-  }
-};
-
-Template.cfg.comment = function() {
-  te = Program.findOne({address: this.address});
-  if (te !== undefined && te.comment != undefined) {
-    return " // "+te.comment;
-  }
-};
-
-Template.cfg.name = function() {
-  te = Program.findOne({address: this.address});
-  if (te !== undefined && te.name != undefined) {
-    return te.name;
-  }
-};
-
-Template.cfg.instructions = function() {
-  //p(this.clstart + " " + this.clend);
-  var changes = Change.find({clnum: {$gte: this.clstart, $lte: this.clend}, type: "I"}, {sort: {clnum: 1}});
-  var query = [];
-  /*changes.forEach(function(post) {
-    //p(post);
-    query.push({address: post.address});
-  });*/
-  //var progdat = Program.find({$or: query}, {sort: {address: 1}});
-  //return progdat;
-  return changes;
-}
-
-Template.cfg.ddepth = function() {
-  return this.depth * 60;
-};
-
-Template.cfg.blocks = function() {
-  var clnum = Session.get('clnum');
-  var BEFORE = clnum-0x10;
-  //var cblocks = Blocks.find({clend: {$gt: BEFORE}}, {sort: {clstart: 1}, limit: 20});
-  var cblocks = Blocks.find({}, {sort: {clstart: 1}});
-  return cblocks;
-};
-
-Template.cfg.lineardump = function() {
-  //var iaddr = Session.get('iaddr');
-  var clnum = Session.get('clnum');
-  if (clnum !== undefined) {
-    return Change.find({clnum: {$gt: clnum-0x10, $lt: clnum+0x18}, type: "I"}, {sort: {clnum:1}});
-  }
-};
 
 Template.timeline.max_clnum = function() {
   post = Change.findOne({}, {sort: {clnum: -1}});
@@ -258,113 +144,6 @@ Template.timeline.rendered = function() {
     Session.set('clnum', val);
   });
 };
-
-Template.changelist.currentchanges = function() {
-  var clnum = Session.get('clnum');
-  return Change.find({clnum: clnum}, {sort: {address: 1}, limit:20});
-};
-
-Template.changelist.iaddr = function() { return hex(Session.get('iaddr')); };
-Template.changelist.daddr = function() { return hex(Session.get('daddr')); };
-Template.changelist.clnum = function() { return Session.get('clnum'); };
-
-Template.changelist.icllist = function() {
-  var iaddr = Session.get('iaddr');
-  return Change.find({address: iaddr, type: "I"}, {sort: {clnum: 1},limit:10})
-};
-
-Template.changelist.dcllist = function() {
-  var daddr = Session.get('daddr');
-  if (daddr >= 0x1000) {
-    return Change.find({address:daddr}, {sort: {clnum: 1},limit:10});
-  } else {
-    return false;
-  }
-};
-
-Template.change.is_mem = function() {
-  return this.type == "L" || this.type == "S";
-};
-
-Template.cl.events({
-  'click .change': function() {
-    Session.set('clnum', this.clnum);
-  }
-});
-
-Template.changelist.events({
-  'change #daddr_input': function() {
-    if ($("#daddr_input")[0].value == "") {
-      Session.set('daddr', undefined);
-      return;
-    }
-    var daddr = parseInt($("#daddr_input")[0].value, 16);
-    p("new daddr is "+daddr);
-    Session.set('daddr', daddr);
-  }
-});
-
-Template.change.events({
-  'click .address': function() {
-    p("new daddr is "+hex(this.address));
-    Session.set('daddr', this.address);
-  }
-});
-
-Template.cfg.events({
-  'click .address': function() {
-    p("new iaddr from click is "+hex(this.address));
-    Session.set('iaddr', this.address);
-  },
-  'click .change': function() {
-    Session.set('clnum', this.clnum);
-  },
-  'click .collapse': function() {
-    var tmp = Fxns.findOne({"clstart": this.clend+1});
-    var newc = Session.get("collapsed");
-    var nc = [tmp.clstart, tmp.clend];
-    var i;
-    for (i = 0; i < newc.length; i++) if (nc[0] == newc[i][0] && nc[1] == newc[i][1]) break;
-    p(newc);
-    p(i);
-    if (i == newc.length) {
-      newc.push(nc);
-      Session.set("collapsed", newc);
-    } else {
-      newc.splice(i, 1);
-      Session.set("collapsed", newc);
-    }
-  }
-});
-
-Template.change.handleaddress = function () {
-  /*if (this.type == "I") {
-    p("new iaddr is "+hex(this.address));
-    Session.set('iaddr', this.address);
-  }*/
-  if (this.type == "R" || this.type == "W") {
-    if (this.address < (X86REGS.length*4)) {
-      return X86REGS[this.address/4];
-    } else {
-      return hex(this.address);
-    }
-  } else {
-    return hex(this.address);
-  }
-};
-
-Template.change.handledata = function () {
-  return hex(this.data);
-};
-
-Deps.autorun(function(){ Meteor.subscribe('dat_iaddr', Session.get("iaddr")); });
-Deps.autorun(function(){ Meteor.subscribe('dat_daddr', Session.get("daddr")); });
-/*Deps.autorun(function(){ Meteor.subscribe('dat_clnum', Session.get("clnum")); });
-Deps.autorun(function(){ Meteor.subscribe('hexedit_daddr', Session.get("daddr"), Session.get("clnum")); });
-Deps.autorun(function(){ Meteor.subscribe('instruction_iaddr', Session.get("iaddr")); });*/
-
-Deps.autorun(function(){ Meteor.subscribe('dat_clnum', Session.get("clnum")); });
-Deps.autorun(function(){ Meteor.subscribe('instructions', Session.get("clnum"), Session.get("collapsed")); });
 
 Meteor.subscribe('max_clnum');
 
