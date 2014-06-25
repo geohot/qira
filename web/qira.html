@@ -37,8 +37,8 @@
 <template name="cfg">
 {{#each blocks}}
   <!--block {{clstart}}-{{clend}} from {{hexstart}}-{{hexend}}-->
-  <div class="block {{isloop}}" id="block_{{blockidx}}" style="margin-left: {{ddepth}}px">
-    {{loopcnt}}
+  <div class="block" style="margin-left: {{ddepth}}px">
+    <!--{{loopcnt}}-->
     {{#each instructions}}
       <div class="instruction">
       <div class="change {{ischange}}">{{clnum}}</div>

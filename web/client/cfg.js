@@ -86,6 +86,7 @@ Template.cfg.blocks = function() {
   var clnum = Session.get('clnum');
   var BEFORE = clnum-0x10;
   //var cblocks = Blocks.find({clend: {$gt: BEFORE}}, {sort: {clstart: 1}, limit: 20});
+  //var cblocks = Blocks.find({}, {sort: {clstart: 1}, limit: 20});
   var cblocks = Blocks.find({}, {sort: {clstart: 1}});
   return cblocks;
 };
@@ -120,7 +121,12 @@ Template.cfg.events({
   }
 });
 
+//Deps.autorun(function(){ Meteor.subscribe('instructions', Session.get("clnum"), Session.get("collapsed")); });
+
 Deps.autorun(function(){ Meteor.subscribe('instructions', Session.get("clnum"), Session.get("collapsed")); });
+
+// the only thing we don't have is the 
+//Meteor.subscribe('blocks');
 Meteor.subscribe('loops');
 var fxn_sub = Meteor.subscribe('fxns', {onReady: function() {
   p("function ready");

@@ -18,7 +18,9 @@ blocks = do_block_analysis(dat)
 for b in blocks:
   b['depth'] = get_depth(fxns, b['clstart'])
 
-(blocks, loops) = do_loop_analysis(blocks)
+(blocks, loops, realblocks, realtrace) = do_loop_analysis(blocks)
+
+print realtrace
 
 coll = db.fxns
 print "doing fxns insert"
@@ -36,6 +38,15 @@ coll.insert(loops)
 print "db insert done, building indexes"
 coll.ensure_index("blockidx")
 print "indexes built"
+
+coll = db.realblocks
+print "doing db insert"
+coll.drop()
+coll.insert(realblocks)
+print "db insert done, building indexes"
+coll.ensure_index("start")
+coll.ensure_index("idx")
+print "realblocks idx built"
 
 coll = db.blocks
 print "doing db insert"

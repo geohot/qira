@@ -3,10 +3,18 @@ def do_loop_analysis(blocks):
   arr = []
   bb = []
   ab = []
+
+  realblocks = []
+  realtrace = []
+
+  idx = 0
   for i in range(len(blocks)):
     h = hex(blocks[i]['start']) + "-" + hex(blocks[i]['end'])
     if h not in arr:
+      realblocks.append({'start': blocks[i]['start'], 'end': blocks[i]['end'], 'idx': idx})
+      idx += 1
       arr.append(h)
+    realtrace.append(arr.index(h))
     bb.append(arr.index(h))
     ab.append(i)
 
@@ -40,12 +48,11 @@ def do_loop_analysis(blocks):
       if did_update:
         break
 
-
   ret = []
   for i in ab:
     t = blocks[i]
     t["blockidx"] = i
     ret.append(t)
-  return (ret, loops)
+  return (ret, loops, realblocks, realtrace)
   
 

@@ -31,7 +31,13 @@ Meteor.publish('fxns', function() {
   return fxns;
 });
 
+Meteor.publish('blocks', function() {
+  var fxns = Blocks.find(); // bad
+  return fxns;
+});
+
 Meteor.publish('instructions', function(clnum, collapsed) {
+  var start_time = process.hrtime();
 
   var BEFORE = clnum-0x10;
   var and = [{clend: {$gt: BEFORE}}];
@@ -59,6 +65,11 @@ Meteor.publish('instructions', function(clnum, collapsed) {
   changes.forEach(function(post) { query.push({address: post.address}); });
   if (query.length == 0) { console.log("ins query failed"); return; }
   var progdat = Program.find({$or: query});
+
+  // this is taking 200ms
+  var end_time = process.hrtime(start_time);
+  console.log("instructions took "+end_time[0]*1000.0 + end_time[1]/1000000.0+" ms");
+
   // we need to send the program data back here as well...
   return [changes, cblocks, progdat];
 });

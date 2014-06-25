@@ -2,13 +2,13 @@
 set -e
 
 #BIN=../tests/ctf/simple
-SRC=../tests/hello.c
-#SRC=../tests/algo.c
+#SRC=../tests/hello.c
+SRC=../tests/algo.c
 
 if [ $SRC != "" ]; then
   cd tests
-  #gcc -m32 -nostdlib -static -g algo.c
-  gcc -m32 -static -g $SRC
+  gcc -m32 -nostdlib -static -g algo.c
+  #gcc -m32 -static -g $SRC
   BIN=../tests/a.out
   cd ../
 fi
