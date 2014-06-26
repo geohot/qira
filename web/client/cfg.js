@@ -123,8 +123,6 @@ Template.cfg.events({
 
 //Deps.autorun(function(){ Meteor.subscribe('instructions', Session.get("clnum"), Session.get("collapsed")); });
 
-Deps.autorun(function(){ Meteor.subscribe('instructions', Session.get("clnum"), Session.get("collapsed")); });
-
 // the only thing we don't have is the 
 //Meteor.subscribe('blocks');
 Meteor.subscribe('loops');

@@ -2,55 +2,173 @@
 #include <idp.hpp>
 #include <loader.hpp>
 
-int IDAP_init(void)
-{
-	// Do checks here to ensure your plug-in is being used within
-	// an environment it was written for. Return PLUGIN_SKIP if the 	
-	// checks fail, otherwise return PLUGIN_KEEP.
-	
+//#define DEBUG
+
+// ***************** WEBSOCKETS *******************
+#include <libwebsockets.h>
+
+static int callback_http(struct libwebsocket_context* context,
+    struct libwebsocket* wsi,
+    enum libwebsocket_callback_reasons reason, void* user,
+    void* in, size_t len) {
+  return 0;
+}
+
+static void thread_safe_jump_to(ea_t a) {
+  struct uireq_jumpto_t: public ui_request_t {
+    uireq_jumpto_t(ea_t a) {
+      la = a;
+    }
+    virtual bool idaapi run() {
+      jumpto(la);
+      return false;
+    }
+    ea_t la;
+  };
+  execute_ui_requests(new uireq_jumpto_t(a), NULL);
+}
+
+struct libwebsocket* gwsi = NULL;
+
+static int callback_qira(struct libwebsocket_context* context,
+      struct libwebsocket* wsi,
+      enum libwebsocket_callback_reasons reason, void* user,
+      void* in, size_t len) {
+  //msg("QIRA CALLBACK: %d\n", reason);
+  switch(reason) {
+    case LWS_CALLBACK_ESTABLISHED:
+      // we only support one client
+      gwsi = wsi;
+      msg("QIRA connected\n");
+      break;
+    case LWS_CALLBACK_RECEIVE:
+      char *strin = (char *)in;
+      #ifdef DEBUG
+        msg("QIRARX:%s\n", strin);
+      #endif
+      if (memcmp(strin, "setaddress ", sizeof("setaddress ")-1) == 0) {
+        ea_t addr = atoi(strin+sizeof("setaddress ")-1);
+        thread_safe_jump_to(addr);
+      }
+      break;
+  }
+  return 0;
+}
+
+static void ws_send(char *str) {
+  #ifdef DEBUG
+    msg("QIRATX:%s\n", str);
+  #endif
+  int len = strlen(str);
+  unsigned char *buf = (unsigned char*)
+    malloc(LWS_SEND_BUFFER_PRE_PADDING + len + LWS_SEND_BUFFER_POST_PADDING);
+  memcpy(&buf[LWS_SEND_BUFFER_PRE_PADDING], str, len);
+  if (gwsi != NULL) {
+    libwebsocket_write(gwsi, &buf[LWS_SEND_BUFFER_PRE_PADDING], len, LWS_WRITE_TEXT);
+  }
+  free(buf);
+}
+
+
+// ***************** IDAPLUGIN *******************
+
+static void update_address(ea_t addr) {
+  //msg("addr 0x%x\n", addr);
+  char tmp[100];
+  qsnprintf(tmp, 100-1, "setiaddr %u", addr);
+  ws_send(tmp);
+}
+
+static int hook(void *user_data, int event_id, va_list va) {
+  static ea_t old_addr = 0;
+  ea_t addr;
+  if (event_id != ui_msg && event_id != ui_screenea) {
+    addr = get_screen_ea();
+    if (old_addr != addr) {
+      update_address(addr);
+    }
+    old_addr = addr;
+  }
+  return 0;
+}
+
+// ***************** WEBSOCKETS BOILERPLATE *******************
+
+static struct libwebsocket_protocols protocols[] = {
+  { "http-only", callback_http, 0 },
+  { "qira", callback_qira, 0 },
+  { NULL, NULL, 0 }
+};
+
+qthread_t websockets_thread;
+int websockets_running;
+
+int websocket_thread(void *) {
+  struct libwebsocket_context* context;
+
+	struct lws_context_creation_info info;
+	memset(&info, 0, sizeof info);
+  info.port = 3003;
+	info.iface = NULL;
+	info.protocols = protocols;
+	info.extensions = libwebsocket_get_internal_extensions();
+	info.gid = -1;
+	info.uid = -1;
+	info.options = 0;
+
+  context = libwebsocket_create_context(&info);
+  msg("yay websockets\n");
+
+  while (websockets_running) {
+    libwebsocket_service(context, 50);
+  }
+  libwebsocket_context_destroy(context);
+  return 0;
+}
+
+void start_websocket_thread() {
+  websockets_running = 1;
+  websockets_thread = qthread_create(websocket_thread, NULL);
+}
+
+void exit_websocket_thread() {
+  websockets_running = 0;
+  qthread_join(websockets_thread);
+}
+
+// ***************** IDAPLUGIN BOILERPLATE *******************
+
+int IDAP_init(void) {
+  hook_to_notification_point(HT_UI, hook, NULL);
+  start_websocket_thread();
 	return PLUGIN_KEEP;
 }
 
-void IDAP_term(void)
-{
-	// Stuff to do when exiting, generally you'd put any sort
-	// of clean-up jobs here.
+void IDAP_term(void) {
+  unhook_from_notification_point(HT_UI, hook);
 	return;
 }
 
-// The plugin can be passed an integer argument from the plugins.cfg
-// file. This can be useful when you want the one plug-in to do
-// something different depending on the hot-key pressed or menu
-// item selected.
-void IDAP_run(int arg)
-{
-	// The "meat" of your plug-in
-	msg("Hello world!");
-	return;
+void IDAP_run(int arg) {
+  msg("installing book\n");
+  return;
 }
 
-// There isn't much use for these yet, but I set them anyway.
+
 char IDAP_comment[] 	= "This is my test plug-in";
 char IDAP_help[] 		= "My plugin";
-
-// The name of the plug-in displayed in the Edit->Plugins menu. It can 
-// be overridden in the user's plugins.cfg file.
-char IDAP_name[] 		= "My plugin";
-
-// The hot-key the user can use to run your plug-in.
+char IDAP_name[] 		= "QIRA server";
 char IDAP_hotkey[] 	= "Alt-X";
 
-// The all-important exported PLUGIN object
-plugin_t PLUGIN =
-{
+plugin_t PLUGIN = {
   IDP_INTERFACE_VERSION,	// IDA version plug-in is written for
-  0,					// Flags (see below)
+  0,					    // Flags (see below)
   IDAP_init,			// Initialisation function
   IDAP_term,			// Clean-up function
   IDAP_run,				// Main plug-in body
-  IDAP_comment,			// Comment – unused
-  IDAP_help,			// As above – unused
+  IDAP_comment,	  // Comment 
+  IDAP_help,			// As above
   IDAP_name,			// Plug-in name shown in 
-						// Edit->Plugins menu
   IDAP_hotkey			// Hot key to run the plug-in
 };
+

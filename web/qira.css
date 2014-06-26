@@ -51,6 +51,13 @@
   border: 1px solid black;
 }
 
+#onlypanel {
+  background-color: #FFAAAA;
+  border: 1px solid black;
+  height: 100%;
+  position: fixed;
+}
+
 #clviewer {
   height: 320px;
   border: 1px solid gray;
@@ -60,10 +67,11 @@
 #regviewer {
   height: 80px;
   border: 1px solid gray;
+  background-color: #FFCCFF;
+  border: 1px solid black;
 }
 
 #hexeditor {
-  height: 100%;
   border: 1px solid gray;
   background-color: #FFFF55;
 }
@@ -91,7 +99,7 @@
 }
 
 .change {
-  color: #888800;
+  color: yellow;
   width: 35px;
   display: inline-block;
 }

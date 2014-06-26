@@ -11,7 +11,8 @@ Meteor.startup(function () {
 });
 
 window.onmousewheel = function(e) {
-  if (e.target.id == "cfg" || $(e.target).parents("#cfg").length > 0) {
+  if (e.target.id == "cfg" || $(e.target).parents("#cfg").length > 0 ||
+      e.target.id == "clviewer" || $(e.target).parents("#clviewer").length > 0) {
     if (e.wheelDelta < 0) {
       Session.set('clnum', Session.get('clnum')+1);
     } else if (e.wheelDelta > 0) {

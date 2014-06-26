@@ -1,9 +1,9 @@
 #!/bin/sh
 set -e
 
-BIN=../tests/ctf/hudak
+#BIN=../tests/ctf/hudak
 #BIN=../tests/ctf/simple
-#SRC=../tests/hello.c
+SRC=../tests/hello.c
 #SRC=../tests/algo.c
 
 if [ $SRC != "" ]; then

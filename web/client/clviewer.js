@@ -47,6 +47,9 @@ Template.change.events({
 });
 
 Template.change.handleaddress = function () {
+  if (this.type == "I") {
+    Session.set("iaddr", this.address);
+  }
   if (this.type == "R" || this.type == "W") {
     if (this.address < (X86REGS.length*4)) {
       return X86REGS[this.address/4];
