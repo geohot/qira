@@ -3,4 +3,7 @@ web/.meteor
 tests/a.out
 tests/*.o
 *.pyc
+ida_plugin/*.o
+ida_plugin/qira.plx
+tests/idb
 
