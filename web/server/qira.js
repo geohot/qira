@@ -1,8 +1,4 @@
 Change = new Meteor.Collection("change");
-Blocks = new Meteor.Collection("blocks");
-Loops = new Meteor.Collection("loops");
-Fxns = new Meteor.Collection("fxns");
-Program = new Meteor.Collection("program");
 
 Meteor.startup(function () {
 });
