@@ -22,21 +22,27 @@ function map_create(dic) {
 }
 
 function map_getbelow(map, a) {
-  // hacks, shouldn't happen
-  if (map.length == 0) return 0;
-
+  if (map == undefined) return undefined;
   // real binary search from real algorithm class
   var b = 0;
-  var e = map.length;
-  while (b != e) {
+  var e = map.length-1;
+  var best = undefined;
+  while (b <= e) {
     var mid = (b+e)>>1;
-    if (a <= map[mid][0]) {
-      e = mid;
-    } else {
+    // do we include the current change?
+    if (map[mid][0] <= a) {
       b = mid+1;
+      best = mid;
+    } else {
+      e = mid-1;
     }
   }
-  return map[b][1];
+  if (best == undefined) {
+    return undefined;
+  } else {
+    console.log("search for "+a+" found "+map[best][0]);
+    return map[best][1];
+  }
 }
 
 Meteor.startup(function () {
@@ -55,8 +61,9 @@ var X86REGS = ['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'];
 stream.on('getregisters', function(clnum) {
   var ret = [];
   for (var i = 0; i < X86REGS.length; i++) {
-    if (regs[i*4] !== undefined) {
-      ret.push({"name": X86REGS[i], "value": map_getbelow(regs[i*4], clnum)});
+    var val = map_getbelow(regs[i*4], clnum)
+    if (val !== undefined) {
+      ret.push({"name": X86REGS[i], "value": val});
     }
   }
   stream.emit("registers", ret);
@@ -65,8 +72,9 @@ stream.on('getregisters', function(clnum) {
 stream.on('getmemory', function(msg) {
   var ret = {}
   for (var i = msg['address']; i < msg['address'] + msg['len']; i++) {
-    if (mem[i] !== undefined) {
-      ret[i] = map_getbelow(mem[i], msg['clnum']);
+    var val = map_getbelow(mem[i], msg['clnum']);
+    if (val !== undefined) {
+      ret[i] = val;
     }
   }
   var rret = {'address': msg['address'], 'len': msg['len'], 'dat': ret};

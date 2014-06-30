@@ -43,7 +43,7 @@ Deps.autorun(function() {
   var daddr = Session.get('daddr');
   var clnum = Session.get('clnum');
   stream.emit('getmemory',
-      {"clnum":clnum-1, "address":(daddr-0x20)-(daddr-0x20)%0x10, "len":0x100});
+      {"clnum":clnum, "address":(daddr-0x20)-(daddr-0x20)%0x10, "len":0x100});
 });
 
 Deps.autorun(function() {
