@@ -1,29 +1,24 @@
 <head>
   <title>qira</title>
-  <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.2/jquery.mobile-1.4.2.min.css">
+  <!--<link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.2/jquery.mobile-1.4.2.min.css">-->
 </head>
 
 <body>
-<div id="timeline">
+<!--<div id="timeline">
 <div id="cl_selector_box">
 <input type="range" id="cl_selector" value="1" min="1" max="1">
 </div>
+</div>-->
+<div id="vtimeline">
 </div>
-<!--
-<div id="cfg">
-{{> cfg}}
-</div>
-<div id="rightpanel">-->
 <div id="onlypanel">
 <div id="clviewer">
 {{> changelist}}
 </div>
 <div id="regviewer">
-<!--regviewer-->
-<!--{{> regviewer}}-->
 </div>
 <div id="hexeditor">
-<div id="hexdump"></div>
+{{> memviewer}}
 </div>
 </div>
 </body>
@@ -36,25 +31,8 @@
 {{/each}}
 </template>
 
-<template name="cfg">
-{{#each blocks}}
-  <!--block {{clstart}}-{{clend}} from {{hexstart}}-{{hexend}}-->
-  <div class="block" style="margin-left: {{ddepth}}px">
-    <!--{{loopcnt}}-->
-    {{#each instructions}}
-      <div class="instruction">
-      <div class="change {{ischange}}">{{clnum}}</div>
-      {{#with program_instruction}}
-          <span class="name">{{name}}</span>
-          <span class="address {{isiaddr}}">{{hexaddress}}</span>
-          {{instruction}}
-          <span class="comment">{{comment}}</span>
-      {{/with}}
-      </div>
-    {{/each}}
-    <div class="collapse">{{fxncollapse}}</div>
-  </div><br/>
-{{/each}}
+<template name="memviewer">
+<div id="hexdump"></div>
 </template>
 
 <!-- related to the changelist viewer -->

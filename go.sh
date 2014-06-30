@@ -16,10 +16,12 @@ fi
 
 cd scripts
 #echo "hello" | ./run_qemu.sh $BIN
-echo "4t_l34st_it_was_1mperat1v3..." | ./run_qemu.sh $BIN
-python db_commit_asm.py $BIN $SRC
+#echo "4t_l34st_it_was_1mperat1v3..." | ./run_qemu.sh $BIN
+echo "i wish i were a valid key bob" | ./run_qemu.sh $BIN
+#python db_commit_asm.py $BIN $SRC
 python db_commit_log.py
-python db_commit_blocks.py
-python memory_server.py
+python mem_json_extract.py
+#python db_commit_blocks.py
+#python memory_server.py
 #python build_multigraph.py
 

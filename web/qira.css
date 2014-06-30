@@ -23,6 +23,40 @@
   font-size: 8px !important;
 }
 
+#vtimeline {
+  width: 100px;
+  height: 100%;
+  position: fixed;
+  background-color: #282828;
+}
+
+.flag {
+  width: 100px;
+  height: 1px;
+  position: fixed;
+  font-family: monospace;
+}
+
+.flagchange {
+  background-color: blue !important;
+  color: blue !important;
+}
+
+.flagiaddr {
+  background-color: red;
+  color: red;
+}
+
+.flagdaddrr {
+  background-color: #888800;
+  color: #888800;
+}
+
+.flagdaddrw {
+  background-color: yellow;
+  color: yellow;
+}
+
 #timeline {
   width: 100%;
   height: 50px;
@@ -52,29 +86,31 @@
 }
 
 #onlypanel {
-  background-color: #FFAAAA;
+  background-color: #AAAAAA;
   border: 1px solid black;
   height: 100%;
+  display: inline-block;
   position: fixed;
+  left: 100px;
 }
 
 #clviewer {
   height: 320px;
   border: 1px solid gray;
-  background-color: #9999FF;
+  background-color: #DDDDDD;
 }
 
 #regviewer {
   height: 80px;
   border: 1px solid gray;
-  background-color: #FFCCFF;
+  background-color: #DDDDDD;
   border: 1px solid black;
-  width: 500px;
+  width: 600px;
 }
 
 #hexeditor {
   border: 1px solid gray;
-  background-color: #FFFF55;
+  background-color: #DDDDDD;
 }
 
 #cl_selector {
@@ -100,8 +136,8 @@
 }
 
 .change {
-  color: yellow;
-  width: 35px;
+  color: #888800;
+  width: 50px;
   display: inline-block;
 }
 
@@ -131,5 +167,4 @@ body {
 .instruction {
   font-family: monospace;
 }
-
 

@@ -16,9 +16,9 @@ window.onmousewheel = function(e) {
     }
   } else if (e.target.id == "hexdump" || $(e.target).parents("#hexdump").length > 0) {
     if (e.wheelDelta < 0) {
-      Session.set('daddr', Session.get('daddr')+0x10);
+      Session.set('dview', Session.get('dview')+0x10);
     } else if (e.wheelDelta > 0) {
-      Session.set('daddr', Session.get('daddr')-0x10);
+      Session.set('dview', Session.get('dview')-0x10);
     }
   }
 };
@@ -31,7 +31,7 @@ Deps.autorun(function() {
   json['clnum'] = Session.get('clnum');
   json['iaddr'] = Session.get('iaddr');
   json['daddr'] = Session.get('daddr');
-  json['collapsed'] = Session.get('collapsed');
+  json['dview'] = Session.get('dview');
   var hash = JSON.stringify(json);
   //p("updating hash to "+hash);
   window.location.hash = hash;
@@ -55,15 +55,6 @@ window.onload = check_hash;
 // TODO: fix this to not snapback
 //window.onhashchange = check_hash;
 
-Deps.autorun(function() {
-  var cl_selector = $('#cl_selector');
-  var clnum = Session.get("clnum");
-  var max_clnum = Session.get("max_clnum");
-  if (cl_selector.length > 0) {
-    cl_selector[0].value = clnum;
-    cl_selector.slider('refresh');
-  }
-});
 
 Meteor.subscribe('max_clnum', {onReady: function() {
   post = Change.findOne({}, {sort: {clnum: -1}});
@@ -71,12 +62,22 @@ Meteor.subscribe('max_clnum', {onReady: function() {
   Session.setDefault("clnum", post.clnum);
   Session.set("max_clnum", post.clnum);
 
-  var cl_selector = $('#cl_selector');
+  /*var cl_selector = $('#cl_selector');
   cl_selector[0].max = post.clnum;
   cl_selector.on("change", function(e) {
     var val = parseInt($('#cl_selector')[0].value);
     Session.set('clnum', val);
   });
-  cl_selector.slider('refresh');
+  cl_selector.slider('refresh');*/
 }});
+
+/*Deps.autorun(function() {
+  var cl_selector = $('#cl_selector');
+  var clnum = Session.get("clnum");
+  var max_clnum = Session.get("max_clnum");
+  if (cl_selector.length > 0) {
+    cl_selector[0].value = clnum;
+    cl_selector.slider('refresh');
+  }
+});*/
 

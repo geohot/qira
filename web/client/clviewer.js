@@ -42,7 +42,10 @@ Template.change.is_mem = function() {
 Template.change.events({
   'click .daddress': function() {
     p("new daddr is "+hex(this.address));
-    Session.set('daddr', this.address);
+    var addr = this.address;
+    // update_dview should be called here
+    Session.set('daddr', addr);
+    Session.set('dview', (addr-0x20)-(addr-0x20)%0x10);
   },
 });
 

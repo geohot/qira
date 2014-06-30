@@ -40,7 +40,7 @@ function map_getbelow(map, a) {
   if (best == undefined) {
     return undefined;
   } else {
-    console.log("search for "+a+" found "+map[best][0]);
+    //console.log("search for "+a+" found "+map[best][0]);
     return map[best][1];
   }
 }
