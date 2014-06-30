@@ -9,15 +9,20 @@ var fs = Npm.require('fs');
 // eww javascript classes
 
 function map_create(dic) {
-  var map = [];
-  for (i in dic) {
-    map.push([i, dic[i]]);
+  var ret = {};
+  for (j in dic) {
+    var map = [];
+    for (i in dic[j]) {
+      map.push([i, dic[j][i]]);
+    }
+    map.sort(function(a, b) { return a[0]-b[0]; })
+    ret[j] = map;
   }
-  map.sort(function(a, b) { return a[0]-b[0]; })
+  return ret;
 }
 
 function map_getbelow(map, a) {
-  // hacks
+  // hacks, shouldn't happen
   if (map.length == 0) return 0;
 
   // real binary search from real algorithm class
@@ -48,11 +53,23 @@ Meteor.startup(function () {
 // shouldn't be here
 var X86REGS = ['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'];
 stream.on('getregisters', function(clnum) {
-  /*ret = [];
+  var ret = [];
   for (var i = 0; i < X86REGS.length; i++) {
-    ret.push({"name": X86REGS, "value": map_getbelow(regs, i)});
+    if (regs[i*4] !== undefined) {
+      ret.push({"name": X86REGS[i], "value": map_getbelow(regs[i*4], clnum)});
+    }
   }
-  stream.emit("registers", ret);*/
-  stream.emit("registers", {});
+  stream.emit("registers", ret);
+});
+
+stream.on('getmemory', function(msg) {
+  var ret = {}
+  for (var i = msg['address']; i < msg['address'] + msg['len']; i++) {
+    if (mem[i] !== undefined) {
+      ret[i] = map_getbelow(mem[i], msg['clnum']);
+    }
+  }
+  var rret = {'address': msg['address'], 'len': msg['len'], 'dat': ret};
+  stream.emit("memory", rret);
 });
 

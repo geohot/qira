@@ -1,10 +1,12 @@
 var ws = undefined;
 
 function do_ida_socket(callme) {
-  if (ws == undefined) {
-    p('connecting to IDA socket');
+  if (ws == undefined || ws.readyState == WebSocket.CLOSED) {
     ws = new WebSocket('ws://localhost:3003', 'qira');
-    ws.onopen = callme;
+    ws.onopen = function() {
+      p('connected to IDA socket');
+      callme();
+    };
     ws.onmessage = function(msg) {
       //p(msg.data);
       var dat = msg.data.split(" ");
