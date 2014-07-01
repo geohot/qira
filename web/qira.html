@@ -20,9 +20,6 @@
 <div id="idump">
 {{> idump}}
 </div>
-<div id="clviewer">
-{{> changelist}}
-</div>
 <div id="regviewer">
 </div>
 <div id="datachanges">
@@ -70,46 +67,5 @@
 
 <template name="memviewer">
 <div id="hexdump"></div>
-</template>
-
-<!-- related to the changelist viewer -->
-
-<template name="changelist">
-  <table id="bigcltable">
-  <tr><td>
-  <table class="cltable">
-  {{#each currentchanges}}
-    {{> change}}
-  {{/each}}
-  </table>
-  </td><td>
-  <table class="cltable">
-  {{#each icllist}}
-    {{> cl}}
-  {{/each}}
-  </table>
-  </td><td>
-  <table class="cltable">
-  {{#each dcllist}}
-    {{> cl}}
-  {{/each}}
-  </table>
-  </td></tr></table>
-</template>
-
-<template name="cl">
-  <tr><td class="change">{{clnum}}</td><td>{{type}}</td></tr>
-</template>
-
-<template name="change">
-  <tr>
-    {{#if is_mem}}
-      <td class="daddress">{{handleaddress}}</td>
-    {{else}}
-      <td>{{handleaddress}}</td>
-    {{/if}}
-    <td>{{type}}</td>
-    <td>{{handledata}}</td>
-  </tr>
 </template>
 

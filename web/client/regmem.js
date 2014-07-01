@@ -152,5 +152,9 @@ Deps.autorun(function() {
 });
 
 Meteor.subscribe('pmaps');
-Deps.autorun(function(){ Meteor.subscribe('dat_clnum', Session.get("clnum")); });
+Deps.autorun(function(){ Meteor.subscribe('dat_clnum', Session.get("clnum"), {onReady: function() {
+  var row = Change.findOne({"clnum": Session.get("clnum"), "type": "I"});
+  if (row === undefined) return;
+  Session.set("iaddr", row.address);
+}}); });
 
