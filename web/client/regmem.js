@@ -10,6 +10,12 @@ Meteor.startup(function() {
   });
 });
 
+function get_data_type(v) {
+  var a = Pmaps.findOne({address: v - v%0x1000});
+  if (a === undefined) return "";
+  else return "data"+a.type;
+}
+
 stream.on('memory', function(msg) {
   // render the hex editor
   var addr = msg['address'];
@@ -29,14 +35,14 @@ stream.on('memory', function(msg) {
       var t = msg['dat'][addr+i+j];
       if (t !== undefined) v += t;
     }
-    var a = Pmaps.findOne({address: v - v%0x1000});
-    if (a !== undefined) {
+    var a = get_data_type(v);
+    if (a !== "") {
       var me = v.toString(16);
       //while (me.length != 8) me = "0" + me;
       me = "0x"+me;
       var exclass = "";
       if (addr+i == Session.get('daddr')) { exclass = "highlight"; }
-      html += '<td colspan="4" class="data data'+a.type+' '+exclass+'" daddr='+(addr+i)+">"+me+"</td>";
+      html += '<td colspan="4" class="data '+a+' '+exclass+'" daddr='+(addr+i)+">"+me+"</td>";
     } else {
       for (var j = 0; j < 4; j++) {
         var ii = msg['dat'][addr+i+j];
@@ -78,6 +84,17 @@ function update_dview(addr) {
   Session.set('dview', (addr-0x20)-(addr-0x20)%0x10);
 }
 
+var baseevents = {
+  'click .datamemory': function(e) {
+    var daddr = parseInt(e.target.innerHTML, 16);
+    update_dview(daddr);
+  },
+  'click .datainstruction': function(e) {
+    var iaddr = parseInt(e.target.innerHTML, 16);
+    Session.set('iaddr', iaddr);
+  },
+};
+
 Template.memviewer.events({
   'dblclick .datamemory': function(e) {
     var daddr = parseInt(e.target.innerHTML, 16);
@@ -92,6 +109,9 @@ Template.memviewer.events({
     Session.set('daddr', daddr);
   },
 });
+
+Template.datachanges.events(baseevents);
+Template.regviewer.events(baseevents);
 
 stream.on('registers', function(msg) {
   $('#regviewer')[0].innerHTML = "";
@@ -113,11 +133,9 @@ Template.regviewer.hexvalue = function() {
   return hex(this.value);
 };
 
-Template.regviewer.events({
-  'click .daddress': function() {
-    update_dview(this.value);
-  },
-});
+Template.regviewer.datatype = function() {
+  return get_data_type(this.value);
+};
 
 Template.datachanges.memactions = function() {
   var clnum = Session.get("clnum");
@@ -137,6 +155,14 @@ Template.datachanges.typeclass = function() {
 
 Template.datachanges.hexdata = function() {
   return hex(this.data);
+};
+
+Template.datachanges.addrtype = function() {
+  return get_data_type(this.address);
+};
+
+Template.datachanges.datatype = function() {
+  return get_data_type(this.data);
 };
 
 // keep these updated

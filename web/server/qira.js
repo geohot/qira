@@ -41,8 +41,3 @@ Meteor.publish('dat_daddr', function(daddr) {
   }
 });
 
-Meteor.publish('dat_iaddr', function(iaddr) {
-  // fetch the static info about the range
-  return Change.find({address: iaddr, type: "I"}, {sort: {clnum: 1}, limit:30})
-});
-

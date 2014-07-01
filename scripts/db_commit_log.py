@@ -28,7 +28,7 @@ for (address, data, clnum, flags) in dat:
 
 #coll = db.tinychange
 coll = db.change
-print "doing db insert"
+print "doing db insert of",len(ds),"changes"
 coll.drop()
 coll.insert(ds)
 print "db insert done, building indexes"

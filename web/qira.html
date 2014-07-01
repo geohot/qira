@@ -17,30 +17,25 @@
 <div id="controls">
 {{> controls}}
 </div>
-<div id="idump">
+<div class="panelthing" id="idump">
 {{> idump}}
 </div>
-<div id="regviewer">
+<div class="panelthing" id="regviewer">
 </div>
-<div id="datachanges">
+<div class="panelthing" id="datachanges">
 {{>datachanges}}
 </div>
-<div id="hexeditor">
+<div class="panelthing" id="hexeditor">
 {{> memviewer}}
 </div>
 </div>
 </body>
 
-<template name="datachanges">
-  {{#each memactions}}
-    <span class="datachanges {{typeclass}}">{{hexaddress}} {{type}} {{hexdata}}</span>
-  {{/each}}
-</template>
 
 <template name="controls">
-<input id="control_clnum" class="control datachange" value={{clnum}} />
-<input id="control_iaddr" class="control datainstruction" value="{{iaddr}}" />
-<input id="control_daddr" class="control datamemory" value="{{daddr}}" />
+<input spellcheck="false" id="control_clnum" class="control datachange" value={{clnum}} />
+<input spellcheck="false" id="control_iaddr" class="control datainstruction" value="{{iaddr}}" />
+<input spellcheck="false" id="control_daddr" class="control datamemory" value="{{daddr}}" />
 </template>
 
 <template name="idump">
@@ -49,7 +44,7 @@
   <div class="change {{ischange}}">{{clnum}}</div>
   {{#with program_instruction}}
       <span class="name">{{name}}</span>
-      <span class="address {{isiaddr}}">{{hexaddress}}</span>
+      <span class="datainstruction {{isiaddr}}">{{hexaddress}}</span>
       {{instruction}}
       <span class="comment">{{comment}}</span>
   {{/with}}
@@ -60,9 +55,19 @@
 <template name="regviewer">
 {{#each regs}}
   <div class="reg {{regactions}}">
-  {{name}}: <span class="daddress">{{hexvalue}}</span>
+  {{name}}: <span class="{{datatype}}">{{hexvalue}}</span>
   </div>
 {{/each}}
+</template>
+
+<template name="datachanges">
+  {{#each memactions}}
+    <span class="datachanges {{typeclass}}">
+      <span class="{{addrtype}}">{{hexaddress}}</span>
+      &lt;--
+      <span class="{{datatype}}">{{hexdata}}</span>
+    </span>
+  {{/each}}
 </template>
 
 <template name="memviewer">

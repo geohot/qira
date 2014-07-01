@@ -1,6 +1,6 @@
 Meteor.startup(function() {
   Deps.autorun(function() {
-    zoom_out_max();
+    zoom_out_max(true);
   });
 
   /*$("#vtimeline").click(function(e) {
@@ -24,14 +24,14 @@ Meteor.startup(function() {
       Session.set("cview", [cview[0] + move, cview[1] + move]);
     }
   });
-
   register_drag_zoom();
 });
 
-function zoom_out_max() {
+function zoom_out_max(dontforce) {
   var max = Session.get("max_clnum");
   if (max === undefined) return;
-  Session.set("cview", [0, max]);
+  if (dontforce === true)  Session.setDefault("cview", [0, max]);
+  else Session.set("cview", [0, max]);
 }
 
 function register_drag_zoom() {
@@ -95,12 +95,32 @@ function redraw_flags() {
   var cscale = get_cscale();
   if (cscale === undefined) return;
   $(".flag").remove();
+  var colors = {
+    "change": "blue",
+    "ciaddr": "#AA0000", // keep it alphabetical
+    "daddrr": "#888800",
+    "daddrw": "yellow"
+  };
   for (clnum in flags) {
     var classes = "flag";
     clnum = parseInt(clnum);
     if (clnum < cview[0] || clnum > cview[1]) continue;
-    for (var i = 0; i < flags[clnum].length; i++) classes += " flag"+flags[clnum][i];
-    var flag = $('<div id="flag'+clnum+'" class="'+classes+'">'+clnum+'</div>');
+    sty = "";
+    if (flags[clnum].length == 0) continue;
+    else if (flags[clnum].length == 1) {
+      var col = colors[flags[clnum][0]];
+      sty = "background-color:"+col+"; color:"+col;
+    }
+    else {
+      sty = "background: linear-gradient(to right"
+      var cols = flags[clnum].sort()
+      for (var i = 0; i < cols.length; i++) {
+        sty += ","+colors[cols[i]];
+      }
+      sty += ")";
+    }
+
+    var flag = $('<div id="flag'+clnum+'" class="flag" style="'+sty+'">'+clnum+'</div>');
     flag[0].style.marginTop = ((clnum-cview[0])/cscale) + "px";
     flag.click(function(cln) { Session.set("clnum", cln); }.bind(undefined, clnum));
     $('#vtimeline').append(flag);
@@ -130,10 +150,9 @@ Deps.autorun(function() {
 Deps.autorun(function() {
   var clnum = Session.get("clnum");
   var iaddr = Session.get('iaddr');
-  remove_flags("iaddr");
+  remove_flags("ciaddr");
   Change.find({address: iaddr, type: "I"}).forEach(function(x) {
-    if (x.clnum == clnum) return;
-    add_flag("iaddr", x.clnum);
+    add_flag("ciaddr", x.clnum);
   });
   redraw_flags();
 });
@@ -145,7 +164,6 @@ Deps.autorun(function() {
   remove_flags("daddrw");
   //Change.find({address: daddr, $or: [{type: "L"}, {type: "S"}] }).forEach(function(x) {
   Change.find({address: daddr}).forEach(function(x) {
-    if (x.clnum == clnum) return;
     if (x.type == "L") add_flag("daddrr", x.clnum);
     if (x.type == "S") add_flag("daddrw", x.clnum);
   });
