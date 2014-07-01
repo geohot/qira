@@ -23,10 +23,14 @@
   font-size: 8px !important;
 }
 
-#vtimeline {
+#vtimelinebox {
   width: 100px;
   height: 100%;
   position: fixed;
+  background-color: #AAAAAA;
+}
+
+#vtimeline {
   background-color: #282828;
 }
 
@@ -115,6 +119,14 @@
   width: 600px;
 }
 
+#datachanges {
+  border: 1px solid gray;
+  background-color: #DDDDDD;
+  font-family: monospace;
+  padding: 2px;
+  height: 20px;
+}
+
 #hexeditor {
   border: 1px solid gray;
   background-color: #DDDDDD;
@@ -171,6 +183,15 @@ body {
   font-family: monospace;
 }
 
+.control {
+  font-family: monospace;
+  font-size: 16px;
+  width: 180px;
+  border: 1px solid black;
+  padding: 2px;
+  margin: 5px;
+}
+
 .instruction {
   font-family: monospace;
 }
@@ -179,11 +200,23 @@ body {
   text-align: right;
 }
 
+.datachange {
+  color: blue;
+}
+
 .datainstruction {
   color: #CC0000;
 }
 
 .datamemory {
   color: #888800;
+}
+
+.regread {
+  background-color: #888800;
+}
+
+.regwrite {
+  background-color: yellow !important;
 }
 

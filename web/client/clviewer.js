@@ -23,18 +23,6 @@ Template.changelist.dcllist = function() {
   }
 };
 
-Template.changelist.events({
-  'change #daddr_input': function() {
-    if ($("#daddr_input")[0].value == "") {
-      Session.set('daddr', undefined);
-      return;
-    }
-    var daddr = parseInt($("#daddr_input")[0].value, 16);
-    p("new daddr is "+daddr);
-    Session.set('daddr', daddr);
-  },
-});
-
 Template.change.is_mem = function() {
   return this.type == "L" || this.type == "S";
 };

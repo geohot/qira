@@ -61,9 +61,9 @@ var X86REGS = ['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'];
 stream.on('getregisters', function(clnum) {
   var ret = [];
   for (var i = 0; i < X86REGS.length; i++) {
-    var val = map_getbelow(regs[i*4], clnum)
+    var val = map_getbelow(regs[i*4], clnum);
     if (val !== undefined) {
-      ret.push({"name": X86REGS[i], "value": val});
+      ret.push({"name": X86REGS[i], "address": i*4, "value": val});
     }
   }
   stream.emit("registers", ret);

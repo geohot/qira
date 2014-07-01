@@ -1,5 +1,12 @@
-//Change = new Meteor.Collection("change");
-//Program = new Meteor.Collection("program");
+Meteor.startup(function() {
+  $("#idump")[0].addEventListener("mousewheel", function(e) {
+    if (e.wheelDelta < 0) {
+      Session.set('clnum', Session.get('clnum')+1);
+    } else if (e.wheelDelta > 0) {
+      Session.set('clnum', Session.get('clnum')-1);
+    }
+  });
+});
 
 Template.idump.ischange = function() {
   var clnum = Session.get("clnum");

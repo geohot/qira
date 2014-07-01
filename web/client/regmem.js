@@ -1,16 +1,26 @@
 stream = new Meteor.Stream('regmem');
 
+Meteor.startup(function() {
+  $("#hexdump")[0].addEventListener("mousewheel", function(e) {
+    if (e.wheelDelta < 0) {
+      Session.set('dview', Session.get('dview')+0x10);
+    } else if (e.wheelDelta > 0) {
+      Session.set('dview', Session.get('dview')-0x10);
+    }
+  });
+});
+
 stream.on('memory', function(msg) {
   // render the hex editor
   var addr = msg['address'];
   html = "<table><tr>";
-  str = "";
   for (var i = 0; i < msg['len']; i+=4) {
     if ((i&0xF) == 0) html += "</tr><tr><td>"+hex(addr+i)+":</td>";
     html += "<td></td>";
 
     // check if it's an address
     var v = 0;
+    
     for (var j = 3; j >= 0; j--) {
       if (addr+i+j == Session.get('daddr')) {
         exclass = "highlight";
@@ -29,14 +39,10 @@ stream.on('memory', function(msg) {
       html += '<td colspan="4" class="data data'+a.type+' '+exclass+'" daddr='+(addr+i)+">"+me+"</td>";
     } else {
       for (var j = 0; j < 4; j++) {
-        if (msg['dat'][addr+i+j] === undefined) {
+        var ii = msg['dat'][addr+i+j];
+        if (ii === undefined) {
           var me = "__";
-          str += "&nbsp;";
         } else {
-          var ii = msg['dat'][addr+i+j];
-          if (ii >= 0x21 && ii <= 0x7e) str += String.fromCharCode(ii);
-          else str += "&nbsp;";
-
           var me = ii.toString(16);
           if (me.length == 1) me = "0" + me;
         }
@@ -46,7 +52,22 @@ stream.on('memory', function(msg) {
       }
     }
 
-    if ((i&0xF) == 0xF) { html += "<td>" + str + "</td>"; str = ""; }
+    // this must run on the last one too
+    if ((i&0xF) == 0xC) { 
+      str = "";
+      for (var j = 0; j < 0x10; j++) {
+        // ewww
+        var ii = msg['dat'][addr+i-0xC+j];
+        if (ii == 0x20) str += "&nbsp;";
+        else if (ii == 0x26) str += "&amp;";
+        else if (ii == 0x3C) str += "&lt;";
+        else if (ii == 0x3E) str += "&gt;";
+        else if (ii >= 0x21 && ii <= 0x7e) str += String.fromCharCode(ii);
+        else if (ii == undefined) str += "&nbsp;";
+        else str += ".";
+      }
+      html += "<td>" + str + "</td>"; str = "";
+    }
   }
   html += "</tr></table>";
   $("#hexdump")[0].innerHTML = html;
@@ -77,6 +98,17 @@ stream.on('registers', function(msg) {
   UI.insert(UI.renderWithData(Template.regviewer, {regs: msg}), $('#regviewer')[0]);
 });
 
+Template.regviewer.regactions = function() {
+  var ret = "";
+  var cur = Change.find({address: this.address,
+    $or: [{type: "R"}, {type: "W"}]});
+  cur.forEach(function(post) {
+    if (post.type == "R") ret += " regread";
+    if (post.type == "W") ret += " regwrite";
+  });
+  return ret;
+};
+
 Template.regviewer.hexvalue = function() {
   return hex(this.value);
 };
@@ -87,18 +119,38 @@ Template.regviewer.events({
   },
 });
 
+Template.datachanges.memactions = function() {
+  var clnum = Session.get("clnum");
+  var cur = Change.find({clnum: clnum,
+    $or: [{type: "L"}, {type: "S"}]});
+  return cur;
+};
+
+Template.datachanges.hexaddress = function() {
+  return hex(this.address);
+};
+
+Template.datachanges.typeclass = function() {
+  if (this.type == "L") return "regread";
+  else if (this.type == "S") return "regwrite";
+};
+
+Template.datachanges.hexdata = function() {
+  return hex(this.data);
+};
+
 // keep these updated
 Deps.autorun(function() {
   var daddr = Session.get('daddr');
   var dview = Session.get('dview');
   var clnum = Session.get('clnum');
-  stream.emit('getmemory', {"clnum":clnum, "address":dview, "len":0x100});
+  stream.emit('getmemory', {"clnum":clnum-1, "address":dview, "len":0x100});
 });
 
 Deps.autorun(function() {
-  stream.emit('getregisters', Session.get('clnum'));
+  stream.emit('getregisters', Session.get('clnum')-1);
 });
 
 Meteor.subscribe('pmaps');
-
+Deps.autorun(function(){ Meteor.subscribe('dat_clnum', Session.get("clnum")); });
 

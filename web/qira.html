@@ -9,9 +9,14 @@
 <input type="range" id="cl_selector" value="1" min="1" max="1">
 </div>
 </div>-->
+<div id="vtimelinebox">
 <div id="vtimeline">
 </div>
+</div>
 <div id="onlypanel">
+<div id="controls">
+{{> controls}}
+</div>
 <div id="idump">
 {{> idump}}
 </div>
@@ -20,12 +25,26 @@
 </div>
 <div id="regviewer">
 </div>
+<div id="datachanges">
+{{>datachanges}}
+</div>
 <div id="hexeditor">
 {{> memviewer}}
 </div>
 </div>
 </body>
 
+<template name="datachanges">
+  {{#each memactions}}
+    <span class="datachanges {{typeclass}}">{{hexaddress}} {{type}} {{hexdata}}</span>
+  {{/each}}
+</template>
+
+<template name="controls">
+<input id="control_clnum" class="control datachange" value={{clnum}} />
+<input id="control_iaddr" class="control datainstruction" value="{{iaddr}}" />
+<input id="control_daddr" class="control datamemory" value="{{daddr}}" />
+</template>
 
 <template name="idump">
 {{#each instructions}}
@@ -43,7 +62,7 @@
 
 <template name="regviewer">
 {{#each regs}}
-  <div class="reg">
+  <div class="reg {{regactions}}">
   {{name}}: <span class="daddress">{{hexvalue}}</span>
   </div>
 {{/each}}
@@ -58,25 +77,21 @@
 <template name="changelist">
   <table id="bigcltable">
   <tr><td>
-  iaddr<br/>{{iaddr}}
-  <br/>instruction
+  <table class="cltable">
+  {{#each currentchanges}}
+    {{> change}}
+  {{/each}}
+  </table>
+  </td><td>
   <table class="cltable">
   {{#each icllist}}
     {{> cl}}
   {{/each}}
   </table>
   </td><td>
-  daddr<br/><input value={{daddr}} id="daddr_input" />
   <table class="cltable">
   {{#each dcllist}}
     {{> cl}}
-  {{/each}}
-  </table>
-  </td><td>
-  clnum {{clnum}}
-  <table class="cltable">
-  {{#each currentchanges}}
-    {{> change}}
   {{/each}}
   </table>
   </td></tr></table>
