@@ -152,9 +152,31 @@ Deps.autorun(function() {
 });
 
 Meteor.subscribe('pmaps');
+// hacks to keep iaddr in sync with clnum
 Deps.autorun(function(){ Meteor.subscribe('dat_clnum', Session.get("clnum"), {onReady: function() {
   var row = Change.findOne({"clnum": Session.get("clnum"), "type": "I"});
-  if (row === undefined) return;
-  Session.set("iaddr", row.address);
+  if (row !== undefined && Session.get("iaddr") !== row.address) {
+    Session.set("iaddr", row.address);
+  }
 }}); });
+
+Deps.autorun(function(){ Meteor.subscribe('dat_iaddr', Session.get("iaddr"), {onReady: function() {
+  var closest = undefined;
+  var diff = 0;
+  var clnum = Session.get("clnum");
+  Change.find({"address": Session.get("iaddr"), "type": "I"}).forEach(function(x) {
+    var ldiff = Math.abs(x.clnum - clnum);
+    if (closest == undefined || diff > ldiff) {
+      closest = x.clnum;
+      diff = ldiff;
+      return;
+    }
+  });
+  //p("nearest change is "+closest);
+  if (closest !== undefined && closest !== clnum) {
+    Session.set("clnum", closest);
+  }
+}}); });
+
+Deps.autorun(function(){ Meteor.subscribe('dat_daddr', Session.get("daddr")); });
 
