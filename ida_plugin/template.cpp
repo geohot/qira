@@ -146,6 +146,7 @@ int IDAP_init(void) {
 
 void IDAP_term(void) {
   unhook_from_notification_point(HT_UI, hook);
+  exit_websocket_thread();
 	return;
 }
 

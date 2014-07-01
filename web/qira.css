@@ -77,16 +77,21 @@ body {
 
 #regviewer {
   height: 80px;
-  border: 1px solid gray;
   background-color: #DDDDDD;
+  padding: 2px;
   border: 1px solid black;
-  width: 600px;
+  width: 620px;
 }
 
 #datachanges {
   font-family: monospace;
   padding: 2px;
-  height: 20px;
+  min-height: 20px;
+  width: 620px;
+}
+
+.datachanges {
+  display: inline-block;
 }
 
 .change {

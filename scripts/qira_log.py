@@ -19,3 +19,12 @@ def read_log(fn):
 
   return ret
 
+
+def write_log(fn, dat):
+  ss = []
+  for (address, data, clnum, flags) in dat:
+    ss.append(struct.pack("QQII", address, data, clnum, flags))
+  f = open(fn, "wb")
+  f.write(''.join(ss))
+  f.close()
+

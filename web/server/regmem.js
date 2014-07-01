@@ -45,7 +45,7 @@ function map_getbelow(map, a) {
   }
 }
 
-Meteor.startup(function () {
+function read_memdb() {
   fs.readFile("/tmp/qira_memdb", function(err, data) {
     if (err) throw err;
     console.log("read memdb");
@@ -53,6 +53,19 @@ Meteor.startup(function () {
     regs = map_create(dat['regs']);
     mem = map_create(dat['mem']);
     console.log("parsed memdb");
+  });
+}
+
+var tmout = undefined;
+Meteor.startup(function () {
+  read_memdb();
+  fs.watch("/tmp/qira_memdb", {}, function(e, fn) {
+    console.log("watch tripped "+e+" "+fn);
+    if (tmout !== undefined) {
+      clearTimeout(tmout);
+      tmout = undefined;
+    }
+    tmout = setTimeout(read_memdb, 200);
   });
 });
 

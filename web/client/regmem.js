@@ -140,7 +140,7 @@ Template.regviewer.datatype = function() {
 Template.datachanges.memactions = function() {
   var clnum = Session.get("clnum");
   var cur = Change.find({clnum: clnum,
-    $or: [{type: "L"}, {type: "S"}]});
+    $or: [{type: "L"}, {type: "S"}]}, {limit: 3});
   return cur;
 };
 

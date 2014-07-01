@@ -62,11 +62,11 @@
 
 <template name="datachanges">
   {{#each memactions}}
-    <span class="datachanges {{typeclass}}">
+    <div class="datachanges {{typeclass}}">
       <span class="{{addrtype}}">{{hexaddress}}</span>
       &lt;--
       <span class="{{datatype}}">{{hexdata}}</span>
-    </span>
+    </div>
   {{/each}}
 </template>
 
