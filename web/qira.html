@@ -12,6 +12,9 @@
 <div id="vtimeline">
 </div>
 <div id="onlypanel">
+<div id="idump">
+{{> idump}}
+</div>
 <div id="clviewer">
 {{> changelist}}
 </div>
@@ -22,6 +25,21 @@
 </div>
 </div>
 </body>
+
+
+<template name="idump">
+{{#each instructions}}
+  <div class="instruction">
+  <div class="change {{ischange}}">{{clnum}}</div>
+  {{#with program_instruction}}
+      <span class="name">{{name}}</span>
+      <span class="address {{isiaddr}}">{{hexaddress}}</span>
+      {{instruction}}
+      <span class="comment">{{comment}}</span>
+  {{/with}}
+  </div>
+{{/each}}
+</template>
 
 <template name="regviewer">
 {{#each regs}}

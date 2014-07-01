@@ -12,7 +12,7 @@
   background-color: #f8e8ff;
 }
 .name {
-  color: blue;
+  color: purple;
 }
 .comment {
   color: purple;
@@ -55,6 +55,13 @@
 .flagdaddrw {
   background-color: yellow;
   color: yellow;
+}
+
+#idump {
+  height: 180px;
+  padding: 10px;
+  border: 1px solid black !important;
+  background-color: #DDDDDD;
 }
 
 #timeline {
@@ -136,7 +143,7 @@
 }
 
 .change {
-  color: #888800;
+  color: blue;
   width: 50px;
   display: inline-block;
 }
@@ -166,5 +173,17 @@ body {
 
 .instruction {
   font-family: monospace;
+}
+
+.data {
+  text-align: right;
+}
+
+.datainstruction {
+  color: #CC0000;
+}
+
+.datamemory {
+  color: #888800;
 }
 

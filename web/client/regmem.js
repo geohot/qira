@@ -5,48 +5,49 @@ stream.on('memory', function(msg) {
   var addr = msg['address'];
   html = "<table><tr>";
   str = "";
-  for (var i = 0; i < msg['len']; i++) {
+  for (var i = 0; i < msg['len']; i+=4) {
     if ((i&0xF) == 0) html += "</tr><tr><td>"+hex(addr+i)+":</td>";
-    if ((i&0x3) == 0) html += "<td></td>";
-    if (msg['dat'][addr+i] === undefined) {
-      var me = "__";
-      str += "&nbsp;";
-    } else {
-      var ii = msg['dat'][addr+i];
-      if (ii >= 0x21 && ii <= 0x7e) str += String.fromCharCode(ii);
-      else str += "&nbsp;";
+    html += "<td></td>";
 
-      var me = ii.toString(16);
-      if (me.length == 1) me = "0" + me;
+    // check if it's an address
+    var v = 0;
+    for (var j = 3; j >= 0; j--) {
+      if (addr+i+j == Session.get('daddr')) {
+        exclass = "highlight";
+      }
+      v *= 0x100;
+      var t = msg['dat'][addr+i+j];
+      if (t !== undefined) v += t;
     }
-    if (addr+i == Session.get('daddr')) {
-      html += '<td class="data highlight" daddr='+(addr+i)+'>'+me+"</td>";
+    var a = Pmaps.findOne({address: v - v%0x1000});
+    if (a !== undefined) {
+      var me = v.toString(16);
+      //while (me.length != 8) me = "0" + me;
+      me = "0x"+me;
+      var exclass = "";
+      if (addr+i == Session.get('daddr')) { exclass = "highlight"; }
+      html += '<td colspan="4" class="data data'+a.type+' '+exclass+'" daddr='+(addr+i)+">"+me+"</td>";
     } else {
-      html += '<td class="data" daddr='+(addr+i)+">"+me+"</td>";
+      for (var j = 0; j < 4; j++) {
+        if (msg['dat'][addr+i+j] === undefined) {
+          var me = "__";
+          str += "&nbsp;";
+        } else {
+          var ii = msg['dat'][addr+i+j];
+          if (ii >= 0x21 && ii <= 0x7e) str += String.fromCharCode(ii);
+          else str += "&nbsp;";
+
+          var me = ii.toString(16);
+          if (me.length == 1) me = "0" + me;
+        }
+        var exclass = "";
+        if (addr+i+j == Session.get('daddr')) { exclass = "highlight"; }
+        html += '<td class="data '+exclass+'" daddr='+(addr+i+j)+">"+me+"</td>";
+      }
     }
+
     if ((i&0xF) == 0xF) { html += "<td>" + str + "</td>"; str = ""; }
   }
-  /*for (var i = 0; i < msg['len']; i+=4) {
-    if ((i&0xF) == 0) html += "</tr><tr><td>"+hex(addr+i)+":</td>";
-
-    var exclass = "";
-    if (msg['dat'][addr+i] === undefined) {
-      var me = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
-    } else {
-      var v = 0;
-      for (var j = 3; j >= 0; j--) {
-        if (addr+i+j == Session.get('daddr')) {
-          exclass = "highlight";
-        }
-        v *= 0x100;
-        var t = msg['dat'][addr+i+j];
-        if (t !== undefined) v += t;
-      }
-      var me = v.toString(16);
-      while (me.length != 8) me = "0" + me;
-    }
-    html += '<td class="data '+exclass+'" daddr='+(addr+i)+">"+me+"</td>";
-  }*/
   html += "</tr></table>";
   $("#hexdump")[0].innerHTML = html;
 });
@@ -57,9 +58,13 @@ function update_dview(addr) {
 }
 
 Template.memviewer.events({
-  'dblclick .data': function(e) {
+  'dblclick .datamemory': function(e) {
     var daddr = parseInt(e.target.innerHTML, 16);
     update_dview(daddr);
+  },
+  'dblclick .datainstruction': function(e) {
+    var iaddr = parseInt(e.target.innerHTML, 16);
+    Session.set('iaddr', iaddr);
   },
   'click .data': function(e) {
     var daddr = parseInt(e.target.getAttribute('daddr'));
@@ -93,4 +98,7 @@ Deps.autorun(function() {
 Deps.autorun(function() {
   stream.emit('getregisters', Session.get('clnum'));
 });
+
+Meteor.subscribe('pmaps');
+
 

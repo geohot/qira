@@ -1,4 +1,4 @@
-Change = new Meteor.Collection("change");
+//Change = new Meteor.Collection("change");
 
 // bitops make numbers negative
 
@@ -7,8 +7,9 @@ Meteor.startup(function () {
 });
 
 window.onmousewheel = function(e) {
-  if (e.target.id == "cfg" || $(e.target).parents("#cfg").length > 0 ||
-      e.target.id == "clviewer" || $(e.target).parents("#clviewer").length > 0) {
+  if (e.target.id == "idump" || $(e.target).parents("#idump").length > 0 ||
+      e.target.id == "clviewer" || $(e.target).parents("#clviewer").length > 0 ||
+      e.target.id == "regviewer" || $(e.target).parents("#regviewer").length > 0) {
     if (e.wheelDelta < 0) {
       Session.set('clnum', Session.get('clnum')+1);
     } else if (e.wheelDelta > 0) {
@@ -32,6 +33,7 @@ Deps.autorun(function() {
   json['iaddr'] = Session.get('iaddr');
   json['daddr'] = Session.get('daddr');
   json['dview'] = Session.get('dview');
+  json['cview'] = Session.get('cview');
   var hash = JSON.stringify(json);
   //p("updating hash to "+hash);
   window.location.hash = hash;
