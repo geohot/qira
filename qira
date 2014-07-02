@@ -9,14 +9,15 @@ fi
 rm -f /tmp/qira_binary
 ln -s $(realpath $1) /tmp/qira_binary
 
-# build qemu for debugging
-pushd .
-cd qemu/qemu-latest
-make -j32
-popd
-
+# build qemu if we have the source
+if [ -d "qemu/qemu-latest" ]; then
+  pushd .
+  cd qemu/qemu-latest
+  make -j32
+  popd
+fi
 
 # detect which qemu to run based on the file
 shift
-./qemu/qemu-latest/i386-linux-user/qemu-i386 -singlestep /tmp/qira_binary $@
+./qemu/qira-i386 -singlestep /tmp/qira_binary $@
 

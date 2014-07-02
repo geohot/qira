@@ -162,4 +162,3 @@ if __name__ == '__main__':
     os.waitpid(meteor_pid, 0)
     print "cleanup done"
 
-

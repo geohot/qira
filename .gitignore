@@ -11,4 +11,5 @@ qiradb/qiradb
 old/qiradb/qiradb
 db/
 qemu/
+distrib/
 
