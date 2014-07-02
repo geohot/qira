@@ -447,6 +447,12 @@ struct change {
   uint32_t flags;
 };
 
+#define IS_VALID      0x80000000
+#define IS_WRITE      0x40000000
+#define IS_MEM        0x20000000
+#define IS_START      0x10000000
+#define SIZE_MASK 0xFF
+
 int GLOBAL_QIRA_did_init = 0;
 CPUArchState *GLOBAL_CPUArchState;
 struct change *GLOBAL_change_buffer;
@@ -461,15 +467,10 @@ uint32_t GLOBAL_is_filtered = 0;
 #define PENDING_CHANGES_MAX_ADDR 0x100
 struct change GLOBAL_pending_changes[PENDING_CHANGES_MAX_ADDR/4];
 
-#define IS_VALID      0x80000000
-#define IS_WRITE      0x40000000
-#define IS_MEM        0x20000000
-#define IS_START      0x10000000
-#define SIZE_MASK 0xFF
-
 void init_QIRA(CPUArchState *env) {
   QIRA_DEBUG("init QIRA called\n");
   GLOBAL_CPUArchState = env;
+  unlink("/tmp/qira_log");
   GLOBAL_qira_log_fd = open("/tmp/qira_log", O_RDWR | O_CREAT, 0644);
   GLOBAL_change_size = 1;
   GLOBAL_QIRA_did_init = 1;
@@ -481,9 +482,12 @@ void init_QIRA(CPUArchState *env) {
   GLOBAL_change_buffer =
     mmap(NULL, GLOBAL_change_size * sizeof(struct change),
          PROT_READ | PROT_WRITE, MAP_SHARED, GLOBAL_qira_log_fd, 0);
-  if (GLOBAL_change_buffer == NULL) QIRA_DEBUG("MMAP FAILED!\n");
   GLOBAL_change_count = (uint32_t*)GLOBAL_change_buffer;
-  // first change is fake invalid shit
+  if (GLOBAL_change_buffer == NULL) QIRA_DEBUG("MMAP FAILED!\n");
+  memset(GLOBAL_change_buffer, 0, sizeof(struct change));
+  GLOBAL_change_count[1] = 0xAAAAAAAA; // canary
+  // first change is invalid
+  ++GLOBAL_change_buffer;
   *GLOBAL_change_count = 1;
 }
 
@@ -497,6 +501,7 @@ void add_change(target_ulong addr, uint64_t data, uint32_t flags) {
     GLOBAL_change_buffer =
       mmap(NULL, GLOBAL_change_size * sizeof(struct change) * 2,
            PROT_READ | PROT_WRITE, MAP_SHARED, GLOBAL_qira_log_fd, 0);
+    GLOBAL_change_count = (uint32_t*)GLOBAL_change_buffer;
     if (GLOBAL_change_buffer == NULL) QIRA_DEBUG("MMAP FAILED!\n");
     GLOBAL_change_buffer += GLOBAL_change_size;
     GLOBAL_change_size *= 2;

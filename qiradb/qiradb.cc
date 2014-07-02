@@ -2,6 +2,8 @@
 #include <pthread.h>
 #include <mongoc.h>
 #include <bson.h>
+#include <fcntl.h>
+#include <sys/mman.h>
 
 #define MONGO_DEBUG printf
 //#define MONGO_DEBUG(...) {}
@@ -14,6 +16,12 @@ struct change {
   uint32_t changelist_number;
   uint32_t flags;
 };
+
+#define IS_VALID      0x80000000
+#define IS_WRITE      0x40000000
+#define IS_MEM        0x20000000
+#define IS_START      0x10000000
+#define SIZE_MASK 0xFF
 
 int main(int argc, char* argv[]) {
   bool ret;
@@ -29,9 +37,12 @@ int main(int argc, char* argv[]) {
   uint32_t mongo_qira_log_fd = open("/tmp/qira_log", O_RDONLY);
   uint32_t mongo_change_count = 0;
 
+  struct change *GLOBAL_change_buffer;
+  uint32_t *GLOBAL_change_count;
+
   GLOBAL_change_buffer =
-    mmap(NULL, GLOBAL_change_size * sizeof(struct change),
-         PROT_READ | PROT_WRITE, MAP_SHARED, GLOBAL_qira_log_fd, 0);
+    (struct change *)mmap(NULL, 4, PROT_READ, MAP_SHARED, mongo_qira_log_fd, 0);
+  GLOBAL_change_count = (uint32_t*)GLOBAL_change_buffer;
 
   // begin thread run loop
   while (1) {
@@ -46,17 +57,18 @@ int main(int argc, char* argv[]) {
     bulk = mongoc_collection_create_bulk_operation(collection, true, NULL);
 
     // add new changes
+    uint32_t change_count = *GLOBAL_change_count;
+    GLOBAL_change_buffer =
+      (struct change *)mmap(NULL, change_count*sizeof(struct change),
+      PROT_READ, MAP_SHARED, mongo_qira_log_fd, 0);
+    GLOBAL_change_count = (uint32_t*)GLOBAL_change_buffer;
+
     int lcount = 0;
-    while (mongo_change_count < GLOBAL_change_count) {
-      struct change tmp;
-      int a = read(mongo_qira_log_fd, &tmp, sizeof(struct change));
-      if (a != sizeof(struct change)) {
-        qemu_log("READ ERROR");
-        break;
-      }
+    while (mongo_change_count < change_count) {
+      struct change *tmp = &GLOBAL_change_buffer[mongo_change_count];
 
       char typ[2]; typ[1] = '\0';
-      uint32_t flags = tmp.flags;
+      uint32_t flags = tmp->flags;
       if (flags & IS_START) typ[0] = 'I';
       else if ((flags & IS_WRITE) && (flags & IS_MEM)) typ[0] = 'S';
       else if (!(flags & IS_WRITE) && (flags & IS_MEM)) typ[0] = 'L';
@@ -64,11 +76,11 @@ int main(int argc, char* argv[]) {
       else if (!(flags & IS_WRITE) && !(flags & IS_MEM)) typ[0] = 'R';
 
       doc = bson_new();
-      BSON_APPEND_INT32(doc, "address", tmp.address);
+      BSON_APPEND_INT32(doc, "address", tmp->address);
       BSON_APPEND_UTF8(doc, "type", typ);
-      BSON_APPEND_INT32(doc, "size", tmp.flags & SIZE_MASK);
-      BSON_APPEND_INT32(doc, "clnum", tmp.changelist_number);
-      BSON_APPEND_INT32(doc, "data", tmp.data);
+      BSON_APPEND_INT32(doc, "size", tmp->flags & SIZE_MASK);
+      BSON_APPEND_INT32(doc, "clnum", tmp->changelist_number);
+      BSON_APPEND_INT32(doc, "data", tmp->data);
       mongoc_bulk_operation_insert(bulk, doc);
       bson_destroy(doc);
 
@@ -77,7 +89,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (lcount > 0) {
-      MONGO_DEBUG("commit %d\n", mongo_change_count);
+      MONGO_DEBUG("commit %d to %d\n", lcount, mongo_change_count);
 
       // do bulk operation
       ret = mongoc_bulk_operation_execute(bulk, &reply, &error);
