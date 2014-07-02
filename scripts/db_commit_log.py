@@ -2,6 +2,7 @@ from qira_log import *
 from pymongo import MongoClient
 
 db = MongoClient('localhost', 3001).meteor
+#db = MongoClient('localhost', 27017).meteor
 
 print "reading log"
 dat = read_log("/tmp/qira_log")

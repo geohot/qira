@@ -30,13 +30,14 @@ int main(int argc, char* argv[]) {
   mongoc_init();
   mongoc_client_t *client;
   mongoc_collection_t *collection;
-  client = mongoc_client_new("mongodb://localhost:3001");
+  //client = mongoc_client_new("mongodb://localhost:3001");
+  client = mongoc_client_new("mongodb://localhost:27017");
   collection = mongoc_client_get_collection(client, "meteor", "change");
   ret = mongoc_collection_drop(collection, NULL);
   if (!ret) MONGO_DEBUG("drop failed\n");
 
   uint32_t mongo_qira_log_fd = open("/tmp/qira_log", O_RDONLY);
-  uint32_t mongo_change_count = 0;
+  uint32_t mongo_change_count = 1;
 
   struct change *GLOBAL_change_buffer;
   uint32_t *GLOBAL_change_count;
@@ -69,6 +70,10 @@ int main(int argc, char* argv[]) {
       PROT_READ, MAP_SHARED, mongo_qira_log_fd, 0);
     GLOBAL_change_count = (uint32_t*)GLOBAL_change_buffer;
 
+    /*if (change_count > mongo_change_count+5000) {
+      change_count = mongo_change_count+5000;
+    }*/
+
     while (mongo_change_count < change_count) {
       struct change *tmp = &GLOBAL_change_buffer[mongo_change_count];
 
@@ -81,11 +86,11 @@ int main(int argc, char* argv[]) {
       else if (!(flags & IS_WRITE) && !(flags & IS_MEM)) typ[0] = 'R';
 
       doc = bson_new();
-      BSON_APPEND_INT64(doc, "address", tmp->address);
+      BSON_APPEND_INT32(doc, "address", tmp->address);
       BSON_APPEND_UTF8(doc, "type", typ);
       BSON_APPEND_INT32(doc, "size", tmp->flags & SIZE_MASK);
       BSON_APPEND_INT32(doc, "clnum", tmp->changelist_number);
-      BSON_APPEND_INT64(doc, "data", tmp->data);
+      BSON_APPEND_INT32(doc, "data", tmp->data);
       mongoc_bulk_operation_insert(bulk, doc);
       bson_destroy(doc);
 
