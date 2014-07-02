@@ -30,8 +30,8 @@ int main(int argc, char* argv[]) {
   mongoc_init();
   mongoc_client_t *client;
   mongoc_collection_t *collection;
-  //client = mongoc_client_new("mongodb://localhost:3001");
-  client = mongoc_client_new("mongodb://localhost:27017");
+  client = mongoc_client_new("mongodb://localhost:3001");
+  //client = mongoc_client_new("mongodb://localhost:27017");
   collection = mongoc_client_get_collection(client, "meteor", "change");
   ret = mongoc_collection_drop(collection, NULL);
   if (!ret) MONGO_DEBUG("drop failed\n");
