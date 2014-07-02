@@ -93,6 +93,7 @@ function redraw_flags() {
   if (cscale === undefined) return;
   $(".flag").remove();
   var colors = {
+    "bounds": "green",
     "change": "blue",
     "ciaddr": "#AA0000", // keep it alphabetical
     "daddrr": "#888800",
@@ -143,6 +144,14 @@ function remove_flags(type) {
 Deps.autorun(function() {
   // false here forces update on max_clnum update
   zoom_out_max(false);
+});
+
+Deps.autorun(function() {
+  var cview = Session.get("cview");
+  remove_flags("bounds");
+  add_flag("bounds", cview[0]);
+  add_flag("bounds", cview[1]);
+  redraw_flags();
 });
 
 Deps.autorun(function() {
