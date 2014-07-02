@@ -26,11 +26,6 @@ Template.idump.instructions = function() {
   return changes;
 };
 
-Template.idump.program_instruction = function() {
-  var progdat = Program.findOne({address: this.address});
-  return progdat;
-};
-
 Template.idump.hexaddress = function() {
   return hex(this.address);
 };

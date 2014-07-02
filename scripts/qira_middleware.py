@@ -6,7 +6,7 @@ import sys
   
 from pymongo import MongoClient
 
-disasm = {}
+instructions = {}
 
 regs = Memory()
 mem = Memory()
@@ -22,9 +22,11 @@ def process(log_entries):
   new_pmaps = pmaps.copy()
   for (address, data, clnum, flags) in dat:
     # Changes database
-    db_changes.append({
-     'address': address, 'type': flag_to_type(flags),
-     'size': flags&SIZE_MASK, 'clnum': clnum, 'data': data})
+    this_change = {'address': address, 'type': flag_to_type(flags),
+        'size': flags&SIZE_MASK, 'clnum': clnum, 'data': data}
+    if address in instructions:
+      this_change['instruction'] = instructions[address]
+    db_changes.append(this_change)
 
     # update local regs and mem database
     if flags & IS_WRITE and flags & IS_MEM:
@@ -65,16 +67,19 @@ def process(log_entries):
 if __name__ == '__main__':
   print "starting QIRA middleware"
   objdump_out = subprocess.Popen(
-    ["objdump", "-d", sys.argv[1]],
+    ["objdump", "-d", "/tmp/qira_binary"],
     stdout = subprocess.PIPE).communicate()[0]
   for line in objdump_out.split("\n"):
     line = line.split("\t")
     if len(line) == 3:
       addr = int(line[0].strip(" :"), 16)
-      print hex(addr), line[2]
+      instructions[addr] = line[2]
+      #print hex(addr), line[2]
     else:
-      print line
-  exit(0)
+      # could get names here too, but maybe useless for now
+      #print line
+      pass
+  print "objdump parse got",len(instructions),"instructions"
 
   # connect to db, set up collections, and drop
   db = MongoClient('localhost', 3001).meteor

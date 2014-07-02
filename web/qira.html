@@ -37,11 +37,7 @@
   <div class="instruction">
   <div class="change {{ischange}}">{{clnum}}</div>
   <span class="datainstruction {{isiaddr}}">{{hexaddress}}</span>
-  {{#with program_instruction}}
-      <span class="name">{{name}}</span>
-      {{instruction}}
-      <span class="comment">{{comment}}</span>
-  {{/with}}
+  {{instruction}}
   </div>
 {{/each}}
 </template>

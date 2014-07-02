@@ -18,12 +18,7 @@ Meteor.publish('dat_clnum', function(clnum) {
 
 Meteor.publish('instructions', function(clnum) {
   var changes = Change.find({clnum: {$gt: clnum-4, $lt: clnum+8}, type: "I"}, {sort: {clnum:1}});
-  var query = [];
-  changes.forEach(function(post) { query.push({address: post.address}); });
-  if (query.length == 0) { console.log("ins query failed"); return; }
-  var progdat = Program.find({$or: query});
-  // we need to send the program data back here as well...
-  return [changes, progdat];
+  return changes;
 });
 
 Meteor.publish('dat_iaddr', function(iaddr) {
