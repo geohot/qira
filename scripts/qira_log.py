@@ -11,7 +11,7 @@ def read_log(fn):
   dat = open(fn).read()
 
   ret = []
-  for i in range(0, len(dat), 0x18):
+  for i in range(0x18, len(dat), 0x18):
     (address, data, clnum, flags) = struct.unpack("QQII", dat[i:i+0x18])
     if not flags & IS_VALID:
       break
@@ -19,9 +19,9 @@ def read_log(fn):
 
   return ret
 
-
 def write_log(fn, dat):
-  ss = []
+  # untested
+  ss = [struct.pack("I", len(dat)) + "\x00"*0x14]
   for (address, data, clnum, flags) in dat:
     ss.append(struct.pack("QQII", address, data, clnum, flags))
   f = open(fn, "wb")

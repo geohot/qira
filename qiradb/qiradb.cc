@@ -4,6 +4,7 @@
 #include <bson.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <time.h>
 
 #define MONGO_DEBUG printf
 //#define MONGO_DEBUG(...) {}
@@ -46,24 +47,28 @@ int main(int argc, char* argv[]) {
 
   // begin thread run loop
   while (1) {
-    usleep(10*1000);  // commit every 10ms
+    // poll the websocket
 
+    // commit every 10ms
+    usleep(10*1000);  
+
+    // check for new changes
+    uint32_t change_count = *GLOBAL_change_count;
+    if (mongo_change_count == change_count) continue;
+
+    // set up bulk operation
     mongoc_bulk_operation_t *bulk;
     bson_t reply;
     bson_error_t error;
     bson_t *doc;
-
-    // set up bulk operation
     bulk = mongoc_collection_create_bulk_operation(collection, true, NULL);
 
     // add new changes
-    uint32_t change_count = *GLOBAL_change_count;
     GLOBAL_change_buffer =
       (struct change *)mmap(NULL, change_count*sizeof(struct change),
       PROT_READ, MAP_SHARED, mongo_qira_log_fd, 0);
     GLOBAL_change_count = (uint32_t*)GLOBAL_change_buffer;
 
-    int lcount = 0;
     while (mongo_change_count < change_count) {
       struct change *tmp = &GLOBAL_change_buffer[mongo_change_count];
 
@@ -76,28 +81,36 @@ int main(int argc, char* argv[]) {
       else if (!(flags & IS_WRITE) && !(flags & IS_MEM)) typ[0] = 'R';
 
       doc = bson_new();
-      BSON_APPEND_INT32(doc, "address", tmp->address);
+      BSON_APPEND_INT64(doc, "address", tmp->address);
       BSON_APPEND_UTF8(doc, "type", typ);
       BSON_APPEND_INT32(doc, "size", tmp->flags & SIZE_MASK);
       BSON_APPEND_INT32(doc, "clnum", tmp->changelist_number);
-      BSON_APPEND_INT32(doc, "data", tmp->data);
+      BSON_APPEND_INT64(doc, "data", tmp->data);
       mongoc_bulk_operation_insert(bulk, doc);
       bson_destroy(doc);
 
       mongo_change_count++;
-      lcount++;
     }
 
-    if (lcount > 0) {
-      MONGO_DEBUG("commit %d to %d\n", lcount, mongo_change_count);
+    // do bulk operation
+    timespec ts_start, ts_end;
+    MONGO_DEBUG("commit to %d...", mongo_change_count);
+    fflush(stdout);
+    clock_gettime(CLOCK_REALTIME, &ts_start);
+    ret = mongoc_bulk_operation_execute(bulk, &reply, &error);
+    clock_gettime(CLOCK_REALTIME, &ts_end);
+    double secs = ts_end.tv_sec - ts_start.tv_sec;
+    secs += (ts_end.tv_nsec - ts_start.tv_nsec) / 1000000000.0; 
+    MONGO_DEBUG("done in %f seconds\n", secs);
 
-      // do bulk operation
-      ret = mongoc_bulk_operation_execute(bulk, &reply, &error);
-      if (!ret) MONGO_DEBUG("mongo error: %s\n", error.message);
+    // debugging
+    char *str = bson_as_json(&reply, NULL);
+    printf("%s\n", str);
+    bson_free(str);
+    if (!ret) MONGO_DEBUG("mongo error: %s\n", error.message);
 
-      // did bulk operation
-      bson_destroy(&reply);
-    }
+    // did bulk operation
+    bson_destroy(&reply);
     mongoc_bulk_operation_destroy(bulk);
   }
 
@@ -105,5 +118,6 @@ int main(int argc, char* argv[]) {
   mongoc_collection_destroy(collection);
   mongoc_client_destroy(client);
   mongoc_cleanup();
-  return NULL;
+  return 0;
 }
+
