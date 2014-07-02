@@ -20,15 +20,19 @@ def flag_to_type(flags):
     typ = "W"
   elif not flags & IS_WRITE and not flags & IS_MEM:
     typ = "R"
+  return typ
 
 def get_log_length(fn):
   dat = open(fn).read(4)
   return struct.unpack("I", dat)[0]
 
-def read_log(fn, seek=1):
+def read_log(fn, seek=1, cnt=0):
   f = open(fn)
   f.seek(seek*0x18)
-  dat = f.read()
+  if cnt == 0:
+    dat = f.read()
+  else:
+    dat = f.read(cnt * 0x18)
 
   ret = []
   for i in range(0, len(dat), 0x18):
