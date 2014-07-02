@@ -7,11 +7,31 @@ IS_START = 0x10000000
 IS_BIGE  = 0x08000000    # not supported
 SIZE_MASK = 0xFF
 
-def read_log(fn):
-  dat = open(fn).read()
+LOGFILE = "/tmp/qira_log"
+
+def flag_to_type(flags):
+  if flags & IS_START:
+    typ = "I"
+  elif flags & IS_WRITE and flags & IS_MEM:
+    typ = "S"
+  elif not flags & IS_WRITE and flags & IS_MEM:
+    typ = "L"
+  elif flags & IS_WRITE and not flags & IS_MEM:
+    typ = "W"
+  elif not flags & IS_WRITE and not flags & IS_MEM:
+    typ = "R"
+
+def get_log_length(fn):
+  dat = open(fn).read(4)
+  return struct.unpack("I", dat)[0]
+
+def read_log(fn, seek=1):
+  f = open(fn)
+  f.seek(seek*0x18)
+  dat = f.read()
 
   ret = []
-  for i in range(0x18, len(dat), 0x18):
+  for i in range(0, len(dat), 0x18):
     (address, data, clnum, flags) = struct.unpack("QQII", dat[i:i+0x18])
     if not flags & IS_VALID:
       break
