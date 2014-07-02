@@ -1,14 +1,8 @@
 <head>
   <title>qira</title>
-  <!--<link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.2/jquery.mobile-1.4.2.min.css">-->
 </head>
 
 <body>
-<!--<div id="timeline">
-<div id="cl_selector_box">
-<input type="range" id="cl_selector" value="1" min="1" max="1">
-</div>
-</div>-->
 <div id="vtimelinebox">
 <div id="vtimeline">
 </div>
@@ -42,9 +36,9 @@
 {{#each instructions}}
   <div class="instruction">
   <div class="change {{ischange}}">{{clnum}}</div>
+  <span class="datainstruction {{isiaddr}}">{{hexaddress}}</span>
   {{#with program_instruction}}
       <span class="name">{{name}}</span>
-      <span class="datainstruction {{isiaddr}}">{{hexaddress}}</span>
       {{instruction}}
       <span class="comment">{{comment}}</span>
   {{/with}}

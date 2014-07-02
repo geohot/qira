@@ -4,8 +4,8 @@ from pymongo import MongoClient
 db = MongoClient('localhost', 3001).meteor
 
 print "reading log"
-#dat = read_log("/tmp/qira_log")
-dat = read_log("/tmp/qira_log_filtered")
+dat = read_log("/tmp/qira_log")
+#dat = read_log("/tmp/qira_log_filtered")
 
 print "building database data"
 
@@ -32,11 +32,12 @@ coll = db.change
 print "doing db insert of",len(ds),"changes"
 coll.drop()
 coll.insert(ds)
-print "db insert done, building indexes"
-coll.ensure_index("data")
-coll.ensure_index([("data", 1), ("address", 1)])
-coll.ensure_index("address")
-coll.ensure_index("clnum")
-coll.ensure_index([("address", 1), ("type", 1)])
-print "indexes built"
+#print "db insert done, building indexes"
+#coll.ensure_index("data")
+#coll.ensure_index([("data", 1), ("address", 1)])
+#coll.ensure_index("address")
+#coll.ensure_index("clnum")
+#coll.ensure_index([("address", 1), ("type", 1)])
+#print "indexes built"
+print "db insert done"
 

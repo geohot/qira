@@ -65,7 +65,7 @@ Meteor.startup(function () {
       clearTimeout(tmout);
       tmout = undefined;
     }
-    tmout = setTimeout(read_memdb, 200);
+    tmout = setTimeout(read_memdb, 500);
   });
 });
 

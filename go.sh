@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 
-#BIN=../tests/ctf/ezhp
-BIN=../tests/ctf/hudak
+BIN=../tests/ctf/ezhp
+#BIN=../tests/ctf/hudak
 #BIN=../tests/ctf/simple
 #SRC=../tests/hello.c
 #SRC=../tests/algo.c
@@ -18,14 +18,13 @@ fi
 cd scripts
 #echo "hello" | ./run_qemu.sh $BIN
 #echo "4t_l34st_it_was_1mperat1v3..." | ./run_qemu.sh $BIN
-echo "i wish i were a valid key bob" | ./run_qemu.sh $BIN
-#./run_qemu.sh $BIN
-#./run_qemu.sh $BIN
+#echo "i wish i were a valid key bob" | ./run_qemu.sh $BIN
+./run_qemu.sh $BIN
 
 echo "*** build the Program database"
 time python db_commit_asm.py $BIN $SRC
-echo "*** filter the Change database"
-time python db_filter_log.py
+#echo "*** filter the Change database"
+#time python db_filter_log.py
 echo "*** build the Change database"
 time python db_commit_log.py
 echo "*** build the memory json"

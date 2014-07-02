@@ -34,10 +34,14 @@ function check_hash() {
 window.onload = check_hash;
 window.onhashchange = check_hash;
 
-Meteor.subscribe('max_clnum', {onReady: function() {
-  post = Change.findOne({}, {sort: {clnum: -1}});
+Meteor.subscribe('max_clnum');
 
-  Session.setDefault("clnum", post.clnum);
-  Session.set("max_clnum", post.clnum);
-}});
+Deps.autorun(function() {
+  var post = Change.findOne({type: "I"}, {sort: {clnum: -1}, limit: 1});
+
+  if (post !== undefined) {
+    Session.setDefault("clnum", post.clnum);
+    Session.set("max_clnum", post.clnum);
+  }
+});
 

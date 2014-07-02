@@ -38,6 +38,9 @@ Template.idump.hexaddress = function() {
 Template.idump.events({
   'click .change': function() {
     Session.set('clnum', this.clnum);
+  },
+  'click .datainstruction': function() {
+    Session.set('iaddr', this.address);
   }
 });
 

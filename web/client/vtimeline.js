@@ -1,7 +1,4 @@
 Meteor.startup(function() {
-  Deps.autorun(function() {
-    zoom_out_max(true);
-  });
 
   /*$("#vtimeline").click(function(e) {
     if (e.target !== $("#vtimeline")[0]) return;
@@ -57,7 +54,7 @@ function register_drag_zoom() {
   $("#vtimeline").mouseup(function(e) {
     if (e.button != 0) return;
     var up = get_clnum(e);
-    if (up == undefined) return;
+    if (up === undefined) return;
     if (down != -1) {
       p("drag "+down+"-"+up);
       if (down == up) {
@@ -76,7 +73,7 @@ var flags = {};
 
 function get_cscale() {
   var cview = Session.get("cview");
-  if (cview == undefined) return;
+  if (cview === undefined) return;
   var range = cview[1] - cview[0];
   var box = $("#vtimelinebox");
   if (box.length == 0) return undefined;
@@ -135,10 +132,18 @@ function add_flag(type, clnum) {
 function remove_flags(type) {
   for (clnum in flags) {
     var index = flags[clnum].indexOf(type);
-    if (index != -1) flags[clnum].splice(index, 1);
+    while (index != -1) {
+      flags[clnum].splice(index, 1)
+      index = flags[clnum].indexOf(type);
+    }
     if (flags[clnum].length == 0) delete flags[clnum];
   }
 }
+
+Deps.autorun(function() {
+  // false here forces update on max_clnum update
+  zoom_out_max(false);
+});
 
 Deps.autorun(function() {
   var clnum = Session.get("clnum");
