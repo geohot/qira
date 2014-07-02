@@ -427,7 +427,7 @@ static bool tci_compare64(uint64_t u0, uint64_t u1, TCGCond condition)
 #include <sys/mman.h>
 
 #define QIRA_DEBUG(...) {}
-//#define QIRA_DEBUG qemu_log
+//#define QIRA_DEBUG printf
 
 // prototypes
 void init_QIRA(CPUArchState *env);
@@ -438,6 +438,8 @@ void track_read(target_ulong base, target_ulong offset, target_ulong data, int s
 void track_write(target_ulong base, target_ulong offset, target_ulong data, int size);
 void add_pending_change(target_ulong addr, uint64_t data, uint32_t flags);
 void commit_pending_changes(void);
+void track_kernel_read(void *host_addr, target_ulong guest_addr, long len);
+void track_kernel_write(void *host_addr, target_ulong guest_addr, long len);
 
 // struct storing change data
 struct change {
@@ -553,6 +555,25 @@ void track_write(target_ulong base, target_ulong offset, target_ulong data, int 
   QIRA_DEBUG("write: %x+%x:%d = %x\n", base, offset, size, data);
   if (GLOBAL_is_filtered == 0) add_change(offset, data, IS_WRITE | size);
   else add_pending_change(offset, data, IS_WRITE | size);
+}
+
+void track_kernel_read(void *host_addr, target_ulong guest_addr, long len) {
+  if (unlikely(GLOBAL_QIRA_did_init == 0)) return;
+
+  // this is generating tons of changes, and maybe not too useful
+  /*QIRA_DEBUG("kernel_read: %p %X %d\n", host_addr, guest_addr, len);
+  long i = 0;
+  for (; i < len; i+=4) add_change(guest_addr+i, ((unsigned int*)host_addr)[i], IS_MEM | 32);
+  for (; i < len; i+=1) add_change(guest_addr+i, ((unsigned char*)host_addr)[i], IS_MEM | 8);*/
+}
+
+void track_kernel_write(void *host_addr, target_ulong guest_addr, long len) {
+  if (unlikely(GLOBAL_QIRA_did_init == 0)) return;
+
+  QIRA_DEBUG("kernel_write: %p %X %d\n", host_addr, guest_addr, len);
+  long i = 0;
+  //for (; i < len; i+=4) add_change(guest_addr+i, ((unsigned int*)host_addr)[i], IS_MEM | IS_WRITE | 32);
+  for (; i < len; i+=1) add_change(guest_addr+i, ((unsigned char*)host_addr)[i], IS_MEM | IS_WRITE | 8);
 }
 
 // careful, this does it twice, MMIO?

@@ -148,7 +148,7 @@ def main():
       sys.stdout.write("going from %d to %d..." % (changes_committed,max_changes))
       sys.stdout.flush()
       process(read_log(LOGFILE, changes_committed, max_changes - changes_committed))
-      print "done"
+      print "done %d to %d" % (changes_committed,max_changes)
       changes_committed = max_changes
 
 if __name__ == '__main__':

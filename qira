@@ -1,8 +1,20 @@
 #!/bin/bash
 set -e
 
+if [ -z $1 ]; then
+  echo "usage: $0 <target binary>"
+  exit -1
+fi
+
 rm -f /tmp/qira_binary
 ln -s $(realpath $1) /tmp/qira_binary
+
+# build qemu for debugging
+pushd .
+cd qemu/qemu-latest
+make -j32
+popd
+
 
 # detect which qemu to run based on the file
 shift
