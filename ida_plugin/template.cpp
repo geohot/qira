@@ -39,7 +39,7 @@ static int callback_qira(struct libwebsocket_context* context,
     case LWS_CALLBACK_ESTABLISHED:
       // we only support one client
       gwsi = wsi;
-      msg("QIRA connected\n");
+      msg("QIRA web connected\n");
       break;
     case LWS_CALLBACK_RECEIVE:
       char *strin = (char *)in;

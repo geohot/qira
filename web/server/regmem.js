@@ -69,14 +69,16 @@ Meteor.startup(function () {
   });
 });
 
-// shouldn't be here
+// consider a better way to do this
 var X86REGS = ['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'];
+var REGS = X86REGS;
+
 stream.on('getregisters', function(clnum) {
   var ret = [];
-  for (var i = 0; i < X86REGS.length; i++) {
+  for (var i = 0; i < REGS.length; i++) {
     var val = map_getbelow(regs[i*4], clnum);
     if (val !== undefined) {
-      ret.push({"name": X86REGS[i], "address": i*4, "value": val});
+      ret.push({"name": REGS[i], "address": i*4, "value": val});
     }
   }
   stream.emit("registers", ret);

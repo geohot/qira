@@ -7,7 +7,7 @@ BIN=../tests/ctf/ezhp
 #SRC=../tests/hello.c
 #SRC=../tests/algo.c
 
-if [ $SRC != "" ]; then
+if [ "$SRC" != "" ]; then
   cd tests
   #gcc -m32 -nostdlib -static -g $src
   gcc -m32 -static -g $SRC
