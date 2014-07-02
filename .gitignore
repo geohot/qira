@@ -8,4 +8,5 @@ ida_plugin/qira.plx
 tests/idb
 qiradb/qiradb
 db/
+qemu/
 
