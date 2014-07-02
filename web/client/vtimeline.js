@@ -148,6 +148,7 @@ Deps.autorun(function() {
 
 Deps.autorun(function() {
   var cview = Session.get("cview");
+  if (cview === undefined) return undefined;
   remove_flags("bounds");
   add_flag("bounds", cview[0]);
   add_flag("bounds", cview[1]);

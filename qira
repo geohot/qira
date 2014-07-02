@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+rm -f /tmp/qira_binary
+ln -s $(realpath $1) /tmp/qira_binary
+
+# detect which qemu to run based on the file
+shift
+./qemu/qemu-latest/i386-linux-user/qemu-i386 -singlestep /tmp/qira_binary $@
+

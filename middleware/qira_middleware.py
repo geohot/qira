@@ -4,7 +4,9 @@ from qira_memory import *
 import subprocess
 import time
 import sys
+import os
 import json
+import signal
   
 from pymongo import MongoClient
 
@@ -14,9 +16,21 @@ pmaps = {}
 regs = Memory()
 mem = Memory()
 
+def mongo_connect():
+  while 1:
+    try:
+      db = MongoClient('localhost', 3001).meteor
+      db.bob.insert([{"test":"test"}])
+      db.bob.drop()  # poor bob, be master
+      break
+    except:
+      time.sleep(0.1)
+  return db
+  
+
 def process(log_entries):
   global instructions, pmaps, regs, mem
-  db = MongoClient('localhost', 3001).meteor
+  db = mongo_connect()
   Change = db.change
   Pmaps = db.pmaps
 
@@ -98,17 +112,29 @@ def init():
   print "wrote initial qira_memdb"
 
   # connect to db, set up collections, and drop
-  db = MongoClient('localhost', 3001).meteor
+  print "waiting for mongo connection"
+  db = mongo_connect()
+
   Change = db.change
   Pmaps = db.pmaps
   Change.drop()
   Pmaps.drop()
   print "dropped old databases"
 
-if __name__ == '__main__':
+def start_meteor():
+  ret = os.fork()
+  if ret == 0:
+    os.chdir("web/")
+    os.execvp("meteor", ["meteor"])
+  return ret
+
+
+def main():
   print "starting QIRA middleware"
+
   init()
   changes_committed = 1
+
 
   # run loop run
   while 1:
@@ -124,5 +150,16 @@ if __name__ == '__main__':
       process(read_log(LOGFILE, changes_committed, max_changes - changes_committed))
       print "done"
       changes_committed = max_changes
+
+if __name__ == '__main__':
+  meteor_pid = start_meteor()
+  print "meteor started with pid",meteor_pid
+  try:
+    main()
+  finally:
+    print "cleaning up"
+    os.kill(meteor_pid, signal.SIGINT)
+    os.waitpid(meteor_pid, 0)
+    print "cleanup done"
 
 

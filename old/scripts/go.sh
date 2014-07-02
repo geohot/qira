@@ -16,13 +16,21 @@ if [ "$SRC" != "" ]; then
 fi
 
 
-cd scripts
 rm -f /tmp/qira_binary
 ln -s $(realpath $BIN) /tmp/qira_binary
 #echo "hello" | ./run_qemu.sh $BIN
 #echo "4t_l34st_it_was_1mperat1v3..." | ./run_qemu.sh $BIN
 #echo "i wish i were a valid key bob" | ./run_qemu.sh $BIN
-./run_qemu.sh /tmp/qira_binary
+
+pushd .
+cd ./qemu/qemu-latest/
+make -j32
+popd
+
+#rm -rf /tmp/qira*
+#../qemu/qemu-latest/i386-linux-user/qemu-i386 -singlestep -d in_asm $@ 2> /tmp/qira_disasm
+./qemu/qemu-latest/i386-linux-user/qemu-i386 -singlestep $@
+ls -l /tmp/qira*
 
 : <<'END'
 echo "*** build the Program database"
