@@ -1,4 +1,4 @@
-web/.meteor
+web/.meteor/local
 .*.swp
 tests/a.out
 tests/*.o
@@ -7,6 +7,7 @@ ida_plugin/*.o
 ida_plugin/qira.plx
 tests/idb
 qiradb/qiradb
+old/qiradb/qiradb
 db/
 qemu/
 
