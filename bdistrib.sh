@@ -64,5 +64,5 @@ strip distrib/qemu/qira-i386
 # then you run qira-i386 <binary>, we need to hack in the -singlestep arg
 
 echo "copying binaries"
-cp -av qira qira-server distrib/
+cp -av install.sh qira qira-server distrib/
 

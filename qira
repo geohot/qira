@@ -19,5 +19,5 @@ fi
 
 # detect which qemu to run based on the file
 shift
-./qemu/qira-i386 -singlestep /tmp/qira_binary $@
+qira-i386 -singlestep /tmp/qira_binary $@
 

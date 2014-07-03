@@ -147,8 +147,8 @@ def start_meteor():
   global meteor_pid
   ret = os.fork()
   if ret == 0:
-    os.chdir("web/")
-    os.execvp("meteor", ["meteor"])
+    os.chdir(os.path.dirname(os.path.realpath(__file__))+"/../web/")
+    os.execvp(os.getenv("HOME")+"/.meteor/tools/latest/bin/meteor", ["meteor"])
   meteor_pid = ret
   print "waiting for mongodb startup"
   wait_for_port(3000)
@@ -168,7 +168,7 @@ def kill_meteor():
     meteor_pid = -1
   print "waiting for ports to be closed"
   wait_for_port(3000, True)
-  os.system("killall mongod")   # OMG WHY?
+  os.system("killall mongod")   # OMG WHY DO I NEED THIS?
   wait_for_port(3001, True)
   print "ports are closed"
 
