@@ -10,6 +10,6 @@ tests/idb
 qiradb/qiradb
 old/qiradb/qiradb
 db/
-qemu/
+qemu/qemu-2*
 distrib/
 

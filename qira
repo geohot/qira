@@ -1,13 +1,15 @@
 #!/bin/bash
 set -e
 
-if [ -z $1 ]; then
+BIN=$(realpath $1)
+
+if [ -z $BIN ]; then
   echo "usage: $0 <target binary>"
   exit -1
 fi
 
 rm -f /tmp/qira_binary
-ln -s $(realpath $1) /tmp/qira_binary
+ln -s $BIN /tmp/qira_binary
 
 # build qemu if we have the source
 if [ -d "qemu/qemu-latest" ]; then
