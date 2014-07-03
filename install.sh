@@ -11,16 +11,25 @@ if ! python -c 'import pymongo; exit(0)'; then
   sudo pip install pymongo
 fi
 
+# we need realpath...err ok for now
+if [ ! $(which realpath) ]; then
+  echo "installing realpath"
+  sudo apt-get install realpath
+fi
+
 # we need meteor
 if [ ! -d ~/.meteor ]; then
   echo "installing meteor"
   curl https://install.meteor.com | /bin/sh
 fi
 
-if [ ! -f /usr/local/bin/qira ]; then
-  echo "making symlinks"
-  sudo ln -s $(pwd)/qira /usr/local/bin/qira
-  sudo ln -s $(pwd)/qira-server /usr/local/bin/qira-server
-  sudo ln -s $(pwd)/qemu/qira-i386 /usr/local/bin/qira-i386
+# and mrt
+if [ ! -f ~/.meteor/tools/latest/bin/mrt ]; then
+  ~/.meteor/tools/latest/bin/npm install -g meteorite
 fi
+
+echo "making symlinks"
+sudo ln -sf $(pwd)/qira /usr/local/bin/qira
+sudo ln -sf $(pwd)/qira-server /usr/local/bin/qira-server
+sudo ln -sf $(pwd)/qemu/qira-i386 /usr/local/bin/qira-i386
 

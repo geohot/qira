@@ -40,6 +40,7 @@ echo "building ida plugin"
 ./build.sh
 cp qira.plx ../distrib/qira/ida/qira_ida66_linux.plx
 strip ../distrib/qira/ida/qira_ida66_linux.plx
+#cp ~/qira-release/ida/* ../distrib/qira/ida/
 cd ../
 
 # fairly standard deps + librt, libglib, libpcre

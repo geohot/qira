@@ -148,7 +148,8 @@ def start_meteor():
   ret = os.fork()
   if ret == 0:
     os.chdir(os.path.dirname(os.path.realpath(__file__))+"/../web/")
-    os.execvp(os.getenv("HOME")+"/.meteor/tools/latest/bin/meteor", ["meteor"])
+    os.environ['PATH'] += ":"+os.getenv("HOME")+"/.meteor/tools/latest/bin/"
+    os.execvp("mrt", ["mrt"])
   meteor_pid = ret
   print "waiting for mongodb startup"
   wait_for_port(3000)

@@ -1,7 +1,5 @@
 #!/bin/bash
 set -e
-sudo pip install pymongo
-curl https://install.meteor.com | /bin/sh
 
 if [ ! -d qemu/qemu-latest ]; then
   rm -rf qemu
