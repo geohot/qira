@@ -1,7 +1,9 @@
 #!/bin/bash
+VERSION=qira-0.1
+
 set -e
 rm -rf distrib/
-mkdir -p distrib/
+mkdir -p distrib/qira
 
 # requires objdump
 # writable /tmp
@@ -18,33 +20,33 @@ mkdir -p distrib/
 # or preship this file in the tarball?
 # the advantage of this over the bundle is it ships mongo
 echo "copying webapp"
-cp -R web distrib/
-rm -rf distrib/web/.meteor/local
+cp -R web distrib/qira/
+rm -rf distrib/qira/web/.meteor/local
 #mrt bundle ../bin/qira_web.tar.gz
 
 # sudo apt-get install python-pip
 # sudo pip install pymongo
 echo "copying middleware"
-mkdir -p distrib/middleware
-cp middleware/*.py distrib/middleware/
+mkdir -p distrib/qira/middleware
+cp middleware/*.py distrib/qira/middleware/
 
 # built for ida 6.6
 # perhaps build for older IDA as well, ie 6.1
 # and mac + windows
 # fairly standard deps + libcrypto, libssl, libz and libida
-mkdir -p distrib/ida
+mkdir -p distrib/qira/ida
 cd ida_plugin
 echo "building ida plugin"
 ./build.sh
-cp qira.plx ../distrib/ida/qira_ida66_linux.plx
-strip ../distrib/ida/qira_ida66_linux.plx
+cp qira.plx ../distrib/qira/ida/qira_ida66_linux.plx
+strip ../distrib/qira/ida/qira_ida66_linux.plx
 cd ../
 
 # fairly standard deps + librt, libglib, libpcre
 echo "copying qemu"
-mkdir -p distrib/qemu
-cp qemu/qemu-latest/i386-linux-user/qemu-i386 distrib/qemu/qira-i386
-strip distrib/qemu/qira-i386
+mkdir -p distrib/qira/qemu
+cp qemu/qemu-latest/i386-linux-user/qemu-i386 distrib/qira/qemu/qira-i386
+strip distrib/qira/qemu/qira-i386
 
 # package up the python, hopefully this includes pymongo driver
 # hmm, it doesn't, user will need to install
@@ -64,10 +66,10 @@ strip distrib/qemu/qira-i386
 # then you run qira-i386 <binary>, we need to hack in the -singlestep arg
 
 echo "copying binaries"
-cp -av install.sh qira qira-server distrib/
+cp -av install.sh qira qira-server distrib/qira/
 
 echo "making archive"
 cd distrib/
-tar zcvf qira-0.1.tar.gz *
+tar zcvf qira-0.1.tar.gz qira
 cd ../
 
