@@ -66,3 +66,8 @@ strip distrib/qemu/qira-i386
 echo "copying binaries"
 cp -av install.sh qira qira-server distrib/
 
+echo "making archive"
+cd distrib/
+tar zcvf qira-0.1.tar.gz *
+cd ../
+
