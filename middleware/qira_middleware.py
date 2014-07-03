@@ -7,7 +7,7 @@ import sys
 import os
 import json
 import signal
-  
+import socket
 from pymongo import MongoClient
 
 # global state for the program
@@ -15,6 +15,8 @@ instructions = {}
 pmaps = {}
 regs = Memory()
 mem = Memory()
+
+meteor_pid = -1
 
 def mongo_connect():
   while 1:
@@ -24,9 +26,12 @@ def mongo_connect():
       db.bob.drop()  # poor bob, be master
       break
     except:
+      try:
+        db.connection.close()
+      except:
+        pass
       time.sleep(0.1)
   return db
-  
 
 def process(log_entries):
   global instructions, pmaps, regs, mem
@@ -82,10 +87,12 @@ def process(log_entries):
   # push changes to db
   if len(db_changes) > 0:
     Change.insert(db_changes)
+  db.connection.close()
 
 
 def init():
   global instructions, pmaps, regs, mem
+  global meteor_pid
   instructions = {}
   pmaps = {}
   regs = Memory()
@@ -112,29 +119,64 @@ def init():
   print "wrote initial qira_memdb"
 
   # connect to db, set up collections, and drop
+  print "restarting meteor"
+  kill_meteor()
+  start_meteor()
   print "waiting for mongo connection"
   db = mongo_connect()
-
   Change = db.change
   Pmaps = db.pmaps
   Change.drop()
   Pmaps.drop()
+  db.connection.close()
   print "dropped old databases"
 
+def wait_for_port(port, closed=False):
+  while 1:
+    try:
+      s = socket.create_connection(("localhost", port))
+      s.close()
+      if closed == False:
+        return
+    except socket.error:
+      if closed == True:
+        return
+    time.sleep(0.1)
+
 def start_meteor():
+  global meteor_pid
   ret = os.fork()
   if ret == 0:
     os.chdir("web/")
     os.execvp("meteor", ["meteor"])
-  return ret
+  meteor_pid = ret
+  print "waiting for mongodb startup"
+  wait_for_port(3000)
+  wait_for_port(3001)
+  print "socket ports are open"
+  time.sleep(5)
+  print "meteor started with pid",meteor_pid
 
+def kill_meteor():
+  global meteor_pid
+  if meteor_pid != -1:
+    print "killing meteor"
+    sys.stdout.flush()
+    os.kill(meteor_pid, signal.SIGINT)
+    print os.waitpid(meteor_pid, 0)
+    print "meteor is dead"
+    meteor_pid = -1
+  print "waiting for ports to be closed"
+  wait_for_port(3000, True)
+  os.system("killall mongod")   # OMG WHY?
+  wait_for_port(3001, True)
+  print "ports are closed"
 
 def main():
   print "starting QIRA middleware"
 
   init()
   changes_committed = 1
-
 
   # run loop run
   while 1:
@@ -152,13 +194,8 @@ def main():
       changes_committed = max_changes
 
 if __name__ == '__main__':
-  meteor_pid = start_meteor()
-  print "meteor started with pid",meteor_pid
   try:
     main()
   finally:
-    print "cleaning up"
-    os.kill(meteor_pid, signal.SIGINT)
-    os.waitpid(meteor_pid, 0)
-    print "cleanup done"
+    kill_meteor()
 

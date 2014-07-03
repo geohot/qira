@@ -48,7 +48,7 @@ function map_getbelow(map, a) {
 function read_memdb() {
   fs.readFile("/tmp/qira_memdb", function(err, data) {
     if (err) { console.log(err); return; }
-    //console.log("read memdb");
+    console.log("read memdb");
     var dat = JSON.parse(data);
     regs = map_create(dat['regs']);
     mem = map_create(dat['mem']);

@@ -19,7 +19,7 @@ mkdir -p distrib/
 # the advantage of this over the bundle is it ships mongo
 echo "copying webapp"
 cp -R web distrib/
-rm -rf web/.meteor/local
+rm -rf distrib/web/.meteor/local
 #mrt bundle ../bin/qira_web.tar.gz
 
 # sudo apt-get install python-pip
@@ -64,6 +64,5 @@ strip distrib/qemu/qira-i386
 # then you run qira-i386 <binary>, we need to hack in the -singlestep arg
 
 echo "copying binaries"
-cp qira distrib/
-cp qira-server distrib/
+cp -av qira qira-server distrib/
 
