@@ -20,6 +20,6 @@ g++ -m32 --shared template.o "-L$IDAROOT" -lida -o $OUTPUT libwebsockets.a -lcry
 sha1sum $OUTPUT
 if [ "$(diff $OUTPUT "$IDAROOT/plugins/$OUTPUT")" != "" ]; then
   echo "copying plugin"
-  cp $OUTPUT $IDAROOT/plugins
+  cp $OUTPUT "$IDAROOT/plugins"
 fi
 
