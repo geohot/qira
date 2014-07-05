@@ -4,8 +4,9 @@ web/.meteor/local
 tests/a.out
 tests/*.o
 *.pyc
-ida_plugin/*.o
-ida_plugin/qira.plx
+ida/*.o
+ida/qira.plx
+ida/libwebsockets.a
 tests/idb
 qiradb/qiradb
 old/qiradb/qiradb
