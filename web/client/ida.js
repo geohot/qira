@@ -15,8 +15,8 @@ function do_ida_socket(callme) {
         Session.set("iaddr", iaddr);
       }
       if (dat[0] == "setdaddr") {
-        var iaddr = parseInt(dat[1])
-        Session.set("daddr", iaddr);
+        var daddr = parseInt(dat[1])
+        update_dview(daddr);
       }
     };
   } else {

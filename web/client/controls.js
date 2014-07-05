@@ -1,9 +1,3 @@
-// belongs in library
-function update_dview(addr) {
-  Session.set('daddr', addr);
-  Session.set('dview', (addr-0x20)-(addr-0x20)%0x10);
-}
-
 Template.controls.clnum = function() {
   return Session.get("clnum");
 };
@@ -28,4 +22,17 @@ Template.controls.events = {
   }
 };
 
+// keyboard shortcuts
+window.onkeydown = function(e) {
+  p(e.keyCode);
+  if (e.keyCode == 38) {
+    Session.set("clnum", Session.get("clnum")-1);
+  } else if (e.keyCode == 40) {
+    Session.set("clnum", Session.get("clnum")+1);
+  } else if (e.keyCode == 90) {
+    zoom_out_max();
+  } else if (e.keyCode == 27) {
+    history.back();
+  }
+};
 

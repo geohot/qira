@@ -24,13 +24,6 @@ Meteor.startup(function() {
   register_drag_zoom();
 });
 
-function zoom_out_max(dontforce) {
-  var max = Session.get("max_clnum");
-  if (max === undefined) return;
-  if (dontforce === true)  Session.setDefault("cview", [0, max]);
-  else Session.set("cview", [0, max]);
-}
-
 function register_drag_zoom() {
   function get_clnum(e) {
     if (e.target !== $("#vtimeline")[0]) return undefined;

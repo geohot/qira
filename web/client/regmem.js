@@ -79,11 +79,6 @@ stream.on('memory', function(msg) {
   $("#hexdump")[0].innerHTML = html;
 });
 
-function update_dview(addr) {
-  Session.set('daddr', addr);
-  Session.set('dview', (addr-0x20)-(addr-0x20)%0x10);
-}
-
 var baseevents = {
   'click .datamemory': function(e) {
     var daddr = parseInt(e.target.innerHTML, 16);
