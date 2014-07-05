@@ -1,3 +1,4 @@
+// these all look really easy to write in python
 
 Meteor.startup(function () {
 });
@@ -11,15 +12,16 @@ Meteor.publish('pmaps', function() {
   return Pmaps.find();
 });
 
+Meteor.publish('instructions', function(clnum) {
+  var changes = Change.find({clnum: {$gt: clnum-4, $lt: clnum+8}, type: "I"}, {sort: {clnum:1}});
+  return changes;
+});
+
 Meteor.publish('dat_clnum', function(clnum) {
   // can only return as many as in the changelist
   return Change.find({clnum: clnum}, {sort: {address: 1}, limit:30});
 });
 
-Meteor.publish('instructions', function(clnum) {
-  var changes = Change.find({clnum: {$gt: clnum-4, $lt: clnum+8}, type: "I"}, {sort: {clnum:1}});
-  return changes;
-});
 
 Meteor.publish('dat_iaddr', function(iaddr) {
   // fetch the static info about the range

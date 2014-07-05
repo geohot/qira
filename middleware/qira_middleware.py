@@ -8,6 +8,7 @@ import os
 import json
 import signal
 import socket
+from elftools.elf.elffile import ELFFile
 from pymongo import MongoClient
 
 # global state for the program
@@ -100,7 +101,17 @@ def init():
   print "reset program state"
 
   # get the memory base
-  # TODO: read the elf file sections
+  elf = ELFFile(open("/tmp/qira_binary"))
+  for seg in elf.iter_segments():
+    try:
+      vaddr = seg.header['p_vaddr']
+      flags = seg.header['p_flags']
+      data = seg.data()
+    except:
+      continue
+    # should we gate the segment on something?
+    for i in range(0, len(data)):
+      mem.commit(0, vaddr+i, ord(data[i]))
 
   # get the instructions
   objdump_out = subprocess.Popen(
