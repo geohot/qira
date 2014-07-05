@@ -440,6 +440,7 @@ void add_pending_change(target_ulong addr, uint64_t data, uint32_t flags);
 void commit_pending_changes(void);
 void track_kernel_read(void *host_addr, target_ulong guest_addr, long len);
 void track_kernel_write(void *host_addr, target_ulong guest_addr, long len);
+void resize_change_buffer(size_t size);
 
 // struct storing change data
 struct change {
@@ -458,16 +459,33 @@ struct change {
 int GLOBAL_QIRA_did_init = 0;
 CPUArchState *GLOBAL_CPUArchState;
 struct change *GLOBAL_change_buffer;
-uint32_t GLOBAL_changelist_number = 0;
 
 uint32_t GLOBAL_qira_log_fd;
-uint32_t *GLOBAL_change_count;
 uint32_t GLOBAL_change_size;
-uint32_t GLOBAL_is_filtered = 0;
+
+// current state that must survive forks
+struct logstate {
+  uint32_t change_count;
+  uint32_t changelist_number;
+  uint32_t is_filtered;
+  // does this work in shared memory?
+  pthread_mutex_t lock;
+};
+struct logstate *GLOBAL_logstate;
 
 // should be 0ed on startup
 #define PENDING_CHANGES_MAX_ADDR 0x100
 struct change GLOBAL_pending_changes[PENDING_CHANGES_MAX_ADDR/4];
+
+void resize_change_buffer(size_t size) {
+  if(ftruncate(GLOBAL_qira_log_fd, size)) {
+    perror("ftruncate");
+  }
+  GLOBAL_change_buffer = mmap(NULL, size,
+         PROT_READ | PROT_WRITE, MAP_SHARED, GLOBAL_qira_log_fd, 0);
+  GLOBAL_logstate = (struct logstate *)GLOBAL_change_buffer;
+  if (GLOBAL_change_buffer == NULL) QIRA_DEBUG("MMAP FAILED!\n");
+}
 
 void init_QIRA(CPUArchState *env) {
   QIRA_DEBUG("init QIRA called\n");
@@ -478,43 +496,30 @@ void init_QIRA(CPUArchState *env) {
   GLOBAL_QIRA_did_init = 1;
   memset(GLOBAL_pending_changes, 0, (PENDING_CHANGES_MAX_ADDR/4) * sizeof(struct change));
 
-  if(ftruncate(GLOBAL_qira_log_fd, GLOBAL_change_size * sizeof(struct change))) {
-    perror("ftruncate");
-  }
-  GLOBAL_change_buffer =
-    mmap(NULL, GLOBAL_change_size * sizeof(struct change),
-         PROT_READ | PROT_WRITE, MAP_SHARED, GLOBAL_qira_log_fd, 0);
-  GLOBAL_change_count = (uint32_t*)GLOBAL_change_buffer;
-  if (GLOBAL_change_buffer == NULL) QIRA_DEBUG("MMAP FAILED!\n");
+  resize_change_buffer(GLOBAL_change_size * sizeof(struct change));
   memset(GLOBAL_change_buffer, 0, sizeof(struct change));
-  GLOBAL_change_count[1] = 0xAAAAAAAA; // canary
-  // first change is invalid
-  ++GLOBAL_change_buffer;
-  *GLOBAL_change_count = 1;
+
+  // skip the first change
+  GLOBAL_logstate->change_count = 1;
+  pthread_mutex_init(&GLOBAL_logstate->lock, NULL);
 }
 
 void add_change(target_ulong addr, uint64_t data, uint32_t flags) {
-  if (*GLOBAL_change_count == GLOBAL_change_size) {
+  pthread_mutex_lock(&GLOBAL_logstate->lock);
+  if (GLOBAL_logstate->change_count == GLOBAL_change_size) {
     // double the buffer size
     QIRA_DEBUG("doubling buffer with size %d\n", GLOBAL_change_size);
-    if(ftruncate(GLOBAL_qira_log_fd, GLOBAL_change_size * sizeof(struct change) * 2)) {
-      perror("ftruncate");
-    }
-    GLOBAL_change_buffer =
-      mmap(NULL, GLOBAL_change_size * sizeof(struct change) * 2,
-           PROT_READ | PROT_WRITE, MAP_SHARED, GLOBAL_qira_log_fd, 0);
-    GLOBAL_change_count = (uint32_t*)GLOBAL_change_buffer;
-    if (GLOBAL_change_buffer == NULL) QIRA_DEBUG("MMAP FAILED!\n");
-    GLOBAL_change_buffer += GLOBAL_change_size;
+    resize_change_buffer(GLOBAL_change_size * sizeof(struct change) * 2);
     GLOBAL_change_size *= 2;
   }
-  GLOBAL_change_buffer->address = (uint64_t)addr;
-  GLOBAL_change_buffer->data = data;
-  GLOBAL_change_buffer->changelist_number = GLOBAL_changelist_number;
-  GLOBAL_change_buffer->flags = IS_VALID | flags;
-  ++GLOBAL_change_buffer;
+  struct change *this_change = GLOBAL_change_buffer + GLOBAL_logstate->change_count;
+  this_change->address = (uint64_t)addr;
+  this_change->data = data;
+  this_change->changelist_number = GLOBAL_logstate->changelist_number;
+  this_change->flags = IS_VALID | flags;
   // must inc this afterward
-  ++(*GLOBAL_change_count);
+  ++GLOBAL_logstate->change_count;
+  pthread_mutex_unlock(&GLOBAL_logstate->lock);
 }
 
 void add_pending_change(target_ulong addr, uint64_t data, uint32_t flags) {
@@ -547,13 +552,13 @@ void track_store(target_ulong addr, uint64_t data, int size) {
 void track_read(target_ulong base, target_ulong offset, target_ulong data, int size) {
   if ((int)offset < 0) return;
   QIRA_DEBUG("read: %x+%x:%d = %x\n", base, offset, size, data);
-  if (GLOBAL_is_filtered == 0) add_change(offset, data, size);
+  if (GLOBAL_logstate->is_filtered == 0) add_change(offset, data, size);
 }
 
 void track_write(target_ulong base, target_ulong offset, target_ulong data, int size) {
   if ((int)offset < 0) return;
   QIRA_DEBUG("write: %x+%x:%d = %x\n", base, offset, size, data);
-  if (GLOBAL_is_filtered == 0) add_change(offset, data, IS_WRITE | size);
+  if (GLOBAL_logstate->is_filtered == 0) add_change(offset, data, IS_WRITE | size);
   else add_pending_change(offset, data, IS_WRITE | size);
 }
 
@@ -647,17 +652,17 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
 
     // hacky check
     if (tb->pc > 0x40000000) {
-      GLOBAL_is_filtered = 1;
+      GLOBAL_logstate->is_filtered = 1;
     } else {
-      if (GLOBAL_is_filtered == 1) {
+      if (GLOBAL_logstate->is_filtered == 1) {
         commit_pending_changes();
-        GLOBAL_is_filtered = 0;
+        GLOBAL_logstate->is_filtered = 0;
       }
-      GLOBAL_changelist_number++;
+      GLOBAL_logstate->changelist_number++;
       add_change(tb->pc, tb->size, IS_START);
     }
 
-    QIRA_DEBUG("set changelist %d at %x(%d)\n", GLOBAL_changelist_number, tb->pc, tb->size);
+    QIRA_DEBUG("set changelist %d at %x(%d)\n", *GLOBAL_changelist_number, tb->pc, tb->size);
 #endif
 
     long tcg_temps[CPU_TEMP_BUF_NLONGS];

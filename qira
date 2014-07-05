@@ -1,12 +1,13 @@
 #!/bin/bash
 set -e
 
-BIN=$(realpath $1)
-
-if [ -z $BIN ]; then
+if [ -z $1 ]; then
   echo "usage: $0 <target binary>"
   exit -1
 fi
+
+BIN=$(realpath $1)
+FILE=$(file $BIN)
 
 ln -sf $BIN /tmp/qira_binary
 
@@ -20,5 +21,8 @@ fi
 
 # detect which qemu to run based on the file
 shift
+# TODO: use $FILE to detect which qira to call
 qira-i386 -singlestep /tmp/qira_binary $@
+#qira-arm -singlestep /tmp/qira_binary $@
+#qira-x86_64 -singlestep /tmp/qira_binary $@
 

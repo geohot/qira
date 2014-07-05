@@ -99,6 +99,10 @@ def init():
   mem = Memory()
   print "reset program state"
 
+  # get the memory base
+  # TODO: read the elf file sections
+
+  # get the instructions
   objdump_out = subprocess.Popen(
     ["objdump", "-d", "/tmp/qira_binary"],
     stdout = subprocess.PIPE).communicate()[0]
@@ -111,7 +115,6 @@ def init():
     else:
       # could get names here too, but maybe useless for now
       pass
-
   print "objdump parse got",len(instructions),"instructions"
 
   open("/tmp/qira_memdb", "wb").write(

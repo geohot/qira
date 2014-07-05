@@ -26,17 +26,20 @@ Meteor.startup(function() {
 
 function register_drag_zoom() {
   function get_clnum(e) {
-    if (e.target !== $("#vtimeline")[0]) return undefined;
-    var cview = Session.get("cview");
-    if (cview === undefined) return undefined;
+    if (e.target !== $("#vtimeline")[0] &&
+        e.target !== $("#vtimelinebox")[0]) return undefined;
+    var max = Session.get("max_clnum"); if (max === undefined) return;
+    var cview = Session.get("cview"); if (cview === undefined) return;
     var cscale = get_cscale();
     if (cscale === undefined) return undefined;
     // fix for non full zoom
     var clnum = (e.offsetY * cscale) + cview[0];
-    return Math.round(clnum);
+    var clret = Math.round(clnum);
+    if (clret > max) clret = max;
+    return clret;
   }
   var down = -1;
-  $("#vtimeline").mousedown(function(e) {
+  $("#vtimelinebox").mousedown(function(e) {
     if (e.button == 1) { zoom_out_max(); }
     if (e.button != 0) return;
     var clnum = get_clnum(e);
@@ -44,7 +47,8 @@ function register_drag_zoom() {
     down = clnum;
     return false;
   });
-  $("#vtimeline").mouseup(function(e) {
+  $("#vtimelinebox").mouseup(function(e) {
+    p("mouseup");
     if (e.button != 0) return;
     var up = get_clnum(e);
     if (up === undefined) return;

@@ -24,7 +24,7 @@ Template.controls.events = {
 
 // keyboard shortcuts
 window.onkeydown = function(e) {
-  p(e.keyCode);
+  //p(e.keyCode);
   if (e.keyCode == 38) {
     Session.set("clnum", Session.get("clnum")-1);
   } else if (e.keyCode == 40) {
