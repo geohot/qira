@@ -1,8 +1,9 @@
 #include <ida.hpp>
 #include <idp.hpp>
 #include <loader.hpp>
+#include <bytes.hpp>
 
-//#define DEBUG
+#define DEBUG
 
 // ***************** WEBSOCKETS *******************
 #include <libwebsockets.h>
@@ -73,20 +74,24 @@ static void ws_send(char *str) {
 
 // ***************** IDAPLUGIN *******************
 
-static void update_address(ea_t addr) {
+static void update_address(const char *type, ea_t addr) {
   //msg("addr 0x%x\n", addr);
   char tmp[100];
-  qsnprintf(tmp, 100-1, "setiaddr %u", addr);
+  qsnprintf(tmp, 100-1, "set%s %u", type, addr);
   ws_send(tmp);
 }
 
 static int hook(void *user_data, int event_id, va_list va) {
   static ea_t old_addr = 0;
   ea_t addr;
-  if (event_id != view_curpos) {
+  if (event_id == view_curpos) {
     addr = get_screen_ea();
     if (old_addr != addr) {
-      update_address(addr);
+      if (isCode(getFlags(addr))) {
+        update_address("iaddr", addr);
+      } else {
+        update_address("daddr", addr);
+      }
     }
     old_addr = addr;
   }
