@@ -3,7 +3,7 @@
 #include <loader.hpp>
 #include <bytes.hpp>
 
-#define DEBUG
+//#define DEBUG
 
 // ***************** WEBSOCKETS *******************
 #include <libwebsockets.h>
