@@ -6,6 +6,7 @@ tests/*.o
 *.pyc
 ida/*.o
 ida/qira.plx
+ida/qira.pmc
 ida/libwebsockets.a
 tests/idb
 qiradb/qiradb

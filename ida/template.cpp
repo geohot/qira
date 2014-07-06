@@ -42,14 +42,15 @@ static int callback_qira(struct libwebsocket_context* context,
       msg("QIRA web connected\n");
       break;
     case LWS_CALLBACK_RECEIVE:
-      char *strin = (char *)in;
       #ifdef DEBUG
-        msg("QIRARX:%s\n", strin);
+        msg("QIRARX:%s\n", (char *)in);
       #endif
-      if (memcmp(strin, "setaddress ", sizeof("setaddress ")-1) == 0) {
-        ea_t addr = atoi(strin+sizeof("setaddress ")-1);
+      if (memcmp(in, "setaddress ", sizeof("setaddress ")-1) == 0) {
+        ea_t addr = atoi((char*)in+sizeof("setaddress ")-1);
         thread_safe_jump_to(addr);
       }
+      break;
+    default:
       break;
   }
   return 0;
@@ -82,7 +83,7 @@ static void update_address(ea_t addr) {
 static int hook(void *user_data, int event_id, va_list va) {
   static ea_t old_addr = 0;
   ea_t addr;
-  if (event_id != ui_msg && event_id != ui_screenea) {
+  if (event_id != view_curpos) {
     addr = get_screen_ea();
     if (old_addr != addr) {
       update_address(addr);
@@ -139,13 +140,13 @@ void exit_websocket_thread() {
 // ***************** IDAPLUGIN BOILERPLATE *******************
 
 int IDAP_init(void) {
-  hook_to_notification_point(HT_UI, hook, NULL);
+  hook_to_notification_point(HT_VIEW, hook, NULL);
   start_websocket_thread();
 	return PLUGIN_KEEP;
 }
 
 void IDAP_term(void) {
-  unhook_from_notification_point(HT_UI, hook);
+  unhook_from_notification_point(HT_VIEW, hook);
   exit_websocket_thread();
 	return;
 }
