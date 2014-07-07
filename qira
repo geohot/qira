@@ -22,7 +22,8 @@ fi
 # detect which qemu to run based on the file
 shift
 # TODO: use $FILE to detect which qira to call
-qira-i386 -singlestep /tmp/qira_binary $@
+#qira-i386 -singlestep /tmp/qira_binary $@
+qira-sparc32plus -singlestep /tmp/qira_binary $@
 #qira-arm -singlestep /tmp/qira_binary $@
 #qira-x86_64 -singlestep /tmp/qira_binary $@
 

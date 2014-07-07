@@ -35,5 +35,7 @@ sudo ln -sf $(pwd)/qira /usr/local/bin/qira
 sudo ln -sf $(pwd)/qira-server /usr/local/bin/qira-server
 sudo ln -sf $(pwd)/qemu/qira-i386 /usr/local/bin/qira-i386
 sudo ln -sf $(pwd)/qemu/qira-arm /usr/local/bin/qira-arm
+sudo ln -sf $(pwd)/qemu/qira-sparc /usr/local/bin/qira-sparc
+sudo ln -sf $(pwd)/qemu/qira-sparc32plus /usr/local/bin/qira-sparc32plus
 sudo ln -sf $(pwd)/qemu/qira-x86_64 /usr/local/bin/qira-x86_64
 

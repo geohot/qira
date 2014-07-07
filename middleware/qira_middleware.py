@@ -45,8 +45,8 @@ def process(log_entries):
 
   for (address, data, clnum, flags) in log_entries:
     # Changes database
-    this_change = {'address': address, 'type': flag_to_type(flags),
-        'size': flags&SIZE_MASK, 'clnum': clnum, 'data': data}
+    this_change = {'address': address&0xFFFFFFFF, 'type': flag_to_type(flags),
+        'size': flags&SIZE_MASK, 'clnum': clnum, 'data': data&0xFFFFFFFF}
     if address in instructions:
       this_change['instruction'] = instructions[address]
     db_changes.append(this_change)
