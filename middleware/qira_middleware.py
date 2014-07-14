@@ -79,6 +79,7 @@ def process(log_entries):
 
 def init():
   global instructions, pmaps, regs, mem, maxclnum, pydb_addr, pydb_clnum
+  global REGS, REGSIZE
   instructions = {}
   pmaps = {}
   regs = Memory()
@@ -89,6 +90,14 @@ def init():
   instructions = objdump_binary()
   mem_commit_base_binary(mem)
   print "mem commit done"
+  fb = file_binary()
+  print fb
+  X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4)
+  X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8)
+  if 'x86-64' in fb:
+    (REGS, REGSIZE) = X64REGS
+  else:
+    (REGS, REGSIZE) = X86REGS
 
   pydb_addr = defaultdict(list)
   pydb_clnum = defaultdict(list)
@@ -152,14 +161,12 @@ def getmemory(m):
 
 @socketio.on('getregisters', namespace='/qira')
 def getregisters(clnum):
+  global REGS, REGSIZE
   #print "getregisters",clnum
   if clnum == None:
     return
   # register names shouldn't be here
   # though i'm not really sure where a better place is, qemu has this information
-  X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4)
-  X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8)
-  (REGS, REGSIZE) = X86REGS
   ret = []
   for i in range(0, len(REGS)):
     if i*REGSIZE in regs.daddr:

@@ -572,7 +572,7 @@ void track_kernel_read(void *host_addr, target_ulong guest_addr, long len) {
 void track_kernel_write(void *host_addr, target_ulong guest_addr, long len) {
   if (unlikely(GLOBAL_QIRA_did_init == 0)) return;
   // clamp at 0x40, badness
-  if (len > 0x40) len = 0x40;
+  //if (len > 0x40) len = 0x40;
 
   QIRA_DEBUG("kernel_write: %p %X %d\n", host_addr, guest_addr, len);
   long i = 0;

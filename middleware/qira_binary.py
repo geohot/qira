@@ -3,6 +3,12 @@
 import subprocess
 from elftools.elf.elffile import ELFFile
 
+def file_binary():
+  instructions = {}
+  return subprocess.Popen(
+    ["file", "-L", "/tmp/qira_binary"],
+    stdout = subprocess.PIPE).communicate()[0]
+
 def objdump_binary():
   instructions = {}
   # get the instructions
