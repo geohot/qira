@@ -1,5 +1,4 @@
-//stream = new Meteor.Stream('regmem');
-stream = io.connect("http://localhost:3002/qira")
+stream = io.connect("http://localhost:3002/qira");
 
 stream.on('maxclnum', function(msg) {
   update_maxclnum(msg);
@@ -118,10 +117,6 @@ Template.memviewer.events({
 Template.datachanges.events(baseevents);
 Template.regviewer.events(baseevents);
 
-stream.on('registers', function(msg) {
-  $('#regviewer')[0].innerHTML = "";
-  UI.insert(UI.renderWithData(Template.regviewer, {regs: msg}), $('#regviewer')[0]);
-});
 
 Template.regviewer.regactions = function() {
   var ret = "";
@@ -182,15 +177,15 @@ Deps.autorun(function() {
   stream.emit('getregisters', Session.get('clnum')-1);
 });
 
-// hacks to keep iaddr in sync with clnum
-Deps.autorun(function(){ Meteor.subscribe('dat_clnum', Session.get("clnum"), {onReady: function() {
-  var row = Change.findOne({"clnum": Session.get("clnum"), "type": "I"});
-  if (row !== undefined && Session.get("iaddr") !== row.address) {
-    Session.set("iaddr", row.address);
-  }
-}}); });
+stream.on('registers', function(msg) {
+  $('#regviewer')[0].innerHTML = "";
+  UI.insert(UI.renderWithData(Template.regviewer, {regs: msg}), $('#regviewer')[0]);
+});
 
-Deps.autorun(function(){ Meteor.subscribe('dat_iaddr', Session.get("iaddr"), {onReady: function() {
+// hacks to keep iaddr in sync with clnum
+
+// moved to vtimeline
+/*Deps.autorun(function(){ Meteor.subscribe('dat_iaddr', Session.get("iaddr"), {onReady: function() {
   var closest = undefined;
   var diff = 0;
   var clnum = Session.get("clnum");
@@ -206,7 +201,8 @@ Deps.autorun(function(){ Meteor.subscribe('dat_iaddr', Session.get("iaddr"), {on
   if (closest !== undefined && closest !== clnum) {
     Session.set("clnum", closest);
   }
-}}); });
+}}); });*/
 
 Deps.autorun(function(){ Meteor.subscribe('dat_daddr', Session.get("daddr")); });
+
 

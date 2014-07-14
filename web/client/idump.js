@@ -1,3 +1,5 @@
+stream = io.connect("http://localhost:3002/qira");
+
 Meteor.startup(function() {
   $("#idump")[0].addEventListener("mousewheel", function(e) {
     if (e.wheelDelta < 0) {
@@ -10,8 +12,11 @@ Meteor.startup(function() {
 
 Template.idump.ischange = function() {
   var clnum = Session.get("clnum");
-  if (this.clnum == clnum) return "highlight";
-  else return "";
+  if (this.clnum == clnum) {
+    // keep the iaddr in sync with the change
+    Session.set('iaddr', this.address);
+    return "highlight";
+  } else return "";
 };
 
 Template.idump.isiaddr = function() {
@@ -19,12 +24,6 @@ Template.idump.isiaddr = function() {
   if (this.address == iaddr) return "highlight";
   else return "";
 }
-
-Template.idump.instructions = function() {
-  var clnum = Session.get("clnum");
-  var changes = Change.find({clnum: {$gt: clnum-4, $lt: clnum+8}, type: "I"}, {sort: {clnum:1}});
-  return changes;
-};
 
 Template.idump.hexaddress = function() {
   return hex(this.address);
@@ -39,5 +38,15 @@ Template.idump.events({
   }
 });
 
-Deps.autorun(function(){ Meteor.subscribe('instructions', Session.get("clnum")); });
+// ** should move these to idump.js **
+
+stream.on('instructions', function(msg) {
+  $('#idump')[0].innerHTML = "";
+  UI.insert(UI.renderWithData(Template.idump, {instructions: msg}), $('#idump')[0]);
+});
+
+Deps.autorun(function() {
+  var clnum = Session.get("clnum");
+  stream.emit('getinstructions', {'clstart': clnum-4, 'clend': clnum+8});
+});
 

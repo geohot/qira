@@ -1,3 +1,5 @@
+stream = io.connect("http://localhost:3002/qira");
+
 Meteor.startup(function() {
 
   /*$("#vtimeline").click(function(e) {
@@ -161,24 +163,25 @@ Deps.autorun(function() {
 });
 
 Deps.autorun(function() {
-  var clnum = Session.get("clnum");
   var iaddr = Session.get('iaddr');
-  remove_flags("ciaddr");
-  Change.find({address: iaddr, type: "I"}).forEach(function(x) {
-    add_flag("ciaddr", x.clnum);
-  });
-  redraw_flags();
+  stream.emit('getchanges', {'address': iaddr, 'type': 'I'})
 });
 
 Deps.autorun(function() {
-  var clnum = Session.get("clnum");
   var daddr = Session.get('daddr');
-  remove_flags("daddrr");
-  remove_flags("daddrw");
-  Change.find({address: daddr}).forEach(function(x) {
-    if (x.type == "L") add_flag("daddrr", x.clnum);
-    if (x.type == "S") add_flag("daddrw", x.clnum);
-  });
+  stream.emit('getchanges', {'address': daddr, 'type': 'L'})
+  stream.emit('getchanges', {'address': daddr, 'type': 'S'})
+});
+
+stream.on('changes', function(msg) {
+  var types = {'I': 'ciaddr', 'L': 'daddrr', 'S': 'daddrw'};
+  var clnums = msg['clnums'];
+  var type = types[msg['type']];
+
+  remove_flags(type);
+  for (var i = 0; i < clnums.length; i++) {
+    add_flag(type, clnums[i]);
+  }
   redraw_flags();
 });
 

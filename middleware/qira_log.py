@@ -9,6 +9,17 @@ SIZE_MASK = 0xFF
 
 LOGFILE = "/tmp/qira_log"
 
+"""
+def flag_to_pytype(flags):
+  if flags & IS_START:
+    typ = "i"
+  elif flags & IS_MEM:
+    typ = "m"
+  else:
+    typ = "r"
+  return typ
+"""
+
 def flag_to_type(flags):
   if flags & IS_START:
     typ = "I"

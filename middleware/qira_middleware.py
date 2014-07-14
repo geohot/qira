@@ -7,6 +7,7 @@ import threading
 import time
 import sys
 import os
+from collections import defaultdict
 
 from flask import Flask
 from flask.ext.socketio import SocketIO, emit
@@ -21,7 +22,13 @@ regs = Memory()
 mem = Memory()
 maxclnum = 1
 
-# python db
+# python db has two indexes
+#  types are I, r, m
+# (addr, type) -> [clnums]
+# (clnum, type) -> [changes]
+pydb_addr = defaultdict(list)
+pydb_clnum = defaultdict(list)
+
 
 # *** HANDLER FOR qira_log ***
 def process(log_entries):
@@ -33,12 +40,19 @@ def process(log_entries):
     if clnum > maxclnum:
       maxclnum = clnum
 
-    # Changes database
-    this_change = {'address': address&0xFFFFFFFF, 'type': flag_to_type(flags),
-        'size': flags&SIZE_MASK, 'clnum': clnum, 'data': data&0xFFFFFFFF}
+    # construct this_change
+    this_change = {'address': address, 'type': flag_to_type(flags),
+        'size': flags&SIZE_MASK, 'clnum': clnum, 'data': data}
     if address in instructions:
       this_change['instruction'] = instructions[address]
+
+    # Changes database for mongo
     db_changes.append(this_change)
+
+    # update python database
+    pytype = flag_to_type(flags)
+    pydb_addr[(address, pytype)].append(clnum)
+    pydb_clnum[(clnum, pytype)].append(this_change)
 
     # update local regs and mem database
     # this is somewhat slow...
@@ -86,6 +100,27 @@ def connect():
   print "client connected", maxclnum
   emit('maxclnum', maxclnum)
   emit('pmaps', pmaps)
+
+
+@socketio.on('getchanges', namespace='/qira')
+def getchanges(m):
+  print "getchanges",m
+  if m == None or 'address' not in m or 'type' not in m or m['address'] == None or m['type'] == None:
+    return
+  key = (m['address'], m['type'])
+  emit('changes', {'type': m['type'], 'clnums': pydb_addr[key]})
+
+@socketio.on('getinstructions', namespace='/qira')
+def getinstructions(m):
+  #print "getinstructions",m
+  if m == None or m['clstart'] == None or m['clend'] == None:
+    return
+  ret = []
+  for i in range(m['clstart'], m['clend']):
+    key = (i, 'I')
+    if key in pydb_clnum:
+      ret.append(pydb_clnum[key][0])
+  emit('instructions', ret)
 
 @socketio.on('getmemory', namespace='/qira')
 def getmemory(m):
