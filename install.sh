@@ -7,7 +7,7 @@ if [ ! $(which pip) ]; then
   sudo apt-get install python-pip
 fi
 echo "installing pip packages"
-sudo pip install pymongo pyelftools blist 
+sudo pip install pymongo pyelftools blist flask-socketio
 
 # we need realpath...err ok for now
 if [ ! $(which realpath) ]; then
