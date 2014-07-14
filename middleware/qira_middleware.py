@@ -24,8 +24,8 @@ maxclnum = 1
 
 # python db has two indexes
 #  types are I, r, m
-# (addr, type) -> [clnums]
-# (clnum, type) -> [changes]
+# pydb_addr:  (addr, type) -> [clnums]
+# pydb_clnum: (clnum, type) -> [changes]
 pydb_addr = defaultdict(list)
 pydb_clnum = defaultdict(list)
 
@@ -101,10 +101,25 @@ def connect():
   emit('maxclnum', maxclnum)
   emit('pmaps', pmaps)
 
+@socketio.on('getclnum', namespace='/qira')
+def getclnum(m):
+  print "getclnum",m
+  if m == None or 'clnum' not in m or 'types' not in m or 'limit' not in m:
+    return
+  ret = []
+  for t in m['types']:
+    key = (m['clnum'], t)
+    for c in pydb_clnum[key]:
+      ret.append(c)
+      if len(ret) >= m['limit']:
+        break
+    if len(ret) >= m['limit']:
+      break
+  emit('clnum', ret)
 
 @socketio.on('getchanges', namespace='/qira')
 def getchanges(m):
-  print "getchanges",m
+  #print "getchanges",m
   if m == None or 'address' not in m or 'type' not in m or m['address'] == None or m['type'] == None:
     return
   key = (m['address'], m['type'])
@@ -145,7 +160,12 @@ def getregisters(clnum):
   ret = []
   for i in range(0, len(REGS)):
     if i*4 in regs.daddr:
-      ret.append({"name": REGS[i], "address": i*4, "value": regs.daddr[i*4].fetch(clnum)})
+      rret = {"name": REGS[i], "address": i*4, "value": regs.daddr[i*4].fetch(clnum), "regactions": ""}
+      if clnum in pydb_addr[(i*4, 'R')]:
+        rret['regactions'] += " regread"
+      if clnum in pydb_addr[(i*4, 'W')]:
+        rret['regactions'] += " regwrite"
+      ret.append(rret)
   emit('registers', ret)
 
 def run_socketio():

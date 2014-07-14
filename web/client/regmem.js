@@ -88,16 +88,6 @@ stream.on('memory', function(msg) {
   $("#hexdump")[0].innerHTML = html;
 });
 
-var baseevents = {
-  'click .datamemory': function(e) {
-    var daddr = parseInt(e.target.innerHTML, 16);
-    update_dview(daddr);
-  },
-  'click .datainstruction': function(e) {
-    var iaddr = parseInt(e.target.innerHTML, 16);
-    Session.set('iaddr', iaddr);
-  },
-};
 
 Template.memviewer.events({
   'dblclick .datamemory': function(e) {
@@ -114,20 +104,7 @@ Template.memviewer.events({
   },
 });
 
-Template.datachanges.events(baseevents);
 Template.regviewer.events(baseevents);
-
-
-Template.regviewer.regactions = function() {
-  var ret = "";
-  var cur = Change.find({address: this.address,
-    $or: [{type: "R"}, {type: "W"}]});
-  cur.forEach(function(post) {
-    if (post.type == "R") ret += " regread";
-    if (post.type == "W") ret += " regwrite";
-  });
-  return ret;
-};
 
 Template.regviewer.hexvalue = function() {
   return hex(this.value);
@@ -137,12 +114,49 @@ Template.regviewer.datatype = function() {
   return get_data_type(this.value);
 };
 
-Template.datachanges.memactions = function() {
+// keep these updated
+Deps.autorun(function() {
+  var daddr = Session.get('daddr');
+  var dview = Session.get('dview');
+  var clnum = Session.get('clnum');
+  stream.emit('getmemory', {"clnum":clnum-1, "address":dview, "len":0x100});
+});
+
+Deps.autorun(function() {
+  stream.emit('getregisters', Session.get('clnum')-1);
+});
+
+stream.on('registers', function(msg) {
+  $('#regviewer')[0].innerHTML = "";
+  UI.insert(UI.renderWithData(Template.regviewer, {regs: msg}), $('#regviewer')[0]);
+});
+
+// hacks to keep iaddr in sync with clnum
+
+// move to vtimeline?
+/*Deps.autorun(function(){ Meteor.subscribe('dat_iaddr', Session.get("iaddr"), {onReady: function() {
+  var closest = undefined;
+  var diff = 0;
   var clnum = Session.get("clnum");
-  var cur = Change.find({clnum: clnum,
-    $or: [{type: "L"}, {type: "S"}]}, {limit: 3});
-  return cur;
-};
+  Change.find({"address": Session.get("iaddr"), "type": "I"}).forEach(function(x) {
+    var ldiff = Math.abs(x.clnum - clnum);
+    if (closest == undefined || diff > ldiff) {
+      closest = x.clnum;
+      diff = ldiff;
+      return;
+    }
+  });
+  //p("nearest change is "+closest);
+  if (closest !== undefined && closest !== clnum) {
+    Session.set("clnum", closest);
+  }
+}}); });*/
+
+Deps.autorun(function(){ Meteor.subscribe('dat_daddr', Session.get("daddr")); });
+
+// *** datachanges ***
+
+Template.datachanges.events(baseevents);
 
 Template.datachanges.hexaddress = function() {
   return hex(this.address);
@@ -165,44 +179,14 @@ Template.datachanges.datatype = function() {
   return get_data_type(this.data);
 };
 
-// keep these updated
 Deps.autorun(function() {
-  var daddr = Session.get('daddr');
-  var dview = Session.get('dview');
-  var clnum = Session.get('clnum');
-  stream.emit('getmemory', {"clnum":clnum-1, "address":dview, "len":0x100});
+  stream.emit('getclnum', {'clnum': Session.get('clnum'), 'types': ['L', 'S'], 'limit': 3});
 });
 
-Deps.autorun(function() {
-  stream.emit('getregisters', Session.get('clnum')-1);
+stream.on('clnum', function(msg) {
+  $('#datachanges')[0].innerHTML = "";
+  UI.insert(UI.renderWithData(Template.datachanges, {memactions: msg}), $('#datachanges')[0]);
 });
 
-stream.on('registers', function(msg) {
-  $('#regviewer')[0].innerHTML = "";
-  UI.insert(UI.renderWithData(Template.regviewer, {regs: msg}), $('#regviewer')[0]);
-});
-
-// hacks to keep iaddr in sync with clnum
-
-// moved to vtimeline
-/*Deps.autorun(function(){ Meteor.subscribe('dat_iaddr', Session.get("iaddr"), {onReady: function() {
-  var closest = undefined;
-  var diff = 0;
-  var clnum = Session.get("clnum");
-  Change.find({"address": Session.get("iaddr"), "type": "I"}).forEach(function(x) {
-    var ldiff = Math.abs(x.clnum - clnum);
-    if (closest == undefined || diff > ldiff) {
-      closest = x.clnum;
-      diff = ldiff;
-      return;
-    }
-  });
-  //p("nearest change is "+closest);
-  if (closest !== undefined && closest !== clnum) {
-    Session.set("clnum", closest);
-  }
-}}); });*/
-
-Deps.autorun(function(){ Meteor.subscribe('dat_daddr', Session.get("daddr")); });
 
 

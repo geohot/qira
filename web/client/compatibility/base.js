@@ -32,3 +32,14 @@ function zoom_out_max(dontforce) {
   else Session.set("cview", [0, max]);
 }
 
+var baseevents = {
+  'click .datamemory': function(e) {
+    var daddr = parseInt(e.target.innerHTML, 16);
+    update_dview(daddr);
+  },
+  'click .datainstruction': function(e) {
+    var iaddr = parseInt(e.target.innerHTML, 16);
+    Session.set('iaddr', iaddr);
+  },
+};
+
