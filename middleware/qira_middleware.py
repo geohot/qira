@@ -29,7 +29,6 @@ maxclnum = 1
 pydb_addr = defaultdict(list)
 pydb_clnum = defaultdict(list)
 
-
 # *** HANDLER FOR qira_log ***
 def process(log_entries):
   global instructions, pmaps, regs, mem, maxclnum
@@ -103,7 +102,7 @@ def connect():
 
 @socketio.on('getclnum', namespace='/qira')
 def getclnum(m):
-  print "getclnum",m
+  #print "getclnum",m
   if m == None or 'clnum' not in m or 'types' not in m or 'limit' not in m:
     return
   ret = []

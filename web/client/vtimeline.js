@@ -177,6 +177,24 @@ stream.on('changes', function(msg) {
   var types = {'I': 'ciaddr', 'L': 'daddrr', 'S': 'daddrw'};
   var clnums = msg['clnums'];
   var type = types[msg['type']];
+  var clnum = Session.get('clnum');
+
+  if (msg['type'] == 'I' && clnums.indexOf(clnum) == -1) {
+    var closest = undefined;
+    var diff = 0;
+    // if these are instructions and the current clnum isn't in the list
+    for (var i = 0; i < clnums.length; i++) {
+      var ldiff = Math.abs(clnums[i] - clnum);
+      if (closest == undefined || diff > ldiff) {
+        closest = clnums[i];
+        diff = ldiff;
+      }
+    }
+    p("nearest change is "+closest);
+    if (closest !== undefined && closest !== clnum) {
+      Session.set("clnum", closest);
+    }
+  }
 
   remove_flags(type);
   for (var i = 0; i < clnums.length; i++) {
