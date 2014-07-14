@@ -10,7 +10,6 @@ Session = Package.session.Session;
 WebApp = Package.webapp.WebApp;
 check = Package.check.check;
 Match = Package.check.Match;
-DDP = Package.livedata.DDP;
 UI = Package.ui.UI;
 Handlebars = Package.ui.Handlebars;
 Spacebars = Package['spacebars-common'].Spacebars;

@@ -9,7 +9,7 @@ import sys
 import os
 from collections import defaultdict
 
-from flask import Flask
+from flask import Flask, Response
 from flask.ext.socketio import SocketIO, emit
 
 app = Flask(__name__)
@@ -176,20 +176,26 @@ def serve(path):
   # best security?
   if ".." in path:
     return
-  web = os.path.dirname(os.path.realpath(__file__))+"/../web/"
   webstatic = os.path.dirname(os.path.realpath(__file__))+"/../webstatic/"
 
-  # first try to serve the page statically
-  try:
-    return open(webstatic+path).read()
-  except IOError:
-    pass
+  print path
+  ext = path.split(".")[-1]
 
-  dat = open(web+path).read()
-  if path[-3:] == '.js':
-    return "(function(){"+dat+"})();"
+  if ext == 'css':
+    path = "qira.css"
+
+  dat = open(webstatic+path).read()
+  if ext == 'js' and not path.startswith('client/compatibility/') and not path.startswith('packages/'):
+    dat = "(function(){"+dat+"})();"
+
+  if ext == 'js':
+    return Response(dat, mimetype="application/javascript")
+  elif ext == 'css':
+    return Response(dat, mimetype="text/css")
   else:
-    return dat
+    return Response(dat, mimetype="text/html")
+
+
 
 def run_socketio():
   print "starting socketio server..."
