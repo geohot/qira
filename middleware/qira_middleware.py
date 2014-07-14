@@ -170,6 +170,27 @@ def getregisters(clnum):
       ret.append(rret)
   emit('registers', ret)
 
+@app.route('/', defaults={'path': 'index.html'})
+@app.route('/<path:path>')
+def serve(path):
+  # best security?
+  if ".." in path:
+    return
+  web = os.path.dirname(os.path.realpath(__file__))+"/../web/"
+  webstatic = os.path.dirname(os.path.realpath(__file__))+"/../webstatic/"
+
+  # first try to serve the page statically
+  try:
+    return open(webstatic+path).read()
+  except IOError:
+    pass
+
+  dat = open(web+path).read()
+  if path[-3:] == '.js':
+    return "(function(){"+dat+"})();"
+  else:
+    return dat
+
 def run_socketio():
   print "starting socketio server..."
   socketio.run(app, port=3002)
