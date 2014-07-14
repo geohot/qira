@@ -11,20 +11,12 @@ def write_memdb(regs, mem):
 
 meteor_pid = -1
 
-def db_push(db_changes, db_pmaps):
-  db = mongo_connect()
-  Change = db.change
-  Pmaps = db.pmaps
-
-  if len(db_pmaps) > 0:
-    Pmaps.insert(db_pmaps)
-  pmaps = new_pmaps
-
-  # push changes to db
+def db_push_changes(db_changes):
   if len(db_changes) > 0:
+    db = mongo_connect()
+    Change = db.change
     Change.insert(db_changes)
-  db.connection.close()
-
+    db.connection.close()
 
 def mongo_connect():
   while 1:
@@ -41,7 +33,6 @@ def mongo_connect():
       time.sleep(0.1)
   return db
 
-
 def meteor_init(is_managing_meteor):
   # connect to db, set up collections, and drop
   if is_managing_meteor:
@@ -51,9 +42,7 @@ def meteor_init(is_managing_meteor):
   print "waiting for mongo connection"
   db = mongo_connect()
   Change = db.change
-  Pmaps = db.pmaps
   Change.drop()
-  Pmaps.drop()
   db.connection.close()
   print "dropped old databases"
 

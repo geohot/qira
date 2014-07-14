@@ -5,6 +5,11 @@ stream.on('maxclnum', function(msg) {
   update_maxclnum(msg);
 });
 
+pmaps = {}
+stream.on('pmaps', function(msg) {
+  pmaps = msg
+});
+
 Meteor.startup(function() {
   $("#hexdump")[0].addEventListener("mousewheel", function(e) {
     if (e.wheelDelta < 0) {
@@ -16,9 +21,9 @@ Meteor.startup(function() {
 });
 
 function get_data_type(v) {
-  var a = Pmaps.findOne({address: v - v%0x1000});
+  var a = pmaps[v - v%0x1000];
   if (a === undefined) return "";
-  else return "data"+a.type;
+  else return "data"+a;
 }
 
 stream.on('memory', function(msg) {
@@ -177,7 +182,6 @@ Deps.autorun(function() {
   stream.emit('getregisters', Session.get('clnum')-1);
 });
 
-Meteor.subscribe('pmaps');
 // hacks to keep iaddr in sync with clnum
 Deps.autorun(function(){ Meteor.subscribe('dat_clnum', Session.get("clnum"), {onReady: function() {
   var row = Change.findOne({"clnum": Session.get("clnum"), "type": "I"});

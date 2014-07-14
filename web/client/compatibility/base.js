@@ -15,6 +15,7 @@ function update_dview(addr) {
 }
 
 function update_maxclnum(clnum) {
+  p("update maxclnum "+clnum);
   if (Session.get("max_clnum") == Session.get("clnum")) {
     // track the max changelist if you have it selected
     Session.set("clnum", clnum);

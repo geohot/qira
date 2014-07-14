@@ -33,14 +33,3 @@ function check_hash() {
 window.onload = check_hash;
 window.onhashchange = check_hash;
 
-// moved to regmem.js
-
-/*Meteor.subscribe('max_clnum');
-
-Deps.autorun(function() {
-  var post = Change.findOne({type: "I"}, {sort: {clnum: -1}, limit: 1});
-  if (post !== undefined) {
-    update_maxclnum(post.clnum);
-  }
-});*/
-
