@@ -1,14 +1,15 @@
 #!/bin/bash
 set -e
 
-# we need pip to install python stuff
-if [ ! $(which pip) ]; then
-  echo "installing pip"
-  sudo apt-get install python-pip
-fi
-echo "installing pip packages"
+# for building blist and stuff for flask like gevent
 
-# pymongo isn't really needed anymore
+# we need pip to install python stuff
+if [ $(which apt-get) ]; then
+  echo "installing apt packagtes"
+  sudo apt-get install build-essential python-dev python-pip
+fi
+
+echo "installing pip packages"
 sudo pip install pyelftools blist flask-socketio
 
 echo "making symlinks"

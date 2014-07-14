@@ -164,11 +164,13 @@ Deps.autorun(function() {
 
 Deps.autorun(function() {
   var iaddr = Session.get('iaddr');
+  var maxclnum = Session.get('max_clnum');
   stream.emit('getchanges', {'address': iaddr, 'type': 'I'})
 });
 
 Deps.autorun(function() {
   var daddr = Session.get('daddr');
+  var maxclnum = Session.get('max_clnum');
   stream.emit('getchanges', {'address': daddr, 'type': 'L'})
   stream.emit('getchanges', {'address': daddr, 'type': 'S'})
 });
@@ -179,6 +181,7 @@ stream.on('changes', function(msg) {
   var type = types[msg['type']];
   var clnum = Session.get('clnum');
 
+  // this should probably only be for the IDA plugin
   if (msg['type'] == 'I' && clnums.indexOf(clnum) == -1) {
     var closest = undefined;
     var diff = 0;

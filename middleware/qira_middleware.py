@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 from qira_log import *
 from qira_memory import *
-from qira_meteor import *
 from qira_binary import *
 import threading
 import time
@@ -89,6 +88,7 @@ def init():
 
   instructions = objdump_binary()
   mem_commit_base_binary(mem)
+  print "mem commit done"
 
   pydb_addr = defaultdict(list)
   pydb_clnum = defaultdict(list)
@@ -226,8 +226,10 @@ def run_middleware():
       # push to all connected websockets
       sys.stdout.write("socket..."); sys.stdout.flush()
       sys.stdout.flush()
-      socketio.emit('maxclnum', maxclnum, namespace='/qira')
       socketio.emit('pmaps', pmaps, namespace='/qira')
+
+      # this must happen last
+      socketio.emit('maxclnum', maxclnum, namespace='/qira')
 
       #print "done %d to %d" % (changes_committed,max_changes)
       print "done", maxclnum
