@@ -31,7 +31,7 @@ pydb_clnum = defaultdict(list)
 
 # *** HANDLER FOR qira_log ***
 def process(log_entries):
-  global instructions, pmaps, regs, mem, maxclnum
+  global instructions, pmaps, regs, mem, maxclnum, pydb_addr, pydb_clnum
 
   db_changes = []
 
@@ -79,7 +79,7 @@ def process(log_entries):
 
 
 def init():
-  global instructions, pmaps, regs, mem, maxclnum
+  global instructions, pmaps, regs, mem, maxclnum, pydb_addr, pydb_clnum
   instructions = {}
   pmaps = {}
   regs = Memory()
@@ -89,6 +89,9 @@ def init():
 
   instructions = objdump_binary()
   mem_commit_base_binary(mem)
+
+  pydb_addr = defaultdict(list)
+  pydb_clnum = defaultdict(list)
 
   #meteor_init(0)
 

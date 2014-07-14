@@ -190,7 +190,7 @@ stream.on('changes', function(msg) {
         diff = ldiff;
       }
     }
-    p("nearest change is "+closest);
+    //p("nearest change is "+closest);
     if (closest !== undefined && closest !== clnum) {
       Session.set("clnum", closest);
     }

@@ -131,10 +131,6 @@ stream.on('registers', function(msg) {
   UI.insert(UI.renderWithData(Template.regviewer, {regs: msg}), $('#regviewer')[0]);
 });
 
-// hacks to keep iaddr in sync with clnum
-
-Deps.autorun(function(){ Meteor.subscribe('dat_daddr', Session.get("daddr")); });
-
 // *** datachanges ***
 
 Template.datachanges.events(baseevents);

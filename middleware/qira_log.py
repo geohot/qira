@@ -34,8 +34,11 @@ def flag_to_type(flags):
   return typ
 
 def get_log_length(fn):
-  dat = open(fn).read(4)
-  return struct.unpack("I", dat)[0]
+  try:
+    dat = open(fn).read(4)
+    return struct.unpack("I", dat)[0]
+  except:
+    return 0
 
 def read_log(fn, seek=1, cnt=0):
   f = open(fn)
