@@ -22,7 +22,9 @@ mkdir -p distrib/qira
 echo "copying webapp"
 cp -R web distrib/qira/
 rm -rf distrib/qira/web/.meteor/local
+rm -f distrib/qira/web/qira.html   # this doesn't work to change, no don't allow the user to
 #mrt bundle ../bin/qira_web.tar.gz
+cp -R webstatic distrib/qira/
 
 # sudo apt-get install python-pip
 # sudo pip install pymongo
@@ -30,23 +32,22 @@ echo "copying middleware"
 mkdir -p distrib/qira/middleware
 cp middleware/*.py distrib/qira/middleware/
 
+
 # built for ida 6.6
 # perhaps build for older IDA as well, ie 6.1
 # and mac + windows
 # fairly standard deps + libcrypto, libssl, libz and libida
 mkdir -p distrib/qira/ida
-cd ida_plugin
-echo "building ida plugin"
-./build.sh
-cp qira.plx ../distrib/qira/ida/qira_ida66_linux.plx
-strip ../distrib/qira/ida/qira_ida66_linux.plx
-#cp ~/qira-release/ida/* ../distrib/qira/ida/
+cd ida
+echo "copying ida plugin"
+cp qira_ida66_linux.plx ../distrib/qira/ida/qira_ida66_linux.plx
+cp qira_ida66_mac.pmc ../distrib/qira/ida/qira_ida66_mac.pmc
 cd ../
 
 # fairly standard deps + librt, libglib, libpcre
 echo "copying qemu"
 mkdir -p distrib/qira/qemu
-cp qemu/qemu-latest/i386-linux-user/qemu-i386 distrib/qira/qemu/qira-i386
+cp qemu/qira-i386 distrib/qira/qemu/qira-i386
 strip distrib/qira/qemu/qira-i386
 
 # package up the python, hopefully this includes pymongo driver
@@ -71,6 +72,6 @@ cp -av install.sh qira qira-server distrib/qira/
 
 echo "making archive"
 cd distrib/
-tar zcvf qira-0.1.tar.gz qira
+tar zcvf qira-0.2.tar.gz qira
 cd ../
 

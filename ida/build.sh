@@ -23,3 +23,11 @@ if [ "$(diff $OUTPUT "$IDAROOT/plugins/$OUTPUT")" != "" ]; then
   cp $OUTPUT "$IDAROOT/plugins"
 fi
 
+if [[ "$unamestr" == 'Linux' ]]; then
+  cp $OUTPUT qira_ida66_linux.plx
+  strip qira_ida66_linux.plx
+elif [[ "$unamestr" == 'Darwin' ]]; then
+  cp $OUTPUT qira_ida66_mac.pmc
+  strip qira_ida66_mac.pmc
+fi
+

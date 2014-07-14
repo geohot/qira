@@ -6,10 +6,10 @@ if [ -z $1 ]; then
   exit -1
 fi
 
-BIN=$(realpath $1)
+BIN="$(pwd)/$1"
 FILE=$(file $BIN)
 
-ln -sf $BIN /tmp/qira_binary
+ln -sf "$BIN" /tmp/qira_binary
 
 # build qemu if we have the source
 if [ -d "qemu/qemu-latest" ]; then
