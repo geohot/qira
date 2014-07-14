@@ -4,7 +4,6 @@ var current_hash = "";
 Deps.autorun(function() {
   var json = {};
   // for dep tracking, can't use keys
-  json['max_clnum'] = Session.get('max_clnum');
   json['clnum'] = Session.get('clnum');
   json['iaddr'] = Session.get('iaddr');
   json['daddr'] = Session.get('daddr');

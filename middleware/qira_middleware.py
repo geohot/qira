@@ -1,49 +1,30 @@
 #!/usr/bin/env python
 from qira_log import *
 from qira_memory import *
-import subprocess
+from qira_meteor import *
+from qira_binary import *
 import time
 import sys
 import os
-import json
-import signal
-import socket
-from elftools.elf.elffile import ELFFile
-from pymongo import MongoClient
 
 # global state for the program
 instructions = {}
 pmaps = {}
 regs = Memory()
 mem = Memory()
+maxclnum = 0
 
-meteor_pid = -1
-
-def mongo_connect():
-  while 1:
-    try:
-      db = MongoClient('localhost', 3001).meteor
-      db.bob.insert([{"test":"test"}])
-      db.bob.drop()  # poor bob, be master
-      break
-    except:
-      try:
-        db.connection.close()
-      except:
-        pass
-      time.sleep(0.1)
-  return db
-
+# *** HANDLER FOR qira_log ***
 def process(log_entries):
-  global instructions, pmaps, regs, mem
-  db = mongo_connect()
-  Change = db.change
-  Pmaps = db.pmaps
+  global instructions, pmaps, regs, mem, maxclnum
 
   db_changes = []
   new_pmaps = pmaps.copy()
 
   for (address, data, clnum, flags) in log_entries:
+    if clnum > maxclnum:
+      maxclum = clnum
+
     # Changes database
     this_change = {'address': address&0xFFFFFFFF, 'type': flag_to_type(flags),
         'size': flags&SIZE_MASK, 'clnum': clnum, 'data': data&0xFFFFFFFF}
@@ -71,15 +52,19 @@ def process(log_entries):
       new_pmaps[page_base] = "instruction"
   # *** FOR LOOP END ***
 
-  # we shouldn't be rewriting this every time
-  open("/tmp/qira_memdb", "wb").write(
-    json.dumps({"regs": regs.dump(), "mem": mem.dump()}))
-
   # push new pmaps
   db_pmaps = []
   for i in new_pmaps:
     if i not in pmaps or pmaps[i] != new_pmaps[i]:
       db_pmaps.append({"address": i, "type": new_pmaps[i]})
+
+  # we shouldn't be rewriting this every time
+  write_memdb(regs, mem)
+
+  # *** actually push to db ***
+  db = mongo_connect()
+  Change = db.change
+  Pmaps = db.pmaps
 
   if len(db_pmaps) > 0:
     Pmaps.insert(db_pmaps)
@@ -90,7 +75,6 @@ def process(log_entries):
     Change.insert(db_changes)
   db.connection.close()
 
-
 def init():
   global instructions, pmaps, regs, mem
   global meteor_pid
@@ -100,98 +84,45 @@ def init():
   mem = Memory()
   print "reset program state"
 
-  # get the memory base
-  elf = ELFFile(open("/tmp/qira_binary"))
-  for seg in elf.iter_segments():
-    try:
-      vaddr = seg.header['p_vaddr']
-      flags = seg.header['p_flags']
-      data = seg.data()
-    except:
-      continue
-    # should we gate the segment on something?
-    for i in range(0, len(data)):
-      mem.commit(0, vaddr+i, ord(data[i]))
+  instructions = objdump_binary()
+  mem_commit_base_binary(mem)
+  write_memdb(regs, mem)
 
-  # get the instructions
-  objdump_out = subprocess.Popen(
-    ["objdump", "-d", "/tmp/qira_binary"],
-    stdout = subprocess.PIPE).communicate()[0]
-  for line in objdump_out.split("\n"):
-    line = line.split("\t")
-    if len(line) == 3:
-      addr = int(line[0].strip(" :"), 16)
-      instructions[addr] = line[2]
-      #print hex(addr), line[2]
-    else:
-      # could get names here too, but maybe useless for now
-      pass
-  print "objdump parse got",len(instructions),"instructions"
+  meteor_init(0)
 
-  open("/tmp/qira_memdb", "wb").write(
-    json.dumps({"regs": regs.dump(), "mem": mem.dump()}))
-  print "wrote initial qira_memdb"
 
-  # connect to db, set up collections, and drop
-  print "restarting meteor"
-  kill_meteor()
-  start_meteor()
-  print "waiting for mongo connection"
-  db = mongo_connect()
-  Change = db.change
-  Pmaps = db.pmaps
-  Change.drop()
-  Pmaps.drop()
-  db.connection.close()
-  print "dropped old databases"
+# ***** after this line is the new server stuff *****
 
-def wait_for_port(port, closed=False):
-  while 1:
-    try:
-      s = socket.create_connection(("localhost", port))
-      s.close()
-      if closed == False:
-        return
-    except socket.error:
-      if closed == True:
-        return
-    time.sleep(0.1)
+from flask import Flask
+from flask.ext.socketio import SocketIO, emit
 
-is_managing_meteor = 0
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret!'
+socketio = SocketIO(app)
 
-def start_meteor():
-  global meteor_pid, is_managing_meteor
-  if not is_managing_meteor:
+def start_server():
+  socketio.run(app, port=3002)
+
+@socketio.on('getmemory')
+def event(m):
+  if m['clnum'] == None or m['address'] == None or m['len'] == None:
     return
-  ret = os.fork()
-  if ret == 0:
-    os.chdir(os.path.dirname(os.path.realpath(__file__))+"/../web/")
-    os.environ['PATH'] += ":"+os.getenv("HOME")+"/.meteor/tools/latest/bin/"
-    os.execvp("mrt", ["mrt"])
-  meteor_pid = ret
-  print "waiting for mongodb startup"
-  wait_for_port(3000)
-  wait_for_port(3001)
-  print "socket ports are open"
-  time.sleep(5)
-  print "meteor started with pid",meteor_pid
+  print "my event ",m
+  dat = mem.fetch(m['clnum'], m['address'], m['len'])
+  emit('memory', {'address': m['address'], 'data': dat})
 
-def kill_meteor():
-  global meteor_pid, is_managing_meteor
-  if not is_managing_meteor:
+@socketio.on('getregisters')
+def regevent(m):
+  if m['clnum'] == None:
     return
-  if meteor_pid != -1:
-    print "killing meteor"
-    sys.stdout.flush()
-    os.kill(meteor_pid, signal.SIGINT)
-    print os.waitpid(meteor_pid, 0)
-    print "meteor is dead"
-    meteor_pid = -1
-  print "waiting for ports to be closed"
-  wait_for_port(3000, True)
-  os.system("killall mongod")   # OMG WHY DO I NEED THIS?
-  wait_for_port(3001, True)
-  print "ports are closed"
+  # register names shouldn't be here
+  X86REGS = ['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP']
+  REGS = X86REGS
+  ret = []
+  for i in range(0, len(REGS)):
+    if i*4 in regs.daddr:
+      ret.append({"name": REGS[i], "address": i*4, "value": regs.daddr[i*4].fetch(m['clnum'])})
+  emit('registers', ret)
 
 def main():
   print "starting QIRA middleware"
@@ -213,6 +144,7 @@ def main():
       process(read_log(LOGFILE, changes_committed, max_changes - changes_committed))
       print "done %d to %d" % (changes_committed,max_changes)
       changes_committed = max_changes
+
 
 if __name__ == '__main__':
   try:
