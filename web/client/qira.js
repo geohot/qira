@@ -33,19 +33,14 @@ function check_hash() {
 window.onload = check_hash;
 window.onhashchange = check_hash;
 
-Meteor.subscribe('max_clnum');
+// moved to regmem.js
+
+/*Meteor.subscribe('max_clnum');
 
 Deps.autorun(function() {
   var post = Change.findOne({type: "I"}, {sort: {clnum: -1}, limit: 1});
-
   if (post !== undefined) {
-    if (Session.get("max_clnum") == Session.get("clnum")) {
-      // track the max changelist if you have it selected
-      Session.set("clnum", post.clnum);
-    } else {
-      Session.setDefault("clnum", post.clnum);
-    }
-    Session.set("max_clnum", post.clnum);
+    update_maxclnum(post.clnum);
   }
-});
+});*/
 

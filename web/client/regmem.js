@@ -1,4 +1,9 @@
-stream = new Meteor.Stream('regmem');
+//stream = new Meteor.Stream('regmem');
+stream = io.connect("http://localhost:3002/qira")
+
+stream.on('maxclnum', function(msg) {
+  update_maxclnum(msg);
+});
 
 Meteor.startup(function() {
   $("#hexdump")[0].addEventListener("mousewheel", function(e) {

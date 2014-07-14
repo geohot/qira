@@ -1,12 +1,12 @@
 // these all look really easy to write in python
 
-Meteor.startup(function () {
+/*Meteor.startup(function () {
 });
 
 Meteor.publish('max_clnum', function() {
   // extract 'clnum' from this to get the max clnum
   return Change.find({type: "I"}, {sort: {clnum: -1}, limit: 1});
-});
+});*/
 
 Meteor.publish('pmaps', function() {
   return Pmaps.find();

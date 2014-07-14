@@ -11,6 +11,21 @@ def write_memdb(regs, mem):
 
 meteor_pid = -1
 
+def db_push(db_changes, db_pmaps):
+  db = mongo_connect()
+  Change = db.change
+  Pmaps = db.pmaps
+
+  if len(db_pmaps) > 0:
+    Pmaps.insert(db_pmaps)
+  pmaps = new_pmaps
+
+  # push changes to db
+  if len(db_changes) > 0:
+    Change.insert(db_changes)
+  db.connection.close()
+
+
 def mongo_connect():
   while 1:
     try:

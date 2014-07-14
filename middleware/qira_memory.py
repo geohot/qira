@@ -5,11 +5,13 @@ class Address:
     this.backing = blist.sorteddict()
 
   def fetch(this, clnum):
-    rclnum = this.backing.bisect_left(clnum)
-    if rclnum == None:
+    kclnum = this.backing.keys().bisect_right(clnum)
+    if kclnum == 0:
       return None
     else:
-      return this.backing[rlcnum]
+      rclnum = this.backing.keys()[kclnum-1]
+      #print this.backing.keys(), clnum, rclnum
+      return this.backing[rclnum]
 
   def commit(this, clnum, dat):
     this.backing[clnum] = dat
@@ -22,7 +24,9 @@ class Memory:
     ret = {}
     for i in range(addr, addr+l):
       if i in this.daddr:
-        ret[i] = this.daddr[i].fetch(clnum)
+        rret = this.daddr[i].fetch(clnum)
+        if rret != None:
+          ret[i] = rret
     return ret
 
   def dump(this):

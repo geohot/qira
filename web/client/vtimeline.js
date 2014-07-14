@@ -53,6 +53,7 @@ function register_drag_zoom() {
     var up = get_clnum(e);
     if (up === undefined) return;
     if (down != -1) {
+      // should check absolute length of drag, not clnums
       p("drag "+down+"-"+up);
       if (down == up) {
         Session.set("clnum", down);
