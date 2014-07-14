@@ -1,6 +1,8 @@
+import blist
+
 class Address:
   def __init__(this):
-    this.backing = {}
+    this.backing = blist.sorteddict()
 
   def commit(this, clnum, dat):
     this.backing[clnum] = dat
@@ -12,7 +14,10 @@ class Memory:
   def dump(this):
     ret = {}
     for i in this.daddr:
-      ret[i] = this.daddr[i].backing
+      rret = {}
+      for j in this.daddr[i].backing:
+        rret[j] = this.daddr[i].backing[j]
+      ret[i] = rret
     return ret
 
   def commit(this, clnum, addr, dat):

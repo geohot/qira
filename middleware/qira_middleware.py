@@ -157,8 +157,12 @@ def wait_for_port(port, closed=False):
         return
     time.sleep(0.1)
 
+is_managing_meteor = 0
+
 def start_meteor():
-  global meteor_pid
+  global meteor_pid, is_managing_meteor
+  if not is_managing_meteor:
+    return
   ret = os.fork()
   if ret == 0:
     os.chdir(os.path.dirname(os.path.realpath(__file__))+"/../web/")
@@ -173,7 +177,9 @@ def start_meteor():
   print "meteor started with pid",meteor_pid
 
 def kill_meteor():
-  global meteor_pid
+  global meteor_pid, is_managing_meteor
+  if not is_managing_meteor:
+    return
   if meteor_pid != -1:
     print "killing meteor"
     sys.stdout.flush()

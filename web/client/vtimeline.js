@@ -174,7 +174,6 @@ Deps.autorun(function() {
   var daddr = Session.get('daddr');
   remove_flags("daddrr");
   remove_flags("daddrw");
-  //Change.find({address: daddr, $or: [{type: "L"}, {type: "S"}] }).forEach(function(x) {
   Change.find({address: daddr}).forEach(function(x) {
     if (x.type == "L") add_flag("daddrr", x.clnum);
     if (x.type == "S") add_flag("daddrw", x.clnum);

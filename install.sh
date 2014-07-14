@@ -2,16 +2,12 @@
 set -e
 
 # we need pymongo
-if ! python -c 'import pymongo; import elftools; exit(0)'; then
-  if [ ! $(which pip) ]; then
-    echo "installing pip"
-    sudo apt-get install python-pip
-  fi
-  echo "installing pymongo"
-  sudo pip install pymongo
-  echo "installing pyelftools"
-  sudo pip install pyelftools
+if [ ! $(which pip) ]; then
+  echo "installing pip"
+  sudo apt-get install python-pip
 fi
+echo "installing pip packages"
+sudo pip install pymongo pyelftools blist 
 
 # we need realpath...err ok for now
 if [ ! $(which realpath) ]; then
