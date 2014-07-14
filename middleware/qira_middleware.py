@@ -178,7 +178,6 @@ def serve(path):
     return
   webstatic = os.path.dirname(os.path.realpath(__file__))+"/../webstatic/"
 
-  print path
   ext = path.split(".")[-1]
 
   if ext == 'css':

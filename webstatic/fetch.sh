@@ -1,20 +1,17 @@
 #!/bin/sh
-rm -f *.html *.js *.css *.map
-wget http://localhost:3000/index.html http://localhost:3000/template.qira.js
+rm -f *.js
+wget http://localhost:3000/template.qira.js
 #wget $(grep style index.html | awk '{ print $3 }' | sed 's/href="/http:\/\/localhost:3000/' | sed 's/\.css.*/\.map/')
 #wget $(grep style index.html | awk '{ print $3 }' | sed 's/href="/http:\/\/localhost:3000/' | sed 's/\.css.*/\.css/')
 
-cd packages
-
-rm -f *.js
-JSFILES=$(grep packages ../index.html | awk '{ print $3 }' | sed 's/src="/http:\/\/localhost:3000/' | sed 's/?.*//')
+JSFILES=$(wget -qO- http://localhost:3000/index.html | grep packages | awk '{ print $3 }' | sed 's/src="/http:\/\/localhost:3000/' | sed 's/?.*//' | grep -v "livedata" | grep -v "application-configuration")
 echo $JSFILES
-wget -q $JSFILES
+wget -qO- $JSFILES | grep -v "^//# sourceMappingURL=" | grep -v "^DDP = Package.livedata.DDP;$" > package.js
+yui-compressor package.js -o package.js
 
-rm -f *.map
-MAPFILES=$(grep packages ../index.html | awk '{ print $3 }' | sed 's/[^?]*?/http:\/\/localhost:3000\/packages\//' | sed 's/".*/\.map/')
-echo $MAPFILES
-wget -q $MAPFILES
+# *** FOR DEBUGGING ***
 
-CSSFILE=$(grep style ../index.html | awk '{ print $3 }' | sed 's/[^?]*?/http:\/\/localhost:3000\/packages\//' | sed 's/".*/\.map/')
+#JSFILES=$(wget -qO- http://localhost:3000/index.html | grep packages | awk '{ print $3 }' | sed 's/src="/http:\/\/localhost:3000/' | sed 's/?.*//')
+#cd packages
+#wget -q $JSFILES
 
