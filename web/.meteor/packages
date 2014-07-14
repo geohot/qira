@@ -3,7 +3,14 @@
 # 'meteor add' and 'meteor remove' will edit this file for you,
 # but you can also edit it by hand.
 
-standard-app-packages
-insecure
 jquery
-d3
+meteor
+underscore
+deps
+templating
+session
+webapp
+check
+livedata
+spacebars
+mongo-livedata
