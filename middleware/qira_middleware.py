@@ -157,15 +157,16 @@ def getregisters(clnum):
     return
   # register names shouldn't be here
   # though i'm not really sure where a better place is, qemu has this information
-  X86REGS = ['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP']
-  REGS = X86REGS
+  X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4)
+  X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8)
+  (REGS, REGSIZE) = X86REGS
   ret = []
   for i in range(0, len(REGS)):
-    if i*4 in regs.daddr:
-      rret = {"name": REGS[i], "address": i*4, "value": regs.daddr[i*4].fetch(clnum), "regactions": ""}
-      if clnum in pydb_addr[(i*4, 'R')]:
+    if i*REGSIZE in regs.daddr:
+      rret = {"name": REGS[i], "address": i*REGSIZE, "value": regs.daddr[i*REGSIZE].fetch(clnum), "size": REGSIZE, "regactions": ""}
+      if clnum in pydb_addr[(i*REGSIZE, 'R')]:
         rret['regactions'] += " regread"
-      if clnum in pydb_addr[(i*4, 'W')]:
+      if clnum in pydb_addr[(i*REGSIZE, 'W')]:
         rret['regactions'] += " regwrite"
       ret.append(rret)
   emit('registers', ret)

@@ -468,8 +468,6 @@ struct logstate {
   uint32_t change_count;
   uint32_t changelist_number;
   uint32_t is_filtered;
-  // does this work in shared memory?
-  pthread_mutex_t lock;
 };
 struct logstate *GLOBAL_logstate;
 
@@ -501,25 +499,23 @@ void init_QIRA(CPUArchState *env) {
 
   // skip the first change
   GLOBAL_logstate->change_count = 1;
-  pthread_mutex_init(&GLOBAL_logstate->lock, NULL);
+  GLOBAL_logstate->is_filtered = 0;
 }
 
 void add_change(target_ulong addr, uint64_t data, uint32_t flags) {
-  pthread_mutex_lock(&GLOBAL_logstate->lock);
-  if (GLOBAL_logstate->change_count == GLOBAL_change_size) {
+  int cc = __sync_fetch_and_add(&GLOBAL_logstate->change_count, 1);
+
+  if (cc == GLOBAL_change_size) {
     // double the buffer size
     QIRA_DEBUG("doubling buffer with size %d\n", GLOBAL_change_size);
     resize_change_buffer(GLOBAL_change_size * sizeof(struct change) * 2);
     GLOBAL_change_size *= 2;
   }
-  struct change *this_change = GLOBAL_change_buffer + GLOBAL_logstate->change_count;
+  struct change *this_change = GLOBAL_change_buffer + cc;
   this_change->address = (uint64_t)addr;
   this_change->data = data;
   this_change->changelist_number = GLOBAL_logstate->changelist_number;
   this_change->flags = IS_VALID | flags;
-  // must inc this afterward
-  ++GLOBAL_logstate->change_count;
-  pthread_mutex_unlock(&GLOBAL_logstate->lock);
 }
 
 void add_pending_change(target_ulong addr, uint64_t data, uint32_t flags) {
@@ -539,6 +535,7 @@ void commit_pending_changes(void) {
   memset(GLOBAL_pending_changes, 0, (PENDING_CHANGES_MAX_ADDR/4) * sizeof(struct change));
 }
 
+// all loads and store happen in libraries...
 void track_load(target_ulong addr, uint64_t data, int size) {
   QIRA_DEBUG("load: 0x%x:%d\n", addr, size);
   add_change(addr, data, IS_MEM | size);
@@ -574,6 +571,8 @@ void track_kernel_read(void *host_addr, target_ulong guest_addr, long len) {
 
 void track_kernel_write(void *host_addr, target_ulong guest_addr, long len) {
   if (unlikely(GLOBAL_QIRA_did_init == 0)) return;
+  // clamp at 0x40, badness
+  if (len > 0x40) len = 0x40;
 
   QIRA_DEBUG("kernel_write: %p %X %d\n", host_addr, guest_addr, len);
   long i = 0;
@@ -651,7 +650,8 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
     TranslationBlock *tb = cpu->current_tb;
 
     // hacky check
-    if (tb->pc > 0x40000000) {
+    //if (tb->pc > 0x40000000) {
+    if (0) {
       GLOBAL_logstate->is_filtered = 1;
     } else {
       if (GLOBAL_logstate->is_filtered == 1) {
@@ -662,7 +662,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
       add_change(tb->pc, tb->size, IS_START);
     }
 
-    QIRA_DEBUG("set changelist %d at %x(%d)\n", *GLOBAL_changelist_number, tb->pc, tb->size);
+    QIRA_DEBUG("set changelist %d at %x(%d)\n", GLOBAL_logstate->changelist_number, tb->pc, tb->size);
 #endif
 
     long tcg_temps[CPU_TEMP_BUF_NLONGS];
@@ -1080,6 +1080,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
             t0 = *tb_ptr++;
             t1 = tci_read_r(&tb_ptr);
             t2 = tci_read_s32(&tb_ptr);
+            track_read(t1, t2, *(uint64_t *)(t1 + t2), 64);
             tci_write_reg64(t0, *(uint64_t *)(t1 + t2));
             break;
         case INDEX_op_st8_i64:
@@ -1105,6 +1106,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
             t1 = tci_read_r(&tb_ptr);
             t2 = tci_read_s32(&tb_ptr);
             assert(t1 != sp_value || (int32_t)t2 < 0);
+            track_write(t1, t2, t0, 64);
             *(uint64_t *)(t1 + t2) = t0;
             break;
 

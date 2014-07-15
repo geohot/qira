@@ -123,6 +123,8 @@ Deps.autorun(function() {
 
 stream.on('registers', function(msg) {
   $('#regviewer')[0].innerHTML = "";
+  var tsize = msg[0]['size'];
+  if (tsize > 0) PTRSIZE = tsize;
   UI.insert(UI.renderWithData(Template.regviewer, {regs: msg}), $('#regviewer')[0]);
 });
 
