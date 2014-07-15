@@ -67,7 +67,7 @@ def process(log_entries):
 
     # for Pmaps
     # shouldn't really send this each time, but it should be smaller anyway
-    page_base = address & 0xFFFFF000
+    page_base = (address>>12)<<12
     if flags & IS_MEM and page_base not in pmaps:
       pmaps[page_base] = "memory"
     if flags & IS_START:

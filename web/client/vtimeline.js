@@ -182,7 +182,7 @@ stream.on('changes', function(msg) {
   var clnum = Session.get('clnum');
 
   // this should probably only be for the IDA plugin
-  if (msg['type'] == 'I' && clnums.indexOf(clnum) == -1) {
+  if (msg['type'] == 'I' && clnums.indexOf(clnum) == -1 && Session.get('dirtyiaddr') == true) {
     var closest = undefined;
     var diff = 0;
     // if these are instructions and the current clnum isn't in the list
@@ -197,6 +197,7 @@ stream.on('changes', function(msg) {
     if (closest !== undefined && closest !== clnum) {
       Session.set("clnum", closest);
     }
+    Session.set("dirtyiaddr", false);
   }
 
   remove_flags(type);

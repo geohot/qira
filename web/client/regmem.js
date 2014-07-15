@@ -25,18 +25,20 @@ function get_data_type(v) {
   else return "data"+a;
 }
 
+var PTRSIZE = 4;
+
 stream.on('memory', function(msg) {
   // render the hex editor
   var addr = msg['address'];
   html = "<table><tr>";
-  for (var i = 0; i < msg['len']; i+=4) {
+  for (var i = 0; i < msg['len']; i += PTRSIZE) {
     if ((i&0xF) == 0) html += "</tr><tr><td>"+hex(addr+i)+":</td>";
     html += "<td></td>";
 
     // check if it's an address
     var v = 0;
     
-    for (var j = 3; j >= 0; j--) {
+    for (var j = PTRSIZE-1; j >= 0; j--) {
       if (addr+i+j == Session.get('daddr')) {
         exclass = "highlight";
       }
@@ -51,9 +53,9 @@ stream.on('memory', function(msg) {
       me = "0x"+me;
       var exclass = "";
       if (addr+i == Session.get('daddr')) { exclass = "highlight"; }
-      html += '<td colspan="4" class="data '+a+' '+exclass+'" daddr='+(addr+i)+">"+me+"</td>";
+      html += '<td colspan="'+PTRSIZE+'" class="data '+a+' '+exclass+'" daddr='+(addr+i)+">"+me+"</td>";
     } else {
-      for (var j = 0; j < 4; j++) {
+      for (var j = 0; j < PTRSIZE; j++) {
         var ii = msg['dat'][addr+i+j];
         if (ii === undefined) {
           var me = "__";
@@ -68,7 +70,7 @@ stream.on('memory', function(msg) {
     }
 
     // this must run on the last one too
-    if ((i&0xF) == 0xC) { 
+    if ((i&0xF) == (0x10-PTRSIZE)) { 
       str = "";
       for (var j = 0; j < 0x10; j++) {
         // ewww

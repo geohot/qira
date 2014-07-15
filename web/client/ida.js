@@ -12,6 +12,7 @@ function do_ida_socket(callme) {
       var dat = msg.data.split(" ");
       if (dat[0] == "setiaddr") {
         var iaddr = parseInt(dat[1])
+        Session.set("dirtyiaddr", true);
         Session.set("iaddr", iaddr);
       }
       if (dat[0] == "setdaddr") {

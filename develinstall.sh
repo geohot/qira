@@ -15,8 +15,4 @@ if [ ! -f ~/.meteor/tools/latest/bin/mrt ]; then
   ~/.meteor/tools/latest/bin/npm install -g meteorite
 fi
 
-echo "making devel symlinks"
-sudo ln -sf $(pwd)/qemu/qira-sparc /usr/local/bin/qira-sparc
-sudo ln -sf $(pwd)/qemu/qira-sparc32plus /usr/local/bin/qira-sparc32plus
-sudo ln -sf $(pwd)/qemu/qira-x86_64 /usr/local/bin/qira-x86_64
 
