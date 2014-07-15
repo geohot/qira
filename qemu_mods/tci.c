@@ -650,8 +650,8 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
     TranslationBlock *tb = cpu->current_tb;
 
     // hacky check
-    //if (tb->pc > 0x40000000) {
-    if (0) {
+    if (tb->pc > 0x40000000) {
+    //if (0) {
       GLOBAL_logstate->is_filtered = 1;
     } else {
       if (GLOBAL_logstate->is_filtered == 1) {

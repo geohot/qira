@@ -6,7 +6,7 @@ if [ -z $1 ]; then
   exit -1
 fi
 
-BIN="$(pwd)/$1"
+BIN=$(readlink -f $1)
 FILE=$(file $BIN)
 
 ln -sf "$BIN" /tmp/qira_binary
