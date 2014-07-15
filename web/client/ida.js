@@ -17,7 +17,9 @@ function do_ida_socket(callme) {
       }
       if (dat[0] == "setdaddr") {
         var daddr = parseInt(dat[1])
-        update_dview(daddr);
+        if (get_data_type(daddr) != "datainstruction") {
+          update_dview(daddr);
+        }
       }
     };
   } else {

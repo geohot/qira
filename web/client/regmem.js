@@ -4,7 +4,6 @@ stream.on('maxclnum', function(msg) {
   update_maxclnum(msg);
 });
 
-pmaps = {}
 stream.on('pmaps', function(msg) {
   pmaps = msg
 });
@@ -18,12 +17,6 @@ Meteor.startup(function() {
     }
   });
 });
-
-function get_data_type(v) {
-  var a = pmaps[v - v%0x1000];
-  if (a === undefined) return "";
-  else return "data"+a;
-}
 
 var PTRSIZE = 4;
 

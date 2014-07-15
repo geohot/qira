@@ -1,5 +1,12 @@
 function p(a) { console.log(a); }
 
+pmaps = {}
+function get_data_type(v) {
+  var a = pmaps[v - v%0x1000];
+  if (a === undefined) return "";
+  else return "data"+a;
+}
+
 function hex(a) {
   if (a == undefined) {
     return "";
