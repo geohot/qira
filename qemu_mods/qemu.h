@@ -22,6 +22,8 @@
 
 #define THREAD __thread
 
+#define QIRA_TRACKING
+
 /* This struct is used to hold certain information about the image.
  * Basically, it replicates in user space what would be certain
  * task_struct fields in the kernel
@@ -387,7 +389,6 @@ abi_long copy_to_user(abi_ulong gaddr, void *hptr, size_t len);
    any byteswapping.  lock_user may return either a pointer to the guest
    memory, or a temporary buffer.  */
 
-#define QIRA_TRACKING
 
 #ifdef QIRA_TRACKING
 void track_kernel_read(void *host_addr, target_ulong guest_addr, long len);

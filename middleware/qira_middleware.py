@@ -232,10 +232,12 @@ def run_middleware():
   print "starting QIRA middleware"
   changes_committed = 1
 
+  MYLOGFILE = "/tmp/qira_logs/0"
+
   # run loop run
   while 1:
     time.sleep(0.05)
-    max_changes = get_log_length(LOGFILE)
+    max_changes = get_log_length(MYLOGFILE)
     if max_changes == None:
       continue
     if max_changes < changes_committed:
@@ -245,7 +247,7 @@ def run_middleware():
     if changes_committed < max_changes:
       sys.stdout.write("going from %d to %d..." % (changes_committed,max_changes))
       sys.stdout.flush()
-      log = read_log(LOGFILE, changes_committed, max_changes - changes_committed)
+      log = read_log(MYLOGFILE, changes_committed, max_changes - changes_committed)
       sys.stdout.write("read..."); sys.stdout.flush()
       db_changes = process(log)
 
@@ -284,6 +286,11 @@ def run_bindserver():
       os.dup2(fd, 0) 
       os.dup2(fd, 1) 
       os.dup2(fd, 2) 
+      for i in range(3, fd+1):
+        try:
+          os.close(i)
+        except:
+          pass
       os.execvp('qira-i386', ["qira-i386", "-singlestep", "/tmp/qira_binary"]+sys.argv[2:])
       #os.execvp('strace', ['strace', '/tmp/qira_binary'])
       #os.execvp('/tmp/qira_binary', ['/tmp/qira_binary'])
