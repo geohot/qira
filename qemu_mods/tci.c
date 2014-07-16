@@ -430,7 +430,7 @@ static bool tci_compare64(uint64_t u0, uint64_t u1, TCGCond condition)
 //#define QIRA_DEBUG printf
 
 // prototypes
-void init_QIRA(CPUArchState *env);
+void init_QIRA(CPUArchState *env, int id);
 void add_change(target_ulong addr, uint64_t data, uint32_t flags);
 void track_load(target_ulong a, uint64_t data, int size);
 void track_store(target_ulong a, uint64_t data, int size);
@@ -468,6 +468,8 @@ struct logstate {
   uint32_t change_count;
   uint32_t changelist_number;
   uint32_t is_filtered;
+  uint32_t first_changelist_number;
+  int parent_id;
 };
 struct logstate *GLOBAL_logstate;
 
@@ -485,11 +487,17 @@ void resize_change_buffer(size_t size) {
   if (GLOBAL_change_buffer == NULL) QIRA_DEBUG("MMAP FAILED!\n");
 }
 
-void init_QIRA(CPUArchState *env) {
+void init_QIRA(CPUArchState *env, int id) {
+  char fn[PATH_MAX];
   QIRA_DEBUG("init QIRA called\n");
   GLOBAL_CPUArchState = env;
+  sprintf(fn, "/tmp/qira_logs/%d", id);
+
+  // for compat
   unlink("/tmp/qira_log");
-  GLOBAL_qira_log_fd = open("/tmp/qira_log", O_RDWR | O_CREAT, 0644);
+  if(symlink(fn, "/tmp/qira_log") == -1) QIRA_DEBUG("log symlink failed\n");
+
+  GLOBAL_qira_log_fd = open(fn, O_RDWR | O_CREAT, 0644);
   GLOBAL_change_size = 1;
   GLOBAL_QIRA_did_init = 1;
   memset(GLOBAL_pending_changes, 0, (PENDING_CHANGES_MAX_ADDR/4) * sizeof(struct change));
@@ -499,7 +507,10 @@ void init_QIRA(CPUArchState *env) {
 
   // skip the first change
   GLOBAL_logstate->change_count = 1;
+  GLOBAL_logstate->changelist_number = 0;
+  GLOBAL_logstate->first_changelist_number = 0;
   GLOBAL_logstate->is_filtered = 0;
+  GLOBAL_logstate->parent_id = -1;
 }
 
 void add_change(target_ulong addr, uint64_t data, uint32_t flags) {
@@ -537,7 +548,7 @@ void commit_pending_changes(void) {
 
 // all loads and store happen in libraries...
 void track_load(target_ulong addr, uint64_t data, int size) {
-  QIRA_DEBUG("load: 0x%x:%d\n", addr, size);
+  QIRA_DEBUG("load:  0x%x:%d\n", addr, size);
   add_change(addr, data, IS_MEM | size);
 }
 
@@ -547,14 +558,14 @@ void track_store(target_ulong addr, uint64_t data, int size) {
 }
 
 void track_read(target_ulong base, target_ulong offset, target_ulong data, int size) {
+  QIRA_DEBUG("read:  %x+%x:%d = %x\n", base, offset, size, data);
   if ((int)offset < 0) return;
-  QIRA_DEBUG("read: %x+%x:%d = %x\n", base, offset, size, data);
   if (GLOBAL_logstate->is_filtered == 0) add_change(offset, data, size);
 }
 
 void track_write(target_ulong base, target_ulong offset, target_ulong data, int size) {
-  if ((int)offset < 0) return;
   QIRA_DEBUG("write: %x+%x:%d = %x\n", base, offset, size, data);
+  if ((int)offset < 0) return;
   if (GLOBAL_logstate->is_filtered == 0) add_change(offset, data, IS_WRITE | size);
   else add_pending_change(offset, data, IS_WRITE | size);
 }
@@ -563,9 +574,9 @@ void track_kernel_read(void *host_addr, target_ulong guest_addr, long len) {
   if (unlikely(GLOBAL_QIRA_did_init == 0)) return;
 
   // this is generating tons of changes, and maybe not too useful
-  /*QIRA_DEBUG("kernel_read: %p %X %d\n", host_addr, guest_addr, len);
+  /*QIRA_DEBUG("kernel_read: %p %X %ld\n", host_addr, guest_addr, len);
   long i = 0;
-  for (; i < len; i+=4) add_change(guest_addr+i, ((unsigned int*)host_addr)[i], IS_MEM | 32);
+  //for (; i < len; i+=4) add_change(guest_addr+i, ((unsigned int*)host_addr)[i], IS_MEM | 32);
   for (; i < len; i+=1) add_change(guest_addr+i, ((unsigned char*)host_addr)[i], IS_MEM | 8);*/
 }
 
@@ -574,7 +585,7 @@ void track_kernel_write(void *host_addr, target_ulong guest_addr, long len) {
   // clamp at 0x40, badness
   //if (len > 0x40) len = 0x40;
 
-  QIRA_DEBUG("kernel_write: %p %X %d\n", host_addr, guest_addr, len);
+  QIRA_DEBUG("kernel_write: %p %X %ld\n", host_addr, guest_addr, len);
   long i = 0;
   //for (; i < len; i+=4) add_change(guest_addr+i, ((unsigned int*)host_addr)[i], IS_MEM | IS_WRITE | 32);
   for (; i < len; i+=1) add_change(guest_addr+i, ((unsigned char*)host_addr)[i], IS_MEM | IS_WRITE | 8);
@@ -641,13 +652,71 @@ void track_kernel_write(void *host_addr, target_ulong guest_addr, long len) {
 # define qemu_st_beq(X)  stq_be_p(g2h(W(taddr,X,64)), X)
 #endif
 
+void run_QIRA_log(CPUArchState *env, int this_id, int to_change);
+
+void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
+  char fn[PATH_MAX];
+  sprintf(fn, "/tmp/qira_logs/%d", this_id);
+
+  int qira_log_fd = open(fn, O_RDWR, 0644);
+  struct logstate plogstate;
+  if (read(qira_log_fd, &plogstate, sizeof(plogstate)) != sizeof(plogstate)) {
+    printf("HEADER READ ISSUE!\n");
+    return;
+  }
+  // check if this one has a parent and recurse here
+  QIRA_DEBUG("parent is %d with first_change %d\n", plogstate.parent_id, plogstate.first_changelist_number);
+  if (plogstate.parent_id != -1) {
+    run_QIRA_log(env, plogstate.parent_id, plogstate.first_changelist_number);
+  }
+
+  struct change pchange;
+  // skip the first change
+  lseek(qira_log_fd, sizeof(pchange), SEEK_SET);
+  while(1) {
+    if (read(qira_log_fd, &pchange, sizeof(pchange)) != sizeof(pchange)) {
+      printf("READ ISSUE!\n");
+      break;
+    }
+    if (pchange.changelist_number == to_change) break;
+    QIRA_DEBUG("running old change %lX %d\n", pchange.address, pchange.changelist_number);
+
+    uint32_t flags = pchange.flags;
+    if ((flags & IS_VALID) && !(flags & IS_START) && (flags & IS_WRITE)) {
+      void *base;
+      if (flags & IS_MEM) { base = g2h(pchange.address); }
+      else { base = ((void *)env) + pchange.address; }
+      memcpy(base, &pchange.data, (flags&SIZE_MASK) >> 3);
+    }
+  }
+
+  GLOBAL_logstate->first_changelist_number = to_change;
+  GLOBAL_logstate->changelist_number = to_change-1;
+  GLOBAL_logstate->parent_id = this_id;
+}
+
 /* Interpret pseudo code in tb. */
 uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
 {
 #ifdef QIRA_TRACKING
-    if (unlikely(GLOBAL_QIRA_did_init == 0)) init_QIRA(env);
     CPUState *cpu = ENV_GET_CPU(env);
     TranslationBlock *tb = cpu->current_tb;
+
+    if (unlikely(GLOBAL_QIRA_did_init == 0)) { 
+      // these three arguments (parent_id, start_clnum, id) must be passed into QIRA
+      int parent_id = -1, start_clnum, id = 0;
+      FILE *f = fopen("/tmp/qira_state", "rb");
+      if (f != NULL) {
+        if (fscanf(f, "%d %d %d", &parent_id, &start_clnum, &id) != 3) {
+          printf("CORRUPT STATE!\n");
+        }
+        fclose(f);
+      }
+
+      init_QIRA(env, id);
+      if (parent_id != -1) run_QIRA_log(env, parent_id, start_clnum);
+      return 0;
+    }
 
     // hacky check
     if (tb->pc > 0x40000000) {
@@ -786,6 +855,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
             t0 = *tb_ptr++;
             t1 = tci_read_r(&tb_ptr);
             t2 = tci_read_s32(&tb_ptr);
+            track_read(t1, t2, *(uint8_t *)(t1 + t2), 32);
             tci_write_reg8(t0, *(uint8_t *)(t1 + t2));
             break;
         case INDEX_op_ld8s_i32:
@@ -806,12 +876,14 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
             t0 = tci_read_r8(&tb_ptr);
             t1 = tci_read_r(&tb_ptr);
             t2 = tci_read_s32(&tb_ptr);
+            track_write(t1, t2, t0, 32);
             *(uint8_t *)(t1 + t2) = t0;
             break;
         case INDEX_op_st16_i32:
             t0 = tci_read_r16(&tb_ptr);
             t1 = tci_read_r(&tb_ptr);
             t2 = tci_read_s32(&tb_ptr);
+            track_write(t1, t2, t0, 32);
             *(uint16_t *)(t1 + t2) = t0;
             break;
         case INDEX_op_st_i32:
@@ -1057,6 +1129,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
             t0 = *tb_ptr++;
             t1 = tci_read_r(&tb_ptr);
             t2 = tci_read_s32(&tb_ptr);
+            track_read(t1, t2, *(uint8_t *)(t1 + t2), 8);
             tci_write_reg8(t0, *(uint8_t *)(t1 + t2));
             break;
         case INDEX_op_ld8s_i64:
@@ -1068,12 +1141,14 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
             t0 = *tb_ptr++;
             t1 = tci_read_r(&tb_ptr);
             t2 = tci_read_s32(&tb_ptr);
+            track_read(t1, t2, *(uint32_t *)(t1 + t2), 32);
             tci_write_reg32(t0, *(uint32_t *)(t1 + t2));
             break;
         case INDEX_op_ld32s_i64:
             t0 = *tb_ptr++;
             t1 = tci_read_r(&tb_ptr);
             t2 = tci_read_s32(&tb_ptr);
+            track_read(t1, t2, *(int32_t *)(t1 + t2), 32);
             tci_write_reg32s(t0, *(int32_t *)(t1 + t2));
             break;
         case INDEX_op_ld_i64:
@@ -1087,18 +1162,21 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
             t0 = tci_read_r8(&tb_ptr);
             t1 = tci_read_r(&tb_ptr);
             t2 = tci_read_s32(&tb_ptr);
+            track_write(t1, t2, t0, 64);
             *(uint8_t *)(t1 + t2) = t0;
             break;
         case INDEX_op_st16_i64:
             t0 = tci_read_r16(&tb_ptr);
             t1 = tci_read_r(&tb_ptr);
             t2 = tci_read_s32(&tb_ptr);
+            track_write(t1, t2, t0, 64);
             *(uint16_t *)(t1 + t2) = t0;
             break;
         case INDEX_op_st32_i64:
             t0 = tci_read_r32(&tb_ptr);
             t1 = tci_read_r(&tb_ptr);
             t2 = tci_read_s32(&tb_ptr);
+            track_write(t1, t2, t0, 64);
             *(uint32_t *)(t1 + t2) = t0;
             break;
         case INDEX_op_st_i64:

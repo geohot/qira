@@ -1,4 +1,4 @@
-mov eax, 10
+mov eax, 3
 
 fail:
 mov ebx, 2

@@ -17,7 +17,8 @@ fi
 cd qemu/qemu-latest
 ln -sf ../../qemu_mods/tci.c tci.c
 ln -sf ../../../qemu_mods/qemu.h linux-user/qemu.h
-./configure --target-list=i386-linux-user,arm-linux-user,x86_64-linux-user,sparc-linux-user,sparc32plus-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown
+#./configure --target-list=i386-linux-user,arm-linux-user,x86_64-linux-user,sparc-linux-user,sparc32plus-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown
+./configure --target-list=i386-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown
 make -j32
 
 

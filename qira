@@ -9,6 +9,7 @@ fi
 BIN=$(readlink -f $1)
 FILE=$(file $BIN)
 
+mkdir -p /tmp/qira_logs/
 ln -sf "$BIN" /tmp/qira_binary
 
 # build qemu if we have the source
@@ -19,11 +20,9 @@ if [ -d "qemu/qemu-latest" ]; then
   popd
 fi
 
-# detect which qemu to run based on the file
 shift
-# TODO: use $FILE to detect which qira to call
-#echo $FILE
 
+# detect which qemu to run based on the file
 if [[ $FILE == *SPARC32PLUS* ]]; then
   qira-sparc32plus -singlestep /tmp/qira_binary $@
 elif [[ $FILE == *ARM* ]]; then

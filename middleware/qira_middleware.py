@@ -2,10 +2,12 @@
 from qira_log import *
 from qira_memory import *
 from qira_binary import *
+import socket
 import threading
 import time
 import sys
 import os
+import subprocess
 from collections import defaultdict
 
 from flask import Flask, Response
@@ -76,20 +78,30 @@ def process(log_entries):
 
   return db_changes
 
-
-def init():
-  global instructions, pmaps, regs, mem, maxclnum, pydb_addr, pydb_clnum
+def init_file(fil):
+  global instructions, pmaps
   global REGS, REGSIZE
+
+  # delete the logs
+  try:
+    os.mkdir("/tmp/qira_logs")
+  except:
+    pass
+  for i in os.listdir("/tmp/qira_logs"):
+    os.unlink("/tmp/qira_logs/"+i)
+
+  # create the binary symlink
+  try:
+    os.unlink("/tmp/qira_binary")
+  except:
+    pass
+  os.symlink(fil, "/tmp/qira_binary")
+
   instructions = {}
   pmaps = {}
-  regs = Memory()
-  mem = Memory()
-  maxclnum = 1
-  print "reset program state"
-
   instructions = objdump_binary()
-  mem_commit_base_binary(mem)
-  print "mem commit done"
+
+  # get file type
   fb = file_binary()
   print fb
   X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4)
@@ -99,10 +111,20 @@ def init():
   else:
     (REGS, REGSIZE) = X86REGS
 
+
+def init_db():
+  global instructions, pmaps, regs, mem, maxclnum, pydb_addr, pydb_clnum
+  regs = Memory()
+  mem = Memory()
+  maxclnum = 1
+  print "reset program state"
+
+  mem_commit_base_binary(mem)
+  print "mem commit done"
+
   pydb_addr = defaultdict(list)
   pydb_clnum = defaultdict(list)
 
-  #meteor_init(0)
 
 # ***** after this line is the new server stuff *****
 
@@ -161,7 +183,6 @@ def getmemory(m):
 
 @socketio.on('getregisters', namespace='/qira')
 def getregisters(clnum):
-  global REGS, REGSIZE
   #print "getregisters",clnum
   if clnum == None:
     return
@@ -203,7 +224,6 @@ def serve(path):
     return Response(dat, mimetype="text/html")
 
 
-
 def run_socketio():
   print "starting socketio server..."
   socketio.run(app, port=3002)
@@ -216,9 +236,11 @@ def run_middleware():
   while 1:
     time.sleep(0.05)
     max_changes = get_log_length(LOGFILE)
+    if max_changes == None:
+      continue
     if max_changes < changes_committed:
       print "RESTART..."
-      init()
+      init_db()
       changes_committed = 1
     if changes_committed < max_changes:
       sys.stdout.write("going from %d to %d..." % (changes_committed,max_changes))
@@ -243,9 +265,51 @@ def run_middleware():
       print "done", maxclnum
       changes_committed = max_changes
 
+import fcntl
+def run_bindserver():
+  # wait for a connection
+  ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+  #ss.setblocking(1)
+  ss.bind(("127.0.0.1", 4000))
+  ss.listen(5)
+  while 1:
+    (cs, address) = ss.accept()
+    print "**** CLIENT",cs, address, cs.fileno()
+
+    if os.fork() == 0:
+      fd = cs.fileno()
+      # python nonblocking is a lie...
+      fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL, 0) & ~os.O_NONBLOCK)
+      os.dup2(fd, 0) 
+      os.dup2(fd, 1) 
+      os.dup2(fd, 2) 
+      os.execvp('qira-i386', ["qira-i386", "-singlestep", "/tmp/qira_binary"]+sys.argv[2:])
+      #os.execvp('strace', ['strace', '/tmp/qira_binary'])
+      #os.execvp('/tmp/qira_binary', ['/tmp/qira_binary'])
+    print os.wait()
+    print "**** CLIENT RETURNED"
+
 if __name__ == '__main__':
-  init()
+  # create the file symlink
+  init_file(os.path.realpath(sys.argv[1]))
+  init_db()
+
+  # bindserver runs in a fork
+  if os.fork() == 0:
+    run_bindserver()
+
+  # start the http server
+  http = threading.Thread(target=run_socketio)
+  http.start()
+
   t = threading.Thread(target=run_middleware)
   t.start()
-  run_socketio()
+  #run_socketio()
+  
+  # have to wait for something
+  http.join()
+
+
+
 

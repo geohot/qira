@@ -9,17 +9,6 @@ SIZE_MASK = 0xFF
 
 LOGFILE = "/tmp/qira_log"
 
-"""
-def flag_to_pytype(flags):
-  if flags & IS_START:
-    typ = "i"
-  elif flags & IS_MEM:
-    typ = "m"
-  else:
-    typ = "r"
-  return typ
-"""
-
 def flag_to_type(flags):
   if flags & IS_START:
     typ = "I"
@@ -38,7 +27,7 @@ def get_log_length(fn):
     dat = open(fn).read(4)
     return struct.unpack("I", dat)[0]
   except:
-    return 0
+    return None
 
 def read_log(fn, seek=1, cnt=0):
   f = open(fn)

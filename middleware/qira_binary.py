@@ -7,7 +7,7 @@ def file_binary():
   instructions = {}
   return subprocess.Popen(
     ["file", "-L", "/tmp/qira_binary"],
-    stdout = subprocess.PIPE).communicate()[0]
+    stdout = subprocess.PIPE).communicate()[0].strip()
 
 def objdump_binary():
   instructions = {}
