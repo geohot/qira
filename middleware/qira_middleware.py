@@ -189,36 +189,35 @@ def init_bindserver():
   ss2.listen(5)
 
 def start_bindserver(myss, parent_id, start_cl, loop = False):
-  if loop:
-    if os.fork() != 0:
-      return
+  if os.fork() != 0:
+    return
+  # bindserver runs in a fork
   while 1:
-    # bindserver runs in a fork
-    if os.fork() == 0:
-      print "**** listening on",myss
-      (cs, address) = myss.accept()
-      run_id = get_next_run_id()
-      print "**** ID",run_id,"CLIENT",cs, address, cs.fileno()
+    print "**** listening on",myss
+    (cs, address) = myss.accept()
 
-      fd = cs.fileno()
-      # python nonblocking is a lie...
-      fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL, 0) & ~os.O_NONBLOCK)
-      os.dup2(fd, 0) 
-      os.dup2(fd, 1) 
-      os.dup2(fd, 2) 
-      for i in range(3, fd+1):
-        try:
-          os.close(i)
-        except:
-          pass
-      # fingerprint here
-      os.execvp('qira-i386', ["qira-i386", "-qirachild",
-        "%d %d %d" % (parent_id, start_cl, run_id), "-singlestep",
-        "/tmp/qira_binary"]+sys.argv[2:])
-    if not loop:
-      break
-    print os.wait()
-    print "**** CLIENT DONE"
+    # fork off the child if we are looping
+    if loop:
+      if os.fork() != 0:
+        continue
+    run_id = get_next_run_id()
+    print "**** ID",run_id,"CLIENT",cs, address, cs.fileno()
+
+    fd = cs.fileno()
+    # python nonblocking is a lie...
+    fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL, 0) & ~os.O_NONBLOCK)
+    os.dup2(fd, 0) 
+    os.dup2(fd, 1) 
+    os.dup2(fd, 2) 
+    for i in range(3, fd+1):
+      try:
+        os.close(i)
+      except:
+        pass
+    # fingerprint here
+    os.execvp('qira-i386', ["qira-i386", "-qirachild",
+      "%d %d %d" % (parent_id, start_cl, run_id), "-singlestep",
+      "/tmp/qira_binary"]+sys.argv[2:])
 
 def delete_old_runs():
   # delete the logs
@@ -239,8 +238,8 @@ if __name__ == '__main__':
   if len(sys.argv) < 2:
     print "usage: %s <target binary>" % sys.argv[0]
     exit(-1)
-  #delete_old_runs()
 
+  delete_old_runs()
   # creates the file symlink, program is constant through server run
   program = qira_trace.Program(os.path.realpath(sys.argv[1]))
 
