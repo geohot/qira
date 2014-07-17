@@ -32,7 +32,7 @@ Template.controls.events = {
   'click #control_fork': function(e) {
     var clnum = Session.get("clnum");
     var forknum = Session.get("forknum");
-    stream.emit('forkat', clnum, forknum)
+    stream.emit('forkat', forknum, clnum)
   }
 };
 

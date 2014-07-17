@@ -22,8 +22,11 @@ run_id = 0
 # ***** after this line is the new server stuff *****
 
 @socketio.on('forkat', namespace='/qira')
-def forkat(clnum, forknum):
-  print "forkat",clnum,forknum
+def forkat(forknum, clnum):
+  global run_id
+  print "forkat",forknum,clnum
+  run_id += 1
+  start_bindserver(forknum, clnum, run_id)
 
 @socketio.on('connect', namespace='/qira')
 def connect():
@@ -173,56 +176,61 @@ def run_middleware():
       socketio.emit('maxclnum', program.get_maxclnum(), namespace='/qira')
       
 
+def init_bindserver():
+  global ss
+  # wait for a connection
+  ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+  ss.bind(("127.0.0.1", 4000))
+  ss.listen(5)
+
 def start_bindserver(parent_id, start_cl, run_id):
+  global ss
   # bindserver runs in a fork
   if os.fork() == 0:
-    # wait for a connection
-    ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    ss.bind(("127.0.0.1", 4000))
-    ss.listen(5)
+    print "**** listening on :4000"
+    (cs, address) = ss.accept()
+    print "**** ID",run_id,"CLIENT",cs, address, cs.fileno()
 
-    while 1:
-      (cs, address) = ss.accept()
-      ss.close()   # close the server socket after we have a client, multiple runs are fine
-      print "**** ID",run_id,"CLIENT",cs, address, cs.fileno()
+    fd = cs.fileno()
+    # python nonblocking is a lie...
+    fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL, 0) & ~os.O_NONBLOCK)
+    os.dup2(fd, 0) 
+    os.dup2(fd, 1) 
+    os.dup2(fd, 2) 
+    for i in range(3, fd+1):
+      try:
+        os.close(i)
+      except:
+        pass
+    # fingerprint here
+    os.execvp('qira-i386', ["qira-i386", "-qirachild",
+      "%d %d %d" % (parent_id, start_cl, run_id), "-singlestep",
+      "/tmp/qira_binary"]+sys.argv[2:])
 
-      if os.fork() == 0:
-        fd = cs.fileno()
-        # python nonblocking is a lie...
-        fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL, 0) & ~os.O_NONBLOCK)
-        os.dup2(fd, 0) 
-        os.dup2(fd, 1) 
-        os.dup2(fd, 2) 
-        for i in range(3, fd+1):
-          try:
-            os.close(i)
-          except:
-            pass
-        # fingerprint here
-        os.execvp('qira-i386', ["qira-i386", "-qirachild",
-          "%d %d %d" % (parent_id, start_cl, run_id), "-singlestep",
-          "/tmp/qira_binary"]+sys.argv[2:])
-      print os.wait()
-      print "**** CLIENT RETURNED"
-      exit(0)  # doesn't have to
+def delete_old_runs():
+  # delete the logs
+  try:
+    os.mkdir("/tmp/qira_logs")
+  except:
+    pass
+  for i in os.listdir("/tmp/qira_logs"):
+    os.unlink("/tmp/qira_logs/"+i)
 
 if __name__ == '__main__':
+  delete_old_runs()
+
   # creates the file symlink, program is constant through server run
   program = qira_trace.Program(os.path.realpath(sys.argv[1]))
 
   # start the first binary running
   # i guess most things after this will be forks
+  init_bindserver()
   start_bindserver(-1, 1, run_id)
 
   # start the http server
   http = threading.Thread(target=run_socketio)
   http.start()
 
-  t = threading.Thread(target=run_middleware)
-  t.start()
-  #run_socketio()
-  
-  # have to wait for something
-  http.join()
+  run_middleware()
 

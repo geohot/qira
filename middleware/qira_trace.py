@@ -10,14 +10,6 @@ X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8)
 # things that don't cross the fork
 class Program:
   def __init__(self, prog):
-    # delete the logs
-    try:
-      os.mkdir("/tmp/qira_logs")
-    except:
-      pass
-    for i in os.listdir("/tmp/qira_logs"):
-      os.unlink("/tmp/qira_logs/"+i)
-
     # create the binary symlink
     try:
       os.unlink("/tmp/qira_binary")
