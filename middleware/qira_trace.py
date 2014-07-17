@@ -50,7 +50,7 @@ class Trace:
   def reset(self):
     self.regs = qira_memory.Memory()
     self.mem = self.program.basemem.copy()
-    self.minclnum = 1
+    self.minclnum = -1
     self.maxclnum = 1
 
     self.changes_committed = 1
@@ -64,6 +64,8 @@ class Trace:
   # *** HANDLER FOR qira_log ***
   def process(self, log_entries):
     for (address, data, clnum, flags) in log_entries:
+      if self.minclnum == -1 or clnum < self.minclnum:
+        self.minclnum = clnum
       if clnum > self.maxclnum:
         self.maxclnum = clnum
 

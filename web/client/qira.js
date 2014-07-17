@@ -10,6 +10,7 @@ Deps.autorun(function() {
   json['daddr'] = Session.get('daddr');
   json['dview'] = Session.get('dview');
   json['cview'] = Session.get('cview');
+  json['max_clnum'] = Session.get('max_clnum');
   var hash = JSON.stringify(json);
   current_hash = hash;
   //p("updating hash to "+hash);

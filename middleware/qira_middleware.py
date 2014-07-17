@@ -217,8 +217,15 @@ def delete_old_runs():
   for i in os.listdir("/tmp/qira_logs"):
     os.unlink("/tmp/qira_logs/"+i)
 
+def get_max_run_id():
+  ret = 0
+  for i in os.listdir("/tmp/qira_logs/"):
+    ret = max(ret, int(i))
+  return ret
+
 if __name__ == '__main__':
-  delete_old_runs()
+  #delete_old_runs()
+  run_id = get_max_run_id()
 
   # creates the file symlink, program is constant through server run
   program = qira_trace.Program(os.path.realpath(sys.argv[1]))
