@@ -20,6 +20,11 @@ class Memory:
   def __init__(this):
     this.daddr = {}
 
+  def copy(this):
+    new = Memory()
+    new.daddr = this.daddr.copy()
+    return new
+
   def fetch(this, clnum, addr, l):
     ret = {}
     for i in range(addr, addr+l):

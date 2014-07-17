@@ -1,12 +1,11 @@
 #!/usr/bin/env python
-from qira_log import *
-from qira_trace import *
+import qira_log
+import qira_trace
 import socket
 import threading
 import time
 import sys
 import os
-import subprocess
 
 from flask import Flask, Response
 from flask.ext.socketio import SocketIO, emit
@@ -14,31 +13,16 @@ from flask.ext.socketio import SocketIO, emit
 app = Flask(__name__)
 socketio = SocketIO(app)
 
+program = None
 trace = None
-
-def init_file(fil):
-  # delete the logs
-  try:
-    os.mkdir("/tmp/qira_logs")
-  except:
-    pass
-  for i in os.listdir("/tmp/qira_logs"):
-    os.unlink("/tmp/qira_logs/"+i)
-
-  # create the binary symlink
-  try:
-    os.unlink("/tmp/qira_binary")
-  except:
-    pass
-  os.symlink(fil, "/tmp/qira_binary")
 
 # ***** after this line is the new server stuff *****
 
 @socketio.on('connect', namespace='/qira')
 def connect():
-  print "client connected", trace.maxclnum
-  emit('maxclnum', trace.maxclnum)
-  emit('pmaps', trace.pmaps)
+  print "client connected", program.maxclnum
+  emit('maxclnum', program.maxclnum)
+  emit('pmaps', program.pmaps)
 
 @socketio.on('getclnum', namespace='/qira')
 def getclnum(m):
@@ -95,8 +79,8 @@ def getregisters(clnum):
   # register names shouldn't be here
   # though i'm not really sure where a better place is, qemu has this information
   ret = []
-  REGS = trace.tregs[0]
-  REGSIZE = trace.tregs[1]
+  REGS = program.tregs[0]
+  REGSIZE = program.tregs[1]
   for i in range(0, len(REGS)):
     if i*REGSIZE in trace.regs.daddr:
       rret = {"name": REGS[i], "address": i*REGSIZE, "value": trace.regs.daddr[i*REGSIZE].fetch(clnum), "size": REGSIZE, "regactions": ""}
@@ -137,7 +121,7 @@ def run_socketio():
   socketio.run(app, port=3002)
 
 def run_middleware():
-  global trace
+  global trace, program
   print "starting QIRA middleware"
   changes_committed = 1
 
@@ -146,30 +130,31 @@ def run_middleware():
   # run loop run
   while 1:
     time.sleep(0.05)
-    max_changes = get_log_length(MYLOGFILE)
+    max_changes = qira_log.get_log_length(MYLOGFILE)
     if max_changes == None:
       continue
     if max_changes < changes_committed:
       print "RESTART..."
-      trace = Trace("/tmp/qira_binary")
+      trace = qira_trace.Trace(program)
+      program.maxclnum = 1
       changes_committed = 1
     if changes_committed < max_changes:
       sys.stdout.write("going from %d to %d..." % (changes_committed,max_changes))
       sys.stdout.flush()
-      log = read_log(MYLOGFILE, changes_committed, max_changes - changes_committed)
+      log = qira_log.read_log(MYLOGFILE, changes_committed, max_changes - changes_committed)
       sys.stdout.write("read..."); sys.stdout.flush()
       trace.process(log)
 
       # push to all connected websockets
       sys.stdout.write("socket..."); sys.stdout.flush()
       sys.stdout.flush()
-      socketio.emit('pmaps', trace.pmaps, namespace='/qira')
+      socketio.emit('pmaps', program.pmaps, namespace='/qira')
 
       # this must happen last
-      socketio.emit('maxclnum', trace.maxclnum, namespace='/qira')
+      socketio.emit('maxclnum', program.maxclnum, namespace='/qira')
 
       #print "done %d to %d" % (changes_committed,max_changes)
-      print "done", trace.maxclnum
+      print "done", program.maxclnum
       changes_committed = max_changes
 
 import fcntl
@@ -204,8 +189,8 @@ def run_bindserver():
 
 if __name__ == '__main__':
   # create the file symlink
-  init_file(os.path.realpath(sys.argv[1]))
-  trace = Trace("/tmp/qira_binary")
+  program = qira_trace.Program(os.path.realpath(sys.argv[1]))
+  trace = qira_trace.Trace(program)
 
   # bindserver runs in a fork
   if os.fork() == 0:
@@ -221,7 +206,5 @@ if __name__ == '__main__':
   
   # have to wait for something
   http.join()
-
-
 
 

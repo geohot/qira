@@ -4,7 +4,6 @@ import subprocess
 from elftools.elf.elffile import ELFFile
 
 def file_binary(prog):
-  instructions = {}
   return subprocess.Popen(
     ["file", "-L", prog],
     stdout = subprocess.PIPE).communicate()[0].strip()
@@ -34,7 +33,7 @@ def mem_commit_base_binary(prog, mem):
   for seg in elf.iter_segments():
     try:
       vaddr = seg.header['p_vaddr']
-      flags = seg.header['p_flags']
+      #flags = seg.header['p_flags']
       data = seg.data()
     except:
       continue
