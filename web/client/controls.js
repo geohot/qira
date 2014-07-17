@@ -39,7 +39,11 @@ Template.controls.events = {
 // keyboard shortcuts
 window.onkeydown = function(e) {
   //p(e.keyCode);
-  if (e.keyCode == 38) {
+  if (e.keyCode == 37) {
+    Session.set("forknum", Session.get("forknum")-1);
+  } else if (e.keyCode == 39) {
+    Session.set("forknum", Session.get("forknum")+1);
+  } else if (e.keyCode == 38) {
     Session.set("clnum", Session.get("clnum")-1);
   } else if (e.keyCode == 40) {
     Session.set("clnum", Session.get("clnum")+1);
