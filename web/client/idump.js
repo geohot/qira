@@ -47,6 +47,7 @@ stream.on('instructions', function(msg) {
 
 Deps.autorun(function() {
   var clnum = Session.get("clnum");
-  stream.emit('getinstructions', {'clstart': clnum-4, 'clend': clnum+8});
+  var forknum = Session.get("forknum");
+  stream.emit('getinstructions', forknum, clnum-4, clnum+8);
 });
 

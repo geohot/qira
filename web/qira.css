@@ -22,6 +22,23 @@ body {
   margin: 5px;
 }
 
+#control_clnum {
+  width: 100px;
+  margin-right: 0px;
+}
+
+#control_fork {
+  margin-left: 0px;
+  width: 50px;
+}
+
+#control_forknum {
+  margin-left: 0px;
+  margin-right: 0px;
+  width: 30px;
+  color: #555555;
+}
+
 /* vertical timeline and flags */
 
 #vtimelinebox {

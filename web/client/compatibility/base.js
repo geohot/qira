@@ -21,19 +21,38 @@ function update_dview(addr) {
   Session.set('dview', (addr-0x20)-(addr-0x20)%0x10);
 }
 
+function abs_maxclnum() {
+  var maxclnum = Session.get("max_clnum")
+  var ret = undefined;
+  for (i in maxclnum) {
+    if (ret == undefined || ret < maxclnum[i][1]) {
+      ret = maxclnum[i][1];
+    }
+  }
+  return ret;
+}
+
 function update_maxclnum(clnum) {
   p("update maxclnum "+clnum);
-  if (Session.get("max_clnum") == Session.get("clnum")) {
-    // track the max changelist if you have it selected
-    Session.set("clnum", clnum);
-  } else {
-    Session.setDefault("clnum", clnum);
-  }
   Session.set("max_clnum", clnum);
+
+  Session.setDefault("forknum", 0);
+  var forknum = Session.get("forknum");
+
+  if (Session.get("max_clnum")[forknum] == undefined) return;
+
+  var tfmaxclnum = Session.get("max_clnum")[forknum][1];
+
+  if (tfmaxclnum == Session.get("clnum")) {
+    // track the max changelist if you have it selected
+    Session.set("clnum", tfmaxclnum);
+  } else {
+    Session.setDefault("clnum", tfmaxclnum);
+  }
 }
 
 function zoom_out_max(dontforce) {
-  var max = Session.get("max_clnum");
+  var max = abs_maxclnum();
   if (max === undefined) return;
   if (dontforce === true)  Session.setDefault("cview", [0, max]);
   else Session.set("cview", [0, max]);

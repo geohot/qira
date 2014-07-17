@@ -8,7 +8,6 @@ X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4)
 X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8)
 
 # things that don't cross the fork
-
 class Program:
   def __init__(self, prog):
     # delete the logs
@@ -26,7 +25,7 @@ class Program:
       pass
     os.symlink(prog, "/tmp/qira_binary")
 
-    self.maxclnum = 1
+    # pmaps is global, but updated by the traces
     self.pmaps = {}
     self.instructions = qira_binary.objdump_binary(prog)
     self.basemem = qira_memory.Memory()
@@ -40,23 +39,41 @@ class Program:
     else:
       self.tregs = X86REGS
 
+    # no traces yet
+    self.traces = {}
+
+  def get_maxclnum(self):
+    ret = {}
+    for t in self.traces:
+      ret[t] = [self.traces[t].minclnum, self.traces[t].maxclnum]
+    return ret
+
 class Trace:
-  def __init__(self, program):
+  def __init__(self, program, forknum):
+    self.program = program
+    self.program.traces[forknum] = self
+    self.forknum = forknum
+    self.reset()
+
+  def reset(self):
+    self.regs = qira_memory.Memory()
+    self.mem = self.program.basemem.copy()
+    self.minclnum = 1
+    self.maxclnum = 1
+
+    self.changes_committed = 1
+
     # python db has two indexes
-    #  types are I, r, m
     # pydb_addr:  (addr, type) -> [clnums]
     # pydb_clnum: (clnum, type) -> [changes]
-    self.program = program
-    self.regs = qira_memory.Memory()
-    self.mem = program.basemem.copy()
     self.pydb_addr = defaultdict(list)
     self.pydb_clnum = defaultdict(list)
 
   # *** HANDLER FOR qira_log ***
   def process(self, log_entries):
     for (address, data, clnum, flags) in log_entries:
-      if clnum > self.program.maxclnum:
-        self.program.maxclnum = clnum
+      if clnum > self.maxclnum:
+        self.maxclnum = clnum
 
       # construct this_change
       pytype = qira_log.flag_to_type(flags)

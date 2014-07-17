@@ -5,6 +5,7 @@ Deps.autorun(function() {
   var json = {};
   // for dep tracking, can't use keys
   json['clnum'] = Session.get('clnum');
+  json['forknum'] = Session.get('forknum');
   json['iaddr'] = Session.get('iaddr');
   json['daddr'] = Session.get('daddr');
   json['dview'] = Session.get('dview');

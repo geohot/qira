@@ -1,5 +1,11 @@
+stream = io.connect("http://localhost:3002/qira");
+
 Template.controls.clnum = function() {
   return Session.get("clnum");
+};
+
+Template.controls.forknum = function() {
+  return Session.get("forknum");
 };
 
 Template.controls.iaddr = function() {
@@ -14,11 +20,19 @@ Template.controls.events = {
   'change #control_clnum': function(e) {
     Session.set("clnum", parseInt(e.target.value));
   },
+  'change #control_forknum': function(e) {
+    Session.set("forknum", parseInt(e.target.value));
+  },
   'change #control_iaddr': function(e) {
     Session.set("iaddr", parseInt(e.target.value, 16));
   },
   'change #control_daddr': function(e) {
     update_dview(parseInt(e.target.value, 16));
+  },
+  'click #control_fork': function(e) {
+    var clnum = Session.get("clnum");
+    var forknum = Session.get("forknum");
+    stream.emit('forkat', clnum, forknum)
   }
 };
 

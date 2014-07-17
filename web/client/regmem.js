@@ -114,11 +114,13 @@ Deps.autorun(function() {
   var daddr = Session.get('daddr');
   var dview = Session.get('dview');
   var clnum = Session.get('clnum');
-  stream.emit('getmemory', {"clnum":clnum-1, "address":dview, "len":0x100});
+  var forknum = Session.get("forknum");
+  stream.emit('getmemory', forknum, clnum-1, dview, 0x100);
 });
 
 Deps.autorun(function() {
-  stream.emit('getregisters', Session.get('clnum')-1);
+  var forknum = Session.get("forknum");
+  stream.emit('getregisters', forknum, Session.get('clnum')-1);
 });
 
 stream.on('registers', function(msg) {
@@ -154,7 +156,8 @@ Template.datachanges.datatype = function() {
 };
 
 Deps.autorun(function() {
-  stream.emit('getclnum', {'clnum': Session.get('clnum'), 'types': ['L', 'S'], 'limit': 3});
+  var forknum = Session.get("forknum");
+  stream.emit('getclnum', forknum, Session.get('clnum'), ['L', 'S'], 3)
 });
 
 stream.on('clnum', function(msg) {

@@ -10,7 +10,7 @@ Meteor.startup(function() {
   });*/
 
   $("#vtimeline")[0].addEventListener("mousewheel", function(e) {
-    var max = Session.get("max_clnum"); if (max === undefined) return;
+    var max = abs_maxclnum(); if (max === undefined) return;
     var cview = Session.get("cview"); if (cview === undefined) return;
     var cscale = get_cscale(); if (cscale === undefined) return;
     var move = Math.round(cscale * 50.0); // 50 pixels
@@ -30,7 +30,7 @@ function register_drag_zoom() {
   function get_clnum(e) {
     if (e.target !== $("#vtimeline")[0] &&
         e.target !== $("#vtimelinebox")[0]) return undefined;
-    var max = Session.get("max_clnum"); if (max === undefined) return;
+    var max = abs_maxclnum(); if (max === undefined) return;
     var cview = Session.get("cview"); if (cview === undefined) return;
     var cscale = get_cscale();
     if (cscale === undefined) return undefined;
@@ -163,16 +163,18 @@ Deps.autorun(function() {
 });
 
 Deps.autorun(function() {
+  var forknum = Session.get("forknum");
   var iaddr = Session.get('iaddr');
   var maxclnum = Session.get('max_clnum');
-  stream.emit('getchanges', {'address': iaddr, 'type': 'I'})
+  stream.emit('getchanges', forknum, iaddr, 'I')
 });
 
 Deps.autorun(function() {
+  var forknum = Session.get("forknum");
   var daddr = Session.get('daddr');
   var maxclnum = Session.get('max_clnum');
-  stream.emit('getchanges', {'address': daddr, 'type': 'L'})
-  stream.emit('getchanges', {'address': daddr, 'type': 'S'})
+  stream.emit('getchanges', forknum, daddr, 'L')
+  stream.emit('getchanges', forknum, daddr, 'S')
 });
 
 stream.on('changes', function(msg) {

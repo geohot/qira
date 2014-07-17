@@ -6,6 +6,7 @@ import threading
 import time
 import sys
 import os
+import fcntl
 
 from flask import Flask, Response
 from flask.ext.socketio import SocketIO, emit
@@ -15,64 +16,74 @@ socketio = SocketIO(app)
 
 program = None
 trace = None
+traces = {}
+run_id = 0
 
 # ***** after this line is the new server stuff *****
 
+@socketio.on('forkat', namespace='/qira')
+def forkat(clnum, forknum):
+  print "forkat",clnum,forknum
+
 @socketio.on('connect', namespace='/qira')
 def connect():
-  print "client connected", program.maxclnum
-  emit('maxclnum', program.maxclnum)
+  print "client connected", program.get_maxclnum()
+  emit('maxclnum', program.get_maxclnum())
   emit('pmaps', program.pmaps)
 
 @socketio.on('getclnum', namespace='/qira')
-def getclnum(m):
-  #print "getclnum",m
-  if m == None or 'clnum' not in m or 'types' not in m or 'limit' not in m:
+def getclnum(forknum, clnum, types, limit):
+  if forknum not in traces:
+    return
+  if clnum == None or types == None or limit == None:
     return
   ret = []
-  for t in m['types']:
-    key = (m['clnum'], t)
-    for c in trace.pydb_clnum[key]:
+  for t in types:
+    key = (clnum, t)
+    for c in traces[forknum].pydb_clnum[key]:
       ret.append(c)
-      if len(ret) >= m['limit']:
+      if len(ret) >= limit:
         break
-    if len(ret) >= m['limit']:
+    if len(ret) >= limit:
       break
   emit('clnum', ret)
 
 @socketio.on('getchanges', namespace='/qira')
-def getchanges(m):
-  #print "getchanges",m
-  if m == None or 'address' not in m or 'type' not in m or m['address'] == None or m['type'] == None:
+def getchanges(forknum, address, typ):
+  if forknum not in traces:
     return
-  key = (m['address'], m['type'])
-  emit('changes', {'type': m['type'], 'clnums': trace.pydb_addr[key]})
+  if address == None or typ == None:
+    return
+  emit('changes', {'type': typ, 'clnums': traces[forknum].pydb_addr[(address, typ)]})
 
 @socketio.on('getinstructions', namespace='/qira')
-def getinstructions(m):
-  #print "getinstructions",m
-  if m == None or m['clstart'] == None or m['clend'] == None:
+def getinstructions(forknum, clstart, clend):
+  if forknum not in traces:
+    return
+  if clstart == None or clend == None:
     return
   ret = []
-  for i in range(m['clstart'], m['clend']):
+  pydb_clnum = traces[forknum].pydb_clnum 
+  for i in range(clstart, clend):
     key = (i, 'I')
-    if key in trace.pydb_clnum:
-      ret.append(trace.pydb_clnum[key][0])
+    if key in pydb_clnum:
+      ret.append(pydb_clnum[key][0])
   emit('instructions', ret)
 
 @socketio.on('getmemory', namespace='/qira')
-def getmemory(m):
-  #print "getmemory",m
-  if m == None or \
-      'clnum' not in m or 'address' not in m or 'len' not in m or \
-      m['clnum'] == None or m['address'] == None or m['len'] == None:
+def getmemory(forknum, clnum, address, ln):
+  if forknum not in traces:
     return
-  dat = trace.mem.fetch(m['clnum'], m['address'], m['len'])
-  ret = {'address': m['address'], 'len': m['len'], 'dat': dat}
+  if clnum == None or address == None or ln == None:
+    return
+  dat = traces[forknum].mem.fetch(clnum, address, ln)
+  ret = {'address': address, 'len': ln, 'dat': dat}
   emit('memory', ret)
 
 @socketio.on('getregisters', namespace='/qira')
-def getregisters(clnum):
+def getregisters(forknum, clnum):
+  if forknum not in traces:
+    return
   #print "getregisters",clnum
   if clnum == None:
     return
@@ -82,11 +93,11 @@ def getregisters(clnum):
   REGS = program.tregs[0]
   REGSIZE = program.tregs[1]
   for i in range(0, len(REGS)):
-    if i*REGSIZE in trace.regs.daddr:
-      rret = {"name": REGS[i], "address": i*REGSIZE, "value": trace.regs.daddr[i*REGSIZE].fetch(clnum), "size": REGSIZE, "regactions": ""}
-      if clnum in trace.pydb_addr[(i*REGSIZE, 'R')]:
+    if i*REGSIZE in traces[forknum].regs.daddr:
+      rret = {"name": REGS[i], "address": i*REGSIZE, "value": traces[forknum].regs.daddr[i*REGSIZE].fetch(clnum), "size": REGSIZE, "regactions": ""}
+      if clnum in traces[forknum].pydb_addr[(i*REGSIZE, 'R')]:
         rret['regactions'] += " regread"
-      if clnum in trace.pydb_addr[(i*REGSIZE, 'W')]:
+      if clnum in traces[forknum].pydb_addr[(i*REGSIZE, 'W')]:
         rret['regactions'] += " regwrite"
       ret.append(rret)
   emit('registers', ret)
@@ -115,86 +126,94 @@ def serve(path):
   else:
     return Response(dat, mimetype="text/html")
 
-
 def run_socketio():
   print "starting socketio server..."
   socketio.run(app, port=3002)
 
-def run_middleware():
-  global trace, program
-  print "starting QIRA middleware"
-  changes_committed = 1
+def check_file(logfile, trace):
+  global program
+  max_changes = qira_log.get_log_length(logfile)
+  if max_changes == None:
+    return False
+  if max_changes < trace.changes_committed:
+    print "RESTART..."+logfile
+    trace.reset()
+  if trace.changes_committed < max_changes:
+    sys.stdout.write("on %s going from %d to %d..." % (logfile, trace.changes_committed,max_changes))
+    sys.stdout.flush()
+    log = qira_log.read_log(logfile, trace.changes_committed, max_changes - trace.changes_committed)
+    sys.stdout.write("read..."); sys.stdout.flush()
+    trace.process(log)
+    print "done", trace.maxclnum
+    trace.changes_committed = max_changes
+    return True
+  return False
 
-  MYLOGFILE = "/tmp/qira_logs/0"
+def run_middleware():
+  global program, traces
+  print "starting QIRA middleware"
 
   # run loop run
+  # read in all the traces
   while 1:
     time.sleep(0.05)
-    max_changes = qira_log.get_log_length(MYLOGFILE)
-    if max_changes == None:
-      continue
-    if max_changes < changes_committed:
-      print "RESTART..."
-      trace = qira_trace.Trace(program)
-      program.maxclnum = 1
-      changes_committed = 1
-    if changes_committed < max_changes:
-      sys.stdout.write("going from %d to %d..." % (changes_committed,max_changes))
-      sys.stdout.flush()
-      log = qira_log.read_log(MYLOGFILE, changes_committed, max_changes - changes_committed)
-      sys.stdout.write("read..."); sys.stdout.flush()
-      trace.process(log)
+    did_update = False
+    for i in os.listdir("/tmp/qira_logs/"):
+      i = int(i)
+      if i not in traces:
+        traces[i] = qira_trace.Trace(program, i)
+      if check_file("/tmp/qira_logs/"+str(i), traces[i]):
+        did_update = True
 
+    if did_update:
       # push to all connected websockets
-      sys.stdout.write("socket..."); sys.stdout.flush()
-      sys.stdout.flush()
       socketio.emit('pmaps', program.pmaps, namespace='/qira')
 
       # this must happen last
-      socketio.emit('maxclnum', program.maxclnum, namespace='/qira')
+      socketio.emit('maxclnum', program.get_maxclnum(), namespace='/qira')
+      
 
-      #print "done %d to %d" % (changes_committed,max_changes)
-      print "done", program.maxclnum
-      changes_committed = max_changes
-
-import fcntl
-def run_bindserver():
-  # wait for a connection
-  ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-  #ss.setblocking(1)
-  ss.bind(("127.0.0.1", 4000))
-  ss.listen(5)
-  while 1:
-    (cs, address) = ss.accept()
-    print "**** CLIENT",cs, address, cs.fileno()
-
-    if os.fork() == 0:
-      fd = cs.fileno()
-      # python nonblocking is a lie...
-      fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL, 0) & ~os.O_NONBLOCK)
-      os.dup2(fd, 0) 
-      os.dup2(fd, 1) 
-      os.dup2(fd, 2) 
-      for i in range(3, fd+1):
-        try:
-          os.close(i)
-        except:
-          pass
-      os.execvp('qira-i386', ["qira-i386", "-singlestep", "/tmp/qira_binary"]+sys.argv[2:])
-      #os.execvp('strace', ['strace', '/tmp/qira_binary'])
-      #os.execvp('/tmp/qira_binary', ['/tmp/qira_binary'])
-    print os.wait()
-    print "**** CLIENT RETURNED"
-
-if __name__ == '__main__':
-  # create the file symlink
-  program = qira_trace.Program(os.path.realpath(sys.argv[1]))
-  trace = qira_trace.Trace(program)
-
+def start_bindserver(parent_id, start_cl, run_id):
   # bindserver runs in a fork
   if os.fork() == 0:
-    run_bindserver()
+    # wait for a connection
+    ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    ss.bind(("127.0.0.1", 4000))
+    ss.listen(5)
+
+    while 1:
+      (cs, address) = ss.accept()
+      ss.close()   # close the server socket after we have a client, multiple runs are fine
+      print "**** ID",run_id,"CLIENT",cs, address, cs.fileno()
+
+      if os.fork() == 0:
+        fd = cs.fileno()
+        # python nonblocking is a lie...
+        fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL, 0) & ~os.O_NONBLOCK)
+        os.dup2(fd, 0) 
+        os.dup2(fd, 1) 
+        os.dup2(fd, 2) 
+        for i in range(3, fd+1):
+          try:
+            os.close(i)
+          except:
+            pass
+        # fingerprint here
+        os.execvp('qira-i386', ["qira-i386", "-qirachild",
+          "%d %d %d" % (parent_id, start_cl, run_id), "-singlestep",
+          "/tmp/qira_binary"]+sys.argv[2:])
+      print os.wait()
+      print "**** CLIENT RETURNED"
+      exit(0)  # doesn't have to
+
+if __name__ == '__main__':
+  # creates the file symlink, program is constant through server run
+  program = qira_trace.Program(os.path.realpath(sys.argv[1]))
+
+  # start the first binary running
+  # i guess most things after this will be forks
+  start_bindserver(-1, 1, run_id)
 
   # start the http server
   http = threading.Thread(target=run_socketio)
@@ -206,5 +225,4 @@ if __name__ == '__main__':
   
   # have to wait for something
   http.join()
-
 
