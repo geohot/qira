@@ -3,18 +3,18 @@
 import subprocess
 from elftools.elf.elffile import ELFFile
 
-def file_binary():
+def file_binary(prog):
   instructions = {}
   return subprocess.Popen(
-    ["file", "-L", "/tmp/qira_binary"],
+    ["file", "-L", prog],
     stdout = subprocess.PIPE).communicate()[0].strip()
 
-def objdump_binary():
+def objdump_binary(prog):
   instructions = {}
   # get the instructions
   # should really get these from QEMU
   objdump_out = subprocess.Popen(
-    ["objdump", "-d", "/tmp/qira_binary"],
+    ["objdump", "-d", prog],
     stdout = subprocess.PIPE).communicate()[0]
   for line in objdump_out.split("\n"):
     line = line.split("\t")
@@ -28,9 +28,9 @@ def objdump_binary():
   print "objdump parse got",len(instructions),"instructions"
   return instructions
 
-def mem_commit_base_binary(mem):
+def mem_commit_base_binary(prog, mem):
   # get the memory base
-  elf = ELFFile(open("/tmp/qira_binary"))
+  elf = ELFFile(open(prog))
   for seg in elf.iter_segments():
     try:
       vaddr = seg.header['p_vaddr']
