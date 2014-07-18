@@ -29,7 +29,7 @@ function register_drag_zoom() {
     var cscale = get_cscale();
     if (cscale === undefined) return undefined;
     // fix for non full zoom
-    var clnum = (e.offsetY * cscale) + cview[0];
+    var clnum = (e.pageY * cscale) + cview[0];
     var clret = Math.round(clnum);
     if (clret > max) clret = max;
     return clret;
@@ -96,8 +96,8 @@ function get_cscale() {
 
 function redraw_vtimelines(scale) {
   var cview = Session.get("cview");
-  var maxclnum = Session.get("max_clnum");
   if (cview === undefined) return;
+  var maxclnum = Session.get("max_clnum");
   if (maxclnum === undefined) return;
 
   for (forknum in maxclnum) {
@@ -122,6 +122,8 @@ function redraw_vtimelines(scale) {
 function redraw_flags() {
   var cview = Session.get("cview");
   if (cview === undefined) return undefined;
+  var maxclnum = Session.get("max_clnum");
+  if (maxclnum === undefined) return;
   var cscale = get_cscale();
   if (cscale === undefined) return;
   $(".flag").remove();
@@ -154,7 +156,7 @@ function redraw_flags() {
     }
 
     var flag = $('<div id="flag'+clnum+'" class="flag" style="'+sty+'">'+clnum+'</div>');
-    flag[0].style.marginTop = ((clnum-cview[0])/cscale) + "px";
+    flag[0].style.marginTop = ((clnum-Math.max(maxclnum[forknum][0], cview[0]))/cscale) + "px";
     flag.click(function(cln) { Session.set("forknum", cln[0]); Session.set("clnum", cln[1]); }.bind(undefined, [forknum, clnum]));
     $('#vtimeline'+forknum).append(flag);
   }

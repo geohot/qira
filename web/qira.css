@@ -44,8 +44,11 @@ body {
 #vtimelinebox {
   height: 100%;
   position: fixed;
+  width: 160px;
   background-color: #AAAAAA;
-  overflow: hidden;
+  overflow-x: scroll;
+  overflow-y: hidden;
+  white-space: nowrap;
 }
 
 .vtimeline {
@@ -60,7 +63,7 @@ body {
 .flag {
   width: 50px;
   height: 2px;
-  position: fixed;
+  position: absolute;
   font-family: monospace;
   color: gray;
 }
