@@ -52,11 +52,17 @@ def getclnum(forknum, clnum, types, limit):
 
 @socketio.on('getchanges', namespace='/qira')
 def getchanges(forknum, address, typ):
-  if forknum not in traces:
-    return
   if address == None or typ == None:
     return
-  emit('changes', {'forknum': forknum, 'type': typ, 'clnums': traces[forknum].pydb_addr[(address, typ)]})
+  if forknum != -1 and forknum not in traces:
+    return
+  if forknum == -1:
+    ret = {}
+    for forknum in traces:
+      ret[forknum] = traces[forknum].pydb_addr[(address, typ)]
+    emit('changes', {'forknum': forknum, 'type': typ, 'clnums': ret})
+  else:
+    emit('changes', {'type': typ, 'clnums': {forknum: traces[forknum].pydb_addr[(address, typ)]}})
 
 @socketio.on('getinstructions', namespace='/qira')
 def getinstructions(forknum, clstart, clend):
@@ -174,7 +180,6 @@ def run_middleware():
       # this must happen last
       socketio.emit('maxclnum', program.get_maxclnum(), namespace='/qira')
       
-
 def init_bindserver():
   global ss, ss2
   # wait for a connection
@@ -239,7 +244,7 @@ if __name__ == '__main__':
     print "usage: %s <target binary>" % sys.argv[0]
     exit(-1)
 
-  delete_old_runs()
+  #delete_old_runs()
   # creates the file symlink, program is constant through server run
   program = qira_trace.Program(os.path.realpath(sys.argv[1]))
 

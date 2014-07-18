@@ -1,5 +1,7 @@
 stream = io.connect("http://localhost:3002/qira");
 
+// *** functions for dealing with the zoom function ***
+
 Meteor.startup(function() {
   $("#vtimelinebox")[0].addEventListener("mousewheel", function(e) {
     var max = abs_maxclnum(); if (max === undefined) return;
@@ -20,7 +22,7 @@ Meteor.startup(function() {
 
 function register_drag_zoom() {
   function get_clnum(e) {
-    if ($(".vtimeline")[0] !== e.target &&
+    if ($(".vtimeline").index(e.target) == -1 &&
         e.target !== $("#vtimelinebox")[0]) return undefined;
     var max = abs_maxclnum(); if (max === undefined) return;
     var cview = Session.get("cview"); if (cview === undefined) return;
@@ -31,6 +33,11 @@ function register_drag_zoom() {
     var clret = Math.round(clnum);
     if (clret > max) clret = max;
     return clret;
+  }
+  function get_forknum(e) {
+    var fn = e.target.id.split("vtimeline")[1];
+    if (fn == "box") return -1;
+    return parseInt(fn);
   }
   var down = -1;
   $("#vtimelinebox").mousedown(function(e) {
@@ -46,11 +53,15 @@ function register_drag_zoom() {
     if (e.button != 0) return;
     var up = get_clnum(e);
     if (up === undefined) return;
+    var forknum = get_forknum(e);
     if (down != -1) {
       // should check absolute length of drag, not clnums
       p("drag "+down+"-"+up);
       if (down == up) {
-        Session.set("clnum", down);
+        if (forknum != -1) {
+          Session.set("clnum", down);
+          Session.set("forknum", forknum);
+        }
       } else if (down < up) {
         Session.set("cview", [down, up]);
       } else if (down > up) {
@@ -60,6 +71,8 @@ function register_drag_zoom() {
     return false;
   });
 }
+
+// *** functions for flags ***
 
 var flags = {};
 
@@ -72,11 +85,38 @@ function get_cscale() {
   var working_height = box[0].offsetHeight - 100;
   //var scale = Math.ceil(range/working_height);
   var scale = range/working_height;
-  var real_height = Math.ceil(range/scale);
-  $(".vtimeline")[0].style.height = real_height + "px";
-  $(".vtimeline")[1].style.height = real_height + "px";
+  /*var real_height = Math.ceil(range/scale);
+  var vtimelines = $('.vtimeline');
+  for (var i = 0; i < vtimelines.length; i++) {
+    vtimelines[i].style.height = real_height + "px";
+  }*/
   //p("working height is "+working_height+" scale is "+scale);
   return scale;
+}
+
+function redraw_vtimelines(scale) {
+  var cview = Session.get("cview");
+  var maxclnum = Session.get("max_clnum");
+  if (cview === undefined) return;
+  if (maxclnum === undefined) return;
+
+  for (forknum in maxclnum) {
+    var vt = $('#vtimeline'+forknum);
+    if (vt.length == 0) {
+      $("#vtimelinebox").append($('<div class="vtimeline" id="vtimeline'+forknum+'"></div>'))
+      vt = $('#vtimeline'+forknum);
+    }
+
+    var range = Math.min(maxclnum[forknum][1], cview[1]) - Math.max(maxclnum[forknum][0], cview[0]);
+    var topp = 0;
+    if (maxclnum[forknum][0] > cview[0]) {
+      topp = Math.ceil((maxclnum[forknum][0] - cview[0])/scale);
+    }
+    var real_height = Math.ceil(range/scale);
+
+    vt[0].style.height = real_height + "px";
+    vt[0].style.top = topp + "px";
+  }
 }
 
 function redraw_flags() {
@@ -85,6 +125,7 @@ function redraw_flags() {
   var cscale = get_cscale();
   if (cscale === undefined) return;
   $(".flag").remove();
+  redraw_vtimelines(cscale);
   var colors = {
     "bounds": "green",
     "change": "blue",
@@ -115,7 +156,7 @@ function redraw_flags() {
     var flag = $('<div id="flag'+clnum+'" class="flag" style="'+sty+'">'+clnum+'</div>');
     flag[0].style.marginTop = ((clnum-cview[0])/cscale) + "px";
     flag.click(function(cln) { Session.set("forknum", cln[0]); Session.set("clnum", cln[1]); }.bind(undefined, [forknum, clnum]));
-    $($('.vtimeline')[forknum]).append(flag);
+    $('#vtimeline'+forknum).append(flag);
   }
 }
 
@@ -144,11 +185,18 @@ Deps.autorun(function() {
 });
 
 Deps.autorun(function() {
-  var cview = Session.get("cview");
+  /*var cview = Session.get("cview");
   if (cview === undefined) return undefined;
-  remove_flags("bounds");
   add_flag("bounds", 0, cview[0]);
-  add_flag("bounds", 0, cview[1]);
+  add_flag("bounds", 0, cview[1]);*/
+  var maxclnum = Session.get("max_clnum");
+  if (maxclnum === undefined) return;
+  remove_flags("bounds");
+  for (forknum in maxclnum) {
+    forknum = parseInt(forknum);
+    add_flag("bounds", forknum, maxclnum[forknum][0]);
+    add_flag("bounds", forknum, maxclnum[forknum][1]);
+  }
   redraw_flags();
 });
 
@@ -161,26 +209,26 @@ Deps.autorun(function() {
 });
 
 Deps.autorun(function() {
-  var forknum = Session.get("forknum");
+  //var forknum = Session.get("forknum");
   var iaddr = Session.get('iaddr');
   var maxclnum = Session.get('max_clnum');
-  stream.emit('getchanges', forknum, iaddr, 'I')
+  stream.emit('getchanges', -1, iaddr, 'I')
 });
 
 Deps.autorun(function() {
-  var forknum = Session.get("forknum");
+  //var forknum = Session.get("forknum");
   var daddr = Session.get('daddr');
   var maxclnum = Session.get('max_clnum');
-  stream.emit('getchanges', forknum, daddr, 'L')
-  stream.emit('getchanges', forknum, daddr, 'S')
+  stream.emit('getchanges', -1, daddr, 'L')
+  stream.emit('getchanges', -1, daddr, 'S')
 });
 
 stream.on('changes', function(msg) {
   var types = {'I': 'ciaddr', 'L': 'daddrr', 'S': 'daddrw'};
-  var clnums = msg['clnums'];
+  var forknum = msg['forknum'];
+  var clnums = msg['clnums'][forknum];
   var type = types[msg['type']];
   var clnum = Session.get('clnum');
-  var forknum = msg['forknum'];
 
   // this should probably only be for the IDA plugin
   if (msg['type'] == 'I' && clnums.indexOf(clnum) == -1 && Session.get('dirtyiaddr') == true) {
@@ -201,9 +249,12 @@ stream.on('changes', function(msg) {
     Session.set("dirtyiaddr", false);
   }
 
-  remove_flags(type, forknum);
-  for (var i = 0; i < clnums.length; i++) {
-    add_flag(type, forknum, clnums[i]);
+  remove_flags(type);
+  for (forknum in msg['clnums']) {
+    clnums = msg['clnums'][forknum];
+    for (var i = 0; i < clnums.length; i++) {
+      add_flag(type, forknum, clnums[i]);
+    }
   }
   redraw_flags();
 });

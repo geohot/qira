@@ -42,16 +42,19 @@ body {
 /* vertical timeline and flags */
 
 #vtimelinebox {
-  width: 200px;
   height: 100%;
   position: fixed;
   background-color: #AAAAAA;
+  overflow: hidden;
 }
 
 .vtimeline {
   background-color: #282828;
   width: 50px;
   display: inline-block;
+  vertical-align: top;
+  margin-right: 5px;
+  position: relative;
 }
 
 .flag {
@@ -70,7 +73,7 @@ body {
   height: 100%;
   display: inline-block;
   position: fixed;
-  left: 200px;
+  left: 160px;
 }
 
 .panelthing {
