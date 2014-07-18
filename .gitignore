@@ -1,4 +1,3 @@
-bin/
 web/.meteor/local
 .*.swp
 tests/a.out
@@ -7,6 +6,8 @@ tests/*.o
 ida/*.o
 ida/qira.plx
 ida/qira.pmc
+ida/qira.plx64
+ida/qira.pmc64
 ida/libwebsockets.a
 tests/idb
 qiradb/qiradb

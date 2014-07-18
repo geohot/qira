@@ -6,28 +6,37 @@ if [[ "$unamestr" == 'Linux' ]]; then
   SDKROOT=~/build/idasdk66
   IDAROOT=~/ida-6.6
   OUTPUT="qira.plx"
+  OUTPUT64="qira.plx64"
   ln -sf linux_libwebsockets.a libwebsockets.a
 elif [[ "$unamestr" == 'Darwin' ]]; then
   SDKROOT=~/idasrc
   IDAROOT="/Applications/IDA Pro 6.6/idaq.app/Contents/MacOS/"
   OUTPUT="qira.pmc"
+  OUTPUT="qira.pmc64"
   ln -sf mac_libwebsockets.a libwebsockets.a
 fi
 
+# build 32
 g++ template.cpp -m32 -fPIC -D__IDP__ -D__PLUGIN__ -c -D__LINUX__ -I . -I$SDKROOT/include
 g++ -m32 --shared template.o "-L$IDAROOT" -lida -o $OUTPUT libwebsockets.a -lcrypto -lz -lssl -lpthread
 
-sha1sum $OUTPUT
-if [ "$(diff $OUTPUT "$IDAROOT/plugins/$OUTPUT")" != "" ]; then
-  echo "copying plugin"
-  cp $OUTPUT "$IDAROOT/plugins"
-fi
+# build 64
+g++ template.cpp -D__EA64__=1 -m32 -fPIC -D__IDP__ -D__PLUGIN__ -c -D__LINUX__ -I . -I$SDKROOT/include
+g++ -m32 --shared template.o "-L$IDAROOT" -lida64 -o $OUTPUT64 libwebsockets.a -lcrypto -lz -lssl -lpthread
+
+strip $OUTPUT
+strip $OUTPUT64
+
+sha1sum $OUTPUT $OUTPUT64
+echo "installing plugin"
+cp $OUTPUT "$IDAROOT/plugins"
+cp $OUTPUT64 "$IDAROOT/plugins"
 
 if [[ "$unamestr" == 'Linux' ]]; then
-  cp $OUTPUT qira_ida66_linux.plx
-  strip qira_ida66_linux.plx
+  cp $OUTPUT bin/qira_ida66_linux.plx
+  cp $OUTPUT64 bin/qira_ida66_linux.plx64
 elif [[ "$unamestr" == 'Darwin' ]]; then
-  cp $OUTPUT qira_ida66_mac.pmc
-  strip qira_ida66_mac.pmc
+  cp $OUTPUT bin/qira_ida66_mac.pmc
+  cp $OUTPUT64 bin/qira_ida66_mac.pmc64
 fi
 

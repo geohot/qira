@@ -90,8 +90,16 @@ Template.memviewer.events({
     update_dview(daddr);
   },
   'dblclick .datainstruction': function(e) {
+    var daddr = parseInt(e.target.innerHTML, 16);
+    update_dview(daddr);
+  },
+  'contextmenu .datainstruction': function(e) {
+    // right click to follow in instruction dump
+    // add menu maybe?
     var iaddr = parseInt(e.target.innerHTML, 16);
+    Session.set("dirtyiaddr", true);
     Session.set('iaddr', iaddr);
+    return false;
   },
   'click .data': function(e) {
     var daddr = parseInt(e.target.getAttribute('daddr'));

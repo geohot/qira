@@ -37,12 +37,9 @@ cp middleware/*.py distrib/qira/middleware/
 # perhaps build for older IDA as well, ie 6.1
 # and mac + windows
 # fairly standard deps + libcrypto, libssl, libz and libida
-mkdir -p distrib/qira/ida
-cd ida
+mkdir -p distrib/qira/ida/bin
 echo "copying ida plugin"
-cp qira_ida66_linux.plx ../distrib/qira/ida/qira_ida66_linux.plx
-cp qira_ida66_mac.pmc ../distrib/qira/ida/qira_ida66_mac.pmc
-cd ../
+cp ida/bin/* distrib/qira/ida/bin/
 
 # fairly standard deps + librt, libglib, libpcre
 echo "copying qemu"

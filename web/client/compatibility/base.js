@@ -65,6 +65,7 @@ var baseevents = {
   },
   'click .datainstruction': function(e) {
     var iaddr = parseInt(e.target.innerHTML, 16);
+    Session.set("dirtyiaddr", true);
     Session.set('iaddr', iaddr);
   },
 };

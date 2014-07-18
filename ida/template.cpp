@@ -3,7 +3,7 @@
 #include <loader.hpp>
 #include <bytes.hpp>
 
-//#define DEBUG
+#define DEBUG
 
 // ***************** WEBSOCKETS *******************
 #include <libwebsockets.h>
@@ -77,7 +77,11 @@ static void ws_send(char *str) {
 static void update_address(const char *type, ea_t addr) {
   //msg("addr 0x%x\n", addr);
   char tmp[100];
-  qsnprintf(tmp, 100-1, "set%s %u", type, addr);
+  #ifdef __EA64__
+    qsnprintf(tmp, 100-1, "set%s %llu", type, addr);
+  #else
+    qsnprintf(tmp, 100-1, "set%s %u", type, addr);
+  #endif
   ws_send(tmp);
 }
 
