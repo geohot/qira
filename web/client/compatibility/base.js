@@ -2,6 +2,7 @@ function p(a) { console.log(a); }
 
 pmaps = {}
 function get_data_type(v) {
+  if (typeof v == "string") v = parseInt(v, 16);
   var a = pmaps[v - v%0x1000];
   if (a === undefined) return "";
   else return "data"+a;

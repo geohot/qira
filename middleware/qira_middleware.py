@@ -17,6 +17,9 @@ socketio = SocketIO(app)
 program = None
 run_id = 0
 
+def ghex(a):
+  return hex(a).strip("L")
+
 # ***** after this line is the new server stuff *****
 
 @socketio.on('forkat', namespace='/qira')
@@ -49,6 +52,9 @@ def getclnum(forknum, clnum, types, limit):
   for t in types:
     key = (clnum, t)
     for c in trace.pydb_clnum[key]:
+      c = c.copy()
+      c['address'] = ghex(c['address'])
+      c['data'] = ghex(c['data'])
       ret.append(c)
       if len(ret) >= limit:
         break
@@ -62,6 +68,7 @@ def getchanges(forknum, address, typ):
     return
   if forknum != -1 and forknum not in program.traces:
     return
+  address = int(address)
   if forknum == -1:
     ret = {}
     for forknum in program.traces:
@@ -92,6 +99,7 @@ def getmemory(forknum, clnum, address, ln):
   trace = program.traces[forknum]
   if clnum == None or address == None or ln == None:
     return
+  address = int(address)
   dat = trace.mem.fetch(clnum, address, ln)
   ret = {'address': address, 'len': ln, 'dat': dat}
   emit('memory', ret)
@@ -111,11 +119,15 @@ def getregisters(forknum, clnum):
   REGSIZE = program.tregs[1]
   for i in range(0, len(REGS)):
     if i*REGSIZE in trace.regs.daddr:
-      rret = {"name": REGS[i], "address": i*REGSIZE, "value": trace.regs.daddr[i*REGSIZE].fetch(clnum), "size": REGSIZE, "regactions": ""}
-      if clnum in trace.pydb_addr[(i*REGSIZE, 'R')]:
-        rret['regactions'] += " regread"
-      if clnum in trace.pydb_addr[(i*REGSIZE, 'W')]:
-        rret['regactions'] += " regwrite"
+      rret = {"name": REGS[i], "address": i*REGSIZE, "value": ghex(trace.regs.daddr[i*REGSIZE].fetch(clnum)), "size": REGSIZE, "regactions": ""}
+      # this +1 is an ugly hack
+      if (clnum+1) in trace.pydb_addr[(i*REGSIZE, 'R')]:
+        rret['regactions'] = "regread"
+      if (clnum+1) in trace.pydb_addr[(i*REGSIZE, 'W')]:
+        if "regread" == rret['regactions']:
+          rret['regactions'] = "regreadwrite"
+        else:
+          rret['regactions'] = "regwrite"
       ret.append(rret)
   emit('registers', ret)
 

@@ -159,7 +159,7 @@ body {
 
 .reg {
   display: inline-block;
-  width: 140px;
+  width: 200px;
   font-family: monospace;
 }
 
@@ -168,6 +168,11 @@ body {
 }
 
 .regwrite {
-  background-color: #EEEE44 !important;
+  background-color: #EEEE44;
+}
+
+.regreadwrite {
+  /* order is lost here */
+  background: linear-gradient(to right, #666644, #EEEE44);
 }
 

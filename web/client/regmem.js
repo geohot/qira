@@ -102,7 +102,7 @@ Template.memviewer.events({
 Template.regviewer.events(baseevents);
 
 Template.regviewer.hexvalue = function() {
-  return hex(this.value);
+  return this.value;
 };
 
 Template.regviewer.datatype = function() {
@@ -135,7 +135,7 @@ stream.on('registers', function(msg) {
 Template.datachanges.events(baseevents);
 
 Template.datachanges.hexaddress = function() {
-  return hex(this.address);
+  return this.address;
 };
 
 Template.datachanges.typeclass = function() {
@@ -144,7 +144,7 @@ Template.datachanges.typeclass = function() {
 };
 
 Template.datachanges.hexdata = function() {
-  return hex(this.data);
+  return this.data;
 };
 
 Template.datachanges.addrtype = function() {
@@ -157,7 +157,7 @@ Template.datachanges.datatype = function() {
 
 Deps.autorun(function() {
   var forknum = Session.get("forknum");
-  stream.emit('getclnum', forknum, Session.get('clnum'), ['L', 'S'], 3)
+  stream.emit('getclnum', forknum, Session.get('clnum'), ['L', 'S'], 2)
 });
 
 stream.on('clnum', function(msg) {
