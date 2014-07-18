@@ -35,6 +35,7 @@ function register_drag_zoom() {
     return clret;
   }
   function get_forknum(e) {
+    if (e.target.id == "trash") return -1;
     var fn = e.target.id.split("vtimeline")[1];
     if (fn == "box") return -1;
     return parseInt(fn);
@@ -53,7 +54,7 @@ function register_drag_zoom() {
   $("#vtimelinebox").mouseup(function(e) {
     p("mouseup");
     if (e.button != 0) return;
-    if (e.target.id == "trash") {
+    if (e.target.id == "trash" && downforknum != -1) {
       stream.emit("deletefork", downforknum);
       redraw_flags();
       return;

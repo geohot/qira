@@ -233,14 +233,6 @@ def start_bindserver(myss, parent_id, start_cl, loop = False):
       "%d %d %d" % (parent_id, start_cl, run_id), "-singlestep",
       "/tmp/qira_binary"]+sys.argv[2:])
 
-def delete_old_runs():
-  # delete the logs
-  try:
-    os.mkdir("/tmp/qira_logs")
-  except:
-    pass
-  for i in os.listdir("/tmp/qira_logs"):
-    os.unlink("/tmp/qira_logs/"+i)
 
 def get_next_run_id():
   ret = -1
@@ -253,12 +245,10 @@ if __name__ == '__main__':
     print "usage: %s <target binary>" % sys.argv[0]
     exit(-1)
 
-  #delete_old_runs()
   # creates the file symlink, program is constant through server run
   program = qira_trace.Program(os.path.realpath(sys.argv[1]))
 
-  # start the first binary running
-  # i guess most things after this will be forks
+  # start the binary runner
   init_bindserver()
   start_bindserver(ss, -1, 1, True)
 

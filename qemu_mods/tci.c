@@ -474,8 +474,13 @@ struct logstate {
   uint32_t is_filtered;
   uint32_t first_changelist_number;
   int parent_id;
+  int this_pid;
 };
 struct logstate *GLOBAL_logstate;
+
+// input args
+uint32_t GLOBAL_start_clnum = 1;
+int GLOBAL_parent_id = -1, GLOBAL_id = 0;
 
 // should be 0ed on startup
 #define PENDING_CHANGES_MAX_ADDR 0x100
@@ -498,8 +503,8 @@ void init_QIRA(CPUArchState *env, int id) {
   sprintf(fn, "/tmp/qira_logs/%d", id);
 
   // for compat
-  unlink("/tmp/qira_log");
-  if(symlink(fn, "/tmp/qira_log") == -1) QIRA_DEBUG("log symlink failed\n");
+  //unlink("/tmp/qira_log");
+  //if(symlink(fn, "/tmp/qira_log") == -1) QIRA_DEBUG("log symlink failed\n");
 
   // unlink it first
   unlink(fn);
@@ -513,10 +518,13 @@ void init_QIRA(CPUArchState *env, int id) {
 
   // skip the first change
   GLOBAL_logstate->change_count = 1;
-  GLOBAL_logstate->changelist_number = 0;
-  GLOBAL_logstate->first_changelist_number = 0;
   GLOBAL_logstate->is_filtered = 0;
-  GLOBAL_logstate->parent_id = -1;
+  GLOBAL_logstate->this_pid = getpid();
+
+  // do this after init_QIRA
+  GLOBAL_logstate->changelist_number = GLOBAL_start_clnum-1;
+  GLOBAL_logstate->first_changelist_number = GLOBAL_start_clnum;
+  GLOBAL_logstate->parent_id = GLOBAL_parent_id;
 }
 
 struct change *add_change(target_ulong addr, uint64_t data, uint32_t flags) {
@@ -685,8 +693,9 @@ void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
     printf("HEADER READ ISSUE!\n");
     return;
   }
+
   // check if this one has a parent and recurse here
-  // FD ISSUE!
+  // BUG: FD ISSUE!
   QIRA_DEBUG("parent is %d with first_change %d\n", plogstate.parent_id, plogstate.first_changelist_number);
   if (plogstate.parent_id != -1) {
     run_QIRA_log(env, plogstate.parent_id, plogstate.first_changelist_number);
@@ -740,8 +749,8 @@ void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
   printf("*** REPLAY DONE ***\n");
 }
 
-int GLOBAL_parent_id = -1, GLOBAL_start_clnum = 1, GLOBAL_id = 0;
 int GLOBAL_last_was_syscall = 0;
+uint32_t GLOBAL_last_fork_change = -1;
 
 /* Interpret pseudo code in tb. */
 uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
@@ -756,13 +765,19 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
         run_QIRA_log(env, GLOBAL_parent_id, GLOBAL_start_clnum);
       }
       init_QIRA(env, GLOBAL_id);
-
-      // do this after init_QIRA
-      GLOBAL_logstate->first_changelist_number = GLOBAL_start_clnum;
-      GLOBAL_logstate->changelist_number = GLOBAL_start_clnum-1;
-      GLOBAL_logstate->parent_id = GLOBAL_parent_id;
       return 0;
     }
+
+    if (unlikely(GLOBAL_logstate->this_pid != getpid())) {
+      GLOBAL_start_clnum = GLOBAL_last_fork_change + 1;
+      GLOBAL_parent_id = GLOBAL_id;
+
+      // this fixes the PID
+      init_QIRA(env, ++GLOBAL_id);   // wrong
+    }
+
+    // set this every time, it's not in shmem
+    GLOBAL_last_fork_change = GLOBAL_logstate->changelist_number;
 
     if (GLOBAL_last_was_syscall) {
       add_change((void *)&env->regs[R_EAX] - (void *)env, env->regs[R_EAX], IS_WRITE | (sizeof(target_ulong)<<3));

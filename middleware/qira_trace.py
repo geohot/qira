@@ -10,6 +10,18 @@ X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8)
 # things that don't cross the fork
 class Program:
   def __init__(self, prog):
+    # create the logs dir
+    try:
+      os.mkdir("/tmp/qira_logs")
+    except:
+      pass
+
+    # if the program changed
+    # BUG: if the program changes but the path doesn't
+    if prog != os.path.realpath("/tmp/qira_binary"):
+      print "*** deleting old runs because binary changed"
+      self.delete_old_runs()
+
     # create the binary symlink
     try:
       os.unlink("/tmp/qira_binary")
@@ -33,6 +45,11 @@ class Program:
 
     # no traces yet
     self.traces = {}
+
+  def delete_old_runs(self):
+    # delete the logs
+    for i in os.listdir("/tmp/qira_logs"):
+      os.unlink("/tmp/qira_logs/"+i)
 
   def get_maxclnum(self):
     ret = {}
