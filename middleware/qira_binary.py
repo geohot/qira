@@ -12,8 +12,12 @@ def objdump_binary(prog):
   instructions = {}
   # get the instructions
   # should really get these from QEMU
+  fn = file_binary(prog)
+  objdump_bin = "objdump"
+  if "ARM" in fn:
+    objdump_bin = "arm-linux-gnueabi-objdump"
   objdump_out = subprocess.Popen(
-    ["objdump", "-d", prog],
+    [objdump_bin, "-d", prog],
     stdout = subprocess.PIPE).communicate()[0]
   for line in objdump_out.split("\n"):
     line = line.split("\t")

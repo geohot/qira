@@ -727,6 +727,7 @@ void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
     if (pchange.changelist_number >= to_change) break;
     QIRA_DEBUG("running old change %lX %d\n", pchange.address, pchange.changelist_number);
 
+#ifdef R_EAX
     if (flags & IS_SYSCALL) {
       // replay all the syscalls?
       // skip reads
@@ -734,20 +735,10 @@ void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
         //printf("LOAD_SEG!\n");
         helper_load_seg(env, pchange.data >> 32, pchange.data & 0xFFFFFFFF);
       } else if (pchange.address != 3) {
-        env->regs[R_EAX] = do_syscall(env,
-                                      env->regs[R_EAX],
-                                      env->regs[R_EBX],
-                                      env->regs[R_ECX],
-                                      env->regs[R_EDX],
-                                      env->regs[R_ESI],
-                                      env->regs[R_EDI],
-                                      env->regs[R_EBP],
-                                      0, 0);
-        /*if (pchange.data != env->regs[R_EAX]) {
-          printf("real return was %lx, we got %lx\n", pchange.data, env->regs[R_EAX]);
-        }*/
+        env->regs[R_EAX] = do_syscall(env, env->regs[R_EAX], env->regs[R_EBX], env->regs[R_ECX], env->regs[R_EDX], env->regs[R_ESI], env->regs[R_EDI], env->regs[R_EBP], 0, 0);
       }               
     }
+#endif
 
     if (flags & IS_WRITE) {
       void *base;
@@ -797,7 +788,9 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
     GLOBAL_last_fork_change = GLOBAL_logstate->changelist_number;
 
     if (GLOBAL_last_was_syscall) {
-      add_change((void *)&env->regs[R_EAX] - (void *)env, env->regs[R_EAX], IS_WRITE | (sizeof(target_ulong)<<3));
+      #ifdef R_EAX
+        add_change((void *)&env->regs[R_EAX] - (void *)env, env->regs[R_EAX], IS_WRITE | (sizeof(target_ulong)<<3));
+      #endif
       GLOBAL_last_was_syscall = 0;
     }
 
@@ -877,6 +870,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
             a3 = tci_read_reg(TCG_REG_R3);
             //printf("op_call: %X\n", t0);
             // helper_function raise_interrupt, load_seg
+#ifdef R_EAX
             struct change *a = NULL;
 
             if (t0 == helper_load_seg) {
@@ -896,6 +890,8 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
               a = track_syscall_begin(env, env->regs[R_EAX]);
               GLOBAL_last_was_syscall = 1;
             }
+#endif
+
 #if TCG_TARGET_REG_BITS == 32
             tmp64 = ((helper_function)t0)(a0,a1,a2,a3,
                                           tci_read_reg(TCG_REG_R5),

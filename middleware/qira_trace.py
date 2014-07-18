@@ -4,6 +4,7 @@ import qira_memory
 from collections import defaultdict
 import os
 
+ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 4)
 X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4)
 X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8)
 
@@ -38,7 +39,10 @@ class Program:
 
     # get file type
     fb = qira_binary.file_binary(prog)
-    if 'x86-64' in fb:
+    if 'ARM' in fb:
+      self.tregs = ARMREGS
+      self.qirabinary = "qira-arm"
+    elif 'x86-64' in fb:
       self.tregs = X64REGS
       self.qirabinary = "qira-x86_64"
     else:
