@@ -67,7 +67,7 @@ stream.on('memory', function(msg) {
       str = "";
       for (var j = 0; j < 0x10; j++) {
         // ewww
-        var ii = msg['dat'][addr+i-0xC+j];
+        var ii = msg['dat'][addr+i-(0x10-PTRSIZE)+j];
         if (ii == 0x20) str += "&nbsp;";
         else if (ii == 0x26) str += "&amp;";
         else if (ii == 0x3C) str += "&lt;";

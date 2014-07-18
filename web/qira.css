@@ -53,7 +53,7 @@ body {
 
 .vtimeline {
   background-color: #282828;
-  width: 50px;
+  width: 45px;
   display: inline-block;
   vertical-align: top;
   margin-left: 2px;
@@ -62,7 +62,7 @@ body {
 }
 
 .flag {
-  width: 50px;
+  width: 45px;
   height: 2px;
   position: absolute;
   font-family: monospace;

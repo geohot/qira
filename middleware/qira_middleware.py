@@ -229,7 +229,7 @@ def start_bindserver(myss, parent_id, start_cl, loop = False):
       except:
         pass
     # fingerprint here
-    os.execvp('qira-i386', ["qira-i386", "-qirachild",
+    os.execvp(program.qirabinary, [program.qirabinary, "-qirachild",
       "%d %d %d" % (parent_id, start_cl, run_id), "-singlestep",
       "/tmp/qira_binary"]+sys.argv[2:])
 

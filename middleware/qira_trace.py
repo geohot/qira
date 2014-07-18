@@ -40,8 +40,10 @@ class Program:
     fb = qira_binary.file_binary(prog)
     if 'x86-64' in fb:
       self.tregs = X64REGS
+      self.qirabinary = "qira-x86_64"
     else:
       self.tregs = X86REGS
+      self.qirabinary = "qira-i386"
 
     # no traces yet
     self.traces = {}

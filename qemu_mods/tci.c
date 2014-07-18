@@ -801,9 +801,8 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
       GLOBAL_last_was_syscall = 0;
     }
 
-    // hacky check
-    if (tb->pc > 0x40000000 && tb->pc < 0xf6800000) {
-    //if (0) {
+    // TODO(geohot): FIX THIS!, filter anything that isn't the user binary and not dynamic
+    if ((tb->pc > 0x40000000 && tb->pc < 0xf6800000) || tb->pc >= 0x100000000) {
       GLOBAL_logstate->is_filtered = 1;
     } else {
       if (GLOBAL_logstate->is_filtered == 1) {
