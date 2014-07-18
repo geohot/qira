@@ -15,8 +15,6 @@ app = Flask(__name__)
 socketio = SocketIO(app)
 
 program = None
-trace = None
-traces = {}
 run_id = 0
 
 # ***** after this line is the new server stuff *****
@@ -27,6 +25,13 @@ def forkat(forknum, clnum):
   print "forkat",forknum,clnum
   start_bindserver(ss2, forknum, clnum)
 
+@socketio.on('deletefork', namespace='/qira')
+def deletefork(forknum):
+  print "deletefork", forknum
+  os.unlink("/tmp/qira_logs/"+str(int(forknum)))
+  del program.traces[forknum]
+  emit('maxclnum', program.get_maxclnum())
+
 @socketio.on('connect', namespace='/qira')
 def connect():
   print "client connected", program.get_maxclnum()
@@ -35,14 +40,15 @@ def connect():
 
 @socketio.on('getclnum', namespace='/qira')
 def getclnum(forknum, clnum, types, limit):
-  if forknum not in traces:
+  if forknum not in program.traces:
     return
+  trace = program.traces[forknum]
   if clnum == None or types == None or limit == None:
     return
   ret = []
   for t in types:
     key = (clnum, t)
-    for c in traces[forknum].pydb_clnum[key]:
+    for c in trace.pydb_clnum[key]:
       ret.append(c)
       if len(ret) >= limit:
         break
@@ -54,24 +60,25 @@ def getclnum(forknum, clnum, types, limit):
 def getchanges(forknum, address, typ):
   if address == None or typ == None:
     return
-  if forknum != -1 and forknum not in traces:
+  if forknum != -1 and forknum not in program.traces:
     return
   if forknum == -1:
     ret = {}
-    for forknum in traces:
-      ret[forknum] = traces[forknum].pydb_addr[(address, typ)]
+    for forknum in program.traces:
+      ret[forknum] = program.traces[forknum].pydb_addr[(address, typ)]
     emit('changes', {'forknum': forknum, 'type': typ, 'clnums': ret})
   else:
-    emit('changes', {'type': typ, 'clnums': {forknum: traces[forknum].pydb_addr[(address, typ)]}})
+    emit('changes', {'type': typ, 'clnums': {forknum: program.traces[forknum].pydb_addr[(address, typ)]}})
 
 @socketio.on('getinstructions', namespace='/qira')
 def getinstructions(forknum, clstart, clend):
-  if forknum not in traces:
+  if forknum not in program.traces:
     return
+  trace = program.traces[forknum]
   if clstart == None or clend == None:
     return
   ret = []
-  pydb_clnum = traces[forknum].pydb_clnum 
+  pydb_clnum = trace.pydb_clnum 
   for i in range(clstart, clend):
     key = (i, 'I')
     if key in pydb_clnum:
@@ -80,18 +87,20 @@ def getinstructions(forknum, clstart, clend):
 
 @socketio.on('getmemory', namespace='/qira')
 def getmemory(forknum, clnum, address, ln):
-  if forknum not in traces:
+  if forknum not in program.traces:
     return
+  trace = program.traces[forknum]
   if clnum == None or address == None or ln == None:
     return
-  dat = traces[forknum].mem.fetch(clnum, address, ln)
+  dat = trace.mem.fetch(clnum, address, ln)
   ret = {'address': address, 'len': ln, 'dat': dat}
   emit('memory', ret)
 
 @socketio.on('getregisters', namespace='/qira')
 def getregisters(forknum, clnum):
-  if forknum not in traces:
+  if forknum not in program.traces:
     return
+  trace = program.traces[forknum]
   #print "getregisters",clnum
   if clnum == None:
     return
@@ -101,11 +110,11 @@ def getregisters(forknum, clnum):
   REGS = program.tregs[0]
   REGSIZE = program.tregs[1]
   for i in range(0, len(REGS)):
-    if i*REGSIZE in traces[forknum].regs.daddr:
-      rret = {"name": REGS[i], "address": i*REGSIZE, "value": traces[forknum].regs.daddr[i*REGSIZE].fetch(clnum), "size": REGSIZE, "regactions": ""}
-      if clnum in traces[forknum].pydb_addr[(i*REGSIZE, 'R')]:
+    if i*REGSIZE in trace.regs.daddr:
+      rret = {"name": REGS[i], "address": i*REGSIZE, "value": trace.regs.daddr[i*REGSIZE].fetch(clnum), "size": REGSIZE, "regactions": ""}
+      if clnum in trace.pydb_addr[(i*REGSIZE, 'R')]:
         rret['regactions'] += " regread"
-      if clnum in traces[forknum].pydb_addr[(i*REGSIZE, 'W')]:
+      if clnum in trace.pydb_addr[(i*REGSIZE, 'W')]:
         rret['regactions'] += " regwrite"
       ret.append(rret)
   emit('registers', ret)
@@ -158,7 +167,7 @@ def check_file(logfile, trace):
   return False
 
 def run_middleware():
-  global program, traces
+  global program
   print "starting QIRA middleware"
 
   # run loop run
@@ -168,9 +177,9 @@ def run_middleware():
     did_update = False
     for i in os.listdir("/tmp/qira_logs/"):
       i = int(i)
-      if i not in traces:
-        traces[i] = qira_trace.Trace(program, i)
-      if check_file("/tmp/qira_logs/"+str(i), traces[i]):
+      if i not in program.traces:
+        qira_trace.Trace(program, i)
+      if check_file("/tmp/qira_logs/"+str(i), program.traces[i]):
         did_update = True
 
     if did_update:

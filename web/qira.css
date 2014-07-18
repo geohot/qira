@@ -44,7 +44,7 @@ body {
 #vtimelinebox {
   height: 100%;
   position: fixed;
-  width: 160px;
+  width: 165px;
   background-color: #AAAAAA;
   overflow-x: scroll;
   overflow-y: hidden;
@@ -56,7 +56,8 @@ body {
   width: 50px;
   display: inline-block;
   vertical-align: top;
-  margin-right: 5px;
+  margin-left: 2px;
+  margin-right: 2px;
   position: relative;
 }
 
@@ -68,6 +69,17 @@ body {
   color: gray;
 }
 
+#trash {
+  font-size: 20px;
+  font-family: monospace;
+  bottom: 15px;
+  position: fixed;
+  width: 165px;
+  text-align: center;
+  border-top: 1px black solid;
+  background-color: #777777;
+}
+
 /* everything in the right panel */
 
 #onlypanel {
@@ -76,7 +88,7 @@ body {
   height: 100%;
   display: inline-block;
   position: fixed;
-  left: 160px;
+  left: 165px;
 }
 
 .panelthing {

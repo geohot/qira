@@ -34,20 +34,19 @@ function abs_maxclnum() {
 
 function update_maxclnum(clnum) {
   p("update maxclnum "+clnum);
+  var old_maxclnum = Session.get("max_clnum");
   Session.set("max_clnum", clnum);
 
   Session.setDefault("forknum", 0);
   var forknum = Session.get("forknum");
 
-  if (Session.get("max_clnum")[forknum] == undefined) return;
+  if (clnum[forknum] === undefined) return;
+  Session.setDefault("clnum", clnum[forknum][1]);
 
-  var tfmaxclnum = Session.get("max_clnum")[forknum][1];
-
-  if (tfmaxclnum == Session.get("clnum")) {
+  if (old_maxclnum === undefined || old_maxclnum[forknum] === undefined) return;
+  if (old_maxclnum[forknum][1] == Session.get("clnum")) {
     // track the max changelist if you have it selected
-    Session.set("clnum", tfmaxclnum);
-  } else {
-    Session.setDefault("clnum", tfmaxclnum);
+    Session.set("clnum", clnum[forknum][1]);
   }
 }
 

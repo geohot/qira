@@ -40,17 +40,25 @@ function register_drag_zoom() {
     return parseInt(fn);
   }
   var down = -1;
+  var downforknum = -1;
   $("#vtimelinebox").mousedown(function(e) {
     if (e.button == 1) { zoom_out_max(); }
     if (e.button != 0) return;
     var clnum = get_clnum(e);
     if (clnum === undefined) return;
     down = clnum;
+    downforknum = get_forknum(e);
     return false;
   });
   $("#vtimelinebox").mouseup(function(e) {
     p("mouseup");
     if (e.button != 0) return;
+    if (e.target.id == "trash") {
+      stream.emit("deletefork", downforknum);
+      redraw_flags();
+      return;
+    }
+
     var up = get_clnum(e);
     if (up === undefined) return;
     var forknum = get_forknum(e);
@@ -99,6 +107,15 @@ function redraw_vtimelines(scale) {
   if (cview === undefined) return;
   var maxclnum = Session.get("max_clnum");
   if (maxclnum === undefined) return;
+
+  // delete old ones that don't have a maxclnum anymore
+  $(".vtimeline").each(function(e) {
+    var forknum = $(this)[0].id.split("vtimeline")[1];
+    if (maxclnum[forknum] === undefined) {
+      $(this).remove();
+    }
+  });
+
 
   for (forknum in maxclnum) {
     var vt = $('#vtimeline'+forknum);
@@ -154,6 +171,8 @@ function redraw_flags() {
       }
       sty += ")";
     }
+    
+    if (maxclnum[forknum] === undefined) continue;
 
     var flag = $('<div id="flag'+clnum+'" class="flag" style="'+sty+'">'+clnum+'</div>');
     flag[0].style.marginTop = ((clnum-Math.max(maxclnum[forknum][0], cview[0]))/cscale) + "px";
@@ -233,7 +252,7 @@ stream.on('changes', function(msg) {
   var clnum = Session.get('clnum');
 
   // this should probably only be for the IDA plugin
-  if (msg['type'] == 'I' && clnums.indexOf(clnum) == -1 && Session.get('dirtyiaddr') == true) {
+  if (msg['type'] == 'I' && clnums !== undefined && clnums.indexOf(clnum) == -1 && Session.get('dirtyiaddr') == true) {
     var closest = undefined;
     var diff = 0;
     // if these are instructions and the current clnum isn't in the list
