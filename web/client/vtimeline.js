@@ -1,15 +1,7 @@
 stream = io.connect("http://localhost:3002/qira");
 
 Meteor.startup(function() {
-
-  /*$("#vtimeline").click(function(e) {
-    if (e.target !== $("#vtimeline")[0]) return;
-    var cscale = get_cscale();
-    if (cscale == undefined) return;
-    Session.set("clnum", e.offsetY * cscale);
-  });*/
-
-  $("#vtimeline")[0].addEventListener("mousewheel", function(e) {
+  $("#vtimelinebox")[0].addEventListener("mousewheel", function(e) {
     var max = abs_maxclnum(); if (max === undefined) return;
     var cview = Session.get("cview"); if (cview === undefined) return;
     var cscale = get_cscale(); if (cscale === undefined) return;
@@ -28,7 +20,7 @@ Meteor.startup(function() {
 
 function register_drag_zoom() {
   function get_clnum(e) {
-    if (e.target !== $("#vtimeline")[0] &&
+    if ($(".vtimeline")[0] !== e.target &&
         e.target !== $("#vtimelinebox")[0]) return undefined;
     var max = abs_maxclnum(); if (max === undefined) return;
     var cview = Session.get("cview"); if (cview === undefined) return;
@@ -81,7 +73,8 @@ function get_cscale() {
   //var scale = Math.ceil(range/working_height);
   var scale = range/working_height;
   var real_height = Math.ceil(range/scale);
-  $("#vtimeline")[0].style.height = real_height + "px";
+  $(".vtimeline")[0].style.height = real_height + "px";
+  $(".vtimeline")[1].style.height = real_height + "px";
   //p("working height is "+working_height+" scale is "+scale);
   return scale;
 }
@@ -99,19 +92,20 @@ function redraw_flags() {
     "daddrr": "#888800",
     "daddrw": "yellow"
   };
-  for (clnum in flags) {
+  for (arr in flags) {
     var classes = "flag";
-    clnum = parseInt(clnum);
+    var forknum = parseInt(arr.split(",")[0]);
+    var clnum = parseInt(arr.split(",")[1]);
     if (clnum < cview[0] || clnum > cview[1]) continue;
     sty = "";
-    if (flags[clnum].length == 0) continue;
-    else if (flags[clnum].length == 1) {
-      var col = colors[flags[clnum][0]];
+    if (flags[arr].length == 0) continue;
+    else if (flags[arr].length == 1) {
+      var col = colors[flags[arr][0]];
       sty = "background-color:"+col+"; color:"+col;
     }
     else {
       sty = "background: linear-gradient(to right"
-      var cols = flags[clnum].sort()
+      var cols = flags[arr].sort()
       for (var i = 0; i < cols.length; i++) {
         sty += ","+colors[cols[i]];
       }
@@ -120,24 +114,27 @@ function redraw_flags() {
 
     var flag = $('<div id="flag'+clnum+'" class="flag" style="'+sty+'">'+clnum+'</div>');
     flag[0].style.marginTop = ((clnum-cview[0])/cscale) + "px";
-    flag.click(function(cln) { Session.set("clnum", cln); }.bind(undefined, clnum));
-    $('#vtimeline').append(flag);
+    flag.click(function(cln) { Session.set("forknum", cln[0]); Session.set("clnum", cln[1]); }.bind(undefined, [forknum, clnum]));
+    $($('.vtimeline')[forknum]).append(flag);
   }
 }
 
-function add_flag(type, clnum) {
-  if (flags[clnum] !== undefined) flags[clnum].push(type);
-  else flags[clnum] = [type];
+function add_flag(type, forknum, clnum) {
+  var t = [forknum, clnum];
+  if (flags[t] !== undefined) flags[t].push(type);
+  else flags[t] = [type];
 }
 
-function remove_flags(type) {
-  for (clnum in flags) {
-    var index = flags[clnum].indexOf(type);
+function remove_flags(type, forknum) {
+  for (arr in flags) {
+    var tforknum = parseInt(arr.split(",")[0]);
+    if (forknum !== undefined && forknum != tforknum) continue;
+    var index = flags[arr].indexOf(type);
     while (index != -1) {
-      flags[clnum].splice(index, 1)
-      index = flags[clnum].indexOf(type);
+      flags[arr].splice(index, 1)
+      index = flags[arr].indexOf(type);
     }
-    if (flags[clnum].length == 0) delete flags[clnum];
+    if (flags[arr].length == 0) delete flags[arr];
   }
 }
 
@@ -150,15 +147,16 @@ Deps.autorun(function() {
   var cview = Session.get("cview");
   if (cview === undefined) return undefined;
   remove_flags("bounds");
-  add_flag("bounds", cview[0]);
-  add_flag("bounds", cview[1]);
+  add_flag("bounds", 0, cview[0]);
+  add_flag("bounds", 0, cview[1]);
   redraw_flags();
 });
 
 Deps.autorun(function() {
+  var forknum = Session.get("forknum");
   var clnum = Session.get("clnum");
   remove_flags("change");
-  add_flag("change", clnum);
+  add_flag("change", forknum, clnum);
   redraw_flags();
 });
 
@@ -182,6 +180,7 @@ stream.on('changes', function(msg) {
   var clnums = msg['clnums'];
   var type = types[msg['type']];
   var clnum = Session.get('clnum');
+  var forknum = msg['forknum'];
 
   // this should probably only be for the IDA plugin
   if (msg['type'] == 'I' && clnums.indexOf(clnum) == -1 && Session.get('dirtyiaddr') == true) {
@@ -202,9 +201,9 @@ stream.on('changes', function(msg) {
     Session.set("dirtyiaddr", false);
   }
 
-  remove_flags(type);
+  remove_flags(type, forknum);
   for (var i = 0; i < clnums.length; i++) {
-    add_flag(type, clnums[i]);
+    add_flag(type, forknum, clnums[i]);
   }
   redraw_flags();
 });
