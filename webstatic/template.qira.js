@@ -1,7 +1,7 @@
 (function(){
 UI.body.contentParts.push(UI.Component.extend({render: (function() {
   var self = this;
-  return [ HTML.Raw('<div id="vtimelinebox">\n<div id="vtimeline">\n</div>\n</div>\n'), HTML.DIV({
+  return [ HTML.Raw('<div id="vtimelinebox">\n<!--<div class="vtimeline" id="vtimeline0"></div>\n<div class="vtimeline" id="vtimeline1"></div>-->\n<div id="trash">delete</div>\n</div>\n'), HTML.DIV({
     id: "onlypanel"
   }, "\n", HTML.DIV({
     id: "controls"
