@@ -66,7 +66,7 @@ def getchanges(forknum, address, typ):
     ret = {}
     for forknum in program.traces:
       ret[forknum] = program.traces[forknum].pydb_addr[(address, typ)]
-    emit('changes', {'forknum': forknum, 'type': typ, 'clnums': ret})
+    emit('changes', {'type': typ, 'clnums': ret})
   else:
     emit('changes', {'type': typ, 'clnums': {forknum: program.traces[forknum].pydb_addr[(address, typ)]}})
 

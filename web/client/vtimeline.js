@@ -247,7 +247,7 @@ Deps.autorun(function() {
 
 stream.on('changes', function(msg) {
   var types = {'I': 'ciaddr', 'L': 'daddrr', 'S': 'daddrw'};
-  var forknum = msg['forknum'];
+  var forknum = Session.get("forknum");
   var clnums = msg['clnums'][forknum];
   var type = types[msg['type']];
   var clnum = Session.get('clnum');

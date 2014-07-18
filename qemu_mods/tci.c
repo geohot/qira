@@ -681,6 +681,19 @@ void track_kernel_write(void *host_addr, target_ulong guest_addr, long len) {
 # define qemu_st_beq(X)  stq_be_p(g2h(W(taddr,X,64)), X)
 #endif
 
+// poorly written, and it fills in holes
+int get_next_id() {
+  char fn[PATH_MAX];
+  int this_id = 0;
+  struct stat junk;
+  while (1) {
+    sprintf(fn, "/tmp/qira_logs/%d", this_id);
+    if (stat(fn, &junk) == -1) break;
+    this_id++;
+  }
+  return this_id;
+}
+
 void run_QIRA_log(CPUArchState *env, int this_id, int to_change);
 
 void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
@@ -749,6 +762,7 @@ void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
   printf("*** REPLAY DONE ***\n");
 }
 
+
 int GLOBAL_last_was_syscall = 0;
 uint32_t GLOBAL_last_fork_change = -1;
 
@@ -772,8 +786,11 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
       GLOBAL_start_clnum = GLOBAL_last_fork_change + 1;
       GLOBAL_parent_id = GLOBAL_id;
 
+      // BUG: race condition
+      GLOBAL_id = get_next_id();
+
       // this fixes the PID
-      init_QIRA(env, ++GLOBAL_id);   // wrong
+      init_QIRA(env, GLOBAL_id);   // wrong
     }
 
     // set this every time, it's not in shmem
@@ -785,7 +802,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
     }
 
     // hacky check
-    if (tb->pc > 0x40000000) {
+    if (tb->pc > 0x40000000 && tb->pc < 0xf6800000) {
     //if (0) {
       GLOBAL_logstate->is_filtered = 1;
     } else {
