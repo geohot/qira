@@ -44,8 +44,11 @@ cp ida/bin/* distrib/qira/ida/bin/
 # fairly standard deps + librt, libglib, libpcre
 echo "copying qemu"
 mkdir -p distrib/qira/qemu
-cp qemu/qira-i386 distrib/qira/qemu/qira-i386
-strip distrib/qira/qemu/qira-i386
+for arch in "i386" "arm" "x86_64"; do
+  cp "qemu/qira-$arch" "distrib/qira/qemu/qira-$arch"
+  strip "distrib/qira/qemu/qira-$arch"
+  #upx -9 "distrib/qira/qemu/qira-$arch"
+done
 
 # package up the python, hopefully this includes pymongo driver
 # hmm, it doesn't, user will need to install
@@ -65,10 +68,12 @@ strip distrib/qira/qemu/qira-i386
 # then you run qira-i386 <binary>, we need to hack in the -singlestep arg
 
 echo "copying binaries"
-cp -av install.sh qira qira-server distrib/qira/
+cp -av install.sh qira distrib/qira/
 
 echo "making archive"
 cd distrib/
-tar zcvf qira-0.2.tar.gz qira
+#tar zcvf qira-0.3.tar.gz qira
+tar cvf qira-0.3.tar qira
+xz qira-0.3.tar
 cd ../
 
