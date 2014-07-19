@@ -18,6 +18,8 @@ program = None
 run_id = 0
 
 def ghex(a):
+  if a == None:
+    return None
   return hex(a).strip("L")
 
 # ***** after this line is the new server stuff *****

@@ -21,9 +21,10 @@ def objdump_binary(prog):
     stdout = subprocess.PIPE).communicate()[0]
   for line in objdump_out.split("\n"):
     line = line.split("\t")
-    if len(line) == 3:
+    if len(line) >= 3:
+      #print line
       addr = int(line[0].strip(" :"), 16)
-      instructions[addr] = line[2]
+      instructions[addr] = ' '.join(line[2:])
       #print hex(addr), line[2]
     else:
       # could get names here too, but maybe useless for now
