@@ -266,6 +266,7 @@ def start_bindserver(myss, parent_id, start_cl, loop = False):
     os.execvp(program.qirabinary, [program.qirabinary, "-D", "/dev/null", "-d", "in_asm",
       "-qirachild", "%d %d %d" % (parent_id, start_cl, run_id), "-singlestep",
       "/tmp/qira_binary"]+sys.argv[2:])
+      #"-strace",
 
 
 def get_next_run_id():

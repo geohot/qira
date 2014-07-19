@@ -500,16 +500,7 @@ void resize_change_buffer(size_t size) {
 
 void init_QIRA(CPUArchState *env, int id) {
   QIRA_DEBUG("init QIRA called\n");
-
-  if (GLOBAL_QIRA_did_init == 0) {
-    GLOBAL_asm_file = fopen("/tmp/qira_asm", "a");
-
-    // these three arguments (parent_id, start_clnum, id) must be passed into QIRA
-    if (GLOBAL_parent_id != -1) {
-      run_QIRA_log(env, GLOBAL_parent_id, GLOBAL_start_clnum);
-    }
-    GLOBAL_QIRA_did_init = 1;
-  }
+  GLOBAL_QIRA_did_init = 1;
 
   char fn[PATH_MAX];
   GLOBAL_CPUArchState = env;
@@ -763,14 +754,15 @@ void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
 
 bool is_filtered_address(target_ulong pc);
 bool is_filtered_address(target_ulong pc) {
+  // TODO(geohot): FIX THIS!, filter anything that isn't the user binary and not dynamic
   return ((pc > 0x40000000 && pc < 0xf6800000) || pc >= 0x100000000);
 }
 
 void real_target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong size, int flags);
 void target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong size, int flags);
 void target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong size, int flags) {
-  if (unlikely(GLOBAL_QIRA_did_init == 0)) { 
-    init_QIRA(env, GLOBAL_id);
+  if (unlikely(GLOBAL_asm_file == NULL)) { 
+    GLOBAL_asm_file = fopen("/tmp/qira_asm", "a");
   }
 
   if (is_filtered_address(code)) return;
@@ -795,6 +787,10 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
     TranslationBlock *tb = cpu->current_tb;
 
     if (unlikely(GLOBAL_QIRA_did_init == 0)) { 
+      // these three arguments (parent_id, start_clnum, id) must be passed into QIRA
+      if (GLOBAL_parent_id != -1) {
+        run_QIRA_log(env, GLOBAL_parent_id, GLOBAL_start_clnum);
+      }
       init_QIRA(env, GLOBAL_id);
       return 0;
     }
@@ -807,7 +803,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
       GLOBAL_id = get_next_id();
 
       // this fixes the PID
-      init_QIRA(env, GLOBAL_id);   // wrong
+      init_QIRA(env, GLOBAL_id);
     }
 
     // set this every time, it's not in shmem
@@ -820,7 +816,6 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
       GLOBAL_last_was_syscall = 0;
     }
 
-    // TODO(geohot): FIX THIS!, filter anything that isn't the user binary and not dynamic
     if (is_filtered_address(tb->pc)) {
       GLOBAL_logstate->is_filtered = 1;
     } else {
