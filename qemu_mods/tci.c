@@ -756,6 +756,7 @@ void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
 
 int GLOBAL_last_was_syscall = 0;
 uint32_t GLOBAL_last_fork_change = -1;
+target_long last_pc = 0;
 
 /* Interpret pseudo code in tb. */
 uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
@@ -1645,11 +1646,12 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
 exit:
 #ifdef QIRA_TRACKING
     // this fixes the jump instruction merging bug
-    if (next_tb != 0) {
-      //printf("next_tb: %lx\n", next_tb);
-      return 0;
+    // with the last_pc hack for ARM, might break some x86 reps
+    if (next_tb != 0 && last_pc != tb->pc) {
+      next_tb = 0;
     }
 #endif
+    last_pc = tb->pc;
     return next_tb;
 }
 

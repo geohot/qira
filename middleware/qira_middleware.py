@@ -7,6 +7,7 @@ import time
 import sys
 import os
 import fcntl
+import signal
 
 from flask import Flask, Response
 from flask.ext.socketio import SocketIO, emit
@@ -179,9 +180,11 @@ def check_file(logfile, trace):
     # python threads really aren't very good
     if total_changes > 10000:
       total_changes = 10000
+    """
     if trace.changes_committed > 200000:
       # clamped
       return
+    """
     sys.stdout.write("on %s going from %d to %d..." % (logfile, trace.changes_committed,max_changes))
     sys.stdout.flush()
     log = qira_log.read_log(logfile, trace.changes_committed, total_changes)
@@ -246,6 +249,7 @@ def start_bindserver(myss, parent_id, start_cl, loop = False):
 
     fd = cs.fileno()
     # python nonblocking is a lie...
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
     fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL, 0) & ~os.O_NONBLOCK)
     os.dup2(fd, 0) 
     os.dup2(fd, 1) 
