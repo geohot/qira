@@ -32,7 +32,6 @@ echo "copying middleware"
 mkdir -p distrib/qira/middleware
 cp middleware/*.py distrib/qira/middleware/
 
-
 # built for ida 6.6
 # perhaps build for older IDA as well, ie 6.1
 # and mac + windows

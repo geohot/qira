@@ -3,6 +3,7 @@ import qira_log
 import qira_memory
 from collections import defaultdict
 import os
+import sys
 
 ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 4)
 X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4)
@@ -19,9 +20,14 @@ class Program:
 
     # if the program changed
     # BUG: if the program changes but the path doesn't
+    """
     if prog != os.path.realpath("/tmp/qira_binary"):
       print "*** deleting old runs because binary changed"
       self.delete_old_runs()
+    """
+
+    # probably always good to do except in development of middleware
+    self.delete_old_runs()
 
     # create the binary symlink
     try:
@@ -35,7 +41,9 @@ class Program:
     self.instructions = qira_binary.objdump_binary(prog)
     self.basemem = qira_memory.Memory()
 
+    sys.stdout.write("committing base memory..."); sys.stdout.flush()
     qira_binary.mem_commit_base_binary(prog, self.basemem)
+    print "done"
 
     # get file type
     fb = qira_binary.file_binary(prog)

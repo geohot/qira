@@ -166,17 +166,26 @@ def check_file(logfile, trace):
   max_changes = qira_log.get_log_length(logfile)
   if max_changes == None:
     return False
+  # shouldn't happen anymore
+  """
   if max_changes < trace.changes_committed:
     print "RESTART..."+logfile
     trace.reset()
+  """
+
   if trace.changes_committed < max_changes:
+    total_changes = max_changes - trace.changes_committed
+    # clamping to keep the server responsive
+    # python threads really aren't very good
+    if total_changes > 10000:
+      total_changes = 10000
     sys.stdout.write("on %s going from %d to %d..." % (logfile, trace.changes_committed,max_changes))
     sys.stdout.flush()
-    log = qira_log.read_log(logfile, trace.changes_committed, max_changes - trace.changes_committed)
+    log = qira_log.read_log(logfile, trace.changes_committed, total_changes)
     sys.stdout.write("read..."); sys.stdout.flush()
     trace.process(log)
     print "done", trace.maxclnum
-    trace.changes_committed = max_changes
+    trace.changes_committed += total_changes
     return True
   return False
 
@@ -187,7 +196,7 @@ def run_middleware():
   # run loop run
   # read in all the traces
   while 1:
-    time.sleep(0.05)
+    time.sleep(0.2)
     did_update = False
     for i in os.listdir("/tmp/qira_logs/"):
       i = int(i)

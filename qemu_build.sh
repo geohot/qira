@@ -10,8 +10,8 @@ if [ ! -d qemu/qemu-latest ]; then
   ln -s qemu-2.1.0-rc0 qemu-latest
 
   ln -s qemu-latest/arm-linux-user/qemu-arm qira-arm
-  ln -s qemu-latest/i386-linux-user/qemu-arm qira-i386
-  ln -s qemu-latest/x86_64-linux-user/qemu-arm qira-x86_64
+  ln -s qemu-latest/i386-linux-user/qemu-i386 qira-i386
+  ln -s qemu-latest/x86_64-linux-user/qemu-x86_64 qira-x86_64
 
   cd qemu-latest
   mv tci.c tci.c.bak
