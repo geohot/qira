@@ -8,6 +8,11 @@ if [ ! -d qemu/qemu-latest ]; then
   wget http://wiki.qemu-project.org/download/qemu-2.1.0-rc0.tar.bz2
   tar xf qemu-2.1.0-rc0.tar.bz2
   ln -s qemu-2.1.0-rc0 qemu-latest
+
+  ln -s qemu-latest/arm-linux-user/qemu-arm qira-arm
+  ln -s qemu-latest/i386-linux-user/qemu-arm qira-i386
+  ln -s qemu-latest/x86_64-linux-user/qemu-arm qira-x86_64
+
   cd qemu-latest
   mv tci.c tci.c.bak
   mv linux-user/qemu.h linux-user/qemu.h.bak
