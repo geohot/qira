@@ -41,9 +41,12 @@ class Program:
     self.instructions = qira_binary.objdump_binary(prog)
     self.basemem = qira_memory.Memory()
 
+    # debug
+    """
     sys.stdout.write("committing base memory..."); sys.stdout.flush()
     qira_binary.mem_commit_base_binary(prog, self.basemem)
     print "done"
+    """
 
     # get file type
     fb = qira_binary.file_binary(prog)

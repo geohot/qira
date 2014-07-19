@@ -179,6 +179,9 @@ def check_file(logfile, trace):
     # python threads really aren't very good
     if total_changes > 10000:
       total_changes = 10000
+    if trace.changes_committed > 200000:
+      # clamped
+      return
     sys.stdout.write("on %s going from %d to %d..." % (logfile, trace.changes_committed,max_changes))
     sys.stdout.flush()
     log = qira_log.read_log(logfile, trace.changes_committed, total_changes)
@@ -236,6 +239,7 @@ def start_bindserver(myss, parent_id, start_cl, loop = False):
     # fork off the child if we are looping
     if loop:
       if os.fork() != 0:
+        cs.close()
         continue
     run_id = get_next_run_id()
     print "**** ID",run_id,"CLIENT",cs, address, cs.fileno()
