@@ -45,6 +45,7 @@ def mem_commit_base_binary(prog, mem):
 
     # should we gate the segment on something?
     # i think any data actually in the ELF file is good
+    print "  committing %x with len %x" % (vaddr, len(data))
     for i in range(0, len(data)):
       mem.commit(0, vaddr+i, ord(data[i]))
 

@@ -482,6 +482,8 @@ struct logstate *GLOBAL_logstate;
 uint32_t GLOBAL_start_clnum = 1;
 int GLOBAL_parent_id = -1, GLOBAL_id = 0;
 
+FILE *GLOBAL_asm_file = NULL;
+
 // should be 0ed on startup
 #define PENDING_CHANGES_MAX_ADDR 0x100
 struct change GLOBAL_pending_changes[PENDING_CHANGES_MAX_ADDR/4];
@@ -497,10 +499,18 @@ void resize_change_buffer(size_t size) {
 }
 
 void init_QIRA(CPUArchState *env, int id) {
+  if (GLOBAL_QIRA_did_init == 0) {
+    // these three arguments (parent_id, start_clnum, id) must be passed into QIRA
+    if (GLOBAL_parent_id != -1) {
+      run_QIRA_log(env, GLOBAL_parent_id, GLOBAL_start_clnum);
+    }
+  }
   char fn[PATH_MAX];
   QIRA_DEBUG("init QIRA called\n");
   GLOBAL_CPUArchState = env;
   sprintf(fn, "/tmp/qira_logs/%d", id);
+
+  GLOBAL_asm_file = fopen("/tmp/qira_asm", "a");
 
   // for compat
   //unlink("/tmp/qira_log");
@@ -753,6 +763,27 @@ void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
   printf("*** REPLAY DONE ***\n");
 }
 
+bool is_filtered_address(target_ulong pc);
+bool is_filtered_address(target_ulong pc) {
+  return ((pc > 0x40000000 && pc < 0xf6800000) || pc >= 0x100000000);
+}
+
+void real_target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong size, int flags);
+void target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong size, int flags);
+void target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong size, int flags) {
+  if (unlikely(GLOBAL_QIRA_did_init == 0)) { 
+    init_QIRA(env, GLOBAL_id);
+  }
+
+  if (is_filtered_address(code)) return;
+
+  flock(fileno(GLOBAL_asm_file), LOCK_EX);
+  real_target_disas(GLOBAL_asm_file, env, code, size, flags);
+  flock(fileno(GLOBAL_asm_file), LOCK_UN);
+
+  fflush(GLOBAL_asm_file);
+}
+
 
 int GLOBAL_last_was_syscall = 0;
 uint32_t GLOBAL_last_fork_change = -1;
@@ -766,10 +797,6 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
     TranslationBlock *tb = cpu->current_tb;
 
     if (unlikely(GLOBAL_QIRA_did_init == 0)) { 
-      // these three arguments (parent_id, start_clnum, id) must be passed into QIRA
-      if (GLOBAL_parent_id != -1) {
-        run_QIRA_log(env, GLOBAL_parent_id, GLOBAL_start_clnum);
-      }
       init_QIRA(env, GLOBAL_id);
       return 0;
     }
@@ -796,7 +823,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
     }
 
     // TODO(geohot): FIX THIS!, filter anything that isn't the user binary and not dynamic
-    if ((tb->pc > 0x40000000 && tb->pc < 0xf6800000) || tb->pc >= 0x100000000) {
+    if (is_filtered_address(tb->pc)) {
       GLOBAL_logstate->is_filtered = 1;
     } else {
       if (GLOBAL_logstate->is_filtered == 1) {

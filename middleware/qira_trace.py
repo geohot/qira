@@ -1,9 +1,11 @@
 import qira_binary
 import qira_log
 import qira_memory
+import threading
 from collections import defaultdict
 import os
 import sys
+import time
 
 ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 4)
 X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4)
@@ -18,16 +20,12 @@ class Program:
     except:
       pass
 
-    # if the program changed
-    # BUG: if the program changes but the path doesn't
-    """
-    if prog != os.path.realpath("/tmp/qira_binary"):
-      print "*** deleting old runs because binary changed"
-      self.delete_old_runs()
-    """
-
     # probably always good to do except in development of middleware
+    print "*** deleting old runs"
     self.delete_old_runs()
+
+    # getting asm from qemu
+    self.create_asm_file()
 
     # create the binary symlink
     try:
@@ -38,19 +36,19 @@ class Program:
 
     # pmaps is global, but updated by the traces
     self.pmaps = {}
-    self.instructions = qira_binary.objdump_binary(prog)
+    #self.instructions = qira_binary.objdump_binary(prog)
+    self.instructions = {}
     self.basemem = qira_memory.Memory()
 
-    sys.stdout.write("committing base memory..."); sys.stdout.flush()
+    print "committing base memory..."
     qira_binary.mem_commit_base_binary(prog, self.basemem)
-    print "done"
 
     # get file type
-    fb = qira_binary.file_binary(prog)
-    if 'ARM' in fb:
+    self.fb = qira_binary.file_binary(prog)
+    if 'ARM' in self.fb:
       self.tregs = ARMREGS
       self.qirabinary = "qira-arm"
-    elif 'x86-64' in fb:
+    elif 'x86-64' in self.fb:
       self.tregs = X64REGS
       self.qirabinary = "qira-x86_64"
     else:
@@ -59,6 +57,34 @@ class Program:
 
     # no traces yet
     self.traces = {}
+
+  def create_asm_file(self):
+    try:
+      os.unlink("/tmp/qira_asm")
+    except:
+      pass
+    open("/tmp/qira_asm", "a").close()
+    self.qira_asm_file = open("/tmp/qira_asm", "r")
+
+  def read_asm_file(self):
+    dat = self.qira_asm_file.read()
+    if len(dat) == 0:
+      return
+    cnt = 0
+    for d in dat.split("\n"):
+      if len(d) == 0:
+        continue
+      # hacks
+      addr = int(d.split(" ")[0].strip(":"), 16)
+      #print repr(d)
+      if 'ARM' in self.fb:
+        inst = d[d.rfind("  ")+2:]
+      else:
+        inst = d[d.find(":")+3:]
+      self.instructions[addr] = inst
+      cnt += 1
+      #print addr, inst
+    sys.stdout.write("%d..." % cnt); sys.stdout.flush()
 
   def delete_old_runs(self):
     # delete the logs
@@ -104,8 +130,10 @@ class Trace:
       pytype = qira_log.flag_to_type(flags)
       this_change = {'address': address, 'type': pytype,
           'size': flags&qira_log.SIZE_MASK, 'clnum': clnum, 'data': data}
+      """
       if address in self.program.instructions:
         this_change['instruction'] = self.program.instructions[address]
+      """
 
       # update python database
       self.pydb_addr[(address, pytype)].append(clnum)
@@ -132,4 +160,6 @@ class Trace:
       if flags & qira_log.IS_START:
         self.program.pmaps[page_base] = "instruction"
     # *** FOR LOOP END ***
+    self.program.read_asm_file()
+
 

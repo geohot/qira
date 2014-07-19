@@ -92,7 +92,10 @@ def getinstructions(forknum, clstart, clend):
   for i in range(clstart, clend):
     key = (i, 'I')
     if key in pydb_clnum:
-      ret.append(pydb_clnum[key][0])
+      rret = pydb_clnum[key][0]     
+      if rret['address'] in program.instructions:
+        rret['instruction'] = program.instructions[rret['address']]
+      ret.append(rret)
   emit('instructions', ret)
 
 @socketio.on('getmemory', namespace='/qira')
@@ -260,8 +263,8 @@ def start_bindserver(myss, parent_id, start_cl, loop = False):
       except:
         pass
     # fingerprint here
-    os.execvp(program.qirabinary, [program.qirabinary, "-qirachild",
-      "%d %d %d" % (parent_id, start_cl, run_id), "-singlestep",
+    os.execvp(program.qirabinary, [program.qirabinary, "-D", "/dev/null", "-d", "in_asm",
+      "-qirachild", "%d %d %d" % (parent_id, start_cl, run_id), "-singlestep",
       "/tmp/qira_binary"]+sys.argv[2:])
 
 
