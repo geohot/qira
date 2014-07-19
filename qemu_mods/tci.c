@@ -500,7 +500,16 @@ void resize_change_buffer(size_t size) {
 
 void init_QIRA(CPUArchState *env, int id) {
   QIRA_DEBUG("init QIRA called\n");
-  GLOBAL_asm_file = fopen("/tmp/qira_asm", "a");
+
+  if (GLOBAL_QIRA_did_init == 0) {
+    GLOBAL_asm_file = fopen("/tmp/qira_asm", "a");
+
+    // these three arguments (parent_id, start_clnum, id) must be passed into QIRA
+    if (GLOBAL_parent_id != -1) {
+      run_QIRA_log(env, GLOBAL_parent_id, GLOBAL_start_clnum);
+    }
+    GLOBAL_QIRA_did_init = 1;
+  }
 
   char fn[PATH_MAX];
   GLOBAL_CPUArchState = env;
@@ -524,14 +533,6 @@ void init_QIRA(CPUArchState *env, int id) {
   GLOBAL_logstate->changelist_number = GLOBAL_start_clnum-1;
   GLOBAL_logstate->first_changelist_number = GLOBAL_start_clnum;
   GLOBAL_logstate->parent_id = GLOBAL_parent_id;
-
-  if (GLOBAL_QIRA_did_init == 0) {
-    // these three arguments (parent_id, start_clnum, id) must be passed into QIRA
-    if (GLOBAL_parent_id != -1) {
-      run_QIRA_log(env, GLOBAL_parent_id, GLOBAL_start_clnum);
-    }
-    GLOBAL_QIRA_did_init = 1;
-  }
 }
 
 struct change *add_change(target_ulong addr, uint64_t data, uint32_t flags) {
