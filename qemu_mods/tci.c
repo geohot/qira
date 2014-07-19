@@ -499,28 +499,17 @@ void resize_change_buffer(size_t size) {
 }
 
 void init_QIRA(CPUArchState *env, int id) {
-  if (GLOBAL_QIRA_did_init == 0) {
-    // these three arguments (parent_id, start_clnum, id) must be passed into QIRA
-    if (GLOBAL_parent_id != -1) {
-      run_QIRA_log(env, GLOBAL_parent_id, GLOBAL_start_clnum);
-    }
-  }
-  char fn[PATH_MAX];
   QIRA_DEBUG("init QIRA called\n");
-  GLOBAL_CPUArchState = env;
-  sprintf(fn, "/tmp/qira_logs/%d", id);
-
   GLOBAL_asm_file = fopen("/tmp/qira_asm", "a");
 
-  // for compat
-  //unlink("/tmp/qira_log");
-  //if(symlink(fn, "/tmp/qira_log") == -1) QIRA_DEBUG("log symlink failed\n");
+  char fn[PATH_MAX];
+  GLOBAL_CPUArchState = env;
+  sprintf(fn, "/tmp/qira_logs/%d", id);
 
   // unlink it first
   unlink(fn);
   GLOBAL_qira_log_fd = open(fn, O_RDWR | O_CREAT, 0644);
   GLOBAL_change_size = 1;
-  GLOBAL_QIRA_did_init = 1;
   memset(GLOBAL_pending_changes, 0, (PENDING_CHANGES_MAX_ADDR/4) * sizeof(struct change));
 
   resize_change_buffer(GLOBAL_change_size * sizeof(struct change));
@@ -535,6 +524,14 @@ void init_QIRA(CPUArchState *env, int id) {
   GLOBAL_logstate->changelist_number = GLOBAL_start_clnum-1;
   GLOBAL_logstate->first_changelist_number = GLOBAL_start_clnum;
   GLOBAL_logstate->parent_id = GLOBAL_parent_id;
+
+  if (GLOBAL_QIRA_did_init == 0) {
+    // these three arguments (parent_id, start_clnum, id) must be passed into QIRA
+    if (GLOBAL_parent_id != -1) {
+      run_QIRA_log(env, GLOBAL_parent_id, GLOBAL_start_clnum);
+    }
+    GLOBAL_QIRA_did_init = 1;
+  }
 }
 
 struct change *add_change(target_ulong addr, uint64_t data, uint32_t flags) {
