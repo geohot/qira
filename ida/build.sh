@@ -12,20 +12,24 @@ elif [[ "$unamestr" == 'Darwin' ]]; then
   SDKROOT=~/idasrc
   IDAROOT="/Applications/IDA Pro 6.6/idaq.app/Contents/MacOS/"
   OUTPUT="qira.pmc"
-  OUTPUT="qira.pmc64"
+  OUTPUT64="qira.pmc64"
   ln -sf mac_libwebsockets.a libwebsockets.a
 fi
 
 # build 32
 g++ template.cpp -m32 -fPIC -D__IDP__ -D__PLUGIN__ -c -D__LINUX__ -I . -I$SDKROOT/include
 g++ -m32 --shared template.o "-L$IDAROOT" -lida -o $OUTPUT libwebsockets.a -lcrypto -lz -lssl -lpthread
+echo "built 32"
 
 # build 64
 g++ template.cpp -D__EA64__=1 -m32 -fPIC -D__IDP__ -D__PLUGIN__ -c -D__LINUX__ -I . -I$SDKROOT/include
 g++ -m32 --shared template.o "-L$IDAROOT" -lida64 -o $OUTPUT64 libwebsockets.a -lcrypto -lz -lssl -lpthread
+echo "built 64"
 
-strip $OUTPUT
-strip $OUTPUT64
+if [[ "$unamestr" == 'Linux' ]]; then
+  strip $OUTPUT
+  strip $OUTPUT64
+fi
 
 sha1sum $OUTPUT $OUTPUT64
 echo "installing plugin"
