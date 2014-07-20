@@ -7,6 +7,7 @@ set -e
 # we need meteor
 if [ ! -d ~/.meteor ]; then
   echo "installing meteor"
+  sudo apt-get install curl
   curl https://install.meteor.com | /bin/sh
 fi
 

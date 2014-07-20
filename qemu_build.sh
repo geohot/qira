@@ -21,6 +21,7 @@ if [ ! -d qemu/qemu-latest ]; then
   cd ../../
 fi
 
+sudo apt-get build-dep qemu
 cd qemu/qemu-latest
 ln -sf ../../qemu_mods/tci.c tci.c
 ln -sf ../../qemu_mods/disas.c disas.c
