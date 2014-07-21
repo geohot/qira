@@ -289,8 +289,8 @@ def get_next_run_id():
   return ret+1
 
 if __name__ == '__main__':
-  parser = argparse.ArgumentParser(description = 'Analyze binary. Bind on port 4000.')
-  parser.add_argument('-s', "--single", help="run target process once without the bind", action="store_true")
+  parser = argparse.ArgumentParser(description = 'Analyze binary.')
+  parser.add_argument('-s', "--server", help="bind on port 4000. like socat", action="store_true")
   parser.add_argument('binary', help="path to binary")
   parser.add_argument('args', nargs='*', help="arguments to the binary")
   args = parser.parse_args()
@@ -299,12 +299,12 @@ if __name__ == '__main__':
   program = qira_trace.Program(args.binary, args.args)
 
   # start the binary runner
-  if args.single:
-    if os.fork() == 0:
-      os.execvp(program.qirabinary, [program.qirabinary, "-D", "/dev/null", "-d", "in_asm", "-singlestep",  program.program]+program.args)
-  else:
+  if args.server:
     init_bindserver()
     start_bindserver(ss, -1, 1, True)
+  else:
+    if os.fork() == 0:
+      os.execvp(program.qirabinary, [program.qirabinary, "-D", "/dev/null", "-d", "in_asm", "-singlestep",  program.program]+program.args)
 
   # start the http server
   http = threading.Thread(target=run_socketio)
