@@ -10,7 +10,8 @@ if [ $(which apt-get) ]; then
 fi
 
 echo "installing pip packages"
-sudo pip install pyelftools blist flask-socketio
+# pyelftools isn't needed anymore
+sudo pip install blist flask-socketio
 
 echo "making symlinks"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira
