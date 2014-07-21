@@ -1,4 +1,5 @@
 # rewrite this whole thing in c?
+# we also have to move the pydb
 import blist
 
 class Address:

@@ -13,7 +13,7 @@ X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8)
 
 # things that don't cross the fork
 class Program:
-  def __init__(self, prog):
+  def __init__(self, prog, args):
     # create the logs dir
     try:
       os.mkdir("/tmp/qira_logs")
@@ -27,17 +27,13 @@ class Program:
     # getting asm from qemu
     self.create_asm_file()
 
-    # create the binary symlink
-    try:
-      os.unlink("/tmp/qira_binary")
-    except:
-      pass
-    os.symlink(prog, "/tmp/qira_binary")
-
     # pmaps is global, but updated by the traces
     self.pmaps = {}
     #self.instructions = qira_binary.objdump_binary(prog)
     self.instructions = {}
+
+    self.program = prog
+    self.args = args
     """
     self.basemem = qira_memory.Memory()
 

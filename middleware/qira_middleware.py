@@ -8,9 +8,18 @@ import sys
 import os
 import fcntl
 import signal
+import argparse
 
 from flask import Flask, Response
 from flask.ext.socketio import SocketIO, emit
+
+# see http://stackoverflow.com/questions/8774958/keyerror-in-module-threading-after-a-successful-py-test-run
+if 'threading' in sys.modules:
+  del sys.modules['threading']
+import gevent
+import gevent.socket
+import gevent.monkey
+gevent.monkey.patch_all()
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -267,7 +276,7 @@ def start_bindserver(myss, parent_id, start_cl, loop = False):
     # fingerprint here
     os.execvp(program.qirabinary, [program.qirabinary, "-D", "/dev/null", "-d", "in_asm",
       "-qirachild", "%d %d %d" % (parent_id, start_cl, run_id), "-singlestep",
-      "/tmp/qira_binary"]+sys.argv[2:])
+      program.program]+program.args)
       #"-strace",
 
 
@@ -280,16 +289,22 @@ def get_next_run_id():
   return ret+1
 
 if __name__ == '__main__':
-  if len(sys.argv) < 2:
-    print "usage: %s <target binary>" % sys.argv[0]
-    exit(-1)
+  parser = argparse.ArgumentParser(description = 'Analyze binary. Bind on port 4000.')
+  parser.add_argument('-s', "--single", help="run target process once without the bind", action="store_true")
+  parser.add_argument('binary', help="path to binary")
+  parser.add_argument('args', nargs='*', help="arguments to the binary")
+  args = parser.parse_args()
 
   # creates the file symlink, program is constant through server run
-  program = qira_trace.Program(os.path.realpath(sys.argv[1]))
+  program = qira_trace.Program(args.binary, args.args)
 
   # start the binary runner
-  init_bindserver()
-  start_bindserver(ss, -1, 1, True)
+  if args.single:
+    if os.fork() == 0:
+      os.execvp(program.qirabinary, [program.qirabinary, "-D", "/dev/null", "-d", "in_asm", "-singlestep",  program.program]+program.args)
+  else:
+    init_bindserver()
+    start_bindserver(ss, -1, 1, True)
 
   # start the http server
   http = threading.Thread(target=run_socketio)
