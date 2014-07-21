@@ -45,15 +45,16 @@ class Program:
     #self.fb = qira_binary.file_binary(prog)
     self.fb = struct.unpack("H", open(prog).read(0x18)[0x12:0x14])[0]
     print "e_machine is",hex(self.fb)
+    qemu_dir = os.path.dirname(os.path.realpath(__file__))+"/../qemu/"
     if self.fb == 0x28:
       self.tregs = ARMREGS
-      self.qirabinary = "qira-arm"
+      self.qirabinary = qemu_dir + "qira-arm"
     elif self.fb == 0x3e:
       self.tregs = X64REGS
-      self.qirabinary = "qira-x86_64"
+      self.qirabinary = qemu_dir + "qira-x86_64"
     elif self.fb == 0x03:
       self.tregs = X86REGS
-      self.qirabinary = "qira-i386"
+      self.qirabinary = qemu_dir + "qira-i386"
     else:
       print "BINARY TYPE NOT SUPPORTED"
 
@@ -139,7 +140,7 @@ class Trace:
       dat = f.read(se-ss)
       self.mem.bcommit(ss, dat)
       f.close()
-      print hex(ss)+"-"+hex(se), offset, fn
+      #print hex(ss)+"-"+hex(se), offset, fn
 
   # *** HANDLER FOR qira_log ***
   def process(self, log_entries):

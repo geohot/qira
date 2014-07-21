@@ -291,7 +291,7 @@ def get_next_run_id():
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description = 'Analyze binary.')
   parser.add_argument('-s', "--server", help="bind on port 4000. like socat", action="store_true")
-  parser.add_argument('binary', help="path to binary")
+  parser.add_argument('binary', help="path to the binary")
   parser.add_argument('args', nargs='*', help="arguments to the binary")
   args = parser.parse_args()
 
@@ -303,6 +303,7 @@ if __name__ == '__main__':
     init_bindserver()
     start_bindserver(ss, -1, 1, True)
   else:
+    print "**** running "+program.program
     if os.fork() == 0:
       os.execvp(program.qirabinary, [program.qirabinary, "-D", "/dev/null", "-d", "in_asm", "-singlestep",  program.program]+program.args)
 
@@ -310,5 +311,6 @@ if __name__ == '__main__':
   http = threading.Thread(target=run_socketio)
   http.start()
 
+  # this reads the files. replace it with c
   run_middleware()
 
