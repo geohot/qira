@@ -2,6 +2,7 @@ import qira_binary
 import qira_log
 import qira_memory
 import threading
+import struct
 from collections import defaultdict
 import os
 import sys
@@ -38,22 +39,28 @@ class Program:
     self.pmaps = {}
     #self.instructions = qira_binary.objdump_binary(prog)
     self.instructions = {}
+    """
     self.basemem = qira_memory.Memory()
 
     print "committing base memory..."
     qira_binary.mem_commit_base_binary(prog, self.basemem)
+    """
 
     # get file type
-    self.fb = qira_binary.file_binary(prog)
-    if 'ARM' in self.fb:
+    #self.fb = qira_binary.file_binary(prog)
+    self.fb = struct.unpack("H", open(prog).read(0x18)[0x12:0x14])[0]
+    print "e_machine is",hex(self.fb)
+    if self.fb == 0x28:
       self.tregs = ARMREGS
       self.qirabinary = "qira-arm"
-    elif 'x86-64' in self.fb:
+    elif self.fb == 0x3e:
       self.tregs = X64REGS
       self.qirabinary = "qira-x86_64"
-    else:
+    elif self.fb == 0x03:
       self.tregs = X86REGS
       self.qirabinary = "qira-i386"
+    else:
+      print "BINARY TYPE NOT SUPPORTED"
 
     # no traces yet
     self.traces = {}
@@ -77,7 +84,7 @@ class Program:
       # hacks
       addr = int(d.split(" ")[0].strip(":"), 16)
       #print repr(d)
-      if 'ARM' in self.fb:
+      if self.fb == 0x28:   # ARM
         inst = d[d.rfind("  ")+2:]
       else:
         inst = d[d.find(":")+3:]
@@ -106,7 +113,8 @@ class Trace:
 
   def reset(self):
     self.regs = qira_memory.Memory()
-    self.mem = self.program.basemem.copy()
+    self.mem = qira_memory.Memory()
+    #self.mem = self.program.basemem.copy()
     self.minclnum = -1
     self.maxclnum = 1
 
@@ -117,6 +125,23 @@ class Trace:
     # pydb_clnum: (clnum, type) -> [changes]
     self.pydb_addr = defaultdict(list)
     self.pydb_clnum = defaultdict(list)
+
+    for ln in open("/tmp/qira_logs/"+str(self.forknum)+"_base").read().split("\n"):
+      ln = ln.split(" ")
+      if len(ln) < 3:
+        continue
+      (ss, se) = ln[0].split("-")
+      ss = int(ss, 16)
+      se = int(se, 16)
+      offset = int(ln[1])
+      fn = ' '.join(ln[2:])
+
+      f = open(fn)
+      f.seek(offset)
+      dat = f.read(se-ss)
+      self.mem.bcommit(ss, dat)
+      f.close()
+      print hex(ss)+"-"+hex(se), offset, fn
 
   # *** HANDLER FOR qira_log ***
   def process(self, log_entries):

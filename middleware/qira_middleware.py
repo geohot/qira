@@ -208,6 +208,8 @@ def run_middleware():
     time.sleep(0.2)
     did_update = False
     for i in os.listdir("/tmp/qira_logs/"):
+      if "_" in i:
+        continue
       i = int(i)
       if i not in program.traces:
         qira_trace.Trace(program, i)
@@ -272,6 +274,8 @@ def start_bindserver(myss, parent_id, start_cl, loop = False):
 def get_next_run_id():
   ret = -1
   for i in os.listdir("/tmp/qira_logs/"):
+    if "_" in i:
+      continue
     ret = max(ret, int(i))
   return ret+1
 

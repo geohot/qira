@@ -19,9 +19,10 @@ if [ ! -d qemu/qemu-latest ]; then
   mv linux-user/qemu.h linux-user/qemu.h.bak
   mv linux-user/main.c linux-user/main.c.bak
   cd ../../
+
+  sudo apt-get build-dep qemu
 fi
 
-sudo apt-get build-dep qemu
 cd qemu/qemu-latest
 ln -sf ../../qemu_mods/tci.c tci.c
 ln -sf ../../qemu_mods/disas.c disas.c

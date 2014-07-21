@@ -1,4 +1,5 @@
 # QIRA would be a better place if these things came from QEMU
+# ALL DEAD CODE, remove ELFFile
 
 import subprocess
 from elftools.elf.elffile import ELFFile
@@ -46,6 +47,11 @@ def mem_commit_base_binary(prog, mem):
     # should we gate the segment on something?
     # i think any data actually in the ELF file is good
     print "  committing %x with len %x" % (vaddr, len(data))
+
+    # old method was too slow
+    mem.bcommit(vaddr, data)
+    """
     for i in range(0, len(data)):
       mem.commit(0, vaddr+i, ord(data[i]))
+    """
 

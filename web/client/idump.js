@@ -33,8 +33,12 @@ Template.idump.events({
   'click .change': function() {
     Session.set('clnum', this.clnum);
   },
+  'mousedown .datainstruction': function(e) { return false; },
   'click .datainstruction': function() {
     Session.set('iaddr', this.address);
+  },
+  'dblclick .datainstruction': function() {
+    update_dview(this.address);
   }
 });
 

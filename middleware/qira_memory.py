@@ -19,10 +19,12 @@ class Address:
 class Memory:
   def __init__(this):
     this.daddr = {}
+    this.backing = {}
 
   def copy(this):
     new = Memory()
     new.daddr = this.daddr.copy()
+    new.backing = this.backing   # no copy required
     return new
 
   def fetch(this, clnum, addr, l):
@@ -32,7 +34,16 @@ class Memory:
         rret = this.daddr[i].fetch(clnum)
         if rret != None:
           ret[i] = rret
+      else:
+        # slow
+        for (s, e) in this.backing:
+          if s <= i and i < e:
+            ret[i] = ord(this.backing[(s,e)][i-s])
     return ret
+
+  # backing commit
+  def bcommit(this, addr, dat):
+    this.backing[(addr, addr+len(dat))] = dat
 
   def dump(this):
     ret = {}

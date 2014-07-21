@@ -126,7 +126,14 @@ int websocket_thread(void *) {
 	info.uid = -1;
 	info.options = 0;
 
+  // i assume this does the bind?
   context = libwebsocket_create_context(&info);
+
+  if (context == NULL) {
+    msg("websocket init failed\n");
+    return -1;
+  }
+
   msg("yay websockets\n");
 
   while (websockets_running) {

@@ -84,30 +84,6 @@ stream.on('memory', function(msg) {
 });
 
 
-Template.memviewer.events({
-  'dblclick .datamemory': function(e) {
-    var daddr = parseInt(e.target.innerHTML, 16);
-    update_dview(daddr);
-  },
-  'dblclick .datainstruction': function(e) {
-    var daddr = parseInt(e.target.innerHTML, 16);
-    update_dview(daddr);
-  },
-  'contextmenu .datainstruction': function(e) {
-    // right click to follow in instruction dump
-    // add menu maybe?
-    var iaddr = parseInt(e.target.innerHTML, 16);
-    Session.set("dirtyiaddr", true);
-    Session.set('iaddr', iaddr);
-    return false;
-  },
-  'click .data': function(e) {
-    var daddr = parseInt(e.target.getAttribute('daddr'));
-    Session.set('daddr', daddr);
-  },
-});
-
-Template.regviewer.events(baseevents);
 
 Template.regviewer.hexvalue = function() {
   return this.value;
@@ -138,9 +114,12 @@ stream.on('registers', function(msg) {
   UI.insert(UI.renderWithData(Template.regviewer, {regs: msg}), $('#regviewer')[0]);
 });
 
-// *** datachanges ***
-
+// events, add the editing here
+Template.memviewer.events(basedblevents);
+Template.regviewer.events(baseevents);
 Template.datachanges.events(baseevents);
+
+// *** datachanges ***
 
 Template.datachanges.hexaddress = function() {
   return this.address;
