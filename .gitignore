@@ -15,4 +15,5 @@ old/qiradb/qiradb
 db/
 qemu/qemu-2*
 distrib/
+libs/
 
