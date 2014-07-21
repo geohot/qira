@@ -119,7 +119,13 @@ class Trace:
     self.pydb_addr = defaultdict(list)
     self.pydb_clnum = defaultdict(list)
 
-    for ln in open("/tmp/qira_logs/"+str(self.forknum)+"_base").read().split("\n"):
+    try:
+      f = open("/tmp/qira_logs/"+str(self.forknum)+"_base")
+    except:
+      # done
+      return
+
+    for ln in f.read().split("\n"):
       ln = ln.split(" ")
       if len(ln) < 3:
         continue
