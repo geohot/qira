@@ -1,3 +1,4 @@
+# rewrite this whole thing in c?
 import blist
 
 class Address:

@@ -92,7 +92,7 @@ def getinstructions(forknum, clstart, clend):
   for i in range(clstart, clend):
     key = (i, 'I')
     if key in pydb_clnum:
-      rret = pydb_clnum[key][0]     
+      rret = pydb_clnum[key][0]
       if rret['address'] in program.instructions:
         rret['instruction'] = program.instructions[rret['address']]
       ret.append(rret)
@@ -181,8 +181,8 @@ def check_file(logfile, trace):
     total_changes = max_changes - trace.changes_committed
     # clamping to keep the server responsive
     # python threads really aren't very good
-    if total_changes > 10000:
-      total_changes = 10000
+    if total_changes > 30000:
+      total_changes = 30000
     """
     if trace.changes_committed > 200000:
       # clamped
