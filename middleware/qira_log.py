@@ -22,15 +22,15 @@ def flag_to_type(flags):
     typ = "R"
   return typ
 
-def get_log_length(fn):
+def get_log_length(f):
   try:
-    dat = open(fn).read(4)
+    f.seek(0)
+    dat = f.read(4)
     return struct.unpack("I", dat)[0]
   except:
     return None
 
-def read_log(fn, seek=1, cnt=0):
-  f = open(fn)
+def read_log(f, seek=1, cnt=0):
   f.seek(seek*0x18)
   if cnt == 0:
     dat = f.read()

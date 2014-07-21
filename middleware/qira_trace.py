@@ -20,7 +20,6 @@ class Program:
     except:
       pass
 
-
     # pmaps is global, but updated by the traces
     self.pmaps = {}
     #self.instructions = qira_binary.objdump_binary(prog)
@@ -99,9 +98,13 @@ class Program:
 
 class Trace:
   def __init__(self, program, forknum):
+    self.logfile = open("/tmp/qira_logs/"+str(forknum))
+
     self.program = program
     self.program.traces[forknum] = self
+
     self.forknum = forknum
+
     self.reset()
 
   def reset(self):
@@ -144,6 +147,28 @@ class Trace:
       self.mem.bcommit(ss, dat)
       f.close()
       #print hex(ss)+"-"+hex(se), offset, fn
+
+  def poll(self):
+    max_changes = qira_log.get_log_length(self.logfile)
+    if self.changes_committed < max_changes:
+      total_changes = max_changes - self.changes_committed
+      # clamping to keep the server responsive
+      # python threads really aren't very good
+      if total_changes > 30000:
+        total_changes = 30000
+      if self.changes_committed > 1000000:
+        # clamped
+        return False
+      sys.stdout.write("on %d going from %d to %d..." % (self.forknum, self.changes_committed,max_changes))
+      sys.stdout.flush()
+      log = qira_log.read_log(self.logfile, self.changes_committed, total_changes)
+      sys.stdout.write("read..."); sys.stdout.flush()
+      self.process(log)
+      print "done", self.maxclnum
+      self.changes_committed += total_changes
+      return True
+    return False
+
 
   # *** HANDLER FOR qira_log ***
   def process(self, log_entries):

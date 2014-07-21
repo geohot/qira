@@ -176,38 +176,6 @@ def run_socketio():
   print "starting socketio server..."
   socketio.run(app, port=QIRA_PORT)
 
-def check_file(logfile, trace):
-  global program
-  max_changes = qira_log.get_log_length(logfile)
-  if max_changes == None:
-    return False
-  # shouldn't happen anymore
-  """
-  if max_changes < trace.changes_committed:
-    print "RESTART..."+logfile
-    trace.reset()
-  """
-
-  if trace.changes_committed < max_changes:
-    total_changes = max_changes - trace.changes_committed
-    # clamping to keep the server responsive
-    # python threads really aren't very good
-    if total_changes > 30000:
-      total_changes = 30000
-    """
-    if trace.changes_committed > 200000:
-      # clamped
-      return
-    """
-    sys.stdout.write("on %s going from %d to %d..." % (logfile, trace.changes_committed,max_changes))
-    sys.stdout.flush()
-    log = qira_log.read_log(logfile, trace.changes_committed, total_changes)
-    sys.stdout.write("read..."); sys.stdout.flush()
-    trace.process(log)
-    print "done", trace.maxclnum
-    trace.changes_committed += total_changes
-    return True
-  return False
 
 def run_middleware():
   global program
@@ -224,7 +192,9 @@ def run_middleware():
       i = int(i)
       if i not in program.traces:
         qira_trace.Trace(program, i)
-      if check_file("/tmp/qira_logs/"+str(i), program.traces[i]):
+
+    for tn in program.traces:
+      if program.traces[tn].poll():
         did_update = True
 
     if did_update:
