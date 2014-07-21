@@ -85,7 +85,7 @@ static void update_address(const char *type, ea_t addr) {
   ws_send(tmp);
 }
 
-static int hook(void *user_data, int event_id, va_list va) {
+static int idaapi hook(void *user_data, int event_id, va_list va) {
   static ea_t old_addr = 0;
   ea_t addr;
   if (event_id == view_curpos) {
@@ -113,7 +113,7 @@ static struct libwebsocket_protocols protocols[] = {
 qthread_t websockets_thread;
 int websockets_running;
 
-int websocket_thread(void *) {
+int idaapi websocket_thread(void *) {
   struct libwebsocket_context* context;
 
 	struct lws_context_creation_info info;
@@ -148,19 +148,19 @@ void exit_websocket_thread() {
 
 // ***************** IDAPLUGIN BOILERPLATE *******************
 
-int IDAP_init(void) {
+int idaapi IDAP_init(void) {
   hook_to_notification_point(HT_VIEW, hook, NULL);
   start_websocket_thread();
 	return PLUGIN_KEEP;
 }
 
-void IDAP_term(void) {
+void idaapi IDAP_term(void) {
   unhook_from_notification_point(HT_VIEW, hook);
   exit_websocket_thread();
 	return;
 }
 
-void IDAP_run(int arg) {
+void idaapi IDAP_run(int arg) {
   msg("installing book\n");
   return;
 }
