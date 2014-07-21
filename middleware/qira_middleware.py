@@ -10,6 +10,8 @@ import fcntl
 import signal
 import argparse
 
+QIRA_PORT = 3002
+
 from flask import Flask, Response
 from flask.ext.socketio import SocketIO, emit
 
@@ -172,7 +174,7 @@ def serve(path):
 
 def run_socketio():
   print "starting socketio server..."
-  socketio.run(app, port=3002)
+  socketio.run(app, port=QIRA_PORT)
 
 def check_file(logfile, trace):
   global program
@@ -298,19 +300,31 @@ if __name__ == '__main__':
   # creates the file symlink, program is constant through server run
   program = qira_trace.Program(args.binary, args.args)
 
+  is_qira_running = 1
+  try:
+    socket.create_connection(('127.0.0.1', QIRA_PORT))
+    if args.server:
+      raise Exception("can't run as server if QIRA is already running")
+  except:
+    is_qira_running = 0
+    print "no qira server found, starting it"
+    program.clear()
+
   # start the binary runner
   if args.server:
     init_bindserver()
     start_bindserver(ss, -1, 1, True)
   else:
     print "**** running "+program.program
-    if os.fork() == 0:
-      os.execvp(program.qirabinary, [program.qirabinary, "-D", "/dev/null", "-d", "in_asm", "-singlestep",  program.program]+program.args)
+    if is_qira_running or os.fork() == 0:   # cute?
+      os.execvp(program.qirabinary, [program.qirabinary, "-D", "/dev/null", "-d", "in_asm",
+        "-singlestep",  program.program]+program.args)
 
-  # start the http server
-  http = threading.Thread(target=run_socketio)
-  http.start()
+  if not is_qira_running:
+    # start the http server
+    http = threading.Thread(target=run_socketio)
+    http.start()
 
-  # this reads the files. replace it with c
-  run_middleware()
+    # this reads the files. replace it with c
+    run_middleware()
 

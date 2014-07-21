@@ -484,7 +484,7 @@ struct logstate *GLOBAL_logstate;
 
 // input args
 uint32_t GLOBAL_start_clnum = 1;
-int GLOBAL_parent_id = -1, GLOBAL_id = 0;
+int GLOBAL_parent_id = -1, GLOBAL_id = -1;
 
 FILE *GLOBAL_asm_file = NULL;
 
@@ -855,6 +855,9 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
     //TaskState *ts = (TaskState *)cpu->opaque;
 
     if (unlikely(GLOBAL_QIRA_did_init == 0)) { 
+      // get next id
+      if (GLOBAL_id == -1) { GLOBAL_id = get_next_id(); }
+
       // do initial core dump
       /*struct rlimit core_limit, core_limit_old;
       getrlimit(RLIMIT_CORE, &core_limit_old);
@@ -872,6 +875,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
       if (GLOBAL_parent_id != -1) {
         run_QIRA_log(env, GLOBAL_parent_id, GLOBAL_start_clnum);
       }
+
 
       init_QIRA(env, GLOBAL_id);
       return 0;

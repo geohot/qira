@@ -20,12 +20,6 @@ class Program:
     except:
       pass
 
-    # probably always good to do except in development of middleware
-    print "*** deleting old runs"
-    self.delete_old_runs()
-
-    # getting asm from qemu
-    self.create_asm_file()
 
     # pmaps is global, but updated by the traces
     self.pmaps = {}
@@ -34,17 +28,10 @@ class Program:
 
     self.program = prog
     self.args = args
-    """
-    self.basemem = qira_memory.Memory()
-
-    print "committing base memory..."
-    qira_binary.mem_commit_base_binary(prog, self.basemem)
-    """
 
     # get file type
     #self.fb = qira_binary.file_binary(prog)
     self.fb = struct.unpack("H", open(prog).read(0x18)[0x12:0x14])[0]
-    print "e_machine is",hex(self.fb)
     qemu_dir = os.path.dirname(os.path.realpath(__file__))+"/../qemu/"
     if self.fb == 0x28:
       self.tregs = ARMREGS
@@ -56,10 +43,20 @@ class Program:
       self.tregs = X86REGS
       self.qirabinary = qemu_dir + "qira-i386"
     else:
-      print "BINARY TYPE NOT SUPPORTED"
+      raise Exception("binary type not supported")
+
+    print "**** using",self.qirabinary,"for",hex(self.fb)
 
     # no traces yet
     self.traces = {}
+
+  def clear(self):
+    # probably always good to do except in development of middleware
+    print "*** deleting old runs"
+    self.delete_old_runs()
+
+    # getting asm from qemu
+    self.create_asm_file()
 
   def create_asm_file(self):
     try:
@@ -110,7 +107,7 @@ class Trace:
   def reset(self):
     self.regs = qira_memory.Memory()
     self.mem = qira_memory.Memory()
-    #self.mem = self.program.basemem.copy()
+
     self.minclnum = -1
     self.maxclnum = 1
 
