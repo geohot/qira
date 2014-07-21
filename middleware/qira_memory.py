@@ -34,11 +34,11 @@ class Memory:
         rret = this.daddr[i].fetch(clnum)
         if rret != None:
           ret[i] = rret
-      else:
-        # slow
-        for (s, e) in this.backing:
-          if s <= i and i < e:
-            ret[i] = ord(this.backing[(s,e)][i-s])
+          continue
+      # slow
+      for (s, e) in this.backing:
+        if s <= i and i < e:
+          ret[i] = ord(this.backing[(s,e)][i-s])
     return ret
 
   # backing commit
