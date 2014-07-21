@@ -1,4 +1,3 @@
-import qira_binary
 import qira_log
 import qira_memory
 import threading
@@ -133,10 +132,13 @@ class Trace:
       (ss, se) = ln[0].split("-")
       ss = int(ss, 16)
       se = int(se, 16)
-      offset = int(ln[1])
+      offset = int(ln[1], 16)
       fn = ' '.join(ln[2:])
 
-      f = open(fn)
+      try:
+        f = open(fn)
+      except:
+        continue
       f.seek(offset)
       dat = f.read(se-ss)
       self.mem.bcommit(ss, dat)

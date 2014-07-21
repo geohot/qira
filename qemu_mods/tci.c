@@ -796,8 +796,18 @@ void write_out_base(CPUArchState *env, int id) {
   sprintf(envfn, "/tmp/qira_logs/%d_env", id);
   FILE *envf = fopen(envfn, "wb");
 
+  // could still be wrong, clipping on env vars
   target_ulong ss = ts->info->start_stack;
-  target_ulong se = (ts->info->start_stack + (TARGET_PAGE_SIZE - 1)) & TARGET_PAGE_MASK;
+  target_ulong se = (ts->info->arg_end + (TARGET_PAGE_SIZE - 1)) & TARGET_PAGE_MASK;
+
+  /*while (h2g_valid(g2h(se))) {
+    printf("%x\n", g2h(se));
+    fflush(stdout);
+    se += TARGET_PAGE_SIZE;
+  }*/
+
+  //target_ulong ss = ts->info->arg_start;
+  //target_ulong se = ts->info->arg_end;
 
   fwrite(g2h(ss), 1, se-ss, envf);
   fclose(envf);
@@ -831,7 +841,7 @@ void write_out_base(CPUArchState *env, int id) {
   }
 
   // env
-  fprintf(f, TARGET_ABI_FMT_lx "-" TARGET_ABI_FMT_lx " %"PRIx64"\n", ss, se, (uint64_t)0, envfn);
+  fprintf(f, TARGET_ABI_FMT_lx "-" TARGET_ABI_FMT_lx " %"PRIx64" %s\n", ss, se, (uint64_t)0, envfn);
 
   fclose(f);
 }
