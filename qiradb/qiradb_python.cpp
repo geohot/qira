@@ -17,7 +17,7 @@ static PyObject *new_trace(PyObject *self, PyObject *args) {
   char *filename;
   int register_size, register_count;
   unsigned int ti;
-  if (!PyArg_ParseTuple(args, "sIii", &filename, &ti, &register_size, &register_count)) { return Py_False; }
+  if (!PyArg_ParseTuple(args, "Isii", &ti, &filename, &register_size, &register_count)) { return Py_False; }
   Trace *t = new Trace(ti);
   if (!t->ConnectToFileAndStart(filename, register_size, register_count)) { delete t; return Py_False; }
   if (traces.size() <= ti) traces.resize(ti+1);

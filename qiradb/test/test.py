@@ -8,7 +8,7 @@ LIMIT = 10000
 #time.sleep(100000.0)
 
 # register size = 4, register count = 9
-print "new_trace:", qiradb.new_trace("hello_trace", 0, 4, 9)
+print "new_trace:", qiradb.new_trace(0, "hello_trace", 4, 9)
 
 while not qiradb.did_update(0):
   print "waiting..."
