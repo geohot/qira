@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+# this is ubuntu specific i think
+
 mkdir -p libs
 cd libs
 
@@ -38,5 +40,4 @@ download $all_debs
 
 choose_extractor
 extract $all_debs
-
 

@@ -6,7 +6,7 @@ set -e
 # we need pip to install python stuff
 if [ $(which apt-get) ]; then
   echo "installing apt packages"
-  sudo apt-get install build-essential python-dev python-pip
+  sudo apt-get install build-essential python-dev python-pip debootstrap
 fi
 
 echo "installing pip packages"

@@ -33,6 +33,9 @@ class Program:
     self.fb = struct.unpack("H", open(prog).read(0x18)[0x12:0x14])[0]
     qemu_dir = os.path.dirname(os.path.realpath(__file__))+"/../qemu/"
     if self.fb == 0x28:
+      if 'QEMU_LD_PREFIX' not in os.environ:
+        os.environ['QEMU_LD_PREFIX'] = os.path.realpath(qemu_dir+"/../libs/armhf/")
+        print "**** set QEMU_LD_PREFIX to",os.environ['QEMU_LD_PREFIX']
       self.tregs = ARMREGS
       self.qirabinary = qemu_dir + "qira-arm"
     elif self.fb == 0x3e:
