@@ -58,6 +58,12 @@ inline MemoryWithValid Trace::get_byte(Clnum clnum, Address a) {
   else { --it2; return MEMORY_VALID | it2->second; }
 }
 
+Trace::~Trace() {
+  pthread_mutex_lock(&backing_mutex_);    // no unlock cause it dies
+  munmap((void*)backing_, backing_size_);
+  close(fd_);
+}
+
 bool Trace::remap_backing(uint64_t new_size) {
   if (backing_size_ == new_size) return true;
   pthread_mutex_lock(&backing_mutex_);

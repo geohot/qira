@@ -21,7 +21,17 @@ static PyObject *new_trace(PyObject *self, PyObject *args) {
   Trace *t = new Trace(ti);
   if (!t->ConnectToFileAndStart(filename, register_size, register_count)) { delete t; return Py_False; }
   if (traces.size() <= ti) traces.resize(ti+1);
+  if (traces[ti] != NULL) delete traces[ti];  // not even close to thread safe
   traces[ti] = t;
+  return Py_True;
+}
+
+static PyObject *delete_trace(PyObject *self, PyObject *args) {
+  unsigned int ti;
+  if (!PyArg_ParseTuple(args, "I", &ti)) { return Py_False; }
+  if (traces[ti] != NULL) { delete traces[ti]; }  // not even close to thread safe
+  else { return Py_False; }
+  traces[ti] = NULL;
   return Py_True;
 }
 
@@ -129,6 +139,7 @@ static PyObject *fetch_registers(PyObject *self, PyObject *args) {
 
 static PyMethodDef Methods[] = {
   { "new_trace", new_trace, METH_VARARGS, NULL },
+  { "delete_trace", delete_trace, METH_VARARGS, NULL },
   { "get_maxclnum", get_maxclnum, METH_VARARGS, NULL },
   { "did_update", did_update, METH_VARARGS, NULL },
   { "fetch_clnums_by_address_and_type", fetch_clnums_by_address_and_type, METH_VARARGS, NULL },

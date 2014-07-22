@@ -46,6 +46,7 @@ void *thread_entry(void *);
 class Trace {
 public:
   Trace(unsigned int trace_index);
+  ~Trace();
   bool ConnectToFileAndStart(char *filename, int register_size, int register_count);
 
   // these must be threadsafe
