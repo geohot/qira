@@ -2,12 +2,15 @@
 #include <map>
 #include <set>
 #include <stdint.h>
+#include <pthread.h>
+
+#include <Python.h>
 
 using namespace std;
 
 typedef uint32_t EntryNumber;
 typedef uint32_t Clnum;
-typedef uint32_t MemoryWithValid;
+typedef uint16_t MemoryWithValid;
 #define MEMORY_VALID 0x100
 typedef uint64_t Address;
 typedef map<Clnum, uint8_t> MemoryCell;
@@ -36,10 +39,12 @@ public:
   bool ConnectToFileAndStart(char *filename, int register_size, int register_count);
 
   // these must be threadsafe
-  set<Clnum> FetchClnumsByAddressAndType(Address address, char type, Clnum start_clnum, int limit);
+  vector<Clnum> FetchClnumsByAddressAndType(Address address, char type, Clnum start_clnum, int limit);
   vector<struct change> FetchChangesByClnum(Clnum clnum, int limit);
   vector<MemoryWithValid> FetchMemory(Clnum clnum, Address address, int len);
   vector<uint64_t> FetchRegisters(Clnum clnum);
+
+  // simple ones
   set<Address> GetInstructionPages() { return instruction_pages_; }
   set<Address> GetDataPages() { return data_pages_; }
   Clnum GetMaxClnum() { return max_clnum_; }
@@ -51,8 +56,9 @@ public:
 private:
   pthread_t thread;
 
-  char get_type_from_flags(uint32_t flags);
-  void commit_memory(Clnum clnum, Address a, uint8_t d);
+  inline char get_type_from_flags(uint32_t flags);
+  inline void commit_memory(Clnum clnum, Address a, uint8_t d);
+  inline MemoryWithValid get_byte(Clnum clnum, Address a);
 
   // the backing of the database
   map<Clnum, EntryNumber> clnum_to_entry_number_;
@@ -63,10 +69,15 @@ private:
   set<Address> data_pages_;
   Clnum max_clnum_;
   
+  pthread_mutex_t backing_mutex_;
   struct change* backing_;
   int fd_;
   EntryNumber entries_done_;
 
   bool did_update_;
 };
+
+extern "C" {
+  PyObject *qiradb_test(PyObject *self, PyObject *args);
+}
 

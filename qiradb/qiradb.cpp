@@ -2,7 +2,6 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #include "qiradb.h"
 
@@ -24,7 +23,7 @@ Trace::Trace() {
   did_update_ = false;
 }
 
-char Trace::get_type_from_flags(uint32_t flags) {
+inline char Trace::get_type_from_flags(uint32_t flags) {
   if (!(flags & IS_VALID)) return '?';
   if (flags & IS_START) return 'I';
   if (flags & IS_SYSCALL) return 's';
@@ -39,7 +38,7 @@ char Trace::get_type_from_flags(uint32_t flags) {
   return '?';
 }
 
-void Trace::commit_memory(Clnum clnum, Address a, uint8_t d) {
+inline void Trace::commit_memory(Clnum clnum, Address a, uint8_t d) {
   MemoryCell mc;
   mc.insert(MP(clnum, d));
   pair<map<Address, MemoryCell>::iterator, bool> ret = memory_.insert(MP(a, mc));
@@ -48,9 +47,19 @@ void Trace::commit_memory(Clnum clnum, Address a, uint8_t d) {
   }
 }
 
+inline MemoryWithValid Trace::get_byte(Clnum clnum, Address a) {
+  map<Address, MemoryCell>::iterator it = memory_.find(a);
+  if (it == memory_.end()) return 0;
+
+  MemoryCell::iterator it2 = it->second.upper_bound(clnum);
+  if (it2 == it->second.begin()) return 0;
+  else { --it2; return MEMORY_VALID & it2->second; }
+}
+
 bool Trace::ConnectToFileAndStart(char *filename, int register_size, int register_count) {
   register_size_ = register_size;
   register_count_ = register_count;
+  pthread_mutex_init(&backing_mutex_, NULL);
 
   registers_.resize(register_count_);
 
@@ -68,7 +77,10 @@ void Trace::process() {
   if (entries_done_ >= entry_count) return;       // handle the > case better
   did_update_ = true;
 
+  
+  pthread_mutex_lock(&backing_mutex_);
   backing_ = (struct change *)mmap(NULL, sizeof(struct change)*entry_count, PROT_READ, MAP_SHARED, fd_, 0);
+  pthread_mutex_unlock(&backing_mutex_);
   // what if this fails?
 
   while (entries_done_ != entry_count) {
@@ -115,5 +127,52 @@ void Trace::process() {
     
     entries_done_++;
   }
+}
+
+vector<Clnum> Trace::FetchClnumsByAddressAndType(Address address, char type, Clnum start_clnum, int limit) {
+  vector<Clnum> ret;
+  pair<Address, char> p = MP(address, type);
+  map<pair<Address, char>, set<Clnum> >::iterator it = addresstype_to_clnums_.find(p);
+  if (it != addresstype_to_clnums_.end()) {
+    for (set<Clnum>::iterator it2 = it->second.lower_bound(start_clnum);
+         it2 != it->second.end(); ++it2) {
+      ret.push_back(*it2);
+      if (ret.size() == limit) break;
+    }
+  }
+  return ret;
+}
+
+vector<struct change> Trace::FetchChangesByClnum(Clnum clnum, int limit) {
+  vector<struct change> ret;
+  map<Clnum, EntryNumber>::iterator it = clnum_to_entry_number_.find(clnum);
+  if (it != clnum_to_entry_number_.end()) {
+    pthread_mutex_lock(&backing_mutex_);
+    for (int i = 0; i < limit; i++) {
+      struct change* c = &backing_[it->second];
+      if (it->first != clnum) break; // on next change already
+      ret.push_back(*c);  // copy?
+    }
+    pthread_mutex_unlock(&backing_mutex_);
+  }
+  return ret;
+}
+
+vector<MemoryWithValid> Trace::FetchMemory(Clnum clnum, Address address, int len) {
+  vector<MemoryWithValid> ret; 
+  for (Address i = address; i < address+len; i++) {
+    ret.push_back(get_byte(clnum, i));
+  }
+  return ret;
+}
+
+vector<uint64_t> Trace::FetchRegisters(Clnum clnum) {
+  vector<uint64_t> ret;
+  for (int i = 0; i < register_count_; i++) {
+    RegisterCell::iterator it = registers_[i].upper_bound(clnum);
+    if (it == registers_[i].begin()) ret.push_back(0);
+    else { --it; ret.push_back(it->second); }
+  }
+  return ret;
 }
 
