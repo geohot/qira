@@ -191,6 +191,7 @@ def run_middleware():
         continue
       i = int(i)
       if i not in program.traces:
+        #print "C create trace",qiradb.new_trace("/tmp/qira_logs/"+str(i), i, program.tregs[1], len(program.tregs[0]))
         qira_trace.Trace(program, i)
 
     for tn in program.traces:

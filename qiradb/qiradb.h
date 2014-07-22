@@ -1,10 +1,20 @@
+
 #include <vector>
 #include <map>
+#if __cplusplus == 201103L
+  #include <unordered_map>
+#else
+  //#define USE_BOOST
+  #ifdef USE_BOOST
+    #include <boost/unordered_map.hpp>
+    #define unordered_map boost::unordered_map
+  #else
+    #define unordered_map map
+  #endif
+#endif
 #include <set>
 #include <stdint.h>
 #include <pthread.h>
-
-#include <Python.h>
 
 using namespace std;
 
@@ -35,12 +45,12 @@ void *thread_entry(void *);
 
 class Trace {
 public:
-  Trace();
+  Trace(unsigned int trace_index);
   bool ConnectToFileAndStart(char *filename, int register_size, int register_count);
 
   // these must be threadsafe
-  vector<Clnum> FetchClnumsByAddressAndType(Address address, char type, Clnum start_clnum, int limit);
-  vector<struct change> FetchChangesByClnum(Clnum clnum, int limit);
+  vector<Clnum> FetchClnumsByAddressAndType(Address address, char type, Clnum start_clnum, unsigned int limit);
+  vector<struct change> FetchChangesByClnum(Clnum clnum, unsigned int limit);
   vector<MemoryWithValid> FetchMemory(Clnum clnum, Address address, int len);
   vector<uint64_t> FetchRegisters(Clnum clnum);
 
@@ -49,35 +59,33 @@ public:
   set<Address> GetDataPages() { return data_pages_; }
   Clnum GetMaxClnum() { return max_clnum_; }
 
-  // err, atomically?
-  bool GetDidUpdate() { bool ret = did_update_; did_update_ = false; return did_update_; }
-
+  bool GetDidUpdate() { bool ret = did_update_; if (ret) { did_update_ = false; } return ret; }
   void process();     // call from private thread
+
+  static char get_type_from_flags(uint32_t flags);
 private:
   pthread_t thread;
 
-  inline char get_type_from_flags(uint32_t flags);
   inline void commit_memory(Clnum clnum, Address a, uint8_t d);
   inline MemoryWithValid get_byte(Clnum clnum, Address a);
 
   // the backing of the database
-  map<Clnum, EntryNumber> clnum_to_entry_number_;
-  map<pair<Address, char>, set<Clnum> > addresstype_to_clnums_;
+  unordered_map<pair<Address, char>, set<Clnum> > addresstype_to_clnums_;
+  vector<EntryNumber> clnum_to_entry_number_;
   vector<RegisterCell> registers_; int register_size_, register_count_;
   map<Address, MemoryCell> memory_;
   set<Address> instruction_pages_;
   set<Address> data_pages_;
   Clnum max_clnum_;
   
+  bool remap_backing(uint64_t);
   pthread_mutex_t backing_mutex_;
-  struct change* backing_;
+  const struct change* backing_;
+  uint64_t backing_size_;
   int fd_;
   EntryNumber entries_done_;
 
   bool did_update_;
+  unsigned int trace_index_;
 };
-
-extern "C" {
-  PyObject *qiradb_test(PyObject *self, PyObject *args);
-}
 
