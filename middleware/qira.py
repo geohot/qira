@@ -38,7 +38,7 @@ if __name__ == '__main__':
   else:
     print "**** running "+program.program
     if is_qira_running or os.fork() == 0:   # cute?
-      os.execvp(program.qirabinary, [program.qirabinary, "-D", "/dev/null", "-d", "in_asm",
+      os.execvp(program.qirabinary, [program.qirabinary, "-strace", "-D", "/dev/null", "-d", "in_asm",
         "-singlestep",  program.program]+program.args)
 
   if not is_qira_running:

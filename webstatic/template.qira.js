@@ -14,7 +14,10 @@ UI.body.contentParts.push(UI.Component.extend({render: (function() {
   }, "\n", Spacebars.include(self.lookupTemplate("datachanges")), "\n"), "\n", HTML.DIV({
     "class": "panelthing",
     id: "hexeditor"
-  }, "\n", Spacebars.include(self.lookupTemplate("memviewer")), "\n"), "\n") ];
+  }, "\n", Spacebars.include(self.lookupTemplate("memviewer")), "\n"), "\n", HTML.DIV({
+    "class": "panelthing",
+    id: "strace"
+  }, "\n", Spacebars.include(self.lookupTemplate("strace")), "\n"), "\n") ];
 })}));
 Meteor.startup(function () { if (! UI.body.INSTANTIATED) { UI.body.INSTANTIATED = true; UI.DomRange.insert(UI.render(UI.body).dom, document.body); } });
 
@@ -50,6 +53,27 @@ Template.__define__("controls", (function() {
       return Spacebars.mustache(self.lookup("daddr"));
     }
   }) ];
+}));
+
+Template.__define__("strace", (function() {
+  var self = this;
+  var template = this;
+  return UI.Each(function() {
+    return Spacebars.call(self.lookup("strace"));
+  }, UI.block(function() {
+    var self = this;
+    return [ "\n  ", HTML.DIV({
+      "class": "syscall"
+    }, "\n  ", HTML.DIV({
+      "class": [ "change ", function() {
+        return Spacebars.mustache(self.lookup("ischange"));
+      } ]
+    }, function() {
+      return Spacebars.mustache(self.lookup("clnum"));
+    }), "\n  ", function() {
+      return Spacebars.mustache(self.lookup("sc"));
+    }, "\n  "), "\n" ];
+  }));
 }));
 
 Template.__define__("idump", (function() {

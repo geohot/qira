@@ -487,10 +487,16 @@ uint32_t GLOBAL_start_clnum = 1;
 int GLOBAL_parent_id = -1, GLOBAL_id = -1;
 
 FILE *GLOBAL_asm_file = NULL;
+FILE *GLOBAL_strace_file = NULL;
 
 // should be 0ed on startup
 #define PENDING_CHANGES_MAX_ADDR 0x100
 struct change GLOBAL_pending_changes[PENDING_CHANGES_MAX_ADDR/4];
+
+uint32_t get_current_clnum(void);
+uint32_t get_current_clnum(void) {
+  return GLOBAL_logstate->changelist_number;
+}
 
 void resize_change_buffer(size_t size) {
   if(ftruncate(GLOBAL_qira_log_fd, size)) {
@@ -508,6 +514,9 @@ void init_QIRA(CPUArchState *env, int id) {
   GLOBAL_CPUArchState = env;   // unused
 
   char fn[PATH_MAX];
+  sprintf(fn, "/tmp/qira_logs/%d_strace", id);
+  GLOBAL_strace_file = fopen(fn, "w");
+
   sprintf(fn, "/tmp/qira_logs/%d", id);
 
   // unlink it first
@@ -783,7 +792,6 @@ void target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong 
 int GLOBAL_last_was_syscall = 0;
 uint32_t GLOBAL_last_fork_change = -1;
 target_long last_pc = 0;
-
 
 void write_out_base(CPUArchState *env, int id);
 void write_out_base(CPUArchState *env, int id) {

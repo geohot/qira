@@ -55,5 +55,5 @@ window.onkeydown = function(e) {
 };
 
 // don't pull the window
-window.onmousewheel = function() { return false; }
+//window.onmousewheel = function() { return false; }
 

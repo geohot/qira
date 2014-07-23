@@ -23,6 +23,9 @@
 <div class="panelthing" id="hexeditor">
 {{> memviewer}}
 </div>
+<div class="panelthing" id="strace">
+{{> strace}}
+</div>
 </div>
 </body>
 
@@ -33,6 +36,15 @@
 <input type="button" value="fork" id="control_fork" class="control" />
 <input spellcheck="false" id="control_iaddr" class="control datainstruction" value="{{iaddr}}" />
 <input spellcheck="false" id="control_daddr" class="control datamemory" value="{{daddr}}" />
+</template>
+
+<template name="strace">
+{{#each strace}}
+  <div class="syscall">
+  <div class="change {{ischange}}">{{clnum}}</div>
+  {{sc}}
+  </div>
+{{/each}}
 </template>
 
 <template name="idump">

@@ -3,7 +3,7 @@ import qira_socat
 import time
 
 QIRA_PORT = 3002
-LIMIT = 100
+LIMIT = 1000
 
 from flask import Flask, Response
 from flask.ext.socketio import SocketIO, emit
@@ -189,7 +189,30 @@ def getregisters(forknum, clnum):
 
   emit('registers', ret)
 
+@socketio.on('getstrace', namespace='/qira')
+def get_strace(forknum):
+  try:
+    f = open("/tmp/qira_logs/"+str(int(forknum))+"_strace").read()
+  except:
+    return "no strace"
+
+  ret = []
+  for ff in f.split("\n"):
+    if ff == '':
+      continue
+    ff = ff.split(" ")
+    clnum = int(ff[0])
+    if clnum == 0:
+      # filter the boring syscalls
+      continue
+    pid = int(ff[1])
+    sc = " ".join(ff[2:])
+    ret.append({"clnum": clnum, "pid":pid, "sc": sc})
+  emit('strace', ret)
+
+
 # ***** generic webserver stuff *****
+  
 
 @app.route('/', defaults={'path': 'index.html'})
 @app.route('/<path:path>')

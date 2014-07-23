@@ -53,7 +53,7 @@ def start_bindserver(program, myss, parent_id, start_cl, loop = False):
       except:
         pass
     # fingerprint here
-    os.execvp(program.qirabinary, [program.qirabinary, "-D", "/dev/null", "-d", "in_asm",
+    os.execvp(program.qirabinary, [program.qirabinary, "-strace", "-D", "/dev/null", "-d", "in_asm",
       "-qirachild", "%d %d %d" % (parent_id, start_cl, run_id), "-singlestep",
       program.program]+program.args)
 
