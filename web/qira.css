@@ -180,7 +180,9 @@ body {
 #strace {
   font-family: monospace;
   height: 150px;
+  overflow-x: hidden;
   overflow-y: scroll;
   padding: 10px;
+  white-space: nowrap;
 }
 

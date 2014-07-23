@@ -1,7 +1,7 @@
 stream = io.connect("http://localhost:3002/qira");
 
 stream.on('strace', function(msg) {
-  p(msg);
+  //p(msg);
   $('#strace')[0].innerHTML = "";
   UI.insert(UI.renderWithData(Template.strace, {strace: msg}), $('#strace')[0]);
 });
