@@ -110,7 +110,7 @@ void Trace::process() {
 
   remap_backing(sizeof(struct change)*entry_count); // what if this fails?
 
-  printf("on %d going from %d to %d...", trace_index_, entries_done_, entry_count);
+  printf("on %u going from %u to %u...", trace_index_, entries_done_, entry_count);
   fflush(stdout);
 
   struct timeval tv_start, tv_end;
