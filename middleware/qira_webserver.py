@@ -62,7 +62,7 @@ def mwpoller():
 def forkat(forknum, clnum):
   global program
   print "forkat",forknum,clnum
-  qira_socat.start_bindserver(program, ss2, forknum, clnum)
+  qira_socat.start_bindserver(program, qira_socat.ss2, forknum, clnum)
 
 @socketio.on('deletefork', namespace='/qira')
 def deletefork(forknum):

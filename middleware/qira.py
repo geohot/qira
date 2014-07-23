@@ -34,7 +34,7 @@ if __name__ == '__main__':
   # start the binary runner
   if args.server:
     qira_socat.init_bindserver()
-    qira_socat.start_bindserver(ss, -1, 1, True)
+    qira_socat.start_bindserver(program, qira_socat.ss, -1, 1, True)
   else:
     print "**** running "+program.program
     if is_qira_running or os.fork() == 0:   # cute?
