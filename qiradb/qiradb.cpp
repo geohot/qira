@@ -8,10 +8,11 @@
 
 #define MP make_pair
 #define PAGE_MASK 0xFFFFF000
+#define INVALID_CLNUM 0xFFFFFFFF
 
 void *thread_entry(void *trace_class) {
   Trace *t = (Trace *)trace_class;  // best c++ casting
-  while (1) {   // running?
+  while (t->is_running_) {   // running?
     t->process();
     usleep(10 * 1000);
   }
@@ -24,8 +25,18 @@ Trace::Trace(unsigned int trace_index) {
   backing_ = NULL;
   did_update_ = false;
   max_clnum_ = 0;
+  min_clnum_ = INVALID_CLNUM;
   backing_size_ = 0;
   trace_index_ = trace_index;
+  is_running_ = true;
+}
+
+Trace::~Trace() {
+  is_running_ = false;
+  pthread_join(thread, NULL);
+  // mutex lock isn't required now that the thread stopped
+  munmap((void*)backing_, backing_size_);
+  close(fd_);
 }
 
 char Trace::get_type_from_flags(uint32_t flags) {
@@ -58,11 +69,6 @@ inline MemoryWithValid Trace::get_byte(Clnum clnum, Address a) {
   else { --it2; return MEMORY_VALID | it2->second; }
 }
 
-Trace::~Trace() {
-  pthread_mutex_lock(&backing_mutex_);    // no unlock cause it dies
-  munmap((void*)backing_, backing_size_);
-  close(fd_);
-}
 
 bool Trace::remap_backing(uint64_t new_size) {
   if (backing_size_ == new_size) return true;
@@ -148,6 +154,10 @@ void Trace::process() {
     // max_clnum_
     if (max_clnum_ < c->clnum) {
       max_clnum_ = c->clnum;
+    }
+
+    if (min_clnum_ == INVALID_CLNUM || c->clnum < min_clnum_) {
+      min_clnum_ = c->clnum;
     }
     
     entries_done_++;

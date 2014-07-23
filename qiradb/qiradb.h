@@ -59,11 +59,15 @@ public:
   set<Address> GetInstructionPages() { return instruction_pages_; }
   set<Address> GetDataPages() { return data_pages_; }
   Clnum GetMaxClnum() { return max_clnum_; }
+  Clnum GetMinClnum() { return min_clnum_; }
 
   bool GetDidUpdate() { bool ret = did_update_; if (ret) { did_update_ = false; } return ret; }
-  void process();     // call from private thread
 
   static char get_type_from_flags(uint32_t flags);
+
+  // should be private
+  void process();
+  bool is_running_;
 private:
   pthread_t thread;
 
@@ -77,7 +81,7 @@ private:
   map<Address, MemoryCell> memory_;
   set<Address> instruction_pages_;
   set<Address> data_pages_;
-  Clnum max_clnum_;
+  Clnum max_clnum_, min_clnum_;
   
   bool remap_backing(uint64_t);
   pthread_mutex_t backing_mutex_;

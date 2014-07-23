@@ -13,60 +13,50 @@ extern "C" {
 // do not delete from this vector
 static vector<Trace*> traces;
 
-static PyObject *new_trace(PyObject *self, PyObject *args) {
+typedef struct {
+  PyObject_HEAD
+  Trace *t;
+} PyTrace;
+
+static int Trace_init(PyTrace *self, PyObject *args, PyObject *kwds) {
   char *filename;
   int register_size, register_count;
   unsigned int ti;
-  if (!PyArg_ParseTuple(args, "Isii", &ti, &filename, &register_size, &register_count)) { return Py_False; }
+  if (!PyArg_ParseTuple(args, "sIii", &filename, &ti, &register_size, &register_count)) { return -1; }
   Trace *t = new Trace(ti);
-  if (!t->ConnectToFileAndStart(filename, register_size, register_count)) { delete t; return Py_False; }
-  if (traces.size() <= ti) traces.resize(ti+1);
-  if (traces[ti] != NULL) delete traces[ti];  // not even close to thread safe
-  traces[ti] = t;
-  return Py_True;
+  if (!t->ConnectToFileAndStart(filename, register_size, register_count)) { delete t; return -1; }
+  self->t = t;
+  return 0;
 }
 
-static PyObject *delete_trace(PyObject *self, PyObject *args) {
-  unsigned int ti;
-  if (!PyArg_ParseTuple(args, "I", &ti)) { return Py_False; }
-  if (traces[ti] != NULL) { delete traces[ti]; }  // not even close to thread safe
-  else { return Py_False; }
-  traces[ti] = NULL;
-  return Py_True;
+static void Trace_dealloc(PyTrace *self) {
+  delete self->t;
 }
 
-static PyObject *get_maxclnum(PyObject *self, PyObject *args) {
-  unsigned int ti;
-  if (!PyArg_ParseTuple(args, "I", &ti) || ti >= traces.size()) { return NULL; }
-  Trace *trace = traces[ti]; if (trace == NULL) { return NULL; }
-
-  return Py_BuildValue("I", traces[ti]->GetMaxClnum());
+static PyObject *get_maxclnum(PyTrace *self) {
+  return Py_BuildValue("I", self->t->GetMaxClnum());
 }
 
-static PyObject *did_update(PyObject *self, PyObject *args) {
-  unsigned int ti;
-  if (!PyArg_ParseTuple(args, "I", &ti) || ti >= traces.size()) { return NULL; }
-  Trace *trace = traces[ti]; if (trace == NULL) { return NULL; }
+static PyObject *get_minclnum(PyTrace *self) {
+  return Py_BuildValue("I", self->t->GetMinClnum());
+}
 
-  if (trace->GetDidUpdate()) {
+static PyObject *did_update(PyTrace *self) {
+  if (self->t->GetDidUpdate()) {
     return Py_True;
   } else {
     return Py_False;
   }
-
-  return Py_BuildValue("I", traces[ti]->GetMaxClnum());
 }
 
-static PyObject *fetch_clnums_by_address_and_type(PyObject *self, PyObject *args) { 
-  unsigned int ti;
+static PyObject *fetch_clnums_by_address_and_type(PyTrace *self, PyObject *args) { 
   Address address;
   char type;
   Clnum start_clnum;
   unsigned int limit;
-  if (!PyArg_ParseTuple(args, "ILcII", &ti, &address, &type, &start_clnum, &limit) || ti >= traces.size()) { return NULL; }
-  Trace *trace = traces[ti]; if (trace == NULL) { return NULL; }
+  if (!PyArg_ParseTuple(args, "LcII", &address, &type, &start_clnum, &limit)) { return NULL; }
   
-  vector<Clnum> ret = trace->FetchClnumsByAddressAndType(address, type, start_clnum, limit);
+  vector<Clnum> ret = self->t->FetchClnumsByAddressAndType(address, type, start_clnum, limit);
  
   PyObject *pyret = PyList_New(ret.size());
   int i = 0;
@@ -76,14 +66,12 @@ static PyObject *fetch_clnums_by_address_and_type(PyObject *self, PyObject *args
   return pyret;
 }
 
-static PyObject *fetch_changes_by_clnum(PyObject *self, PyObject *args) {
-  unsigned int ti;
+static PyObject *fetch_changes_by_clnum(PyTrace *self, PyObject *args) {
   Clnum clnum;
   unsigned int limit;
-  if (!PyArg_ParseTuple(args, "III", &ti, &clnum, &limit) || ti >= traces.size()) { return NULL; }
-  Trace *trace = traces[ti]; if (trace == NULL) { return NULL; }
+  if (!PyArg_ParseTuple(args, "II", &clnum, &limit)) { return NULL; }
 
-  vector<struct change> ret = trace->FetchChangesByClnum(clnum, limit);
+  vector<struct change> ret = self->t->FetchChangesByClnum(clnum, limit);
 
   PyObject *pyret = PyList_New(ret.size());
   int i = 0;
@@ -100,15 +88,13 @@ static PyObject *fetch_changes_by_clnum(PyObject *self, PyObject *args) {
   return pyret;
 }
 
-static PyObject *fetch_memory(PyObject *self, PyObject *args) {
-  unsigned int ti;
+static PyObject *fetch_memory(PyTrace *self, PyObject *args) {
   Clnum clnum;
   Address address;
   int len;
-  if (!PyArg_ParseTuple(args, "IILi", &ti, &clnum, &address, &len) || ti >= traces.size()) { return NULL; }
-  Trace *trace = traces[ti]; if (trace == NULL) { return NULL; }
+  if (!PyArg_ParseTuple(args, "ILi", &clnum, &address, &len)) { return NULL; }
 
-  vector<MemoryWithValid> ret = trace->FetchMemory(clnum, address, len);
+  vector<MemoryWithValid> ret = self->t->FetchMemory(clnum, address, len);
 
   PyObject *pyret = PyList_New(ret.size());
   int i = 0;
@@ -118,13 +104,11 @@ static PyObject *fetch_memory(PyObject *self, PyObject *args) {
   return pyret;
 }
 
-static PyObject *fetch_registers(PyObject *self, PyObject *args) {
-  unsigned int ti;
+static PyObject *fetch_registers(PyTrace *self, PyObject *args) {
   Clnum clnum;
-  if (!PyArg_ParseTuple(args, "II", &ti, &clnum) || ti >= traces.size()) { return NULL; }
-  Trace *trace = traces[ti]; if (trace == NULL) { return NULL; }
+  if (!PyArg_ParseTuple(args, "I", &clnum)) { return NULL; }
 
-  vector<uint64_t> ret = trace->FetchRegisters(clnum);
+  vector<uint64_t> ret = self->t->FetchRegisters(clnum);
 
   PyObject *pyret = PyList_New(ret.size());
   int i = 0;
@@ -134,23 +118,92 @@ static PyObject *fetch_registers(PyObject *self, PyObject *args) {
   return pyret;
 }
 
+static PyObject *get_pmaps(PyTrace *self, PyObject *args) {
+  set<Address> ip = self->t->GetInstructionPages();
+  set<Address> dp = self->t->GetDataPages();
+  PyObject *iit = PyDict_New();
+  // eww these strings are long
+  FE(dp, it) {
+    PyDict_SetItem(iit, Py_BuildValue("L", *it), Py_BuildValue("s", "memory"));
+  }
+  FE(ip, it) {
+    PyDict_SetItem(iit, Py_BuildValue("L", *it), Py_BuildValue("s", "instruction"));
+  }
+  return iit;
+}
+
 
 // python stuff follows
 
-static PyMethodDef Methods[] = {
-  { "new_trace", new_trace, METH_VARARGS, NULL },
-  { "delete_trace", delete_trace, METH_VARARGS, NULL },
-  { "get_maxclnum", get_maxclnum, METH_VARARGS, NULL },
-  { "did_update", did_update, METH_VARARGS, NULL },
-  { "fetch_clnums_by_address_and_type", fetch_clnums_by_address_and_type, METH_VARARGS, NULL },
-  { "fetch_changes_by_clnum", fetch_changes_by_clnum, METH_VARARGS, NULL },
-  { "fetch_memory", fetch_memory, METH_VARARGS, NULL },
-  { "fetch_registers", fetch_registers, METH_VARARGS, NULL },
+static PyMethodDef Trace_methods[] = {
+  /*{ "new_trace", new_trace, METH_VARARGS, NULL },
+  { "delete_trace", delete_trace, METH_VARARGS, NULL },*/
+  { "get_maxclnum", (PyCFunction)get_maxclnum, METH_NOARGS, NULL },
+  { "get_minclnum", (PyCFunction)get_minclnum, METH_NOARGS, NULL },
+  { "get_pmaps", (PyCFunction)get_pmaps, METH_NOARGS, NULL },
+  { "did_update", (PyCFunction)did_update, METH_NOARGS, NULL },
+  { "fetch_clnums_by_address_and_type", (PyCFunction)fetch_clnums_by_address_and_type, METH_VARARGS, NULL },
+  { "fetch_changes_by_clnum", (PyCFunction)fetch_changes_by_clnum, METH_VARARGS, NULL },
+  { "fetch_memory", (PyCFunction)fetch_memory, METH_VARARGS, NULL },
+  { "fetch_registers", (PyCFunction)fetch_registers, METH_VARARGS, NULL },
   { NULL, NULL, 0, NULL }
 };
 
+static PyMethodDef Methods[] = {
+  { NULL, NULL, 0, NULL }
+};
+
+
+
+static PyTypeObject qiradb_TraceType = {
+    PyObject_HEAD_INIT(NULL)
+    0,                         /*ob_size*/
+    "qiradb_Trace",            /*tp_name*/
+    sizeof(qiradb_TraceType),  /*tp_basicsize*/
+    0,                         /*tp_itemsize*/
+    (destructor)Trace_dealloc, /*tp_dealloc*/
+    0,                         /*tp_print*/
+    0,                         /*tp_getattr*/
+    0,                         /*tp_setattr*/
+    0,                         /*tp_compare*/
+    0,                         /*tp_repr*/
+    0,                         /*tp_as_number*/
+    0,                         /*tp_as_sequence*/
+    0,                         /*tp_as_mapping*/
+    0,                         /*tp_hash */
+    0,                         /*tp_call*/
+    0,                         /*tp_str*/
+    0,                         /*tp_getattro*/
+    0,                         /*tp_setattro*/
+    0,                         /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT,        /*tp_flags*/
+    "Trace object",            /* tp_doc */
+    0,                   /* tp_traverse */
+    0,                   /* tp_clear */
+    0,                   /* tp_richcompare */
+    0,                   /* tp_weaklistoffset */
+    0,                   /* tp_iter */
+    0,                   /* tp_iternext */
+    Trace_methods,             /* tp_methods */
+    0,             /* tp_members */
+    0,                         /* tp_getset */
+    0,                         /* tp_base */
+    0,                         /* tp_dict */
+    0,                         /* tp_descr_get */
+    0,                         /* tp_descr_set */
+    0,                         /* tp_dictoffset */
+    (initproc)Trace_init,      /* tp_init */
+    0,                         /* tp_alloc */
+    0,                 /* tp_new */
+};
+
 void initqiradb(void) {
-  Py_InitModule("qiradb", Methods);
+  PyObject* m;
+  qiradb_TraceType.tp_new = PyType_GenericNew;
+  if (PyType_Ready(&qiradb_TraceType) < 0) return;
+  m = Py_InitModule("qiradb", Methods);
+  Py_INCREF(&qiradb_TraceType);
+  PyModule_AddObject(m, "Trace", (PyObject *)&qiradb_TraceType);
 }
 
 }
