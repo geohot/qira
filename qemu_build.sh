@@ -12,6 +12,7 @@ if [ ! -d qemu/qemu-latest ]; then
   ln -s qemu-latest/arm-linux-user/qemu-arm qira-arm
   ln -s qemu-latest/i386-linux-user/qemu-i386 qira-i386
   ln -s qemu-latest/x86_64-linux-user/qemu-x86_64 qira-x86_64
+  ln -s qemu-latest/ppc-linux-user/qemu-ppc qira-ppc
 
   cd qemu-latest
   mv tci.c tci.c.bak
@@ -31,7 +32,7 @@ ln -sf ../../../qemu_mods/qemu.h linux-user/qemu.h
 ln -sf ../../../qemu_mods/main.c linux-user/main.c
 ln -sf ../../../qemu_mods/strace.c linux-user/strace.c
 #./configure --target-list=i386-linux-user,arm-linux-user,x86_64-linux-user,sparc-linux-user,sparc32plus-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown
-./configure --target-list=i386-linux-user,x86_64-linux-user,arm-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown
+./configure --target-list=i386-linux-user,x86_64-linux-user,arm-linux-user,ppc-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown
 make -j32
 
 

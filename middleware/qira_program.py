@@ -4,6 +4,10 @@ import struct
 
 import qiradb
 
+PPCREGS = ([], 4)
+for i in range(32):
+  PPCREGS[0].append("r"+str(i))
+
 ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 4)
 X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4)
 X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8)
@@ -25,12 +29,21 @@ class Program:
 
     # get file type
     #self.fb = qira_binary.file_binary(prog)
-    self.fb = struct.unpack("H", open(prog).read(0x18)[0x12:0x14])[0]
+    self.fb = struct.unpack("H", open(prog).read(0x18)[0x12:0x14])[0]   # e_machine
     qemu_dir = os.path.dirname(os.path.realpath(__file__))+"/../qemu/"
-    if self.fb == 0x28:
-      if 'QEMU_LD_PREFIX' not in os.environ:
-        os.environ['QEMU_LD_PREFIX'] = os.path.realpath(qemu_dir+"/../libs/armhf/")
+
+    def use_lib(arch):
+      maybe_path = qemu_dir+"/../libs/"+arch+"/"
+      if 'QEMU_LD_PREFIX' not in os.environ and os.path.exists(maybe_path):
+        os.environ['QEMU_LD_PREFIX'] = os.path.realpath(maybe_path)
         print "**** set QEMU_LD_PREFIX to",os.environ['QEMU_LD_PREFIX']
+
+    if self.fb == 0x28:
+      progdat = open(prog).read(0x800)
+      if '/lib/ld-linux.so.3' in progdat:
+        use_lib('armel')
+      elif '/lib/ld-linux-armhf.so.3' in progdat:
+        use_lib('armhf')
       self.tregs = ARMREGS
       self.qirabinary = qemu_dir + "qira-arm"
     elif self.fb == 0x3e:
@@ -39,8 +52,12 @@ class Program:
     elif self.fb == 0x03:
       self.tregs = X86REGS
       self.qirabinary = qemu_dir + "qira-i386"
+    elif self.fb == 0x1400:   # big endian...
+      use_lib('powerpc')
+      self.tregs = PPCREGS
+      self.qirabinary = qemu_dir + "qira-ppc"
     else:
-      raise Exception("binary type not supported")
+      raise Exception("binary type "+hex(self.fb)+" not supported")
 
     print "**** using",self.qirabinary,"for",hex(self.fb)
 
