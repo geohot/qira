@@ -3,7 +3,7 @@ import qira_socat
 import time
 
 QIRA_PORT = 3002
-LIMIT = 1000
+LIMIT = 400
 
 from flask import Flask, Response
 from flask.ext.socketio import SocketIO, emit

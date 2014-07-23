@@ -3,7 +3,7 @@
 #if __cplusplus == 201103L
   #include <unordered_map>
 #else
-  #define USE_BOOST
+  //#define USE_BOOST
   #ifdef USE_BOOST
     #include <boost/unordered_map.hpp>
     #define unordered_map boost::unordered_map
@@ -74,7 +74,7 @@ private:
   inline MemoryWithValid get_byte(Clnum clnum, Address a);
 
   // the backing of the database
-  pthread_mutex_t db_mutex_;
+  pthread_rwlock_t db_lock_;
   unordered_map<pair<Address, char>, set<Clnum> > addresstype_to_clnums_;
   vector<EntryNumber> clnum_to_entry_number_;
   vector<RegisterCell> registers_; int register_size_, register_count_;
