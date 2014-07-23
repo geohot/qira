@@ -1,4 +1,11 @@
 QIRA is an IDA plugin to reverse using QEMU
 
-See qira.googlecode.com for docs
+== Installation ==
+
+If this is a release version, ./install.sh handles everything
+./fetchlibs.sh will fetch the libraries for armhf
+
+For a checkout of trunk, try ./develinstall.sh
+You really just need ./install.sh and ./qemu_build.sh
+
 
