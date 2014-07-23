@@ -203,12 +203,15 @@ def get_strace(forknum):
     return "no strace"
 
   ret = []
+  first_clnum = None
   for ff in f.split("\n"):
     if ff == '':
       continue
     ff = ff.split(" ")
     clnum = int(ff[0])
-    if clnum == 0:
+    if first_clnum == None:
+      first_clnum = clnum
+    if clnum == first_clnum:
       # filter the boring syscalls
       continue
     pid = int(ff[1])
