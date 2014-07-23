@@ -109,7 +109,36 @@ class Program:
     self.traces[i] = Trace(fn, i, self.tregs[1], len(self.tregs[0]))
 
 class Trace:
-  def __init__(self, fn, i, r1, r2):
-    self.db = qiradb.Trace(fn, i, r1, r2)
+  def __init__(self, fn, forknum, r1, r2):
+    self.forknum = forknum
+    self.db = qiradb.Trace(fn, forknum, r1, r2)
+    self.fetch_base_memory()
+
+  def fetch_base_memory(self):
+    self.base_memory = {}
+    try:
+      f = open("/tmp/qira_logs/"+str(self.forknum)+"_base")
+    except:
+      # done
+      return
+
+    for ln in f.read().split("\n"):
+      ln = ln.split(" ")
+      if len(ln) < 3:
+        continue
+      (ss, se) = ln[0].split("-")
+      ss = int(ss, 16)
+      se = int(se, 16)
+      offset = int(ln[1], 16)
+      fn = ' '.join(ln[2:])
+
+      try:
+        f = open(fn)
+      except:
+        continue
+      f.seek(offset)
+      dat = f.read(se-ss)
+      self.base_memory[(ss, se)] = dat
+      f.close()
 
 

@@ -146,8 +146,14 @@ def getmemory(forknum, clnum, address, ln):
   mem = trace.db.fetch_memory(clnum, address, ln)
   dat = {}
   for i in range(ln):
+    ri = address+i
     if mem[i] & 0x100:
-      dat[address+i] = mem[i]&0xFF
+      dat[ri] = mem[i]&0xFF
+    else:
+      for (ss, se) in trace.base_memory:
+        if ss <= ri and ri < se:
+          dat[ri] = ord(trace.base_memory[(ss,se)][ri-ss])
+      
   ret = {'address': address, 'len': ln, 'dat': dat}
   emit('memory', ret)
 
