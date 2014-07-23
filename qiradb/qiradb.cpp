@@ -8,7 +8,7 @@
 #include "qiradb.h"
 
 #define MP make_pair
-#define PAGE_MASK 0xFFFFF000
+#define PAGE_MASK 0xFFFFFFFFFFFFF000LL
 #define INVALID_CLNUM 0xFFFFFFFF
 
 void *thread_entry(void *trace_class) {

@@ -154,7 +154,7 @@ def getmemory(forknum, clnum, address, ln):
         if ss <= ri and ri < se:
           dat[ri] = ord(trace.base_memory[(ss,se)][ri-ss])
       
-  ret = {'address': address, 'len': ln, 'dat': dat}
+  ret = {'address': address, 'len': ln, 'dat': dat, 'is_big_endian': program.tregs[2], 'ptrsize': program.tregs[1]}
   emit('memory', ret)
 
 @socketio.on('getregisters', namespace='/qira')

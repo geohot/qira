@@ -18,11 +18,11 @@ Meteor.startup(function() {
   });
 });
 
-var PTRSIZE = 4;
 
 stream.on('memory', function(msg) {
   // render the hex editor
   var addr = msg['address'];
+  var PTRSIZE = msg['ptrsize'];
   html = "<table><tr>";
   for (var i = 0; i < msg['len']; i += PTRSIZE) {
     if ((i&0xF) == 0) html += "</tr><tr><td>"+hex(addr+i)+":</td>";
@@ -30,14 +30,25 @@ stream.on('memory', function(msg) {
 
     // check if it's an address
     var v = 0;
-    
-    for (var j = PTRSIZE-1; j >= 0; j--) {
-      if (addr+i+j == Session.get('daddr')) {
-        exclass = "highlight";
+
+    if (msg['is_big_endian']) {
+      for (var j = 0; j < PTRSIZE; j++) {
+        if (addr+i+j == Session.get('daddr')) {
+          exclass = "highlight";
+        }
+        v *= 0x100;
+        var t = msg['dat'][addr+i+j];
+        if (t !== undefined) v += t;
       }
-      v *= 0x100;
-      var t = msg['dat'][addr+i+j];
-      if (t !== undefined) v += t;
+    } else {
+      for (var j = PTRSIZE-1; j >= 0; j--) {
+        if (addr+i+j == Session.get('daddr')) {
+          exclass = "highlight";
+        }
+        v *= 0x100;
+        var t = msg['dat'][addr+i+j];
+        if (t !== undefined) v += t;
+      }
     }
     var a = get_data_type(v);
     if (a !== "") {
