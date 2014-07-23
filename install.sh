@@ -10,7 +10,12 @@ if [ $(which apt-get) ]; then
 fi
 
 echo "installing pip packages"
-sudo pip install blist flask-socketio
+sudo pip install flask-socketio
+
+echo "installing qiradb"
+cd qiradb
+sudo python setup.py install
+cd ../
 
 echo "making symlinks"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira
