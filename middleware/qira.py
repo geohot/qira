@@ -1,11 +1,9 @@
 #!/usr/bin/env python
-
 import os
 import argparse
 import socket
 import threading
 import time
-
 
 import qira_socat
 import qira_program
@@ -23,7 +21,7 @@ if __name__ == '__main__':
 
   is_qira_running = 1
   try:
-    socket.create_connection(('127.0.0.1', QIRA_PORT))
+    socket.create_connection(('127.0.0.1', qira_webserver.QIRA_PORT))
     if args.server:
       raise Exception("can't run as server if QIRA is already running")
   except:
