@@ -52,4 +52,10 @@ print "pop esi:",ret
 print t.get_pmaps()
 
 
+"""
+while 1:
+  ret = t.fetch_clnums_by_address_and_type(0xf6fff090, 'L', 0, LIMIT)
+  ret = t.fetch_registers(113)
+  ret = t.fetch_memory(0, 0xf6fff080, 0x10)
+"""
 

@@ -6,33 +6,10 @@ import socket
 import threading
 import time
 
-import qiradb
 
 import qira_socat
 import qira_program
 import qira_webserver
-
-def run_middleware(program):
-  while 1:
-    time.sleep(0.2)
-    # poll for new traces
-    for i in os.listdir("/tmp/qira_logs/"):
-      if "_" in i:
-        continue
-      i = int(i)
-
-      if i not in program.traces:
-        nt = qiradb.Trace("/tmp/qira_logs/"+str(i), i, program.tregs[1], len(program.tregs[0]))
-        program.traces[i] = nt
-
-    did_update = False
-    # poll for updates on existing
-    for tn in program.traces:
-      if program.traces[tn].did_update():
-        did_update = True
-    if did_update:
-      program.read_asm_file()
-      qira_webserver.push_updates()
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description = 'Analyze binary.')
@@ -66,9 +43,5 @@ if __name__ == '__main__':
 
   if not is_qira_running:
     # start the http server
-    http = threading.Thread(target=qira_webserver.run_socketio, args=[program])
-    http.start()
-
-    # this reads the files. replace it with c
-    run_middleware(program)
+    qira_webserver.run_server(program)
 

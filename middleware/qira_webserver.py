@@ -1,13 +1,15 @@
 import os
 import qira_socat
+import time
 
 QIRA_PORT = 3002
-LIMIT = 10000
+LIMIT = 100
 
 from flask import Flask, Response
 from flask.ext.socketio import SocketIO, emit
 
 # http://stackoverflow.com/questions/8774958/keyerror-in-module-threading-after-a-successful-py-test-run
+import threading
 import sys
 if 'threading' in sys.modules:
   del sys.modules['threading']
@@ -25,6 +27,35 @@ def ghex(a):
     return None
   return hex(a).strip("L")
 
+# ***** middleware moved here *****
+def push_updates():
+  socketio.emit('pmaps', program.get_pmaps(), namespace='/qira')
+  socketio.emit('maxclnum', program.get_maxclnum(), namespace='/qira')
+
+def mwpoll():
+  # poll for new traces, call this every once in a while
+  for i in os.listdir("/tmp/qira_logs/"):
+    if "_" in i:
+      continue
+    i = int(i)
+
+    if i not in program.traces:
+      program.add_trace("/tmp/qira_logs/"+str(i), i)
+
+  did_update = False
+  # poll for updates on existing
+  for tn in program.traces:
+    if program.traces[tn].db.did_update():
+      did_update = True
+  if did_update:
+    program.read_asm_file()
+    push_updates()
+
+def mwpoller():
+  while 1:
+    time.sleep(0.2)
+    mwpoll()
+
 # ***** after this line is the new server stuff *****
 
 @socketio.on('forkat', namespace='/qira')
@@ -41,9 +72,6 @@ def deletefork(forknum):
   del program.traces[forknum]
   push_updates()
 
-def push_updates():
-  socketio.emit('pmaps', program.get_pmaps(), namespace='/qira')
-  socketio.emit('maxclnum', program.get_maxclnum(), namespace='/qira')
   
 @socketio.on('connect', namespace='/qira')
 def connect():
@@ -60,7 +88,7 @@ def getclnum(forknum, clnum, types, limit):
   if clnum == None or types == None or limit == None:
     return
   ret = []
-  for c in trace.fetch_changes_by_clnum(clnum, LIMIT):
+  for c in trace.db.fetch_changes_by_clnum(clnum, LIMIT):
     if c['type'] not in types:
       continue
     c = c.copy()
@@ -85,7 +113,7 @@ def getchanges(forknum, address, typ):
     forknums = [forknum]
   ret = {}
   for forknum in forknums:
-    ret[forknum] = program.traces[forknum].fetch_clnums_by_address_and_type(address, chr(ord(typ[0])), 0, LIMIT)
+    ret[forknum] = program.traces[forknum].db.fetch_clnums_by_address_and_type(address, chr(ord(typ[0])), 0, LIMIT)
   emit('changes', {'type': typ, 'clnums': ret})
 
 @socketio.on('getinstructions', namespace='/qira')
@@ -97,7 +125,7 @@ def getinstructions(forknum, clstart, clend):
     return
   ret = []
   for i in range(clstart, clend):
-    rret = trace.fetch_changes_by_clnum(i, 1)
+    rret = trace.db.fetch_changes_by_clnum(i, 1)
     if len(rret) == 0:
       continue
     else:
@@ -115,7 +143,7 @@ def getmemory(forknum, clnum, address, ln):
   if clnum == None or address == None or ln == None:
     return
   address = int(address)
-  mem = trace.fetch_memory(clnum, address, ln)
+  mem = trace.db.fetch_memory(clnum, address, ln)
   dat = {}
   for i in range(ln):
     if mem[i] & 0x100:
@@ -137,8 +165,8 @@ def getregisters(forknum, clnum):
   REGS = program.tregs[0]
   REGSIZE = program.tregs[1]
 
-  cls = trace.fetch_changes_by_clnum(clnum+1, LIMIT)
-  regs = trace.fetch_registers(clnum)
+  cls = trace.db.fetch_changes_by_clnum(clnum+1, LIMIT)
+  regs = trace.db.fetch_registers(clnum)
 
   for i in range(0, len(REGS)):
     rret = {"name": REGS[i], "address": i*REGSIZE, "value": ghex(regs[i]), "size": REGSIZE, "regactions": ""}
@@ -187,9 +215,10 @@ def serve(path):
   else:
     return Response(dat, mimetype="text/html")
 
-def run_socketio(lprogram):
+def run_server(lprogram):
   global program
   program = lprogram
   print "starting socketio server..."
+  threading.Thread(target=mwpoller).start()
   socketio.run(app, port=QIRA_PORT)
 

@@ -1,4 +1,3 @@
-
 #include <vector>
 #include <map>
 #if __cplusplus == 201103L
@@ -56,8 +55,8 @@ public:
   vector<uint64_t> FetchRegisters(Clnum clnum);
 
   // simple ones
-  set<Address> GetInstructionPages() { return instruction_pages_; }
-  set<Address> GetDataPages() { return data_pages_; }
+  set<Address> GetInstructionPages();
+  set<Address> GetDataPages();
   Clnum GetMaxClnum() { return max_clnum_; }
   Clnum GetMinClnum() { return min_clnum_; }
 
@@ -75,6 +74,7 @@ private:
   inline MemoryWithValid get_byte(Clnum clnum, Address a);
 
   // the backing of the database
+  pthread_mutex_t db_mutex_;
   unordered_map<pair<Address, char>, set<Clnum> > addresstype_to_clnums_;
   vector<EntryNumber> clnum_to_entry_number_;
   vector<RegisterCell> registers_; int register_size_, register_count_;

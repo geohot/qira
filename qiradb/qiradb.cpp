@@ -34,9 +34,13 @@ Trace::Trace(unsigned int trace_index) {
 Trace::~Trace() {
   is_running_ = false;
   pthread_join(thread, NULL);
+  // lock all the mutexes, could hang...better than crash?
+  pthread_mutex_lock(&backing_mutex_);
+  pthread_mutex_lock(&db_mutex_);
   // mutex lock isn't required now that the thread stopped
   munmap((void*)backing_, backing_size_);
   close(fd_);
+  printf("dead\n");
 }
 
 char Trace::get_type_from_flags(uint32_t flags) {
@@ -69,7 +73,6 @@ inline MemoryWithValid Trace::get_byte(Clnum clnum, Address a) {
   else { --it2; return MEMORY_VALID | it2->second; }
 }
 
-
 bool Trace::remap_backing(uint64_t new_size) {
   if (backing_size_ == new_size) return true;
   pthread_mutex_lock(&backing_mutex_);
@@ -83,6 +86,7 @@ bool Trace::remap_backing(uint64_t new_size) {
 bool Trace::ConnectToFileAndStart(char *filename, int register_size, int register_count) {
   register_size_ = register_size;
   register_count_ = register_count;
+  pthread_mutex_init(&db_mutex_, NULL);
   pthread_mutex_init(&backing_mutex_, NULL);
 
   registers_.resize(register_count_);
@@ -96,7 +100,10 @@ bool Trace::ConnectToFileAndStart(char *filename, int register_size, int registe
 }
 
 void Trace::process() {
+  pthread_mutex_lock(&backing_mutex_);
   EntryNumber entry_count = *((EntryNumber*)backing_);  // don't let this change under me
+  pthread_mutex_unlock(&backing_mutex_);
+
   if (entries_done_ >= entry_count) return;       // handle the > case better
 
   remap_backing(sizeof(struct change)*entry_count); // what if this fails?
@@ -112,7 +119,15 @@ void Trace::process() {
     entry_count = entries_done_ + 1000000;
   }
 
+  pthread_mutex_lock(&db_mutex_);
   while (entries_done_ != entry_count) {
+    if ((entries_done_ % 1000) == 0) {
+      // give the server a chance
+      pthread_mutex_unlock(&db_mutex_);
+      // we really need a priority mutex
+      usleep(0);
+      pthread_mutex_lock(&db_mutex_);
+    }
     const struct change *c = &backing_[entries_done_];
     char type = get_type_from_flags(c->flags);
 
@@ -162,6 +177,8 @@ void Trace::process() {
     
     entries_done_++;
   }
+  pthread_mutex_unlock(&db_mutex_);
+
   gettimeofday(&tv_end, NULL);
   double t = (tv_end.tv_usec-tv_start.tv_usec)/1000.0 +
              (tv_end.tv_sec-tv_start.tv_sec)*1000.0;
@@ -172,6 +189,7 @@ void Trace::process() {
 }
 
 vector<Clnum> Trace::FetchClnumsByAddressAndType(Address address, char type, Clnum start_clnum, unsigned int limit) {
+  pthread_mutex_lock(&db_mutex_);
   vector<Clnum> ret;
   pair<Address, char> p = MP(address, type);
   unordered_map<pair<Address, char>, set<Clnum> >::iterator it = addresstype_to_clnums_.find(p);
@@ -182,15 +200,19 @@ vector<Clnum> Trace::FetchClnumsByAddressAndType(Address address, char type, Cln
       if (ret.size() == limit) break;
     }
   }
+  pthread_mutex_unlock(&db_mutex_);
   return ret;
 }
 
 vector<struct change> Trace::FetchChangesByClnum(Clnum clnum, unsigned int limit) {
+  pthread_mutex_lock(&db_mutex_);
   vector<struct change> ret;
   EntryNumber en = 0;
   if (clnum < clnum_to_entry_number_.size()) {
     en = clnum_to_entry_number_[clnum];
   }
+  pthread_mutex_unlock(&db_mutex_);
+
   if (en != 0) {
     pthread_mutex_lock(&backing_mutex_);
     const struct change* c = &backing_[en];
@@ -206,20 +228,38 @@ vector<struct change> Trace::FetchChangesByClnum(Clnum clnum, unsigned int limit
 }
 
 vector<MemoryWithValid> Trace::FetchMemory(Clnum clnum, Address address, int len) {
+  pthread_mutex_lock(&db_mutex_);
   vector<MemoryWithValid> ret; 
   for (Address i = address; i < address+len; i++) {
     ret.push_back(get_byte(clnum, i));
   }
+  pthread_mutex_unlock(&db_mutex_);
   return ret;
 }
 
 vector<uint64_t> Trace::FetchRegisters(Clnum clnum) {
+  pthread_mutex_lock(&db_mutex_);
   vector<uint64_t> ret;
   for (int i = 0; i < register_count_; i++) {
     RegisterCell::iterator it = registers_[i].upper_bound(clnum);
     if (it == registers_[i].begin()) ret.push_back(0);
     else { --it; ret.push_back(it->second); }
   }
+  pthread_mutex_unlock(&db_mutex_);
+  return ret;
+}
+
+set<Address> Trace::GetInstructionPages() {
+  pthread_mutex_lock(&db_mutex_);
+  set<Address> ret = instruction_pages_;
+  pthread_mutex_unlock(&db_mutex_);
+  return ret;
+}
+
+set<Address> Trace::GetDataPages() {
+  pthread_mutex_lock(&db_mutex_);
+  set<Address> ret = data_pages_;
+  pthread_mutex_unlock(&db_mutex_);
   return ret;
 }
 

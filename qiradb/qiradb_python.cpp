@@ -1,4 +1,5 @@
 #include <Python.h>
+#include <structmember.h>
 #include "qiradb.h"
 
 #if __cplusplus == 201103L
@@ -7,11 +8,7 @@
 #define FE(x,y) for (typeof(x.begin()) y = x.begin(); y != x.end(); ++y)
 #endif
 
-
 extern "C" {
-
-// do not delete from this vector
-static vector<Trace*> traces;
 
 typedef struct {
   PyObject_HEAD
@@ -30,21 +27,27 @@ static int Trace_init(PyTrace *self, PyObject *args, PyObject *kwds) {
 }
 
 static void Trace_dealloc(PyTrace *self) {
-  delete self->t;
+  if (self->t != NULL) { delete self->t; }
+  self->ob_type->tp_free((PyObject*)self);
 }
 
 static PyObject *get_maxclnum(PyTrace *self) {
+  if (self->t == NULL) { return NULL; }
   return Py_BuildValue("I", self->t->GetMaxClnum());
 }
 
 static PyObject *get_minclnum(PyTrace *self) {
+  if (self->t == NULL) { return NULL; }
   return Py_BuildValue("I", self->t->GetMinClnum());
 }
 
 static PyObject *did_update(PyTrace *self) {
+  if (self->t == NULL) { return NULL; }
   if (self->t->GetDidUpdate()) {
+    Py_INCREF(Py_True);
     return Py_True;
   } else {
+    Py_INCREF(Py_False);
     return Py_False;
   }
 }
@@ -55,6 +58,7 @@ static PyObject *fetch_clnums_by_address_and_type(PyTrace *self, PyObject *args)
   Clnum start_clnum;
   unsigned int limit;
   if (!PyArg_ParseTuple(args, "LcII", &address, &type, &start_clnum, &limit)) { return NULL; }
+  if (self->t == NULL) { return NULL; }
   
   vector<Clnum> ret = self->t->FetchClnumsByAddressAndType(address, type, start_clnum, limit);
  
@@ -70,6 +74,7 @@ static PyObject *fetch_changes_by_clnum(PyTrace *self, PyObject *args) {
   Clnum clnum;
   unsigned int limit;
   if (!PyArg_ParseTuple(args, "II", &clnum, &limit)) { return NULL; }
+  if (self->t == NULL) { return NULL; }
 
   vector<struct change> ret = self->t->FetchChangesByClnum(clnum, limit);
 
@@ -93,6 +98,7 @@ static PyObject *fetch_memory(PyTrace *self, PyObject *args) {
   Address address;
   int len;
   if (!PyArg_ParseTuple(args, "ILi", &clnum, &address, &len)) { return NULL; }
+  if (self->t == NULL) { return NULL; }
 
   vector<MemoryWithValid> ret = self->t->FetchMemory(clnum, address, len);
 
@@ -101,12 +107,14 @@ static PyObject *fetch_memory(PyTrace *self, PyObject *args) {
   FE(ret, it) {
     PyList_SetItem(pyret, i++, Py_BuildValue("I", *it));
   }
+
   return pyret;
 }
 
 static PyObject *fetch_registers(PyTrace *self, PyObject *args) {
   Clnum clnum;
   if (!PyArg_ParseTuple(args, "I", &clnum)) { return NULL; }
+  if (self->t == NULL) { return NULL; }
 
   vector<uint64_t> ret = self->t->FetchRegisters(clnum);
 
@@ -119,6 +127,7 @@ static PyObject *fetch_registers(PyTrace *self, PyObject *args) {
 }
 
 static PyObject *get_pmaps(PyTrace *self, PyObject *args) {
+  if (self->t == NULL) { return NULL; }
   set<Address> ip = self->t->GetInstructionPages();
   set<Address> dp = self->t->GetDataPages();
   PyObject *iit = PyDict_New();
@@ -136,8 +145,6 @@ static PyObject *get_pmaps(PyTrace *self, PyObject *args) {
 // python stuff follows
 
 static PyMethodDef Trace_methods[] = {
-  /*{ "new_trace", new_trace, METH_VARARGS, NULL },
-  { "delete_trace", delete_trace, METH_VARARGS, NULL },*/
   { "get_maxclnum", (PyCFunction)get_maxclnum, METH_NOARGS, NULL },
   { "get_minclnum", (PyCFunction)get_minclnum, METH_NOARGS, NULL },
   { "get_pmaps", (PyCFunction)get_pmaps, METH_NOARGS, NULL },
@@ -149,17 +156,13 @@ static PyMethodDef Trace_methods[] = {
   { NULL, NULL, 0, NULL }
 };
 
-static PyMethodDef Methods[] = {
-  { NULL, NULL, 0, NULL }
-};
-
-
+static PyMethodDef Methods[] = { {NULL} };
 
 static PyTypeObject qiradb_TraceType = {
     PyObject_HEAD_INIT(NULL)
     0,                         /*ob_size*/
     "qiradb_Trace",            /*tp_name*/
-    sizeof(qiradb_TraceType),  /*tp_basicsize*/
+    sizeof(PyTrace),           /*tp_basicsize*/
     0,                         /*tp_itemsize*/
     (destructor)Trace_dealloc, /*tp_dealloc*/
     0,                         /*tp_print*/
@@ -193,8 +196,6 @@ static PyTypeObject qiradb_TraceType = {
     0,                         /* tp_descr_set */
     0,                         /* tp_dictoffset */
     (initproc)Trace_init,      /* tp_init */
-    0,                         /* tp_alloc */
-    0,                 /* tp_new */
 };
 
 void initqiradb(void) {
@@ -202,6 +203,7 @@ void initqiradb(void) {
   qiradb_TraceType.tp_new = PyType_GenericNew;
   if (PyType_Ready(&qiradb_TraceType) < 0) return;
   m = Py_InitModule("qiradb", Methods);
+  if (m == NULL) return;
   Py_INCREF(&qiradb_TraceType);
   PyModule_AddObject(m, "Trace", (PyObject *)&qiradb_TraceType);
 }

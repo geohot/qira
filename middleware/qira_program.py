@@ -2,6 +2,8 @@ import os
 import sys
 import struct
 
+import qiradb
+
 ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 4)
 X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4)
 X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8)
@@ -89,17 +91,25 @@ class Program:
   def get_maxclnum(self):
     ret = {}
     for t in self.traces:
-      ret[t] = [self.traces[t].get_minclnum(), self.traces[t].get_maxclnum()]
+      ret[t] = [self.traces[t].db.get_minclnum(), self.traces[t].db.get_maxclnum()]
     return ret
 
   def get_pmaps(self):
     ret = {}
     for t in self.traces:
-      pm = self.traces[t].get_pmaps()
+      pm = self.traces[t].db.get_pmaps()
       for a in pm:
         if a not in ret:
           ret[a] = pm[a]
         elif ret[a] == "memory":
           ret[a] = pm[a]
     return ret
+
+  def add_trace(self, fn, i):
+    self.traces[i] = Trace(fn, i, self.tregs[1], len(self.tregs[0]))
+
+class Trace:
+  def __init__(self, fn, i, r1, r2):
+    self.db = qiradb.Trace(fn, i, r1, r2)
+
 
