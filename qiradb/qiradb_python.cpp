@@ -19,9 +19,10 @@ static int Trace_init(PyTrace *self, PyObject *args, PyObject *kwds) {
   char *filename;
   int register_size, register_count;
   unsigned int ti;
-  if (!PyArg_ParseTuple(args, "sIii", &filename, &ti, &register_size, &register_count)) { return -1; }
+  int is_big_endian;
+  if (!PyArg_ParseTuple(args, "sIiii", &filename, &ti, &register_size, &register_count, &is_big_endian)) { return -1; }
   Trace *t = new Trace(ti);
-  if (!t->ConnectToFileAndStart(filename, register_size, register_count)) { delete t; return -1; }
+  if (!t->ConnectToFileAndStart(filename, register_size, register_count, is_big_endian!=0)) { delete t; return -1; }
   self->t = t;
   return 0;
 }

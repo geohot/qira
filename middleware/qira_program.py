@@ -4,13 +4,13 @@ import struct
 
 import qiradb
 
-PPCREGS = ([], 4)
+PPCREGS = ([], 4, True)
 for i in range(32):
   PPCREGS[0].append("r"+str(i))
 
-ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 4)
-X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4)
-X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8)
+ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 4, False)
+X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, False)
+X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8, False)
 
 # things that don't cross the fork
 class Program:
@@ -123,12 +123,12 @@ class Program:
     return ret
 
   def add_trace(self, fn, i):
-    self.traces[i] = Trace(fn, i, self.tregs[1], len(self.tregs[0]))
+    self.traces[i] = Trace(fn, i, self.tregs[1], len(self.tregs[0]), self.tregs[2])
 
 class Trace:
-  def __init__(self, fn, forknum, r1, r2):
+  def __init__(self, fn, forknum, r1, r2, r3):
     self.forknum = forknum
-    self.db = qiradb.Trace(fn, forknum, r1, r2)
+    self.db = qiradb.Trace(fn, forknum, r1, r2, r3)
     self.fetch_base_memory()
 
   def fetch_base_memory(self):

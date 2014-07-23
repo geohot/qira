@@ -85,7 +85,8 @@ bool Trace::remap_backing(uint64_t new_size) {
   return (backing_ != NULL);
 }
 
-bool Trace::ConnectToFileAndStart(char *filename, int register_size, int register_count) {
+bool Trace::ConnectToFileAndStart(char *filename, int register_size, int register_count, bool is_big_endian) {
+  is_big_endian_ = is_big_endian;
   register_size_ = register_size;
   register_count_ = register_count;
   pthread_rwlock_init(&db_lock_, NULL);
@@ -154,10 +155,17 @@ void Trace::process() {
       if (type == 'S') {
         int byte_count = (c->flags&SIZE_MASK)/8;
         uint64_t data = c->data;
-        for (int i = 0; i < byte_count; i++) {
+        if (is_big_endian_) {
+          for (int i = byte_count-1; i >= 0; --i) {
+            commit_memory(c->clnum, c->address+i, data&0xFF);
+            data >>= 8;
+          }
+        } else {
           // little endian
-          commit_memory(c->clnum, c->address+i, data&0xFF);
-          data >>= 8;
+          for (int i = 0; i < byte_count; i++) {
+            commit_memory(c->clnum, c->address+i, data&0xFF);
+            data >>= 8;
+          }
         }
       }
     }

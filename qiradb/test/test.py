@@ -8,7 +8,7 @@ LIMIT = 10000
 #time.sleep(100000.0)
 
 # register size = 4, register count = 9
-t = qiradb.Trace("hello_trace", 0, 4, 9)
+t = qiradb.Trace("hello_trace", 0, 4, 9, False)
 print "trace created"
 
 while not t.did_update():

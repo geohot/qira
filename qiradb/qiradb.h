@@ -46,7 +46,7 @@ class Trace {
 public:
   Trace(unsigned int trace_index);
   ~Trace();
-  bool ConnectToFileAndStart(char *filename, int register_size, int register_count);
+  bool ConnectToFileAndStart(char *filename, int register_size, int register_count, bool is_big_endian);
 
   // these must be threadsafe
   vector<Clnum> FetchClnumsByAddressAndType(Address address, char type, Clnum start_clnum, unsigned int limit);
@@ -73,6 +73,7 @@ private:
   inline void commit_memory(Clnum clnum, Address a, uint8_t d);
   inline MemoryWithValid get_byte(Clnum clnum, Address a);
 
+  bool is_big_endian_;
   // the backing of the database
   pthread_rwlock_t db_lock_;
   unordered_map<pair<Address, char>, set<Clnum> > addresstype_to_clnums_;
