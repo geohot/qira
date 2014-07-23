@@ -4,7 +4,7 @@
 #if __cplusplus == 201103L
   #include <unordered_map>
 #else
-  //#define USE_BOOST
+  #define USE_BOOST
   #ifdef USE_BOOST
     #include <boost/unordered_map.hpp>
     #define unordered_map boost::unordered_map
