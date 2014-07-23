@@ -713,6 +713,10 @@ void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
   sprintf(fn, "/tmp/qira_logs/%d", this_id);
 
   int qira_log_fd = open(fn, O_RDWR, 0644);
+  dup2(qira_log_fd, 100+this_id);
+  close(qira_log_fd);
+  qira_log_fd = 100+this_id;
+
   struct logstate plogstate;
   if (read(qira_log_fd, &plogstate, sizeof(plogstate)) != sizeof(plogstate)) {
     printf("HEADER READ ISSUE!\n");
@@ -866,26 +870,17 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
       // get next id
       if (GLOBAL_id == -1) { GLOBAL_id = get_next_id(); }
 
-      // do initial core dump
-      /*struct rlimit core_limit, core_limit_old;
-      getrlimit(RLIMIT_CORE, &core_limit_old);
-      core_limit.rlim_cur = RLIM_INFINITY;
-      core_limit.rlim_max = RLIM_INFINITY;
-      setrlimit(RLIMIT_CORE, &core_limit);
-      (*ts->bprm->core_dump)(0, env);
-      setrlimit(RLIMIT_CORE, &core_limit_old);*/
-      /*page_dump(stderr);
-      fflush(stderr);*/
-
+      // these are the base libraries we load
       write_out_base(env, GLOBAL_id);
 
+      init_QIRA(env, GLOBAL_id);
+
       // these three arguments (parent_id, start_clnum, id) must be passed into QIRA
+      // this now runs after init_QIRA
       if (GLOBAL_parent_id != -1) {
         run_QIRA_log(env, GLOBAL_parent_id, GLOBAL_start_clnum);
       }
 
-
-      init_QIRA(env, GLOBAL_id);
       return 0;
     }
 
