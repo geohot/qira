@@ -1,4 +1,4 @@
-stream = io.connect("http://localhost:3002/qira");
+stream = io.connect(STREAM_URL);
 
 Template.controls.clnum = function() {
   return Session.get("clnum");

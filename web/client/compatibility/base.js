@@ -1,3 +1,10 @@
+if (window.location.port == 3000) {
+  // for meteor development
+  STREAM_URL = "http://localhost:3002/qira";
+} else {
+  STREAM_URL = window.location.origin+"/qira";
+}
+
 function p(a) { console.log(a); }
 
 pmaps = {}

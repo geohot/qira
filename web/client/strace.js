@@ -1,4 +1,4 @@
-stream = io.connect("http://localhost:3002/qira");
+stream = io.connect(STREAM_URL);
 
 stream.on('strace', function(msg) {
   //p(msg);

@@ -1,4 +1,4 @@
-stream = io.connect("http://localhost:3002/qira");
+stream = io.connect(STREAM_URL);
 
 // *** the analysis overlay ***
 
@@ -151,7 +151,8 @@ function redraw_vtimelines(scale) {
     var vt = $('#vtimeline'+forknum);
     var max = maxclnum[forknum];
     //vt.css('image-rendering', 'pixelated');
-    vt.css('background-image', "url('"+overlays[forknum]+"')");
+    var is_analyzing = Session.get("is_analyzing");
+    if (is_analyzing && overlays[forknum] !== undefined) vt.css('background-image', "url('"+overlays[forknum]+"')");
     var cscale = get_cscale();
 
     if (max[0] < cview[0] && cview[0] < max[1]) { add_flag("zoom", forknum, cview[0]); }
