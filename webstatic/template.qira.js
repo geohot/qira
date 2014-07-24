@@ -38,7 +38,7 @@ Template.__define__("controls", (function() {
     value: function() {
       return Spacebars.mustache(self.lookup("forknum"));
     }
-  }), HTML.Raw('\n<input type="button" value="fork" id="control_fork" class="control">\n'), HTML.INPUT({
+  }), HTML.Raw('\n<input type="button" value="fork" id="control_fork" class="control">\n<input type="button" value="A" id="control_analysis" class="control">\n'), HTML.INPUT({
     spellcheck: "false",
     id: "control_iaddr",
     "class": "control datainstruction",
