@@ -32,9 +32,40 @@ Template.controls.events = {
   'click #control_fork': function(e) {
     var clnum = Session.get("clnum");
     var forknum = Session.get("forknum");
-    stream.emit('forkat', forknum, clnum)
+    stream.emit('forkat', forknum, clnum);
+  },
+  'click #control_analysis': function(e) {
+    var is_analyzing = Session.get("is_analyzing");
+    if (is_analyzing) {
+      Session.set("is_analyzing", false);
+    } else {
+      Session.set("is_analyzing", true);
+    }
   }
 };
+
+Deps.autorun(function() {
+  var is_analyzing = Session.get("is_analyzing");
+  var maxclnum = Session.get("max_clnum");
+  if (is_analyzing) {
+    $('#control_analysis').addClass("highlight");
+    for (i in maxclnum) {
+      stream.emit('doanalysis', parseInt(i))
+    }
+  } else {
+    $('#control_analysis').removeClass("highlight");
+    $(".vtimeline").each(function(id) {
+      $(this)[0].style.backgroundImage = "";
+    });
+  }
+});
+
+stream.on('setpicture', function(msg) {
+  p(msg);
+  var id = $("#vtimeline"+msg['forknum'])[0]
+  id.style.backgroundImage = "url('"+msg['data']+"')";
+  id.style.backgroundSize = "contain";
+});
 
 // keyboard shortcuts
 window.onkeydown = function(e) {

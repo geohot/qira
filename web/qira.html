@@ -18,7 +18,7 @@
 <div class="panelthing" id="regviewer">
 </div>
 <div class="panelthing" id="datachanges">
-{{>datachanges}}
+{{> datachanges}}
 </div>
 <div class="panelthing" id="hexeditor">
 {{> memviewer}}
@@ -34,6 +34,7 @@
 <input spellcheck="false" id="control_clnum" class="control datachange" value={{clnum}} />
 <input spellcheck="false" id="control_forknum" class="control" value={{forknum}} />
 <input type="button" value="fork" id="control_fork" class="control" />
+<input type="button" value="A" id="control_analysis" class="control" />
 <input spellcheck="false" id="control_iaddr" class="control datainstruction" value="{{iaddr}}" />
 <input spellcheck="false" id="control_daddr" class="control datamemory" value="{{daddr}}" />
 </template>

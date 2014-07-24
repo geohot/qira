@@ -16,7 +16,7 @@ body {
 .control {
   font-family: monospace;
   font-size: 16px;
-  width: 180px;
+  width: 165px;
   border: 1px solid black;
   padding: 2px;
   margin: 5px;
@@ -30,6 +30,14 @@ body {
 #control_fork {
   margin-left: 0px;
   width: 50px;
+  margin-right: 0px;
+}
+
+#control_analysis {
+  margin-left: 0px;
+  width: auto;
+  padding-left: 5px;
+  padding-right: 5px;
 }
 
 #control_forknum {

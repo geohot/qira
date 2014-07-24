@@ -2,6 +2,8 @@ import os
 import qira_socat
 import time
 
+import qira_analysis
+
 QIRA_PORT = 3002
 LIMIT = 400
 
@@ -72,6 +74,12 @@ def deletefork(forknum):
   del program.traces[forknum]
   push_updates()
 
+@socketio.on('doanalysis', namespace='/qira')
+def analysis(forknum):
+  if forknum not in program.traces:
+    return
+  trace = program.traces[forknum]
+  emit('setpicture', {"forknum":forknum, "data":qira_analysis.analyze(trace, program)})
   
 @socketio.on('connect', namespace='/qira')
 def connect():

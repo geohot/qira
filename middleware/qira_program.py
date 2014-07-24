@@ -21,6 +21,14 @@ class Program:
     except:
       pass
 
+    # bring this back
+    if prog != "/tmp/qira_binary":
+      try:
+        os.unlink("/tmp/qira_binary")
+      except:
+        pass
+      os.symlink(os.path.realpath(prog), "/tmp/qira_binary")
+
     # pmaps is global, but updated by the traces
     self.instructions = {}
 
