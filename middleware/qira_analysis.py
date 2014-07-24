@@ -290,6 +290,7 @@ def analyze(trace, program):
 
   from PIL import Image   # sudo pip install pillow
   import base64
+  import StringIO
   im = Image.new( 'RGB', (1, maxclnum), "black")
   px = im.load()
 
@@ -300,9 +301,10 @@ def analyze(trace, program):
     px[0, i] = (0,c,c)
 
   #im = im.resize((50, 1000), Image.ANTIALIAS)
-  im.save("/tmp/w.png")
+  buf = StringIO.StringIO()
+  im.save(buf, format='PNG')
 
-  dat = "data:image/png;base64,"+base64.b64encode(open("/tmp/w.png").read())
+  dat = "data:image/png;base64,"+base64.b64encode(buf.getvalue())
   return dat
   
   #loops = do_loop_analysis(blocks)

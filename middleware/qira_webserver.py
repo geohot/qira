@@ -79,7 +79,12 @@ def analysis(forknum):
   if forknum not in program.traces:
     return
   trace = program.traces[forknum]
-  emit('setpicture', {"forknum":forknum, "data":qira_analysis.analyze(trace, program)})
+  # this fails sometimes, who knows why
+  try:
+    data = qira_analysis.analyze(trace, program)
+    emit('setpicture', {"forknum":forknum, "data":data})
+  except:
+    pass
   
 @socketio.on('connect', namespace='/qira')
 def connect():
