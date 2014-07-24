@@ -288,7 +288,7 @@ def analyze(trace, program):
   #print dmap
   #print maxclnum, maxd
 
-  import Image   # sudo pip install pillow
+  from PIL import Image   # sudo pip install pillow
   import base64
   im = Image.new( 'RGB', (1, maxclnum), "black")
   px = im.load()
