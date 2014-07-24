@@ -16,6 +16,9 @@ Template.controls.daddr = function() {
   return hex(Session.get("daddr"));
 };
 
+// probably shouldn't be here
+Session.setDefault('is_analyzing', true);
+
 Template.controls.events = {
   'change #control_clnum': function(e) {
     Session.set("clnum", parseInt(e.target.value));
@@ -43,29 +46,6 @@ Template.controls.events = {
     }
   }
 };
-
-Deps.autorun(function() {
-  var is_analyzing = Session.get("is_analyzing");
-  var maxclnum = Session.get("max_clnum");
-  if (is_analyzing) {
-    $('#control_analysis').addClass("highlight");
-    for (i in maxclnum) {
-      stream.emit('doanalysis', parseInt(i))
-    }
-  } else {
-    $('#control_analysis').removeClass("highlight");
-    $(".vtimeline").each(function(id) {
-      $(this)[0].style.backgroundImage = "";
-    });
-  }
-});
-
-stream.on('setpicture', function(msg) {
-  p(msg);
-  var id = $("#vtimeline"+msg['forknum'])[0]
-  id.style.backgroundImage = "url('"+msg['data']+"')";
-  id.style.backgroundSize = "contain";
-});
 
 // keyboard shortcuts
 window.onkeydown = function(e) {

@@ -1,7 +1,5 @@
 var current_hash = "";
 
-Session.setDefault('is_analyzing', true);
-
 // there should be a library for this
 Deps.autorun(function() {
   var json = {};

@@ -1,5 +1,33 @@
 stream = io.connect("http://localhost:3002/qira");
 
+// *** the analysis overlay ***
+
+Deps.autorun(function() {
+  var is_analyzing = Session.get("is_analyzing");
+  var maxclnum = Session.get("max_clnum");
+  if (is_analyzing) {
+    $('#control_analysis').addClass("highlight");
+    for (i in maxclnum) {
+      stream.emit('doanalysis', parseInt(i))
+    }
+  } else {
+    $('#control_analysis').removeClass("highlight");
+    $(".vtimeline").each(function(id) {
+      $(this)[0].style.backgroundImage = "";
+    });
+  }
+});
+
+
+var overlays = {};
+
+stream.on('setpicture', function(msg) {
+  forknum = msg['forknum'];
+  overlays[forknum] = msg['data'];
+  var vt = $('#vtimeline'+forknum);
+  vt.css('background-image', "url('"+overlays[forknum]+"')");
+});
+
 // *** functions for dealing with the zoom function ***
 
 Meteor.startup(function() {
@@ -120,6 +148,15 @@ function redraw_vtimelines(scale) {
 
   for (forknum in maxclnum) {
     var vt = $('#vtimeline'+forknum);
+    var max = maxclnum[forknum];
+    //vt.css('image-rendering', 'pixelated');
+    vt.css('background-image', "url('"+overlays[forknum]+"')");
+    var cscale = get_cscale();
+
+    // so it looks like size is applied before position, hence we divide position by cscale
+    vt.css('background-size', "100% " + ((max[1]-max[0]) / cscale) + "px")
+    vt.css('background-position-y', -1*(cview[0]/cscale) + "px");
+    vt.css('background-repeat', "no-repeat");
     if (vt.length == 0) {
       $("#vtimelinebox").append($('<div class="vtimeline" id="vtimeline'+forknum+'"></div>'))
       vt = $('#vtimeline'+forknum);

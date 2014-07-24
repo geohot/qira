@@ -263,7 +263,7 @@ def get_hacked_depth_map(flow):
   for (address, length, clnum, ins) in flow:
     if address in return_stack:
       return_stack = return_stack[0:return_stack.index(address)]
-    if ins[0:4] == "call":
+    if ins[0:5] == "call ":
       return_stack.append(address+length)
     #print return_stack
     ret.append(len(return_stack))
@@ -294,7 +294,7 @@ def analyze(trace, program):
   px = im.load()
 
   for i in range(maxclnum):
-    c = int((dmap[i]*255.0)/maxd)
+    c = int((dmap[i]*128.0)/maxd)
     #px[0, i] = (int((dmap[i]*255.0)/maxd), 0, 0)
     #px[0, i] = (c,c,c)
     px[0, i] = (0,c,c)

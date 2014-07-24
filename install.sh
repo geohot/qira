@@ -10,7 +10,7 @@ if [ $(which apt-get) ]; then
 fi
 
 echo "installing pip packages"
-sudo pip install flask-socketio
+sudo pip install flask-socketio pillow
 
 echo "installing qiradb"
 cd qiradb
