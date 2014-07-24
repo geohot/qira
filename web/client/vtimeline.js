@@ -146,12 +146,16 @@ function redraw_vtimelines(scale) {
   });
 
 
+  remove_flags("zoom");
   for (forknum in maxclnum) {
     var vt = $('#vtimeline'+forknum);
     var max = maxclnum[forknum];
     //vt.css('image-rendering', 'pixelated');
     vt.css('background-image', "url('"+overlays[forknum]+"')");
     var cscale = get_cscale();
+
+    if (max[0] < cview[0] && cview[0] < max[1]) { add_flag("zoom", forknum, cview[0]); }
+    if (max[0] < cview[1] && cview[1] < max[1]) { add_flag("zoom", forknum, cview[1]); }
 
     // so it looks like size is applied before position, hence we divide position by cscale
     vt.css('background-size', "100% " + ((max[1]-max[0]) / cscale) + "px")
@@ -188,7 +192,8 @@ function redraw_flags() {
     "change": "blue",
     "ciaddr": "#AA0000", // keep it alphabetical
     "daddrr": "#888800",
-    "daddrw": "yellow"
+    "daddrw": "yellow",
+    "zoom": "gray"
   };
   for (arr in flags) {
     var classes = "flag";
