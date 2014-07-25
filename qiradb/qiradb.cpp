@@ -62,7 +62,7 @@ char Trace::get_type_from_flags(uint32_t flags) {
 
 inline void Trace::commit_memory(Clnum clnum, Address a, uint8_t d) {
   pair<map<Address, MemoryCell>::iterator, bool> ret = memory_.insert(MP(a, MemoryCell()));
-  ret.first->second.insert(MP(clnum, d));
+  ret.first->second[clnum] = d;
 }
 
 inline MemoryWithValid Trace::get_byte(Clnum clnum, Address a) {
@@ -146,7 +146,7 @@ void Trace::process() {
 
     // registers_
     if (type == 'W' && c->address < (register_size_ * register_count_)) {
-      registers_[c->address / register_size_].insert(MP(c->clnum, c->data));
+      registers_[c->address / register_size_][c->clnum] = c->data;
     }
 
     // memory_, data_pages_

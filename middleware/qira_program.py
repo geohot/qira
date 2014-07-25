@@ -29,6 +29,9 @@ class Program:
         pass
       os.symlink(os.path.realpath(prog), "/tmp/qira_binary")
 
+    # defaultargs for qira binary
+    self.defaultargs = ["-strace", "-D", "/dev/null", "-d", "in_asm", "-singlestep"]
+
     # pmaps is global, but updated by the traces
     self.instructions = {}
 
@@ -132,6 +135,9 @@ class Program:
 
   def add_trace(self, fn, i):
     self.traces[i] = Trace(fn, i, self.tregs[1], len(self.tregs[0]), self.tregs[2])
+
+  def execqira(self, args=[]):
+    os.execvp(self.qirabinary, [self.qirabinary]+self.defaultargs+args+[self.program]+self.args)
 
 class Trace:
   def __init__(self, fn, forknum, r1, r2, r3):

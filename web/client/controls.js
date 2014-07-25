@@ -17,7 +17,8 @@ Template.controls.daddr = function() {
 };
 
 // probably shouldn't be here
-Session.setDefault('is_analyzing', true);
+// left off for now, doesn't work if things are big
+//Session.setDefault('is_analyzing', true);
 
 Template.controls.events = {
   'change #control_clnum': function(e) {

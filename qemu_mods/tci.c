@@ -486,6 +486,8 @@ struct logstate *GLOBAL_logstate;
 uint32_t GLOBAL_start_clnum = 1;
 int GLOBAL_parent_id = -1, GLOBAL_id = -1;
 
+int GLOBAL_tracelibraries = 0;
+
 FILE *GLOBAL_asm_file = NULL;
 FILE *GLOBAL_strace_file = NULL;
 
@@ -774,7 +776,11 @@ bool is_filtered_address(target_ulong pc) {
   // to remove the warning
   uint64_t bpc = (uint64_t)pc;
   // TODO(geohot): FIX THIS!, filter anything that isn't the user binary and not dynamic
-  return ((bpc > 0x40000000 && bpc < 0xf6800000) || bpc >= 0x100000000);
+  if (unlikely(GLOBAL_tracelibraries)) {
+    return false;
+  } else {
+    return ((bpc > 0x40000000 && bpc < 0xf6800000) || bpc >= 0x100000000);
+  }
 }
 
 void real_target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong size, int flags);
