@@ -64,7 +64,13 @@ def mwpoller():
 def forkat(forknum, clnum):
   global program
   print "forkat",forknum,clnum
-  qira_socat.start_bindserver(program, 4001, forknum, clnum)
+  if args.server:
+    qira_socat.start_bindserver(program, 4001, forknum, clnum)
+  else:
+    if os.fork() == 0:
+      program.execqira(["-qirachild", "%d %d %d" % (forknum, clnum, qira_socat.get_next_run_id())])
+      
+    
 
 @socketio.on('deletefork', namespace='/qira')
 def deletefork(forknum):
@@ -260,8 +266,10 @@ def serve(path):
   else:
     return Response(dat, mimetype="text/html")
 
-def run_server(lprogram):
+def run_server(largs, lprogram):
+  global args
   global program
+  args = largs
   program = lprogram
   print "starting socketio server..."
   threading.Thread(target=mwpoller).start()

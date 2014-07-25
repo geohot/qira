@@ -43,5 +43,5 @@ if __name__ == '__main__':
 
   if not is_qira_running:
     # start the http server
-    qira_webserver.run_server(program)
+    qira_webserver.run_server(args, program)
 
