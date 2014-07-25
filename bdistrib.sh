@@ -77,7 +77,7 @@ cp -av fetchlibs.sh qira distrib/qira/
 echo "making archive"
 cd distrib/
 #tar zcvf qira-0.3.tar.gz qira
-tar cvf qira-0.4.tar qira
-xz qira-0.4.tar
+tar cvf qira-0.5.tar qira
+xz qira-0.5.tar
 cd ../
 
