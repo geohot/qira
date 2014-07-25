@@ -488,6 +488,7 @@ int GLOBAL_parent_id = -1, GLOBAL_id = -1;
 
 int GLOBAL_tracelibraries = 0;
 
+#define OPEN_GLOBAL_ASM_FILE { if (unlikely(GLOBAL_asm_file == NULL)) { GLOBAL_asm_file = fopen("/tmp/qira_asm", "a"); } }
 FILE *GLOBAL_asm_file = NULL;
 FILE *GLOBAL_strace_file = NULL;
 
@@ -515,6 +516,8 @@ void init_QIRA(CPUArchState *env, int id) {
   GLOBAL_QIRA_did_init = 1;
   GLOBAL_CPUArchState = env;   // unused
 
+  OPEN_GLOBAL_ASM_FILE
+
   char fn[PATH_MAX];
   sprintf(fn, "/tmp/qira_logs/%d_strace", id);
   GLOBAL_strace_file = fopen(fn, "w");
@@ -539,6 +542,9 @@ void init_QIRA(CPUArchState *env, int id) {
   GLOBAL_logstate->changelist_number = GLOBAL_start_clnum-1;
   GLOBAL_logstate->first_changelist_number = GLOBAL_start_clnum;
   GLOBAL_logstate->parent_id = GLOBAL_parent_id;
+
+  // use all fds up to 20
+  while (open("/dev/null", O_RDONLY) < 20);
 }
 
 struct change *add_change(target_ulong addr, uint64_t data, uint32_t flags) {
@@ -785,9 +791,7 @@ bool is_filtered_address(target_ulong pc) {
 
 void real_target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong size, int flags);
 void target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong size, int flags) {
-  if (unlikely(GLOBAL_asm_file == NULL)) { 
-    GLOBAL_asm_file = fopen("/tmp/qira_asm", "a");
-  }
+  OPEN_GLOBAL_ASM_FILE
 
   if (is_filtered_address(code)) return;
 
@@ -857,6 +861,7 @@ void write_out_base(CPUArchState *env, int id) {
     /*printf("%s", line);
     fflush(stdout);*/
   }
+  fclose(maps);
 
   // env
   fprintf(f, TARGET_ABI_FMT_lx "-" TARGET_ABI_FMT_lx " %"PRIx64" %s\n", ss, se, (uint64_t)0, envfn);
