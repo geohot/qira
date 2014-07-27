@@ -21,6 +21,9 @@ if __name__ == '__main__':
   # creates the file symlink, program is constant through server run
   program = qira_program.Program(args)
 
+  if args.socat_only:
+    print '*** only running "socat", not QIRA'
+
   if args.tracelibraries:
     program.defaultargs.append("-tracelibraries")
 
