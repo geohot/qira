@@ -544,7 +544,16 @@ void init_QIRA(CPUArchState *env, int id) {
   GLOBAL_logstate->parent_id = GLOBAL_parent_id;
 
   // use all fds up to 20
-  while (open("/dev/null", O_RDONLY) < 20);
+  int i;
+  int dupme = open("/dev/null", O_RDONLY);
+  struct stat useless;
+  for (i = 0; i < 20; i++) {
+    sprintf(fn, "/proc/self/fd/%d", i);
+    if (stat(fn, &useless) == -1) {
+      printf("dup2 %d %d\n", dupme, i);
+      dup2(dupme, i);
+    }
+  }
 }
 
 struct change *add_change(target_ulong addr, uint64_t data, uint32_t flags) {
