@@ -726,40 +726,14 @@ int get_next_id(void) {
   return this_id;
 }
 
-void run_QIRA_log(CPUArchState *env, int this_id, int to_change);
-void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
-  char fn[PATH_MAX];
-  sprintf(fn, "/tmp/qira_logs/%d", this_id);
-
-  int qira_log_fd, qira_log_fd_ = open(fn, O_RDWR, 0644);
-  // qira_log_fd_ must be 30, if it isn't, i'm not sure what happened
-  dup2(qira_log_fd_, 100+this_id);
-  close(qira_log_fd_);
-  qira_log_fd = 100+this_id;
-
-  struct logstate plogstate;
-  if (read(qira_log_fd, &plogstate, sizeof(plogstate)) != sizeof(plogstate)) {
-    printf("HEADER READ ISSUE!\n");
-    return;
-  }
-
-  printf("+++ REPLAY %d START on fd %d(%d)\n", this_id, qira_log_fd, qira_log_fd_);
-
-  // check if this one has a parent and recurse here
-  // BUG: FD ISSUE!
-  QIRA_DEBUG("parent is %d with first_change %d\n", plogstate.parent_id, plogstate.first_changelist_number);
-  if (plogstate.parent_id != -1) {
-    run_QIRA_log(env, plogstate.parent_id, plogstate.first_changelist_number);
-  }
-
+int run_QIRA_log_from_fd(CPUArchState *env, int qira_log_fd, uint32_t to_change);
+int run_QIRA_log_from_fd(CPUArchState *env, int qira_log_fd, uint32_t to_change) {
   struct change pchange;
   // skip the first change
   lseek(qira_log_fd, sizeof(pchange), SEEK_SET);
+  int ret = 0;
   while(1) {
-    if (read(qira_log_fd, &pchange, sizeof(pchange)) != sizeof(pchange)) {
-      printf("READ ISSUE!\n");
-      break;
-    }
+    if (read(qira_log_fd, &pchange, sizeof(pchange)) != sizeof(pchange)) { break; }
     uint32_t flags = pchange.flags;
     if (!(flags & IS_VALID)) break;
     if (pchange.changelist_number >= to_change) break;
@@ -784,11 +758,60 @@ void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
       else { base = ((void *)env) + pchange.address; }
       memcpy(base, &pchange.data, (flags&SIZE_MASK) >> 3);
     }
+    ret++;
   }
+  return ret;
+}
+
+void run_QIRA_mods(CPUArchState *env, int this_id);
+void run_QIRA_mods(CPUArchState *env, int this_id) {
+  char fn[PATH_MAX];
+  sprintf(fn, "/tmp/qira_logs/%d_mods", this_id);
+  int qira_log_fd = open(fn, O_RDONLY);
+  if (qira_log_fd == -1) return;
+
+  // seek past the header
+  lseek(qira_log_fd, sizeof(struct logstate), SEEK_SET);
+
+  // run all the changes in this file
+  int count = run_QIRA_log_from_fd(env, qira_log_fd, 0xFFFFFFFF);
 
   close(qira_log_fd);
 
-  printf("+++ REPLAY %d DONE to %d\n", this_id, to_change);
+  printf("+++ REPLAY %d MODS DONE with entry count %d\n", this_id, count);
+}
+
+void run_QIRA_log(CPUArchState *env, int this_id, int to_change);
+void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
+  char fn[PATH_MAX];
+  sprintf(fn, "/tmp/qira_logs/%d", this_id);
+
+  int qira_log_fd, qira_log_fd_ = open(fn, O_RDONLY);
+  // qira_log_fd_ must be 30, if it isn't, i'm not sure what happened
+  dup2(qira_log_fd_, 100+this_id);
+  close(qira_log_fd_);
+  qira_log_fd = 100+this_id;
+
+  struct logstate plogstate;
+  if (read(qira_log_fd, &plogstate, sizeof(plogstate)) != sizeof(plogstate)) {
+    printf("HEADER READ ISSUE!\n");
+    return;
+  }
+
+  printf("+++ REPLAY %d START on fd %d(%d)\n", this_id, qira_log_fd, qira_log_fd_);
+
+  // check if this one has a parent and recurse here
+  // BUG: FD ISSUE!
+  QIRA_DEBUG("parent is %d with first_change %d\n", plogstate.parent_id, plogstate.first_changelist_number);
+  if (plogstate.parent_id != -1) {
+    run_QIRA_log(env, plogstate.parent_id, plogstate.first_changelist_number);
+  }
+
+  int count = run_QIRA_log_from_fd(env, qira_log_fd, to_change);
+
+  close(qira_log_fd);
+
+  printf("+++ REPLAY %d DONE to %d with entry count %d\n", this_id, to_change, count);
 }
 
 bool is_filtered_address(target_ulong pc);
@@ -904,6 +927,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
       // this now runs after init_QIRA
       if (GLOBAL_parent_id != -1) {
         run_QIRA_log(env, GLOBAL_parent_id, GLOBAL_start_clnum);
+        run_QIRA_mods(env, GLOBAL_id);
       }
 
       return 0;

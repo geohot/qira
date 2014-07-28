@@ -3,8 +3,9 @@ import qira_socat
 import time
 
 import qira_analysis
+import qira_log
 
-QIRA_PORT = 3002
+QIRA_WEB_PORT = 3002
 LIMIT = 400
 
 from flask import Flask, Response
@@ -61,16 +62,37 @@ def mwpoller():
 # ***** after this line is the new server stuff *****
 
 @socketio.on('forkat', namespace='/qira')
-def forkat(forknum, clnum):
+def forkat(forknum, clnum, pending):
   global program
-  print "forkat",forknum,clnum
+  print "forkat",forknum,clnum,pending
+
+  REGSIZE = program.tregs[1]
+  dat = []
+  for p in pending:
+    daddr = int(p['daddr'], 16)
+    ddata = int(p['ddata'], 16)
+    if len(p['ddata']) > 4:
+      # ugly hack
+      dsize = REGSIZE
+    else:
+      dsize = 1
+    flags = qira_log.IS_VALID | qira_log.IS_WRITE
+    if daddr >= 0x1000:
+      flags |= qira_log.IS_MEM
+    flags |= dsize*8
+    dat.append((daddr, ddata, clnum-1, flags))
+
+  next_run_id = qira_socat.get_next_run_id()
+
+  if len(dat) > 0:
+    qira_log.write_log("/tmp/qira_logs/"+str(next_run_id)+"_mods", dat)
+
   if args.server:
     qira_socat.start_bindserver(program, 4001, forknum, clnum)
   else:
     if os.fork() == 0:
-      program.execqira(["-qirachild", "%d %d %d" % (forknum, clnum, qira_socat.get_next_run_id())])
-      
-    
+      program.execqira(["-qirachild", "%d %d %d" % (forknum, clnum, next_run_id)])
+
 
 @socketio.on('deletefork', namespace='/qira')
 def deletefork(forknum):
@@ -278,5 +300,5 @@ def run_server(largs, lprogram):
   program = lprogram
   print "starting socketio server..."
   threading.Thread(target=mwpoller).start()
-  socketio.run(app, port=QIRA_PORT)
+  socketio.run(app, port=QIRA_WEB_PORT)
 
