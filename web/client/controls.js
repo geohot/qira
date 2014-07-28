@@ -1,5 +1,6 @@
 stream = io.connect(STREAM_URL);
 
+
 Template.controls.clnum = function() {
   return Session.get("clnum");
 };
@@ -32,7 +33,8 @@ Template.controls.events = {
   'click #control_fork': function(e) {
     var clnum = Session.get("clnum");
     var forknum = Session.get("forknum");
-    stream.emit('forkat', forknum, clnum);
+    var pending = Session.get('pending');
+    stream.emit('forkat', forknum, clnum, pending);
   }
 };
 
@@ -47,9 +49,9 @@ window.onkeydown = function(e) {
     Session.set("clnum", Session.get("clnum")-1);
   } else if (e.keyCode == 40) {
     Session.set("clnum", Session.get("clnum")+1);
-  } else if (e.keyCode == 90) {
+  } else if (e.keyCode == 90) {  // z
     zoom_out_max();
-  } else if (e.keyCode == 27) {
+  } else if (e.keyCode == 27) {  // esc
     history.back();
   }
 };

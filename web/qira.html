@@ -12,9 +12,18 @@
 <div id="controls">
 {{> controls}}
 </div>
+
+<div>
+
+<div class="panelthing" id="changeeditor">
+{{> changeeditor}}
+</div>
+
 <div class="panelthing" id="idump">
 {{> idump}}
 </div>
+</div>
+
 <div class="panelthing" id="regviewer">
 </div>
 <div class="panelthing" id="datachanges">
@@ -28,7 +37,6 @@
 </div>
 </div>
 </body>
-
 
 <template name="controls">
 <input spellcheck="false" id="control_clnum" class="control datachange" value={{clnum}} />
@@ -47,6 +55,25 @@
 {{/each}}
 </template>
 
+<template name="changeeditor">
+<input id="changeadd" type="button" value="Add Change" />
+<input id="changeclear" type="button" value="Clear" />
+<div id="pending">
+{{> pending}}
+</div>
+</template>
+
+<template name="pending">
+<table>
+{{#each pending}}
+<tr>
+<td>{{daddr}}</td><td>=</td>
+<input spellcheck="false" class="changeedit" value={{ddata}}>
+</tr>
+{{/each}}
+</table>
+</template>
+
 <template name="idump">
 {{#each instructions}}
   <div class="instruction">
@@ -60,7 +87,7 @@
 <template name="regviewer">
 {{#each regs}}
   <div class="reg {{regactions}}">
-  <span class="register {{isselected}}">{{name}}: </span><span class="{{datatype}}">{{hexvalue}}</span>
+  <span class="register">{{name}}: </span><span class="{{datatype}} {{isselected}}">{{hexvalue}}</span>
   </div>
 {{/each}}
 </template>

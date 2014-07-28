@@ -1,4 +1,7 @@
 /* universal things */
+input {
+  font-family: monospace;
+}
 
 td {
   font-family: monospace;
@@ -10,7 +13,7 @@ body {
 }
 
 .highlight {
-  background-color: #FF7777;
+  background-color: #FF7777 !important;
 }
 
 .control {
@@ -116,6 +119,21 @@ body {
 }
 .comment {
   color: purple;
+}
+
+/* change editor */
+
+#changeeditor {
+  float: right;
+  height: 180px;
+  width: 200px;
+  padding: 10px;
+}
+
+.changeedit {
+  width: 100px;
+  margin: 0;
+  padding: 0;
 }
 
 /* regviewer and datachanges */
