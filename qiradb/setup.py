@@ -1,7 +1,12 @@
+#!/usr/bin/env python2
 from setuptools import setup, Extension
 
-# the c++ extension module
-extension_mod = Extension("qiradb", ["src/qiradb.cpp", "src/qiradb_python.cpp"])
+# should be a symlink to the root
+version=open('VERSION').read().strip()
 
-setup(name = "qiradb", version='0.6', ext_modules=[extension_mod])
+# the c++ extension module
+extension_mod = Extension("qiradb._qiradb", ["qiradb/Trace.cpp", "qiradb/_qiradb.cpp"])
+
+# specify the package
+setup(name='qiradb', version=version, ext_modules=[extension_mod], packages=['qiradb'])
 

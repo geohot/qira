@@ -5,7 +5,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-#include "qiradb.h"
+#include "Trace.h"
 
 #define MP make_pair
 #define PAGE_MASK 0xFFFFFFFFFFFFF000LL

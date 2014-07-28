@@ -3,6 +3,13 @@ set -e
 rm -rf distrib/
 mkdir -p distrib/qira
 
+VERSION=$(cat VERSION)
+echo "packaging version $VERSION"
+
+# VERSION is required to build the python thing
+echo "copying docs"
+cp VERSION README distrib/qira/
+
 # requires objdump
 # writable /tmp
 
@@ -49,9 +56,7 @@ done
 
 echo "copying qiradb"
 mkdir -p distrib/qira/qiradb
-cp qiradb/*.cpp distrib/qira/qiradb/
-cp qiradb/*.h distrib/qira/qiradb/
-cp qiradb/setup.py distrib/qira/qiradb/
+cp -R qiradb/* distrib/qira/qiradb/
 
 # package up the python, hopefully this includes pymongo driver
 # hmm, it doesn't, user will need to install
@@ -76,8 +81,7 @@ cp -av fetchlibs.sh qira distrib/qira/
 
 echo "making archive"
 cd distrib/
-#tar zcvf qira-0.3.tar.gz qira
-tar cvf qira-0.5.tar qira
-xz qira-0.5.tar
+tar cvf qira-$VERSION.tar qira
+xz qira-$VERSION.tar
 cd ../
 

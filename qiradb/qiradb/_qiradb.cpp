@@ -1,6 +1,6 @@
 #include <Python.h>
 #include <structmember.h>
-#include "qiradb.h"
+#include "Trace.h"
 
 #if __cplusplus == 201103L
 #define FE(x,y) for (auto y = x.begin(); y != x.end(); ++y)
@@ -199,11 +199,11 @@ static PyTypeObject qiradb_TraceType = {
     (initproc)Trace_init,      /* tp_init */
 };
 
-void initqiradb(void) {
+void init_qiradb(void) {
   PyObject* m;
   qiradb_TraceType.tp_new = PyType_GenericNew;
   if (PyType_Ready(&qiradb_TraceType) < 0) return;
-  m = Py_InitModule("qiradb", Methods);
+  m = Py_InitModule("_qiradb", Methods);
   if (m == NULL) return;
   Py_INCREF(&qiradb_TraceType);
   PyModule_AddObject(m, "Trace", (PyObject *)&qiradb_TraceType);
