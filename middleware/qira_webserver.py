@@ -218,21 +218,24 @@ def getregisters(forknum, clnum):
 
 @socketio.on('getstrace', namespace='/qira')
 def get_strace(forknum):
+  if forknum not in program.traces:
+    return
+  trace = program.traces[forknum]
   try:
     f = open("/tmp/qira_logs/"+str(int(forknum))+"_strace").read()
   except:
     return "no strace"
 
   ret = []
-  first_clnum = None
   for ff in f.split("\n"):
     if ff == '':
       continue
     ff = ff.split(" ")
-    clnum = int(ff[0])
-    if first_clnum == None:
-      first_clnum = clnum
-    if clnum == first_clnum:
+    try:
+      clnum = int(ff[0])
+    except:
+      continue
+    if clnum == trace.db.get_minclnum():
       # filter the boring syscalls
       continue
     pid = int(ff[1])

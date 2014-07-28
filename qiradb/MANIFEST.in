@@ -1,3 +1,4 @@
 include qiradb/*
 include setup.py
+include VERSION
 

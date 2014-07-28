@@ -1,5 +1,5 @@
-#!/bin/bash
-set -e
+#!/bin/bash -e
+
 rm -rf distrib/
 mkdir -p distrib/qira
 

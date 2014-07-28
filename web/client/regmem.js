@@ -104,6 +104,14 @@ Template.regviewer.datatype = function() {
   return get_data_type(this.value);
 };
 
+Template.regviewer.isselected = function() {
+  if (Session.get('daddr') == this.address) {
+    return 'highlight';
+  } else {
+    return '';
+  }
+};
+
 // keep these updated
 Deps.autorun(function() {
   var daddr = Session.get('daddr');

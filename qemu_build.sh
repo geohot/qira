@@ -1,5 +1,4 @@
-#!/bin/bash
-set -e
+#!/bin/bash -e
 
 if [ ! -d qemu/qemu-latest ]; then
   rm -rf qemu

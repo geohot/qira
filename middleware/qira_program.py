@@ -70,6 +70,7 @@ class Program:
     else:
       raise Exception("binary type "+hex(self.fb)+" not supported")
 
+    self.qirabinary = os.path.realpath(self.qirabinary)
     print "**** using",self.qirabinary,"for",hex(self.fb)
 
     # no traces yet

@@ -91,6 +91,10 @@ var baseevents = {
     var daddr = parseInt(e.target.getAttribute('daddr'));
     Session.set('daddr', daddr);
   },
+  'click .register': function(e) {
+    // the registers are in the zero page
+    Session.set('daddr', this.address);
+  }
 };
 
 // uniform events everywhere
