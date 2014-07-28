@@ -137,7 +137,9 @@ class Program:
     self.traces[i] = Trace(fn, i, self.tregs[1], len(self.tregs[0]), self.tregs[2])
 
   def execqira(self, args=[]):
-    os.execvp(self.qirabinary, [self.qirabinary]+self.defaultargs+args+[self.program]+self.args)
+    eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
+    print "***",' '.join(eargs)
+    os.execvp(self.qirabinary, eargs)
 
 class Trace:
   def __init__(self, fn, forknum, r1, r2, r3):

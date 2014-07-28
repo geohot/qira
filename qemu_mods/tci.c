@@ -543,17 +543,19 @@ void init_QIRA(CPUArchState *env, int id) {
   GLOBAL_logstate->first_changelist_number = GLOBAL_start_clnum;
   GLOBAL_logstate->parent_id = GLOBAL_parent_id;
 
-  // use all fds up to 20
+  // use all fds up to 30
   int i;
   int dupme = open("/dev/null", O_RDONLY);
   struct stat useless;
-  for (i = 0; i < 20; i++) {
+  for (i = 0; i < 30; i++) {
     sprintf(fn, "/proc/self/fd/%d", i);
     if (stat(fn, &useless) == -1) {
-      printf("dup2 %d %d\n", dupme, i);
+      //printf("dup2 %d %d\n", dupme, i);
       dup2(dupme, i);
     }
   }
+
+  // no more opens can happen here in QEMU, only the target process
 }
 
 struct change *add_change(target_ulong addr, uint64_t data, uint32_t flags) {
@@ -729,9 +731,10 @@ void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
   char fn[PATH_MAX];
   sprintf(fn, "/tmp/qira_logs/%d", this_id);
 
-  int qira_log_fd = open(fn, O_RDWR, 0644);
-  dup2(qira_log_fd, 100+this_id);
-  close(qira_log_fd);
+  int qira_log_fd, qira_log_fd_ = open(fn, O_RDWR, 0644);
+  // qira_log_fd_ must be 30, if it isn't, i'm not sure what happened
+  dup2(qira_log_fd_, 100+this_id);
+  close(qira_log_fd_);
   qira_log_fd = 100+this_id;
 
   struct logstate plogstate;
@@ -739,6 +742,8 @@ void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
     printf("HEADER READ ISSUE!\n");
     return;
   }
+
+  printf("+++ REPLAY %d START on fd %d(%d)\n", this_id, qira_log_fd, qira_log_fd_);
 
   // check if this one has a parent and recurse here
   // BUG: FD ISSUE!
@@ -783,7 +788,7 @@ void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
 
   close(qira_log_fd);
 
-  printf("*** REPLAY DONE ***\n");
+  printf("+++ REPLAY %d DONE to %d\n", this_id, to_change);
 }
 
 bool is_filtered_address(target_ulong pc);
