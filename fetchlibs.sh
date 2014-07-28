@@ -1,5 +1,12 @@
 #!/bin/bash -e
 
+DEBOOTSTRAP_DIR=/usr/share/debootstrap
+
+if [ ! -d "$DEBOOTSTRAP_DIR" ]; then
+  echo "this script requires debootstrap to be installed"
+  exit 1
+fi
+
 # this is ubuntu specific i think
 fetcharch() {
   ARCH="$1"
@@ -17,7 +24,6 @@ fetcharch() {
 
   mkdir -p "$TARGET" "$TARGET/debootstrap"
 
-  DEBOOTSTRAP_DIR=/usr/share/debootstrap
   . $DEBOOTSTRAP_DIR/functions
   . $DEBOOTSTRAP_DIR/scripts/$SUITE
 

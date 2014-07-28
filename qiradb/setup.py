@@ -2,6 +2,7 @@
 from setuptools import setup, Extension
 
 # should be a symlink to the root
+# could also add the git rev to this?
 version=open('VERSION').read().strip()
 
 # the c++ extension module

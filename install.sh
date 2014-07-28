@@ -1,5 +1,4 @@
-#!/bin/bash
-set -e
+#!/bin/bash -e
 
 # default is just pip, but on things like arch where python 3 is default, it's pip2
 PIP="pip"
@@ -18,6 +17,6 @@ fi
 echo "installing pip packages"
 sudo $PIP install flask-socketio pillow ./qiradb
 
-echo "making symlinks"
+echo "making symlink"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira
 
