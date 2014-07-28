@@ -3,21 +3,11 @@ stream = io.connect(STREAM_URL);
 // *** the analysis overlay ***
 
 Deps.autorun(function() {
-  var is_analyzing = Session.get("is_analyzing");
   var maxclnum = Session.get("max_clnum");
-  if (is_analyzing) {
-    $('#control_analysis').addClass("highlight");
-    for (i in maxclnum) {
-      stream.emit('doanalysis', parseInt(i))
-    }
-  } else {
-    $('#control_analysis').removeClass("highlight");
-    $(".vtimeline").each(function(id) {
-      $(this)[0].style.backgroundImage = "";
-    });
+  for (i in maxclnum) {
+    stream.emit('doanalysis', parseInt(i))
   }
 });
-
 
 var overlays = {};
 
@@ -150,9 +140,8 @@ function redraw_vtimelines(scale) {
   for (forknum in maxclnum) {
     var vt = $('#vtimeline'+forknum);
     var max = maxclnum[forknum];
-    //vt.css('image-rendering', 'pixelated');
-    var is_analyzing = Session.get("is_analyzing");
-    if (is_analyzing && overlays[forknum] !== undefined) vt.css('background-image', "url('"+overlays[forknum]+"')");
+
+    if (overlays[forknum] !== undefined) vt.css('background-image', "url('"+overlays[forknum]+"')");
     var cscale = get_cscale();
 
     if (max[0] < cview[0] && cview[0] < max[1]) { add_flag("zoom", forknum, cview[0]); }

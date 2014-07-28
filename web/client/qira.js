@@ -11,7 +11,6 @@ Deps.autorun(function() {
   json['dview'] = Session.get('dview');
   json['cview'] = Session.get('cview');
   json['max_clnum'] = Session.get('max_clnum');
-  json['is_analyzing'] = Session.get('is_analyzing');
   var hash = JSON.stringify(json);
   current_hash = hash;
   //p("updating hash to "+hash);

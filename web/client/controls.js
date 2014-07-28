@@ -16,10 +16,6 @@ Template.controls.daddr = function() {
   return hex(Session.get("daddr"));
 };
 
-// probably shouldn't be here
-// left off for now, doesn't work if things are big
-//Session.setDefault('is_analyzing', true);
-
 Template.controls.events = {
   'change #control_clnum': function(e) {
     Session.set("clnum", parseInt(e.target.value));
@@ -37,14 +33,6 @@ Template.controls.events = {
     var clnum = Session.get("clnum");
     var forknum = Session.get("forknum");
     stream.emit('forkat', forknum, clnum);
-  },
-  'click #control_analysis': function(e) {
-    var is_analyzing = Session.get("is_analyzing");
-    if (is_analyzing) {
-      Session.set("is_analyzing", false);
-    } else {
-      Session.set("is_analyzing", true);
-    }
   }
 };
 

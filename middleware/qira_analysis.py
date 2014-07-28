@@ -243,9 +243,8 @@ def get_depth_map(fxns, maxclnum):
     dmap.append(thisd)
   return dmap
 
-def get_instruction_flow(trace, program):
+def get_instruction_flow(trace, program, maxclnum):
   ret = []
-  maxclnum = trace.db.get_maxclnum()
   for i in range(0, maxclnum):
     r = trace.db.fetch_changes_by_clnum(i, 1)
     if len(r) != 1:
@@ -272,7 +271,11 @@ def get_hacked_depth_map(flow):
 
 def analyze(trace, program):
   maxclnum = trace.db.get_maxclnum()
-  flow = get_instruction_flow(trace, program)
+  if maxclnum > 10000:
+    # don't analyze if the program is bigger than this
+    return
+  
+  flow = get_instruction_flow(trace, program, maxclnum)
 
   #blocks = get_blocks(flow)
   #print blocks
