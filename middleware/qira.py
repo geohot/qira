@@ -10,7 +10,7 @@ import qira_program
 import qira_webserver
 
 if __name__ == '__main__':
-  parser = argparse.ArgumentParser(description = 'Analyze binary.')
+  parser = argparse.ArgumentParser(description = 'Analyze binary. Like "qira /bin/ls /"')
   parser.add_argument('-s', "--server", help="bind on port 4000. like socat", action="store_true")
   parser.add_argument('-t', "--tracelibraries", help="trace into all libraries", action="store_true")
   parser.add_argument('binary', help="path to the binary")

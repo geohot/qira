@@ -12,7 +12,7 @@ Deps.autorun(function() {
 var overlays = {};
 
 stream.on('setpicture', function(msg) {
-  p(msg);
+  //p(msg);
   forknum = msg['forknum'];
   overlays[forknum] = msg['data'];
   var vt = $('#vtimeline'+forknum);

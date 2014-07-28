@@ -7,15 +7,13 @@ set -e
 if [ $(which apt-get) ]; then
   echo "installing apt packages"
   sudo apt-get install build-essential python-dev python-pip debootstrap
+elif [ $(which pacman) ]; then
+  echo "installing pip"
+  sudo pacman -S base-devel python2-pip
 fi
 
 echo "installing pip packages"
-sudo pip install flask-socketio pillow
-
-echo "installing qiradb"
-cd qiradb
-sudo python setup.py install
-cd ../
+sudo pip install flask-socketio pillow ./qiradb
 
 echo "making symlinks"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira

@@ -1,14 +1,7 @@
-from distutils.core import setup, Extension
+from setuptools import setup, Extension
 
-"""
-import os
-os.environ["CC"] = "clang"
-os.environ["CXX"] = "clang"
-extension_mod = Extension("qiradb", ["qiradb.cpp", "qiradb_python.cpp"], extra_compile_args=['-std=c++11'])
-
-"""
 # the c++ extension module
-extension_mod = Extension("qiradb", ["qiradb.cpp", "qiradb_python.cpp"])
+extension_mod = Extension("qiradb", ["src/qiradb.cpp", "src/qiradb_python.cpp"])
 
-setup(name = "qiradb", ext_modules=[extension_mod])
+setup(name = "qiradb", version='0.6', ext_modules=[extension_mod])
 

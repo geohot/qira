@@ -163,5 +163,3 @@ stream.on('clnum', function(msg) {
   UI.insert(UI.renderWithData(Template.datachanges, {memactions: msg}), $('#datachanges')[0]);
 });
 
-
-
