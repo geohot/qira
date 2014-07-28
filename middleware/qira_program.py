@@ -14,24 +14,20 @@ X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8, F
 
 # things that don't cross the fork
 class Program:
-  def __init__(self, qiraargs):
+  def __init__(self, prog, args):
     # create the logs dir
     try:
       os.mkdir("/tmp/qira_logs")
     except:
       pass
 
-    self.qiraargs = qiraargs
-    self.program = qiraargs.binary
-    self.args = qiraargs.args
-
     # bring this back
-    if self.program != "/tmp/qira_binary":
+    if prog != "/tmp/qira_binary":
       try:
         os.unlink("/tmp/qira_binary")
       except:
         pass
-      os.symlink(os.path.realpath(self.program), "/tmp/qira_binary")
+      os.symlink(os.path.realpath(prog), "/tmp/qira_binary")
 
     # defaultargs for qira binary
     self.defaultargs = ["-strace", "-D", "/dev/null", "-d", "in_asm", "-singlestep"]
@@ -39,8 +35,12 @@ class Program:
     # pmaps is global, but updated by the traces
     self.instructions = {}
 
+    self.program = prog
+    self.args = args
+
     # get file type
-    self.fb = struct.unpack("H", open(self.program).read(0x18)[0x12:0x14])[0]   # e_machine
+    #self.fb = qira_binary.file_binary(prog)
+    self.fb = struct.unpack("H", open(prog).read(0x18)[0x12:0x14])[0]   # e_machine
     qemu_dir = os.path.dirname(os.path.realpath(__file__))+"/../qemu/"
 
     def use_lib(arch):
@@ -50,7 +50,7 @@ class Program:
         print "**** set QEMU_LD_PREFIX to",os.environ['QEMU_LD_PREFIX']
 
     if self.fb == 0x28:
-      progdat = open(self.program).read(0x800)
+      progdat = open(prog).read(0x800)
       if '/lib/ld-linux.so.3' in progdat:
         use_lib('armel')
       elif '/lib/ld-linux-armhf.so.3' in progdat:
@@ -137,10 +137,7 @@ class Program:
     self.traces[i] = Trace(fn, i, self.tregs[1], len(self.tregs[0]), self.tregs[2])
 
   def execqira(self, args=[]):
-    if self.qiraargs.socat_only:
-      os.execvp(self.program, [self.program]+self.args)
-    else:
-      os.execvp(self.qirabinary, [self.qirabinary]+self.defaultargs+args+[self.program]+self.args)
+    os.execvp(self.qirabinary, [self.qirabinary]+self.defaultargs+args+[self.program]+self.args)
 
 class Trace:
   def __init__(self, fn, forknum, r1, r2, r3):
