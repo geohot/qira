@@ -88,9 +88,11 @@ def analysis(forknum):
   # this fails sometimes, who knows why
   try:
     data = qira_analysis.analyze(trace, program)
+  except Exception as e:
+    print "!!! analysis failed on",forknum,"because",e
+    data = None
+  if data != None:
     emit('setpicture', {"forknum":forknum, "data":data})
-  except:
-    pass
   
 @socketio.on('connect', namespace='/qira')
 def connect():

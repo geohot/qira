@@ -12,6 +12,7 @@ Deps.autorun(function() {
 var overlays = {};
 
 stream.on('setpicture', function(msg) {
+  p(msg);
   forknum = msg['forknum'];
   overlays[forknum] = msg['data'];
   var vt = $('#vtimeline'+forknum);
@@ -148,15 +149,17 @@ function redraw_vtimelines(scale) {
     if (max[0] < cview[1] && cview[1] < max[1]) { add_flag("zoom", forknum, cview[1]); }
 
     // so it looks like size is applied before position, hence we divide position by cscale
-    vt.css('background-size', "100% " + ((max[1]-max[0]) / cscale) + "px")
-    vt.css('background-position-y', -1*(cview[0]/cscale) + "px");
+    //vt.css('background-size', "100% " + ((max[1]-max[0]) / cscale) + "px")
+    //vt.css('background-position-y', -1*(cview[0]/cscale) + "px");
+    vt.css('background-size', "100% " + (max[1] / cscale) + "px")
+    vt.css('background-position-y', -1*((Math.max(max[0],cview[0])-max[0])/cscale) + "px");
     vt.css('background-repeat', "no-repeat");
     if (vt.length == 0) {
       $("#vtimelinebox").append($('<div class="vtimeline" id="vtimeline'+forknum+'"></div>'))
       vt = $('#vtimeline'+forknum);
     }
 
-    var range = Math.min(maxclnum[forknum][1], cview[1]) - Math.max(maxclnum[forknum][0], cview[0]);
+    var range = Math.min(max[1], cview[1]) - Math.max(max[0], cview[0]);
     var topp = 0;
     if (maxclnum[forknum][0] > cview[0]) {
       topp = Math.ceil((maxclnum[forknum][0] - cview[0])/scale);

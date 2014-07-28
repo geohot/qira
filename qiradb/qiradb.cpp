@@ -172,7 +172,7 @@ void Trace::process() {
     pthread_rwlock_unlock(&db_lock_);
 
     // max_clnum_
-    if (max_clnum_ < c->clnum) {
+    if (max_clnum_ < c->clnum && c->clnum != INVALID_CLNUM) {
       max_clnum_ = c->clnum;
     }
 
