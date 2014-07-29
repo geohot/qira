@@ -6,7 +6,7 @@
 //#define DEBUG
 
 // ***************** WEBSOCKETS *******************
-#include <libwebsockets.h>
+#include "libwebsockets.h"
 
 static int callback_http(struct libwebsocket_context* context,
     struct libwebsocket* wsi,
@@ -85,7 +85,11 @@ static void update_address(const char *type, ea_t addr) {
   ws_send(tmp);
 }
 
+#ifdef _WIN32
+static int __stdcall hook(void *user_data, int event_id, va_list va) {
+#else
 static int hook(void *user_data, int event_id, va_list va) {
+#endif
   static ea_t old_addr = 0;
   ea_t addr;
   if (event_id == view_curpos) {
@@ -145,7 +149,7 @@ int websocket_thread(void *) {
 
 void start_websocket_thread() {
   websockets_running = 1;
-  websockets_thread = qthread_create(websocket_thread, NULL);
+  websockets_thread = qthread_create((qthread_cb_t)websocket_thread, NULL);
 }
 
 void exit_websocket_thread() {
@@ -155,19 +159,19 @@ void exit_websocket_thread() {
 
 // ***************** IDAPLUGIN BOILERPLATE *******************
 
-int IDAP_init(void) {
+int idaapi IDAP_init(void) {
   hook_to_notification_point(HT_VIEW, hook, NULL);
   start_websocket_thread();
 	return PLUGIN_KEEP;
 }
 
-void IDAP_term(void) {
+void idaapi IDAP_term(void) {
   unhook_from_notification_point(HT_VIEW, hook);
   exit_websocket_thread();
 	return;
 }
 
-void IDAP_run(int arg) {
+void idaapi IDAP_run(int arg) {
   msg("installing book\n");
   return;
 }
