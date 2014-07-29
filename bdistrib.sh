@@ -48,7 +48,7 @@ cp ida/bin/* distrib/qira/ida/bin/
 # fairly standard deps + librt, libglib, libpcre
 echo "copying qemu"
 mkdir -p distrib/qira/qemu
-for arch in "i386" "arm" "x86_64"; do
+for arch in "i386" "arm" "x86_64" "ppc"; do
   cp "qemu/qira-$arch" "distrib/qira/qemu/qira-$arch"
   strip "distrib/qira/qemu/qira-$arch"
   #upx -9 "distrib/qira/qemu/qira-$arch"
