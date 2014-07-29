@@ -15,7 +15,7 @@ elif [ $(which pacman) ]; then
 fi
 
 echo "installing pip packages"
-sudo $PIP install flask-socketio pillow elftools ./qiradb
+sudo $PIP install flask-socketio pillow pyelftools ./qiradb
 
 echo "making symlink"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira
