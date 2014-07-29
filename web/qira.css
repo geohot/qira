@@ -166,6 +166,12 @@ body {
 
 .instruction {
   font-family: monospace;
+  white-space: nowrap;
+}
+
+.instructiondesc {
+  min-width: 180px;
+  display: inline-block;
 }
 
 .data {

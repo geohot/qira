@@ -166,7 +166,7 @@ Template.datachanges.datatype = function() {
 
 Deps.autorun(function() {
   var forknum = Session.get("forknum");
-  stream.emit('getclnum', forknum, Session.get('clnum'), ['L', 'S'], 2)
+  stream.emit('getclnum', forknum, Session.get('clnum'), ['L', 'S'], 3)
 });
 
 stream.on('clnum', function(msg) {

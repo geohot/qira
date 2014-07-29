@@ -89,6 +89,8 @@ class Program:
     # no traces yet
     self.traces = {}
 
+    self.getdwarf()
+
   def clear(self):
     # probably always good to do except in development of middleware
     print "*** deleting old runs"
@@ -154,6 +156,39 @@ class Program:
     eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
     print "***",' '.join(eargs)
     os.execvp(self.qirabinary, eargs)
+
+  def getdwarf(self):
+    self.dwarves = {}
+    from elftools.elf.elffile import ELFFile
+    elf = ELFFile(open(self.program))
+    if not elf.has_dwarf_info():
+      return
+
+    # DWARF IS STUPIDLY COMPLICATED
+    di = elf.get_dwarf_info()
+    for cu in di.iter_CUs():
+      basedir = ''
+      # get the base directory
+      for die in cu.iter_DIEs():
+        if die.tag == "DW_TAG_compile_unit":
+          basedir = die.attributes['DW_AT_comp_dir'].value
+      # get the line program?
+      lp = di.line_program_for_CU(cu)
+      dir_index = lp['file_entry'][0].dir_index
+      if dir_index > 0:
+        basedir = lp['include_directory'][dir_index-1]
+      # now we have the filename
+      filename = basedir + "/" + lp['file_entry'][0].name
+      try:
+        lines = open(filename).read().split("\n")
+      except:
+        print "*** couldn't find %s for DWARF", filename
+        continue
+      for entry in lp.get_entries():
+        #print entry
+        s = entry.state
+        if s != None:
+          self.dwarves[s.address] = (s.line, lines[s.line-1])
 
 class Trace:
   def __init__(self, fn, forknum, r1, r2, r3):
