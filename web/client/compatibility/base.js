@@ -15,6 +15,26 @@ function get_data_type(v) {
   else return "data"+a;
 }
 
+function highlight_addresses(a) {
+  // no XSS :)
+  var d = UI.toHTML(a);
+  var re = /0x[0123456789abcdef]+/g;
+  var m = d.match(re);
+  if (m !== null) {
+    m = m.filter(function (v,i,a) { return a.indexOf (v) == i });
+    m.map(function(a) { 
+      var cl = get_data_type(a);
+      if (cl == "") return;
+      d = d.replace(a, "<span class='h"+cl+"'>"+a+"</span>");
+    });
+  }
+  return new Handlebars.SafeString(d);
+}
+
+function fhex(a) {
+  return parseInt(a, 16);
+}
+
 function hex(a) {
   if (a == undefined) {
     return "";

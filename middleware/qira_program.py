@@ -12,6 +12,19 @@ ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12',
 X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, False)
 X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8, False)
 
+
+def which(prog):
+  import subprocess
+  cmd = ["which", prog]
+  p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+  res = p.stdout.readlines()
+  if len(res) == 0:
+    # fallback mode, look for the binary straight up
+    if os.path.isfile(prog):
+      return os.path.realpath(prog)
+    raise Exception("binary not found")
+  return os.path.realpath(res[0].strip())
+
 # things that don't cross the fork
 class Program:
   def __init__(self, prog, args):
@@ -21,13 +34,17 @@ class Program:
     except:
       pass
 
+    # call which to match the behavior of strace and gdb
+    self.program = which(prog)
+    self.args = args
+
     # bring this back
-    if prog != "/tmp/qira_binary":
+    if self.program != "/tmp/qira_binary":
       try:
         os.unlink("/tmp/qira_binary")
       except:
         pass
-      os.symlink(os.path.realpath(prog), "/tmp/qira_binary")
+      os.symlink(os.path.realpath(self.program), "/tmp/qira_binary")
 
     # defaultargs for qira binary
     self.defaultargs = ["-strace", "-D", "/dev/null", "-d", "in_asm", "-singlestep"]
@@ -35,12 +52,8 @@ class Program:
     # pmaps is global, but updated by the traces
     self.instructions = {}
 
-    self.program = prog
-    self.args = args
-
     # get file type
-    #self.fb = qira_binary.file_binary(prog)
-    self.fb = struct.unpack("H", open(prog).read(0x18)[0x12:0x14])[0]   # e_machine
+    self.fb = struct.unpack("H", open(self.program).read(0x18)[0x12:0x14])[0]   # e_machine
     qemu_dir = os.path.dirname(os.path.realpath(__file__))+"/../qemu/"
 
     def use_lib(arch):
@@ -50,7 +63,7 @@ class Program:
         print "**** set QEMU_LD_PREFIX to",os.environ['QEMU_LD_PREFIX']
 
     if self.fb == 0x28:
-      progdat = open(prog).read(0x800)
+      progdat = open(self.program).read(0x800)
       if '/lib/ld-linux.so.3' in progdat:
         use_lib('armel')
       elif '/lib/ld-linux-armhf.so.3' in progdat:

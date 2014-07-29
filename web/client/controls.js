@@ -1,6 +1,5 @@
 stream = io.connect(STREAM_URL);
 
-
 Template.controls.clnum = function() {
   return Session.get("clnum");
 };
@@ -25,10 +24,10 @@ Template.controls.events = {
     Session.set("forknum", parseInt(e.target.value));
   },
   'change #control_iaddr': function(e) {
-    Session.set("iaddr", parseInt(e.target.value, 16));
+    Session.set("iaddr", fhex(e.target.value));
   },
   'change #control_daddr': function(e) {
-    update_dview(parseInt(e.target.value, 16));
+    update_dview(fhex(e.target.value));
   },
   'click #control_fork': function(e) {
     var clnum = Session.get("clnum");
@@ -55,6 +54,19 @@ window.onkeydown = function(e) {
     history.back();
   }
 };
+
+$(document).ready(function() {
+  $('body').on('click', '.hdatamemory', function(e) {
+    update_dview(fhex(e.target.innerHTML));
+  });
+  $('body').on('click', '.hdatainstruction', function(e) {
+    update_dview(fhex(e.target.innerHTML));
+  });
+  $('body').on('contextmenu', '.hdatainstruction', function(e) {
+    Session.set("iaddr", fhex(e.target.innerHTML));
+    return false;
+  });
+});
 
 // don't pull the window
 //window.onmousewheel = function() { return false; }

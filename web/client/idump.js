@@ -42,6 +42,8 @@ Template.idump.events({
   }
 });
 
+Template.idump.instruction = function() { return highlight_addresses(this.instruction); }
+
 // ** should move these to idump.js **
 
 stream.on('instructions', function(msg) {

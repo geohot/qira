@@ -24,3 +24,5 @@ Template.strace.events({
   },
 });
 
+Template.strace.sc = function() { return highlight_addresses(this.sc); }
+

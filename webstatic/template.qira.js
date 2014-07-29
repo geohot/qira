@@ -5,10 +5,13 @@ UI.body.contentParts.push(UI.Component.extend({render: (function() {
     id: "onlypanel"
   }, "\n", HTML.DIV({
     id: "controls"
-  }, "\n", Spacebars.include(self.lookupTemplate("controls")), "\n"), "\n", HTML.DIV({
+  }, "\n", Spacebars.include(self.lookupTemplate("controls")), "\n"), "\n\n", HTML.DIV("\n\n", HTML.DIV({
+    "class": "panelthing",
+    id: "changeeditor"
+  }, "\n", Spacebars.include(self.lookupTemplate("changeeditor")), "\n"), "\n\n", HTML.DIV({
     "class": "panelthing",
     id: "idump"
-  }, "\n", Spacebars.include(self.lookupTemplate("idump")), "\n"), HTML.Raw('\n<div class="panelthing" id="regviewer">\n</div>\n'), HTML.DIV({
+  }, "\n", Spacebars.include(self.lookupTemplate("idump")), "\n"), "\n"), HTML.Raw('\n\n<div class="panelthing" id="regviewer">\n</div>\n'), HTML.DIV({
     "class": "panelthing",
     id: "datachanges"
   }, "\n", Spacebars.include(self.lookupTemplate("datachanges")), "\n"), "\n", HTML.DIV({
@@ -76,6 +79,33 @@ Template.__define__("strace", (function() {
   }));
 }));
 
+Template.__define__("changeeditor", (function() {
+  var self = this;
+  var template = this;
+  return [ HTML.Raw('<input id="changeadd" type="button" value="Add Change">\n<input id="changeclear" type="button" value="Clear">\n'), HTML.DIV({
+    id: "pending"
+  }, "\n", Spacebars.include(self.lookupTemplate("pending")), "\n") ];
+}));
+
+Template.__define__("pending", (function() {
+  var self = this;
+  var template = this;
+  return HTML.TABLE("\n", UI.Each(function() {
+    return Spacebars.call(self.lookup("pending"));
+  }, UI.block(function() {
+    var self = this;
+    return [ "\n", HTML.TR("\n", HTML.TD(function() {
+      return Spacebars.mustache(self.lookup("daddr"));
+    }), HTML.TD("="), "\n", HTML.INPUT({
+      spellcheck: "false",
+      "class": "changeedit",
+      value: function() {
+        return Spacebars.mustache(self.lookup("ddata"));
+      }
+    }), "\n"), "\n" ];
+  })), "\n");
+}));
+
 Template.__define__("idump", (function() {
   var self = this;
   var template = this;
@@ -114,12 +144,16 @@ Template.__define__("regviewer", (function() {
       "class": [ "reg ", function() {
         return Spacebars.mustache(self.lookup("regactions"));
       } ]
-    }, "\n  ", function() {
+    }, "\n  ", HTML.SPAN({
+      "class": "register"
+    }, function() {
       return Spacebars.mustache(self.lookup("name"));
-    }, ": ", HTML.SPAN({
-      "class": function() {
+    }, ": "), HTML.SPAN({
+      "class": [ function() {
         return Spacebars.mustache(self.lookup("datatype"));
-      }
+      }, " ", function() {
+        return Spacebars.mustache(self.lookup("isselected"));
+      } ]
     }, function() {
       return Spacebars.mustache(self.lookup("hexvalue"));
     }), "\n  "), "\n" ];
