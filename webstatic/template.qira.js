@@ -127,9 +127,15 @@ Template.__define__("idump", (function() {
       } ]
     }, function() {
       return Spacebars.mustache(self.lookup("hexaddress"));
-    }), "\n  ", function() {
+    }), "\n  ", HTML.DIV({
+      "class": "instructiondesc"
+    }, function() {
       return Spacebars.mustache(self.lookup("instruction"));
-    }, "\n  "), "\n" ];
+    }), "\n  ", HTML.SPAN({
+      "class": "comment"
+    }, function() {
+      return Spacebars.mustache(self.lookup("comment"));
+    }), "\n  "), "\n" ];
   }));
 }));
 

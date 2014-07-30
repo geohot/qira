@@ -176,7 +176,7 @@ def getinstructions(forknum, clstart, clend):
     if rret['address'] in program.instructions:
       rret['instruction'] = program.instructions[rret['address']]
     if rret['address'] in program.dwarves:
-      rret['comment'] = program.dwarves[rret['address']]
+      rret['comment'] = program.dwarves[rret['address']][1]
     ret.append(rret)
   emit('instructions', ret)
 

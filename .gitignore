@@ -16,4 +16,5 @@ qemu/qemu-2*
 distrib/
 libs/
 qiradb/build
+cda/clang
 

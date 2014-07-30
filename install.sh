@@ -19,4 +19,5 @@ sudo $PIP install flask-socketio pillow pyelftools ./qiradb
 
 echo "making symlink"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira
+sudo ln -sf $(pwd)/cda/cda /usr/local/bin/cda
 

@@ -1,0 +1,29 @@
+#!/usr/bin/env python2
+import os
+import sys
+import cachegen
+import json
+
+file_cache = {}
+
+if __name__ == "__main__":
+  directory = os.path.realpath(sys.argv[2])
+  print "root directory is",directory
+  if os.path.isfile(directory):
+    #DEBUG = 1
+    filename = directory.split("/")[-1]
+    directory = '/'.join(directory.split("/")[:-1])
+    print "single file",filename
+    file_cache[filename] = cachegen.parse_file(directory+"/"+filename)
+  else:
+    for root, dir, files in os.walk(directory):
+      for file in filter(lambda x: x.split(".")[-1] in ["c", "cc", "cpp", "h", "hpp"], files):
+        fn = root+"/"+file
+        print "parsing",fn
+        filename = fn[len(directory):].strip("/")
+        file_cache[filename] = cachegen.parse_file(fn)
+  dat = (cachegen.object_cache, file_cache, cachegen.xref_cache)
+  f = open(sys.argv[1], "wb")
+  json.dump(dat, f)
+  f.close()
+
