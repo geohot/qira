@@ -13,8 +13,7 @@ python << EOF
 
 import vim
 
-print dir(vim.current)
-#print vim.current.line_num
+print vim.current.window.cursor
 
 #vim.current.buffer.append('bobobbb')
 #print dir(vim)

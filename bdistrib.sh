@@ -8,7 +8,7 @@ echo "packaging version $VERSION"
 
 # VERSION is required to build the python thing
 echo "copying docs"
-cp VERSION README distrib/qira/
+cp -av VERSION README distrib/qira/
 
 # requires objdump
 # writable /tmp

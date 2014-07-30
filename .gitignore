@@ -17,4 +17,5 @@ distrib/
 libs/
 qiradb/build
 cda/clang
+qemu
 

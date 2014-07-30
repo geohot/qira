@@ -21,6 +21,7 @@ if [ ! -d qemu/qemu-latest ]; then
   mv linux-user/strace.c linux-user/strace.c.bak
   cd ../../
 
+  echo "fetching qemu build-deps"
   sudo apt-get build-dep qemu
 fi
 

@@ -70,7 +70,10 @@ class Program:
         os.unlink("/tmp/qira_binary")
       except:
         pass
-      os.symlink(os.path.realpath(self.program), "/tmp/qira_binary")
+      try:
+        os.symlink(os.path.realpath(self.program), "/tmp/qira_binary")
+      except:
+        pass
 
     # defaultargs for qira binary
     self.defaultargs = ["-strace", "-D", "/dev/null", "-d", "in_asm", "-singlestep"]
