@@ -232,7 +232,7 @@ class Program:
           print "DWARF: error on",filename,"got",e
       return (dwarves, rdwarves)
 
-    (self.dwarves, self.rdwarves) = cachewrap("/tmp/dwarfcaches", self.proghash, parse_dwarf)
+    (self.dwarves, self.rdwarves) = cachewrap("/tmp/qira_dwarfcaches", self.proghash, parse_dwarf)
 
     # cda
     if not qira_config.WITH_CDA:
@@ -246,7 +246,7 @@ class Program:
         print "CDA: cachegen failed with",e
         return None
 
-    self.cda = cachewrap("/tmp/cdacaches", self.proghash, parse_cda)
+    self.cda = cachewrap("/tmp/qira_cdacaches", self.proghash, parse_cda)
 
 
 class Trace:
