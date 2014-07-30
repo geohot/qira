@@ -19,24 +19,12 @@ function link_click_handler(e) {
   selected.removeClass('highlighted');
   selected = $(document.getElementsByName(e.target.getAttribute('name')));
   selected.addClass('highlighted');
-
-  /*xdiv.empty();
-  xdiv.append($('<div class="xrefstitle">'+selected[0].getAttribute('usr')+'</div>'));
-
-  var xrefs_ele = selected[0].getAttribute('xrefs');
-  if (xrefs_ele == null) return;
-
-  var xrefs = xrefs_ele.split(" ");
-  p("xref "+xrefs);
-  for (var i = 0; i < xrefs.length; i++) {
-    xdiv.append($('<a href="/f/'+xrefs[i]+'">'+xrefs[i]+'</a></br>'));
-  }*/
 }
 
 function link_dblclick_handler(e) {
   var targets = e.target.getAttribute('targets').split(" ");
   p(targets);
-  window.location = "/f/"+targets[0];
+  window.location = "/f?"+targets[0];
 }
 
 function xref_key_handler(e) {
