@@ -14,6 +14,9 @@ elif [ $(which pacman) ]; then
   PIP="pip2"
 fi
 
+echo "building QEMU"
+./qemu_build.sh
+
 echo "installing pip packages"
 sudo $PIP install html flask-socketio pillow pyelftools ./qiradb
 

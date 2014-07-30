@@ -3,6 +3,7 @@
 rm -rf distrib/
 mkdir -p distrib/qira
 
+QEMU_SOURCE=1
 VERSION=$(cat VERSION)
 echo "packaging version $VERSION"
 
@@ -35,7 +36,7 @@ cp -R webstatic distrib/qira/
 # sudo pip install pymongo
 echo "copying middleware"
 mkdir -p distrib/qira/middleware
-cp middleware/*.py distrib/qira/middleware/
+cp -av middleware/*.py distrib/qira/middleware/
 
 # built for ida 6.6
 # perhaps build for older IDA as well, ie 6.1
@@ -43,20 +44,26 @@ cp middleware/*.py distrib/qira/middleware/
 # fairly standard deps + libcrypto, libssl, libz and libida
 mkdir -p distrib/qira/ida/bin
 echo "copying ida plugin"
-cp ida/bin/* distrib/qira/ida/bin/
+cp -av ida/bin/* distrib/qira/ida/bin/
 
-# fairly standard deps + librt, libglib, libpcre
-echo "copying qemu"
-mkdir -p distrib/qira/qemu
-for arch in "i386" "arm" "x86_64" "ppc"; do
-  cp "qemu/qira-$arch" "distrib/qira/qemu/qira-$arch"
-  strip "distrib/qira/qemu/qira-$arch"
-  #upx -9 "distrib/qira/qemu/qira-$arch"
-done
+if [ $QEMU_SOURCE ]; then
+  #echo "copying qemu_mods for building qemu from source"
+  cp -Rav qemu_mods distrib/qira/
+  cp -av qemu_build.sh distrib/qira/
+else
+  # fairly standard deps + librt, libglib, libpcre
+  echo "copying qemu"
+  mkdir -p distrib/qira/qemu
+  for arch in "i386" "arm" "x86_64" "ppc"; do
+    cp "qemu/qira-$arch" "distrib/qira/qemu/qira-$arch"
+    strip "distrib/qira/qemu/qira-$arch"
+    #upx -9 "distrib/qira/qemu/qira-$arch"
+  done
+fi
 
 echo "copying qiradb"
 mkdir -p distrib/qira/qiradb
-cp -R qiradb/* distrib/qira/qiradb/
+cp -Rav qiradb/* distrib/qira/qiradb/
 
 # package up the python, hopefully this includes pymongo driver
 # hmm, it doesn't, user will need to install
@@ -76,8 +83,7 @@ cp -R qiradb/* distrib/qira/qiradb/
 # then you run qira-i386 <binary>, we need to hack in the -singlestep arg
 
 echo "copying binaries"
-cp -av install.sh qira distrib/qira/
-cp -av fetchlibs.sh qira distrib/qira/
+cp -av install.sh qira fetchlibs.sh distrib/qira/
 
 echo "making archive"
 cd distrib/

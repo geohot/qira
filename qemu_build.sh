@@ -21,8 +21,10 @@ if [ ! -d qemu/qemu-latest ]; then
   mv linux-user/strace.c linux-user/strace.c.bak
   cd ../../
 
-  echo "fetching qemu build-deps"
-  sudo apt-get build-dep qemu
+  if [ $(which apt-get) ]; then
+    echo "fetching qemu build-deps, enter your password"
+    sudo apt-get --no-install-recommends -y build-dep qemu
+  fi
 fi
 
 cd qemu/qemu-latest

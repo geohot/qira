@@ -328,4 +328,3 @@ if __name__ == "__main__":
   qira_program.Program.read_asm_file(fake_program)
   analyze(t, fake_program)
 
-
