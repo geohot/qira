@@ -101,5 +101,5 @@ def display_file():
 def set_cache(cache):
   global object_cache, file_cache, xref_cache
   (object_cache, file_cache, xref_cache) = cache
-  print "read",len(file_cache),"files",len(object_cache),"objects",len(xref_cache),"xrefs"
+  print "CDA: read",len(file_cache),"files",len(object_cache),"objects",len(xref_cache),"xrefs"
 

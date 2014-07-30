@@ -18,7 +18,8 @@ if __name__ == '__main__':
   parser.add_argument('binary', help="path to the binary")
   parser.add_argument('args', nargs='*', help="arguments to the binary")
   parser.add_argument("--dwarf", help="parse program dwarf data", action="store_true")
-  parser.add_argument("--cda", help="use CDA to view source", action="store_true")
+  parser.add_argument("--cda", help="use CDA to view source(implies dwarf)", action="store_true")
+  parser.add_argument("--flush-cache", help="flush all QIRA caches", action="store_true")
 
   # parse arguments
   args = parser.parse_args()
@@ -28,6 +29,10 @@ if __name__ == '__main__':
     qira_config.WITH_DWARF = True
   if args.cda:
     qira_config.WITH_CDA = True
+    qira_config.WITH_DWARF = True
+  if args.flush_cache:
+    print "*** flushing caches"
+    os.system("rm -rfv /tmp/qira*")
 
   # creates the file symlink, program is constant through server run
   program = qira_program.Program(args.binary, args.args)

@@ -196,14 +196,14 @@ class Program:
 
     # DWARF IS STUPIDLY COMPLICATED
     def parse_dwarf():
+      files = []
       dwarves = {}
       rdwarves = {}
 
       from elftools.elf.elffile import ELFFile
       elf = ELFFile(open(self.program))
       if not elf.has_dwarf_info():
-        return (dwarves, rdwarves)
-      files = []
+        return (files, dwarves, rdwarves)
       filename = None
       di = elf.get_dwarf_info()
       for cu in di.iter_CUs():
@@ -233,21 +233,17 @@ class Program:
               rdwarves[filename+"#"+str(s.line)] = s.address
         except Exception as e:
           print "DWARF: error on",filename,"got",e
-      return (dwarves, rdwarves)
+      return (files, dwarves, rdwarves)
 
-    (self.dwarves, self.rdwarves) = cachewrap("/tmp/qira_dwarfcaches", self.proghash, parse_dwarf)
+    (files, self.dwarves, self.rdwarves) = cachewrap("/tmp/qira_dwarfcaches", self.proghash, parse_dwarf)
 
     # cda
     if not qira_config.WITH_CDA:
       return
 
     def parse_cda():
-      try:
-        import cachegen
-        return cachegen.parse_files(files)
-      except Exception as e:
-        print "CDA: cachegen failed with",e
-        return None
+      import cachegen
+      return cachegen.parse_files(files)
 
     self.cda = cachewrap("/tmp/qira_cdacaches", self.proghash, parse_cda)
 

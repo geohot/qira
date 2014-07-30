@@ -31,14 +31,6 @@ app = Flask(__name__)
 #app.config['DEBUG'] = True
 socketio = SocketIO(app)
 
-# add cda server paths here
-if qira_config.WITH_CDA:
-  try:
-    import cacheserver
-    app.register_blueprint(cacheserver.app)
-  except Exception as e:
-    print "CDA: load cacheserver failed with",e
-
 def ghex(a):
   if a == None:
     return None
@@ -322,10 +314,10 @@ def run_server(largs, lprogram):
   global program
   args = largs
   program = lprogram
-  try:
+  if qira_config.WITH_CDA:
+    import cacheserver
+    app.register_blueprint(cacheserver.app)
     cacheserver.set_cache(program.cda)
-  except:
-    pass
   print "starting socketio server..."
   threading.Thread(target=mwpoller).start()
   socketio.run(app, port=QIRA_WEB_PORT)
