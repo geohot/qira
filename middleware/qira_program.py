@@ -1,7 +1,12 @@
+import qira_config
 import os
 import sys
-import struct
+from hashlib import sha1
+basedir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(basedir+"/../cda")
 
+import json
+import struct
 import qiradb
 
 PPCREGS = ([], 4, True)
@@ -12,6 +17,25 @@ ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12',
 X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, False)
 X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8, False)
 
+def cachewrap(cachedir, cachename, cachegen):
+  try:
+    os.mkdir(cachedir)
+  except:
+    pass
+  cachename = cachedir + "/" + cachename
+  if os.path.isfile(cachename):
+    dat = json.load(open(cachename))
+    print "read cache",cachename
+  else:
+    print "cache",cachename,"not found, generating"
+    dat = cachegen()
+    if dat == None:
+      return None
+    f = open(cachename, "wb")
+    json.dump(dat, f)
+    f.close()
+    print "wrote cache",cachename
+  return dat
 
 def which(prog):
   import subprocess
@@ -37,6 +61,8 @@ class Program:
     # call which to match the behavior of strace and gdb
     self.program = which(prog)
     self.args = args
+    self.proghash = sha1(open(prog).read()).hexdigest()
+    print "*** program is",self.program,"with hash",self.proghash
 
     # bring this back
     if self.program != "/tmp/qira_binary":
@@ -48,6 +74,8 @@ class Program:
 
     # defaultargs for qira binary
     self.defaultargs = ["-strace", "-D", "/dev/null", "-d", "in_asm", "-singlestep"]
+    if qira_config.TRACE_LIBRARIES:
+      program.defaultargs.append("-tracelibraries")
 
     # pmaps is global, but updated by the traces
     self.instructions = {}
@@ -158,39 +186,68 @@ class Program:
     os.execvp(self.qirabinary, eargs)
 
   def getdwarf(self):
-    self.dwarves = {}
-    self.rdwarves = {}
-    from elftools.elf.elffile import ELFFile
-    elf = ELFFile(open(self.program))
-    if not elf.has_dwarf_info():
+    (self.dwarves, self.rdwarves) = ({}, {})
+
+    if not qira_config.WITH_DWARF:
       return
 
     # DWARF IS STUPIDLY COMPLICATED
-    di = elf.get_dwarf_info()
-    for cu in di.iter_CUs():
-      basedir = ''
-      # get the base directory
-      for die in cu.iter_DIEs():
-        if die.tag == "DW_TAG_compile_unit":
-          basedir = die.attributes['DW_AT_comp_dir'].value
-      # get the line program?
-      lp = di.line_program_for_CU(cu)
-      dir_index = lp['file_entry'][0].dir_index
-      if dir_index > 0:
-        basedir = lp['include_directory'][dir_index-1]
-      # now we have the filename
-      filename = basedir + "/" + lp['file_entry'][0].name
+    def parse_dwarf():
+      dwarves = {}
+      rdwarves = {}
+
+      from elftools.elf.elffile import ELFFile
+      elf = ELFFile(open(self.program))
+      if not elf.has_dwarf_info():
+        return (dwarves, rdwarves)
+      files = []
+      filename = None
+      di = elf.get_dwarf_info()
+      for cu in di.iter_CUs():
+        try:
+          basedir = None
+          # get the base directory
+          for die in cu.iter_DIEs():
+            if die.tag == "DW_TAG_compile_unit":
+              basedir = die.attributes['DW_AT_comp_dir'].value + "/"
+          if basedir == None:
+            continue
+          # get the line program?
+          lp = di.line_program_for_CU(cu)
+          dir_index = lp['file_entry'][0].dir_index
+          if dir_index > 0:
+            basedir += lp['include_directory'][dir_index-1]+"/"
+          # now we have the filename
+          filename = basedir + lp['file_entry'][0].name
+          files.append(filename)
+          lines = open(filename).read().split("\n")
+          print "DWARF: parsing",filename
+          for entry in lp.get_entries():
+            s = entry.state
+            if s != None:
+              #print filename, s.line, len(lines)
+              dwarves[s.address] = (s.line, lines[s.line-1])
+              rdwarves[filename+"#"+str(s.line)] = s.address
+        except Exception as e:
+          print "DWARF: error on",filename,"got",e
+      return (dwarves, rdwarves)
+
+    (self.dwarves, self.rdwarves) = cachewrap("/tmp/dwarfcaches", self.proghash, parse_dwarf)
+
+    # cda
+    if not qira_config.WITH_CDA:
+      return
+
+    def parse_cda():
       try:
-        lines = open(filename).read().split("\n")
-      except:
-        print "*** couldn't find %s for DWARF", filename
-        continue
-      for entry in lp.get_entries():
-        #print entry
-        s = entry.state
-        if s != None:
-          self.dwarves[s.address] = (s.line, lines[s.line-1])
-          self.rdwarves[(filename, s.line)] = s.address
+        import cachegen
+        return cachegen.parse_files(files)
+      except Exception as e:
+        print "CDA: cachegen failed with",e
+        return None
+
+    self.cda = cachewrap("/tmp/cdacaches", self.proghash, parse_cda)
+
 
 class Trace:
   def __init__(self, fn, forknum, r1, r2, r3):

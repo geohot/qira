@@ -1,3 +1,6 @@
+void swag();
+void swag2();
+
 int main() {
   int i;
   int j = 1;
@@ -8,6 +11,8 @@ int main() {
     k += 1;
     l += i;
   }
+  swag();
+  swag2();
   printf("%d %d %d\n", j, k, l);
 }
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+import qira_config
 import qira_program
 import time
 

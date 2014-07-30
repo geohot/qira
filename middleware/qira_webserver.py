@@ -1,4 +1,9 @@
+import qira_config
 import os
+import sys
+basedir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(basedir+"/../cda")
+
 import qira_socat
 import time
 
@@ -23,7 +28,16 @@ gevent.monkey.patch_all()
 # done with that
 
 app = Flask(__name__)
+#app.config['DEBUG'] = True
 socketio = SocketIO(app)
+
+# add cda server paths here
+if qira_config.WITH_CDA:
+  try:
+    import cacheserver
+    app.register_blueprint(cacheserver.app)
+  except Exception as e:
+    print "CDA: load cacheserver failed with",e
 
 def ghex(a):
   if a == None:
@@ -64,7 +78,7 @@ def mwpoller():
 @socketio.on('navigateline', namespace='/qira')
 def navigateline(fn, ln):
   try:
-    iaddr = program.rdwarves[(fn,ln)]
+    iaddr = program.rdwarves[fn+"#"+str(ln)]
   except:
     return
   print 'navigateline',fn,ln,iaddr
@@ -279,7 +293,6 @@ def get_strace(forknum):
 
 # ***** generic webserver stuff *****
   
-
 @app.route('/', defaults={'path': 'index.html'})
 @app.route('/<path:path>')
 def serve(path):
@@ -290,11 +303,11 @@ def serve(path):
 
   ext = path.split(".")[-1]
 
-  if ext == 'css':
-    path = "qira.css"
-
-  dat = open(webstatic+path).read()
-  if ext == 'js' and not path.startswith('client/compatibility/') and not path.startswith('packages/'):
+  try:
+    dat = open(webstatic+path).read()
+  except:
+    return ""
+  if ext == 'js' and not path.startswith('client/compatibility/') and path.startswith('client/'):
     dat = "(function(){"+dat+"})();"
 
   if ext == 'js':
@@ -309,6 +322,10 @@ def run_server(largs, lprogram):
   global program
   args = largs
   program = lprogram
+  try:
+    cacheserver.set_cache(program.cda)
+  except:
+    pass
   print "starting socketio server..."
   threading.Thread(target=mwpoller).start()
   socketio.run(app, port=QIRA_WEB_PORT)

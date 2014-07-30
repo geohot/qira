@@ -2,24 +2,15 @@
 import os
 import sys
 import cgi
-from flask import Flask,redirect, request
+from flask import Flask,redirect,request,Blueprint
 from html import XHTML
-import pickle
-app = Flask(__name__, static_folder='static', static_url_path='/static')
+
+app = Blueprint('cda',__name__)
 
 # escape on the real
 def escape(s, crap=False):
   return s.replace("<", "&lt;").replace(">", "&gt;").replace(" ", "&nbsp;").replace("\n", "<br/>").replace("\t", "&nbsp;"*4).replace("\x00", " ")
 cgi.escape = escape
-
-@app.route("/")
-def index():
-  h = XHTML().html
-  h.head.link(rel="stylesheet", href="/static/cda.css")
-  h.head.style('body{margin:0;padding:0;}')
-  h.body.iframe(src='/list', id="topframe")
-  h.body.iframe(src='/x/=', id="bottomframe")
-  return str(h)
 
 @app.route("/list")
 def home():
@@ -34,7 +25,7 @@ def home():
 
   # generate html
   h = XHTML().html
-  h.head.link(rel="stylesheet", href="/static/cda.css")
+  h.head.link(rel="stylesheet", href="/cdastatic/cda.css")
   body = h.body
   objs = list(set(objs))
   objs.sort()
@@ -42,16 +33,17 @@ def home():
     body.div.a(obj[1], href=obj[0], klass=obj[2])
   return str(h)
 
-@app.route("/x/<xref>")
-def display_xref(xref):
-  xref = xref.decode("base64")
+@app.route("/x/<b64xref>")
+def display_xref(b64xref):
+  xref = b64xref.decode("base64")
   h = XHTML().html
-  h.head.link(rel="stylesheet", href="/static/cda.css")
+  h.head.link(rel="stylesheet", href="/cdastatic/cda.css")
   body = h.body(klass="xref")
   body.div.div(xref, klass="xrefstitle")
   if xref in xref_cache:
     for obj in xref_cache[xref]:
-      body.div.a(obj, onclick="parent.frames[0].location = '/f?"+obj+"';", klass="filelink")
+      linkobj = obj+","+b64xref
+      body.div.a(obj, onclick="parent.location = '/f?"+linkobj+"';", klass="filelink")
   return str(h)
 
 @app.route("/f")
@@ -61,26 +53,28 @@ def display_file():
     return "file "+str(path)+" not found"
   # generate the HTML
   h = XHTML().html
-  h.head.link(rel="stylesheet", href="/static/cda.css")
-  h.head.script(src="/static/socket.io.min.js")
-  h.head.script(src="/static/jquery-2.1.0.js")
-  h.head.script(src="/static/jquery.scrollTo-1.4.3.1.js")
-  h.head.script(src="/static/cda.js?"+os.urandom(16).encode("hex"))
+  h.head.link(rel="stylesheet", href="/cdastatic/cda.css")
+  h.head.script(src="/cdastatic/socket.io.min.js")
+  h.head.script(src="/cdastatic/jquery-2.1.0.js")
+  h.head.script(src="/cdastatic/jquery.scrollTo-1.4.3.1.js")
+  h.head.script(src="/cdastatic/cda.js?"+os.urandom(16).encode("hex"))
   body = h.body
-  body.div(path, id="filename")
+  body.div(path, id='filename')
+  prog = body.div(id="program")
+  body.iframe(id='bottomframe')
 
   # get parsed file
   (care, rdat) = file_cache[path]
 
   # add line numbers
   lc = len(rdat.split("\n"))
-  ln = body.div(id="ln")
+  ln = prog.div(id="ln")
   for linenum in range(lc):
-    ln.span("%5d \n" % (linenum+1), id="l"+str(linenum+1), onclick='location.hash='+str(linenum+1))
+    ln.span("%5d \n" % (linenum+1), id="l"+str(linenum+1), onclick='go_to_line('+str(linenum+1)+')')
 
   # add the code
   #print object_cache
-  p = body.div(id="code")
+  p = prog.div(id="code")
   last = 0
   for (start, end, klass, usr) in care:
     if last > start:
@@ -104,12 +98,8 @@ def display_file():
 
   return str(h)
 
-def start(cache):
+def set_cache(cache):
   global object_cache, file_cache, xref_cache
-
   (object_cache, file_cache, xref_cache) = cache
   print "read",len(file_cache),"files",len(object_cache),"objects",len(xref_cache),"xrefs"
-
-  #app.run(host='127.0.0.1', debug=True, port=5000)
-  app.run(host='127.0.0.1', port=5000)
 

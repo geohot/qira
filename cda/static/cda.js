@@ -8,38 +8,49 @@ function p(s) {
 var highlighted = $();
 
 $(window).on('hashchange', function() {
-  if (window.location.hash == "") return;
-  var ln = window.location.hash.substr(1);
+  if (location.hash == "") location.replace("#0");
+  var ln = location.hash.substr(1).split(",")[0];
+  var b64xref = location.hash.split(",")[1];
   highlighted.removeClass("line_highlighted")
   highlighted = $("#l" + ln)
-  highlighted.addClass("line_highlighted");
-  $(window).scrollTo(highlighted, {offset: -150})
-  stream.emit('navigateline', $('#filename')[0].innerHTML, parseInt(ln))
+  if (highlighted.length > 0) {
+    highlighted.addClass("line_highlighted");
+    $(window).scrollTo(highlighted, {offset: -150})
+    stream.emit('navigateline', $('#filename')[0].innerHTML, parseInt(ln))
+  }
+  if (b64xref !== undefined) {
+    selected.removeClass('highlighted');
+    selected = $(document.getElementsByName(atob(b64xref)));
+    selected.addClass('highlighted');
+    if (frames[0].location.pathname != '/x/'+b64xref) {
+      frames[0].location.replace('/x/'+b64xref);
+    }
+  }
 });
 
 var selected = $();
 
 function link_click_handler(e) {
-  //p(e.target.getAttribute('name'));
-  selected.removeClass('highlighted');
-  selected = $(document.getElementsByName(e.target.getAttribute('name')));
-  selected.addClass('highlighted');
+  var usr = e.target.getAttribute('name');
+  location.replace(location.hash.split(",")[0]+","+btoa(usr));
 }
 
 function link_dblclick_handler(e) {
   var targets = e.target.getAttribute('targets').split(" ");
   p(targets);
-  parent.frames[0].location = "/f?"+targets[0];
-}
-
-function xref_handler(e) {
   var usr = e.target.getAttribute('name');
-  p("xref "+usr);
-  parent.frames[1].location = '/x/'+btoa(usr)
-  return false;
+  location = "/f?"+targets[0]+","+btoa(usr);
 }
 
-// no selection
+function go_to_line(line) {
+  var b64xref = location.hash.split(",")[1];
+  var newl = "#"+line;
+  if (b64xref !== undefined) {
+    newl += ","+b64xref;
+  }
+  location.replace(newl);
+}
+
 window.onmousedown = function() { return false; };
 
 // when the page loads we need to check the hash
@@ -48,8 +59,6 @@ window.onload = function() {
 
   $('.link').bind('click', link_click_handler); 
   $('.link').bind('dblclick', link_dblclick_handler); 
-  $('.link').bind('contextmenu', xref_handler); 
 };
-
 
 

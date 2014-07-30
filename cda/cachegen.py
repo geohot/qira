@@ -10,10 +10,14 @@ ci.Config.set_library_file(basedir+"/clang/build/Release+Asserts/lib/libclang.so
 import pickle
 from clang.cindex import CursorKind
 
+import json
+from hashlib import sha1
+
 # debug
 DEBUG = 0
 
 # cache generated
+file_cache = {}
 object_cache = {}
 xref_cache = {}
 
@@ -114,4 +118,11 @@ def parse_file(filename, args=[]):
   rdat = open(filename).read()
 
   return (care, rdat)
+
+def parse_files(files, args=[]):
+  for fn in files:
+    print "CDA: caching",fn
+    file_cache[fn] = parse_file(fn)
+  dat = (object_cache, file_cache, xref_cache)
+  return dat
 
