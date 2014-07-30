@@ -24,12 +24,14 @@ function link_click_handler(e) {
 function link_dblclick_handler(e) {
   var targets = e.target.getAttribute('targets').split(" ");
   p(targets);
-  window.location = "/f?"+targets[0];
+  parent.frames[0].location = "/f?"+targets[0];
 }
 
-function xref_key_handler(e) {
-  var usr = selected[0].getAttribute('name');
-  window.open('/x/'+btoa(usr), "xrefs", "resizable=no,scrollbars=no,menubar=no,width=300,height=500,left=1000,top=50");
+function xref_handler(e) {
+  var usr = e.target.getAttribute('name');
+  p("xref "+usr);
+  parent.frames[1].location = '/x/'+btoa(usr)
+  return false;
 }
 
 // no selection
@@ -41,17 +43,7 @@ window.onload = function() {
 
   $('.link').bind('click', link_click_handler); 
   $('.link').bind('dblclick', link_dblclick_handler); 
-
-  xdiv = $('<div id="xref"></div>');
-  $(document.body).prepend(xdiv);
-  
-  var keys = {88: xref_key_handler};
-  document.onkeydown = function(e) {
-    //p(e.which);
-    if (keys[e.which] !== undefined) {
-      keys[e.which](e);
-    }
-  };
+  $('.link').bind('contextmenu', xref_handler); 
 };
 
 

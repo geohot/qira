@@ -13,9 +13,22 @@ def escape(s, crap=False):
 cgi.escape = escape
 
 @app.route("/")
+def index():
+  h = XHTML().html
+  h.head.link(rel="stylesheet", href="/static/cda.css")
+  h.head.style('body{margin:0;padding:0;}')
+  h.body.iframe(src='/list', id="topframe")
+  h.body.iframe(src='/x/=', id="bottomframe")
+  return str(h)
+
+@app.route("/list")
 def home():
   # add files
   objs = []
+  if len(file_cache) == 1:
+    # one file, display it
+    return redirect("/f?"+file_cache.keys()[0], code=302)
+
   for f in file_cache:
     objs.append(("/f?"+f, f, "filelink"))
 
@@ -38,7 +51,7 @@ def display_xref(xref):
   body.div.div(xref, klass="xrefstitle")
   if xref in xref_cache:
     for obj in xref_cache[xref]:
-      body.div.a(obj, onclick="window.opener.location = '/f?"+obj+"';", klass="filelink")
+      body.div.a(obj, onclick="parent.frames[0].location = '/f?"+obj+"';", klass="filelink")
   return str(h)
 
 @app.route("/f")
@@ -51,8 +64,9 @@ def display_file():
   h.head.link(rel="stylesheet", href="/static/cda.css")
   h.head.script(src="/static/jquery-2.1.0.js")
   h.head.script(src="/static/jquery.scrollTo-1.4.3.1.js")
-  h.head.script(src="/static/cda.js")
+  h.head.script(src="/static/cda.js?"+os.urandom(16).encode("hex"))
   body = h.body
+  body.div(path, id="filename")
 
   # get parsed file
   (care, rdat) = file_cache[path]
