@@ -159,6 +159,7 @@ class Program:
 
   def getdwarf(self):
     self.dwarves = {}
+    self.rdwarves = {}
     from elftools.elf.elffile import ELFFile
     elf = ELFFile(open(self.program))
     if not elf.has_dwarf_info():
@@ -189,6 +190,7 @@ class Program:
         s = entry.state
         if s != None:
           self.dwarves[s.address] = (s.line, lines[s.line-1])
+          self.rdwarves[(filename, s.line)] = s.address
 
 class Trace:
   def __init__(self, fn, forknum, r1, r2, r3):

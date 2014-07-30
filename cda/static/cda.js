@@ -1,3 +1,6 @@
+// connect to the QIRA stream
+stream = io.connect("http://localhost:3002/qira");
+
 function p(s) {
   console.log(s);
 }
@@ -6,10 +9,12 @@ var highlighted = $();
 
 $(window).on('hashchange', function() {
   if (window.location.hash == "") return;
+  var ln = window.location.hash.substr(1);
   highlighted.removeClass("line_highlighted")
-  highlighted = $("#l" + window.location.hash.substr(1))
+  highlighted = $("#l" + ln)
   highlighted.addClass("line_highlighted");
   $(window).scrollTo(highlighted, {offset: -150})
+  stream.emit('navigateline', $('#filename')[0].innerHTML, parseInt(ln))
 });
 
 var selected = $();

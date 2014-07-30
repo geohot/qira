@@ -62,6 +62,7 @@ def display_file():
   # generate the HTML
   h = XHTML().html
   h.head.link(rel="stylesheet", href="/static/cda.css")
+  h.head.script(src="/static/socket.io.min.js")
   h.head.script(src="/static/jquery-2.1.0.js")
   h.head.script(src="/static/jquery.scrollTo-1.4.3.1.js")
   h.head.script(src="/static/cda.js?"+os.urandom(16).encode("hex"))
@@ -109,6 +110,6 @@ def start(cache):
   (object_cache, file_cache, xref_cache) = cache
   print "read",len(file_cache),"files",len(object_cache),"objects",len(xref_cache),"xrefs"
 
-  app.run(host='127.0.0.1', debug=True, port=5000)
-  #app.run(host='127.0.0.1', port=5000)
+  #app.run(host='127.0.0.1', debug=True, port=5000)
+  app.run(host='127.0.0.1', port=5000)
 

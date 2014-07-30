@@ -1,5 +1,10 @@
 stream = io.connect(STREAM_URL);
 
+stream.on('setiaddr', function(iaddr) {
+  Session.set("dirtyiaddr", true);
+  Session.set('iaddr', iaddr);
+});
+
 Template.controls.clnum = function() {
   return Session.get("clnum");
 };

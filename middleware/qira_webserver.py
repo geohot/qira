@@ -61,6 +61,15 @@ def mwpoller():
 
 # ***** after this line is the new server stuff *****
 
+@socketio.on('navigateline', namespace='/qira')
+def navigateline(fn, ln):
+  try:
+    iaddr = program.rdwarves[(fn,ln)]
+  except:
+    return
+  print 'navigateline',fn,ln,iaddr
+  socketio.emit('setiaddr', iaddr, namespace='/qira')
+
 @socketio.on('forkat', namespace='/qira')
 def forkat(forknum, clnum, pending):
   global program
