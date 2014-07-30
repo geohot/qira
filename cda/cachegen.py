@@ -72,9 +72,8 @@ def parse_node(node, d, filename, care):
   if end != None:
     care.append((start, end, klass, usr))
 
-  """
-  if end != None and usr != None and node.location.line > 0 and filename[0:len(directory)] == directory:
-    newval = filename[len(directory):].strip("/")+"#"+str(node.location.line)
+  if end != None and usr != None and node.location.line > 0:
+    newval = filename+"#"+str(node.location.line)
     if node.is_definition():
       # defining the object
       if usr in object_cache:
@@ -88,14 +87,13 @@ def parse_node(node, d, filename, care):
       else:
         xref_cache[usr] = [newval]
       # link here is good
-  """
 
   for child in node.get_children():
     parse_node(child, d+1, filename, care)
 
-def parse_file(filename):
+def parse_file(filename, args=[]):
   # traversal attack
-  tu = index.parse(filename, args=sys.argv[3:])
+  tu = index.parse(filename, args=args)
 
   # bad shit happened
   bad = False
