@@ -5,6 +5,11 @@ stream.on('setiaddr', function(iaddr) {
   Session.set('iaddr', iaddr);
 });
 
+Deps.autorun(function() {
+  var iaddr = Session.get('iaddr');
+  stream.emit('navigateiaddr', iaddr);
+});
+
 Template.controls.clnum = function() {
   return Session.get("clnum");
 };

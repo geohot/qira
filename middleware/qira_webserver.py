@@ -67,14 +67,25 @@ def mwpoller():
 
 # ***** after this line is the new server stuff *****
 
-@socketio.on('navigateline', namespace='/qira')
+@socketio.on('navigateline', namespace='/cda')
 def navigateline(fn, ln):
   try:
     iaddr = program.rdwarves[fn+"#"+str(ln)]
   except:
     return
-  print 'navigateline',fn,ln,iaddr
+  #print 'navigateline',fn,ln,iaddr
   socketio.emit('setiaddr', iaddr, namespace='/qira')
+
+@socketio.on('navigateiaddr', namespace='/qira')
+def navigateiaddr(iaddr):
+  if iaddr == None:
+    return
+  try:
+    (filename, line, linedat) = program.dwarves[iaddr]
+  except:
+    return
+  #print 'navigateiaddr', hex(iaddr), filename, line
+  socketio.emit('setline', filename, line, namespace='/cda')
 
 @socketio.on('forkat', namespace='/qira')
 def forkat(forknum, clnum, pending):
@@ -191,7 +202,7 @@ def getinstructions(forknum, clstart, clend):
     if rret['address'] in program.instructions:
       rret['instruction'] = program.instructions[rret['address']]
     if rret['address'] in program.dwarves:
-      rret['comment'] = program.dwarves[rret['address']][1]
+      rret['comment'] = program.dwarves[rret['address']][2]
     ret.append(rret)
   emit('instructions', ret)
 

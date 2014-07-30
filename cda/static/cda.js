@@ -1,5 +1,14 @@
 // connect to the QIRA stream
-stream = io.connect("http://localhost:3002/qira");
+stream = io.connect("http://localhost:3002/cda");
+
+stream.on('setline', function(filename, line) {
+  p('setline');
+  var b64xref = location.hash.split(",")[1];
+  if (b64xref === undefined) b64xref = "";
+  else b64xref = ","+b64xref;
+
+  location.replace("/f?"+filename+"#"+line+b64xref);
+});
 
 function p(s) {
   console.log(s);

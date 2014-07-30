@@ -78,7 +78,7 @@ class Program:
     # defaultargs for qira binary
     self.defaultargs = ["-strace", "-D", "/dev/null", "-d", "in_asm", "-singlestep"]
     if qira_config.TRACE_LIBRARIES:
-      program.defaultargs.append("-tracelibraries")
+      self.defaultargs.append("-tracelibraries")
 
     # pmaps is global, but updated by the traces
     self.instructions = {}
@@ -229,7 +229,7 @@ class Program:
             s = entry.state
             if s != None:
               #print filename, s.line, len(lines)
-              dwarves[s.address] = (s.line, lines[s.line-1])
+              dwarves[s.address] = (filename, s.line, lines[s.line-1])
               rdwarves[filename+"#"+str(s.line)] = s.address
         except Exception as e:
           print "DWARF: error on",filename,"got",e
