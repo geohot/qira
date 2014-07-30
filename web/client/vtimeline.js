@@ -1,4 +1,23 @@
-stream = io.connect("http://localhost:3002/qira");
+stream = io.connect(STREAM_URL);
+
+// *** the analysis overlay ***
+
+Deps.autorun(function() {
+  var maxclnum = Session.get("max_clnum");
+  for (i in maxclnum) {
+    stream.emit('doanalysis', parseInt(i))
+  }
+});
+
+var overlays = {};
+
+stream.on('setpicture', function(msg) {
+  //p(msg);
+  forknum = msg['forknum'];
+  overlays[forknum] = msg['data'];
+  var vt = $('#vtimeline'+forknum);
+  vt.css('background-image', "url('"+overlays[forknum]+"')");
+});
 
 // *** functions for dealing with the zoom function ***
 
@@ -118,14 +137,29 @@ function redraw_vtimelines(scale) {
   });
 
 
+  remove_flags("zoom");
   for (forknum in maxclnum) {
     var vt = $('#vtimeline'+forknum);
+    var max = maxclnum[forknum];
+
+    if (overlays[forknum] !== undefined) vt.css('background-image', "url('"+overlays[forknum]+"')");
+    var cscale = get_cscale();
+
+    if (max[0] < cview[0] && cview[0] < max[1]) { add_flag("zoom", forknum, cview[0]); }
+    if (max[0] < cview[1] && cview[1] < max[1]) { add_flag("zoom", forknum, cview[1]); }
+
+    // so it looks like size is applied before position, hence we divide position by cscale
+    //vt.css('background-size', "100% " + ((max[1]-max[0]) / cscale) + "px")
+    //vt.css('background-position-y', -1*(cview[0]/cscale) + "px");
+    vt.css('background-size', "100% " + (max[1] / cscale) + "px")
+    vt.css('background-position-y', -1*((Math.max(max[0],cview[0])-max[0])/cscale) + "px");
+    vt.css('background-repeat', "no-repeat");
     if (vt.length == 0) {
       $("#vtimelinebox").append($('<div class="vtimeline" id="vtimeline'+forknum+'"></div>'))
       vt = $('#vtimeline'+forknum);
     }
 
-    var range = Math.min(maxclnum[forknum][1], cview[1]) - Math.max(maxclnum[forknum][0], cview[0]);
+    var range = Math.min(max[1], cview[1]) - Math.max(max[0], cview[0]);
     var topp = 0;
     if (maxclnum[forknum][0] > cview[0]) {
       topp = Math.ceil((maxclnum[forknum][0] - cview[0])/scale);
@@ -151,7 +185,8 @@ function redraw_flags() {
     "change": "blue",
     "ciaddr": "#AA0000", // keep it alphabetical
     "daddrr": "#888800",
-    "daddrw": "yellow"
+    "daddrw": "yellow",
+    "zoom": "gray"
   };
   for (arr in flags) {
     var classes = "flag";

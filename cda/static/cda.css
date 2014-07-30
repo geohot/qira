@@ -1,0 +1,130 @@
+body {
+  font-family: monospace;
+}
+
+a {
+  color: inherit;
+}
+
+span {
+  white-space: nowrap;
+}
+
+.link {
+  /*background-color: #F0F0F0;*/
+  text-decoration: underline;
+  /*font-style: italic;*/
+}
+
+.xref {
+  background-color: #EEEEEE;
+  padding: 5px;
+}
+
+.xrefstitle {
+  color: blue;
+}
+
+#ln {
+  display: inline-block;
+  float: left;
+  color: gray;
+}
+
+.line_highlighted {
+  background-color: #EE8888;
+}
+
+.highlighted {
+  background-color: #EEEE88;
+}
+
+#code {
+  overflow: hidden;
+}
+
+.dirlink {
+  color: blue;
+}
+.filelink {
+  color: black;
+  text-decoration: underline;
+}
+
+/* declaring a function in the global scope */
+.FUNCTION_DECL {
+  color: red;
+}
+
+/* C++ method in class */
+.CXX_METHOD {
+  color: #AAAAAA;
+}
+
+/* a variable or function reference */
+.DECL_REF_EXPR {
+  color: #00AA00;
+}
+
+/* calling a C++ member function */
+.MEMBER_REF_EXPR {
+  color: #AAAA55;
+}
+
+/* string in quotes */
+.STRING_LITERAL {
+  color: blue;
+}
+
+/* integer */
+.INTEGER_LITERAL {
+  color: purple;
+}
+
+.VAR_DECL {
+  color: orange;
+}
+
+.PARM_DECL {
+  color: orange;
+}
+
+.CLASS_DECL {
+  color: #00AAAA;
+}
+
+.CLASS_TEMPLATE {
+  color: #00AAAA;
+}
+
+.TYPE_REF {
+  color: #AAAA00;
+}
+
+.TEMPLATE_REF {
+  color: #AA4400;
+}
+
+iframe {
+  margin: 0;
+  padding: 0;
+  border: 0 none;
+}
+
+#topframe {
+  width:100%;
+  height: 70%;
+}
+
+#bottomframe {
+  width:100%;
+  height:30%;
+  border-top: 1px solid black;
+}
+
+#filename {
+  padding-bottom: 10px;
+  font-size: 14px;
+}
+
+

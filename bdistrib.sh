@@ -1,9 +1,14 @@
-#!/bin/bash
-VERSION=qira-0.1
+#!/bin/bash -e
 
-set -e
 rm -rf distrib/
 mkdir -p distrib/qira
+
+VERSION=$(cat VERSION)
+echo "packaging version $VERSION"
+
+# VERSION is required to build the python thing
+echo "copying docs"
+cp VERSION README distrib/qira/
 
 # requires objdump
 # writable /tmp
@@ -22,7 +27,7 @@ mkdir -p distrib/qira
 echo "copying webapp"
 cp -R web distrib/qira/
 rm -rf distrib/qira/web/.meteor/local
-rm -f distrib/qira/web/qira.html   # this doesn't work to change, no don't allow the user to
+rm -f distrib/qira/web/qira.html   # this doesn't work to change, so don't allow the user to
 #mrt bundle ../bin/qira_web.tar.gz
 cp -R webstatic distrib/qira/
 
@@ -43,11 +48,15 @@ cp ida/bin/* distrib/qira/ida/bin/
 # fairly standard deps + librt, libglib, libpcre
 echo "copying qemu"
 mkdir -p distrib/qira/qemu
-for arch in "i386" "arm" "x86_64"; do
+for arch in "i386" "arm" "x86_64" "ppc"; do
   cp "qemu/qira-$arch" "distrib/qira/qemu/qira-$arch"
   strip "distrib/qira/qemu/qira-$arch"
   #upx -9 "distrib/qira/qemu/qira-$arch"
 done
+
+echo "copying qiradb"
+mkdir -p distrib/qira/qiradb
+cp -R qiradb/* distrib/qira/qiradb/
 
 # package up the python, hopefully this includes pymongo driver
 # hmm, it doesn't, user will need to install
@@ -68,11 +77,11 @@ done
 
 echo "copying binaries"
 cp -av install.sh qira distrib/qira/
+cp -av fetchlibs.sh qira distrib/qira/
 
 echo "making archive"
 cd distrib/
-#tar zcvf qira-0.3.tar.gz qira
-tar cvf qira-0.3.tar qira
-xz qira-0.3.tar
+tar cvf qira-$VERSION.tar qira
+xz qira-$VERSION.tar
 cd ../
 

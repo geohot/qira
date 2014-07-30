@@ -1,0 +1,43 @@
+#!/usr/bin/env python2
+import os
+import sys
+import json
+from hashlib import sha1
+
+import cachegen
+import cacheserver
+
+file_cache = {}
+
+if __name__ == "__main__":
+  try:
+    os.mkdir("/tmp/cdacaches")
+  except:
+    pass
+    
+  files = []
+  for fn in sys.argv[1:]:
+    fn = os.path.realpath(sys.argv[1])
+    files.append(fn)
+
+  cachename = "/tmp/cdacaches/"+sha1(''.join(files)).hexdigest()
+
+  if os.path.isfile(cachename):
+    dat = json.load(open(cachename))
+    print "read cache",cachename
+  else:
+    for fn in files:
+      print "caching",fn
+      file_cache[fn] = cachegen.parse_file(fn)
+    dat = (cachegen.object_cache, file_cache, cachegen.xref_cache)
+    f = open(cachename, "wb")
+    json.dump(dat, f)
+    f.close()
+    print "wrote cache",cachename
+
+  cacheserver.start(dat)
+
+
+
+
+

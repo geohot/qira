@@ -10,9 +10,11 @@ ida/qira.plx64
 ida/qira.pmc64
 ida/libwebsockets.a
 tests/idb
-qiradb/qiradb
 old/qiradb/qiradb
 db/
 qemu/qemu-2*
 distrib/
+libs/
+qiradb/build
+cda/clang
 

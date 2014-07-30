@@ -1,22 +1,23 @@
-#!/bin/bash
-set -e
+#!/bin/bash -e
 
-# for building blist and stuff for flask like gevent
+# default is just pip, but on things like arch where python 3 is default, it's pip2
+PIP="pip"
 
 # we need pip to install python stuff
+# build for building qiradb and stuff for flask like gevent
 if [ $(which apt-get) ]; then
-  echo "installing apt packagtes"
-  sudo apt-get install build-essential python-dev python-pip
+  echo "installing apt packages"
+  sudo apt-get install build-essential python-dev python-pip debootstrap
+elif [ $(which pacman) ]; then
+  echo "installing pip"
+  sudo pacman -S base-devel python2-pip
+  PIP="pip2"
 fi
 
 echo "installing pip packages"
-sudo pip install pyelftools blist flask-socketio
+sudo $PIP install flask-socketio pillow pyelftools ./qiradb
 
-echo "making symlinks"
+echo "making symlink"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira
-sudo ln -sf $(pwd)/qemu/qira-i386 /usr/local/bin/qira-i386
-sudo ln -sf $(pwd)/qemu/qira-arm /usr/local/bin/qira-arm
-sudo ln -sf $(pwd)/qemu/qira-sparc /usr/local/bin/qira-sparc
-sudo ln -sf $(pwd)/qemu/qira-sparc32plus /usr/local/bin/qira-sparc32plus
-sudo ln -sf $(pwd)/qemu/qira-x86_64 /usr/local/bin/qira-x86_64
+sudo ln -sf $(pwd)/cda/cda /usr/local/bin/cda
 

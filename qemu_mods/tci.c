@@ -425,6 +425,8 @@ static bool tci_compare64(uint64_t u0, uint64_t u1, TCGCond condition)
 
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/file.h>
+#include "qemu.h"
 
 #define QIRA_DEBUG(...) {}
 //#define QIRA_DEBUG qemu_debug
@@ -447,9 +449,11 @@ void track_read(target_ulong base, target_ulong offset, target_ulong data, int s
 void track_write(target_ulong base, target_ulong offset, target_ulong data, int size);
 void add_pending_change(target_ulong addr, uint64_t data, uint32_t flags);
 void commit_pending_changes(void);
-void track_kernel_read(void *host_addr, target_ulong guest_addr, long len);
-void track_kernel_write(void *host_addr, target_ulong guest_addr, long len);
 void resize_change_buffer(size_t size);
+
+// defined in qemu.h
+//void track_kernel_read(void *host_addr, target_ulong guest_addr, long len);
+//void track_kernel_write(void *host_addr, target_ulong guest_addr, long len);
 
 #define IS_VALID      0x80000000
 #define IS_WRITE      0x40000000
@@ -480,13 +484,22 @@ struct logstate *GLOBAL_logstate;
 
 // input args
 uint32_t GLOBAL_start_clnum = 1;
-int GLOBAL_parent_id = -1, GLOBAL_id = 0;
+int GLOBAL_parent_id = -1, GLOBAL_id = -1;
 
+int GLOBAL_tracelibraries = 0;
+
+#define OPEN_GLOBAL_ASM_FILE { if (unlikely(GLOBAL_asm_file == NULL)) { GLOBAL_asm_file = fopen("/tmp/qira_asm", "a"); } }
 FILE *GLOBAL_asm_file = NULL;
+FILE *GLOBAL_strace_file = NULL;
 
 // should be 0ed on startup
 #define PENDING_CHANGES_MAX_ADDR 0x100
 struct change GLOBAL_pending_changes[PENDING_CHANGES_MAX_ADDR/4];
+
+uint32_t get_current_clnum(void);
+uint32_t get_current_clnum(void) {
+  return GLOBAL_logstate->changelist_number;
+}
 
 void resize_change_buffer(size_t size) {
   if(ftruncate(GLOBAL_qira_log_fd, size)) {
@@ -501,9 +514,14 @@ void resize_change_buffer(size_t size) {
 void init_QIRA(CPUArchState *env, int id) {
   QIRA_DEBUG("init QIRA called\n");
   GLOBAL_QIRA_did_init = 1;
+  GLOBAL_CPUArchState = env;   // unused
+
+  OPEN_GLOBAL_ASM_FILE
 
   char fn[PATH_MAX];
-  GLOBAL_CPUArchState = env;
+  sprintf(fn, "/tmp/qira_logs/%d_strace", id);
+  GLOBAL_strace_file = fopen(fn, "w");
+
   sprintf(fn, "/tmp/qira_logs/%d", id);
 
   // unlink it first
@@ -524,6 +542,20 @@ void init_QIRA(CPUArchState *env, int id) {
   GLOBAL_logstate->changelist_number = GLOBAL_start_clnum-1;
   GLOBAL_logstate->first_changelist_number = GLOBAL_start_clnum;
   GLOBAL_logstate->parent_id = GLOBAL_parent_id;
+
+  // use all fds up to 30
+  int i;
+  int dupme = open("/dev/null", O_RDONLY);
+  struct stat useless;
+  for (i = 0; i < 30; i++) {
+    sprintf(fn, "/proc/self/fd/%d", i);
+    if (stat(fn, &useless) == -1) {
+      //printf("dup2 %d %d\n", dupme, i);
+      dup2(dupme, i);
+    }
+  }
+
+  // no more opens can happen here in QEMU, only the target process
 }
 
 struct change *add_change(target_ulong addr, uint64_t data, uint32_t flags) {
@@ -681,7 +713,8 @@ void track_kernel_write(void *host_addr, target_ulong guest_addr, long len) {
 #endif
 
 // poorly written, and it fills in holes
-int get_next_id() {
+int get_next_id(void);
+int get_next_id(void) {
   char fn[PATH_MAX];
   int this_id = 0;
   struct stat junk;
@@ -693,34 +726,14 @@ int get_next_id() {
   return this_id;
 }
 
-void run_QIRA_log(CPUArchState *env, int this_id, int to_change);
-
-void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
-  char fn[PATH_MAX];
-  sprintf(fn, "/tmp/qira_logs/%d", this_id);
-
-  int qira_log_fd = open(fn, O_RDWR, 0644);
-  struct logstate plogstate;
-  if (read(qira_log_fd, &plogstate, sizeof(plogstate)) != sizeof(plogstate)) {
-    printf("HEADER READ ISSUE!\n");
-    return;
-  }
-
-  // check if this one has a parent and recurse here
-  // BUG: FD ISSUE!
-  QIRA_DEBUG("parent is %d with first_change %d\n", plogstate.parent_id, plogstate.first_changelist_number);
-  if (plogstate.parent_id != -1) {
-    run_QIRA_log(env, plogstate.parent_id, plogstate.first_changelist_number);
-  }
-
+int run_QIRA_log_from_fd(CPUArchState *env, int qira_log_fd, uint32_t to_change);
+int run_QIRA_log_from_fd(CPUArchState *env, int qira_log_fd, uint32_t to_change) {
   struct change pchange;
   // skip the first change
   lseek(qira_log_fd, sizeof(pchange), SEEK_SET);
+  int ret = 0;
   while(1) {
-    if (read(qira_log_fd, &pchange, sizeof(pchange)) != sizeof(pchange)) {
-      printf("READ ISSUE!\n");
-      break;
-    }
+    if (read(qira_log_fd, &pchange, sizeof(pchange)) != sizeof(pchange)) { break; }
     uint32_t flags = pchange.flags;
     if (!(flags & IS_VALID)) break;
     if (pchange.changelist_number >= to_change) break;
@@ -745,25 +758,77 @@ void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
       else { base = ((void *)env) + pchange.address; }
       memcpy(base, &pchange.data, (flags&SIZE_MASK) >> 3);
     }
+    ret++;
   }
+  return ret;
+}
+
+void run_QIRA_mods(CPUArchState *env, int this_id);
+void run_QIRA_mods(CPUArchState *env, int this_id) {
+  char fn[PATH_MAX];
+  sprintf(fn, "/tmp/qira_logs/%d_mods", this_id);
+  int qira_log_fd = open(fn, O_RDONLY);
+  if (qira_log_fd == -1) return;
+
+  // seek past the header
+  lseek(qira_log_fd, sizeof(struct logstate), SEEK_SET);
+
+  // run all the changes in this file
+  int count = run_QIRA_log_from_fd(env, qira_log_fd, 0xFFFFFFFF);
 
   close(qira_log_fd);
 
-  printf("*** REPLAY DONE ***\n");
+  printf("+++ REPLAY %d MODS DONE with entry count %d\n", this_id, count);
+}
+
+void run_QIRA_log(CPUArchState *env, int this_id, int to_change);
+void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
+  char fn[PATH_MAX];
+  sprintf(fn, "/tmp/qira_logs/%d", this_id);
+
+  int qira_log_fd, qira_log_fd_ = open(fn, O_RDONLY);
+  // qira_log_fd_ must be 30, if it isn't, i'm not sure what happened
+  dup2(qira_log_fd_, 100+this_id);
+  close(qira_log_fd_);
+  qira_log_fd = 100+this_id;
+
+  struct logstate plogstate;
+  if (read(qira_log_fd, &plogstate, sizeof(plogstate)) != sizeof(plogstate)) {
+    printf("HEADER READ ISSUE!\n");
+    return;
+  }
+
+  printf("+++ REPLAY %d START on fd %d(%d)\n", this_id, qira_log_fd, qira_log_fd_);
+
+  // check if this one has a parent and recurse here
+  // BUG: FD ISSUE!
+  QIRA_DEBUG("parent is %d with first_change %d\n", plogstate.parent_id, plogstate.first_changelist_number);
+  if (plogstate.parent_id != -1) {
+    run_QIRA_log(env, plogstate.parent_id, plogstate.first_changelist_number);
+  }
+
+  int count = run_QIRA_log_from_fd(env, qira_log_fd, to_change);
+
+  close(qira_log_fd);
+
+  printf("+++ REPLAY %d DONE to %d with entry count %d\n", this_id, to_change, count);
 }
 
 bool is_filtered_address(target_ulong pc);
 bool is_filtered_address(target_ulong pc) {
+  // to remove the warning
+  uint64_t bpc = (uint64_t)pc;
   // TODO(geohot): FIX THIS!, filter anything that isn't the user binary and not dynamic
-  return ((pc > 0x40000000 && pc < 0xf6800000) || pc >= 0x100000000);
+  if (unlikely(GLOBAL_tracelibraries)) {
+    return false;
+  } else {
+    return ((bpc > 0x40000000 && bpc < 0xf6800000) || bpc >= 0x100000000);
+  }
 }
 
 void real_target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong size, int flags);
-void target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong size, int flags);
 void target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong size, int flags) {
-  if (unlikely(GLOBAL_asm_file == NULL)) { 
-    GLOBAL_asm_file = fopen("/tmp/qira_asm", "a");
-  }
+  OPEN_GLOBAL_ASM_FILE
 
   if (is_filtered_address(code)) return;
 
@@ -779,19 +844,92 @@ int GLOBAL_last_was_syscall = 0;
 uint32_t GLOBAL_last_fork_change = -1;
 target_long last_pc = 0;
 
+void write_out_base(CPUArchState *env, int id);
+void write_out_base(CPUArchState *env, int id) {
+  CPUState *cpu = ENV_GET_CPU(env);
+  TaskState *ts = (TaskState *)cpu->opaque;
+
+  char fn[PATH_MAX];
+  char envfn[PATH_MAX];
+
+  sprintf(envfn, "/tmp/qira_logs/%d_env", id);
+  FILE *envf = fopen(envfn, "wb");
+
+  // could still be wrong, clipping on env vars
+  target_ulong ss = ts->info->start_stack;
+  target_ulong se = (ts->info->arg_end + (TARGET_PAGE_SIZE - 1)) & TARGET_PAGE_MASK;
+
+  /*while (h2g_valid(g2h(se))) {
+    printf("%x\n", g2h(se));
+    fflush(stdout);
+    se += TARGET_PAGE_SIZE;
+  }*/
+
+  //target_ulong ss = ts->info->arg_start;
+  //target_ulong se = ts->info->arg_end;
+
+  fwrite(g2h(ss), 1, se-ss, envf);
+  fclose(envf);
+
+  sprintf(fn, "/tmp/qira_logs/%d_base", id);
+  FILE *f = fopen(fn, "w");
+
+
+  // code copied from linux-user/syscall.c
+  FILE *maps = fopen("/proc/self/maps", "r");
+  char *line = NULL;
+  size_t len = 0;
+  while (getline(&line, &len, maps) != -1) {
+    int fields, dev_maj, dev_min, inode;
+    uint64_t min, max, offset;
+    char flag_r, flag_w, flag_x, flag_p;
+    char path[512] = "";
+    fields = sscanf(line, "%"PRIx64"-%"PRIx64" %c%c%c%c %"PRIx64" %x:%x %d"
+                    " %512s", &min, &max, &flag_r, &flag_w, &flag_x,
+                    &flag_p, &offset, &dev_maj, &dev_min, &inode, path);
+    if ((fields < 10) || (fields > 11)) { continue; }
+
+    if (h2g_valid(min) && h2g_valid(max) && strlen(path) && flag_w == '-') {
+      fprintf(f, TARGET_ABI_FMT_lx "-" TARGET_ABI_FMT_lx " %"PRIx64" %s\n", h2g(min), h2g(max), offset, path);
+      //printf("%p - %p -- %s", h2g(min), h2g(max), line);
+      //fflush(stdout);
+    }
+
+    /*printf("%s", line);
+    fflush(stdout);*/
+  }
+  fclose(maps);
+
+  // env
+  fprintf(f, TARGET_ABI_FMT_lx "-" TARGET_ABI_FMT_lx " %"PRIx64" %s\n", ss, se, (uint64_t)0, envfn);
+
+  fclose(f);
+}
+
 /* Interpret pseudo code in tb. */
 uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
 {
 #ifdef QIRA_TRACKING
     CPUState *cpu = ENV_GET_CPU(env);
     TranslationBlock *tb = cpu->current_tb;
+    //TaskState *ts = (TaskState *)cpu->opaque;
 
     if (unlikely(GLOBAL_QIRA_did_init == 0)) { 
+      // get next id
+      if (GLOBAL_id == -1) { GLOBAL_id = get_next_id(); }
+
+      // these are the base libraries we load
+      write_out_base(env, GLOBAL_id);
+
+      init_QIRA(env, GLOBAL_id);
+
       // these three arguments (parent_id, start_clnum, id) must be passed into QIRA
+      // this now runs after init_QIRA
       if (GLOBAL_parent_id != -1) {
         run_QIRA_log(env, GLOBAL_parent_id, GLOBAL_start_clnum);
+        run_QIRA_mods(env, GLOBAL_id);
       }
-      init_QIRA(env, GLOBAL_id);
+
       return 0;
     }
 
@@ -894,14 +1032,14 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
 #ifdef R_EAX
             struct change *a = NULL;
 
-            if (t0 == helper_load_seg) {
+            if ((void*)t0 == helper_load_seg) {
               if (GLOBAL_logstate->is_filtered == 1) {
                 commit_pending_changes();
               }
               a = track_syscall_begin(env, FAKE_SYSCALL_LOADSEG);
               a->data = a1<<32 | a2;
               //printf("LOAD SEG %x %x %x %x\n", a0, a1, a2, a3);
-            } else if (t0 == helper_raise_interrupt) {
+            } else if ((void*)t0 == helper_raise_interrupt) {
               if (GLOBAL_logstate->is_filtered == 1) {
                 commit_pending_changes();
                 // syscalls always get a change?

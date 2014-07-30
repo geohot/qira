@@ -1,4 +1,4 @@
-stream = io.connect("http://localhost:3002/qira");
+stream = io.connect(STREAM_URL);
 
 stream.on('maxclnum', function(msg) {
   update_maxclnum(msg);
@@ -18,11 +18,11 @@ Meteor.startup(function() {
   });
 });
 
-var PTRSIZE = 4;
 
 stream.on('memory', function(msg) {
   // render the hex editor
   var addr = msg['address'];
+  var PTRSIZE = msg['ptrsize'];
   html = "<table><tr>";
   for (var i = 0; i < msg['len']; i += PTRSIZE) {
     if ((i&0xF) == 0) html += "</tr><tr><td>"+hex(addr+i)+":</td>";
@@ -30,14 +30,25 @@ stream.on('memory', function(msg) {
 
     // check if it's an address
     var v = 0;
-    
-    for (var j = PTRSIZE-1; j >= 0; j--) {
-      if (addr+i+j == Session.get('daddr')) {
-        exclass = "highlight";
+
+    if (msg['is_big_endian']) {
+      for (var j = 0; j < PTRSIZE; j++) {
+        if (addr+i+j == Session.get('daddr')) {
+          exclass = "highlight";
+        }
+        v *= 0x100;
+        var t = msg['dat'][addr+i+j];
+        if (t !== undefined) v += t;
       }
-      v *= 0x100;
-      var t = msg['dat'][addr+i+j];
-      if (t !== undefined) v += t;
+    } else {
+      for (var j = PTRSIZE-1; j >= 0; j--) {
+        if (addr+i+j == Session.get('daddr')) {
+          exclass = "highlight";
+        }
+        v *= 0x100;
+        var t = msg['dat'][addr+i+j];
+        if (t !== undefined) v += t;
+      }
     }
     var a = get_data_type(v);
     if (a !== "") {
@@ -84,30 +95,6 @@ stream.on('memory', function(msg) {
 });
 
 
-Template.memviewer.events({
-  'dblclick .datamemory': function(e) {
-    var daddr = parseInt(e.target.innerHTML, 16);
-    update_dview(daddr);
-  },
-  'dblclick .datainstruction': function(e) {
-    var daddr = parseInt(e.target.innerHTML, 16);
-    update_dview(daddr);
-  },
-  'contextmenu .datainstruction': function(e) {
-    // right click to follow in instruction dump
-    // add menu maybe?
-    var iaddr = parseInt(e.target.innerHTML, 16);
-    Session.set("dirtyiaddr", true);
-    Session.set('iaddr', iaddr);
-    return false;
-  },
-  'click .data': function(e) {
-    var daddr = parseInt(e.target.getAttribute('daddr'));
-    Session.set('daddr', daddr);
-  },
-});
-
-Template.regviewer.events(baseevents);
 
 Template.regviewer.hexvalue = function() {
   return this.value;
@@ -115,6 +102,14 @@ Template.regviewer.hexvalue = function() {
 
 Template.regviewer.datatype = function() {
   return get_data_type(this.value);
+};
+
+Template.regviewer.isselected = function() {
+  if (Session.get('daddr') == this.address) {
+    return 'highlight';
+  } else {
+    return '';
+  }
 };
 
 // keep these updated
@@ -136,11 +131,17 @@ stream.on('registers', function(msg) {
   var tsize = msg[0]['size'];
   if (tsize > 0) PTRSIZE = tsize;
   UI.insert(UI.renderWithData(Template.regviewer, {regs: msg}), $('#regviewer')[0]);
+
+  // hack to display the change editor on x86 only
+  if (msg[0]['name']=="EAX") $('#changeeditor').show();
 });
 
-// *** datachanges ***
-
+// events, add the editing here
+Template.memviewer.events(basedblevents);
+Template.regviewer.events(baseevents);
 Template.datachanges.events(baseevents);
+
+// *** datachanges ***
 
 Template.datachanges.hexaddress = function() {
   return this.address;
@@ -165,13 +166,11 @@ Template.datachanges.datatype = function() {
 
 Deps.autorun(function() {
   var forknum = Session.get("forknum");
-  stream.emit('getclnum', forknum, Session.get('clnum'), ['L', 'S'], 2)
+  stream.emit('getclnum', forknum, Session.get('clnum'), ['L', 'S'], 3)
 });
 
 stream.on('clnum', function(msg) {
   $('#datachanges')[0].innerHTML = "";
   UI.insert(UI.renderWithData(Template.datachanges, {memactions: msg}), $('#datachanges')[0]);
 });
-
-
 

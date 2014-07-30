@@ -1,5 +1,8 @@
 var current_hash = "";
 
+// put the defaults here
+Session.setDefault('pending', []);
+
 // there should be a library for this
 Deps.autorun(function() {
   var json = {};

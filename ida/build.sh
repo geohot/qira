@@ -7,13 +7,13 @@ if [[ "$unamestr" == 'Linux' ]]; then
   IDAROOT=~/ida-6.6
   OUTPUT="qira.plx"
   OUTPUT64="qira.plx64"
-  ln -sf linux_libwebsockets.a libwebsockets.a
+  ln -sf libs/linux_libwebsockets.a libwebsockets.a
 elif [[ "$unamestr" == 'Darwin' ]]; then
   SDKROOT=~/idasrc
   IDAROOT="/Applications/IDA Pro 6.6/idaq.app/Contents/MacOS/"
   OUTPUT="qira.pmc"
   OUTPUT64="qira.pmc64"
-  ln -sf mac_libwebsockets.a libwebsockets.a
+  ln -sf libs/mac_libwebsockets.a libwebsockets.a
 fi
 
 # build 32

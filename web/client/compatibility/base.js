@@ -1,3 +1,10 @@
+if (window.location.port == 3000) {
+  // for meteor development
+  STREAM_URL = "http://localhost:3002/qira";
+} else {
+  STREAM_URL = window.location.origin+"/qira";
+}
+
 function p(a) { console.log(a); }
 
 pmaps = {}
@@ -6,6 +13,26 @@ function get_data_type(v) {
   var a = pmaps[v - v%0x1000];
   if (a === undefined) return "";
   else return "data"+a;
+}
+
+function highlight_addresses(a) {
+  // no XSS :)
+  var d = UI.toHTML(a);
+  var re = /0x[0123456789abcdef]+/g;
+  var m = d.match(re);
+  if (m !== null) {
+    m = m.filter(function (v,i,a) { return a.indexOf (v) == i });
+    m.map(function(a) { 
+      var cl = get_data_type(a);
+      if (cl == "") return;
+      d = d.replace(a, "<span class='h"+cl+"'>"+a+"</span>");
+    });
+  }
+  return new Handlebars.SafeString(d);
+}
+
+function fhex(a) {
+  return parseInt(a, 16);
 }
 
 function hex(a) {
@@ -58,15 +85,63 @@ function zoom_out_max(dontforce) {
   else Session.set("cview", [0, max]);
 }
 
+
+// uniform events everywhere
 var baseevents = {
+  'mousedown .datamemory': function(e) { return false; },
+  'mousedown .datainstruction': function(e) { return false; },
+  // ugh highlights
   'click .datamemory': function(e) {
     var daddr = parseInt(e.target.innerHTML, 16);
     update_dview(daddr);
   },
   'click .datainstruction': function(e) {
+    var daddr = parseInt(e.target.innerHTML, 16);
+    update_dview(daddr);
+  },
+  'contextmenu .datainstruction': function(e) {
+    // right click to follow in instruction dump
+    // add menu maybe?
     var iaddr = parseInt(e.target.innerHTML, 16);
     Session.set("dirtyiaddr", true);
     Session.set('iaddr', iaddr);
+    return false;
+  },
+  'click .data': function(e) {
+    var daddr = parseInt(e.target.getAttribute('daddr'));
+    Session.set('daddr', daddr);
+  },
+  'click .register': function(e) {
+    // the registers are in the zero page
+    Session.set('daddr', this.address);
+  }
+};
+
+// uniform events everywhere
+// ugh duplicated code, i'm bad at javascript
+var basedblevents = {
+  'mousedown .datamemory': function(e) { return false; },
+  'mousedown .datainstruction': function(e) { return false; },
+  // ugh highlights
+  'dblclick .datamemory': function(e) {
+    var daddr = parseInt(e.target.innerHTML, 16);
+    update_dview(daddr);
+  },
+  'dblclick .datainstruction': function(e) {
+    var daddr = parseInt(e.target.innerHTML, 16);
+    update_dview(daddr);
+  },
+  'contextmenu .datainstruction': function(e) {
+    // right click to follow in instruction dump
+    // add menu maybe?
+    var iaddr = parseInt(e.target.innerHTML, 16);
+    Session.set("dirtyiaddr", true);
+    Session.set('iaddr', iaddr);
+    return false;
+  },
+  'click .data': function(e) {
+    var daddr = parseInt(e.target.getAttribute('daddr'));
+    Session.set('daddr', daddr);
   },
 };
 

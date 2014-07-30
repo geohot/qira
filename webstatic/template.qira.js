@@ -5,16 +5,22 @@ UI.body.contentParts.push(UI.Component.extend({render: (function() {
     id: "onlypanel"
   }, "\n", HTML.DIV({
     id: "controls"
-  }, "\n", Spacebars.include(self.lookupTemplate("controls")), "\n"), "\n", HTML.DIV({
+  }, "\n", Spacebars.include(self.lookupTemplate("controls")), "\n"), "\n\n", HTML.DIV("\n\n", HTML.DIV({
+    "class": "panelthing",
+    id: "changeeditor"
+  }, "\n", Spacebars.include(self.lookupTemplate("changeeditor")), "\n"), "\n\n", HTML.DIV({
     "class": "panelthing",
     id: "idump"
-  }, "\n", Spacebars.include(self.lookupTemplate("idump")), "\n"), HTML.Raw('\n<div class="panelthing" id="regviewer">\n</div>\n'), HTML.DIV({
+  }, "\n", Spacebars.include(self.lookupTemplate("idump")), "\n"), "\n"), HTML.Raw('\n\n<div class="panelthing" id="regviewer">\n</div>\n'), HTML.DIV({
     "class": "panelthing",
     id: "datachanges"
   }, "\n", Spacebars.include(self.lookupTemplate("datachanges")), "\n"), "\n", HTML.DIV({
     "class": "panelthing",
     id: "hexeditor"
-  }, "\n", Spacebars.include(self.lookupTemplate("memviewer")), "\n"), "\n") ];
+  }, "\n", Spacebars.include(self.lookupTemplate("memviewer")), "\n"), "\n", HTML.DIV({
+    "class": "panelthing",
+    id: "strace"
+  }, "\n", Spacebars.include(self.lookupTemplate("strace")), "\n"), "\n") ];
 })}));
 Meteor.startup(function () { if (! UI.body.INSTANTIATED) { UI.body.INSTANTIATED = true; UI.DomRange.insert(UI.render(UI.body).dom, document.body); } });
 
@@ -52,6 +58,54 @@ Template.__define__("controls", (function() {
   }) ];
 }));
 
+Template.__define__("strace", (function() {
+  var self = this;
+  var template = this;
+  return UI.Each(function() {
+    return Spacebars.call(self.lookup("strace"));
+  }, UI.block(function() {
+    var self = this;
+    return [ "\n  ", HTML.DIV({
+      "class": "syscall"
+    }, "\n  ", HTML.DIV({
+      "class": [ "change ", function() {
+        return Spacebars.mustache(self.lookup("ischange"));
+      } ]
+    }, function() {
+      return Spacebars.mustache(self.lookup("clnum"));
+    }), "\n  ", function() {
+      return Spacebars.mustache(self.lookup("sc"));
+    }, "\n  "), "\n" ];
+  }));
+}));
+
+Template.__define__("changeeditor", (function() {
+  var self = this;
+  var template = this;
+  return [ HTML.Raw('<input id="changeadd" type="button" value="Add Change">\n<input id="changeclear" type="button" value="Clear">\n'), HTML.DIV({
+    id: "pending"
+  }, "\n", Spacebars.include(self.lookupTemplate("pending")), "\n") ];
+}));
+
+Template.__define__("pending", (function() {
+  var self = this;
+  var template = this;
+  return HTML.TABLE("\n", UI.Each(function() {
+    return Spacebars.call(self.lookup("pending"));
+  }, UI.block(function() {
+    var self = this;
+    return [ "\n", HTML.TR("\n", HTML.TD(function() {
+      return Spacebars.mustache(self.lookup("daddr"));
+    }), HTML.TD("="), "\n", HTML.INPUT({
+      spellcheck: "false",
+      "class": "changeedit",
+      value: function() {
+        return Spacebars.mustache(self.lookup("ddata"));
+      }
+    }), "\n"), "\n" ];
+  })), "\n");
+}));
+
 Template.__define__("idump", (function() {
   var self = this;
   var template = this;
@@ -73,9 +127,15 @@ Template.__define__("idump", (function() {
       } ]
     }, function() {
       return Spacebars.mustache(self.lookup("hexaddress"));
-    }), "\n  ", function() {
+    }), "\n  ", HTML.DIV({
+      "class": "instructiondesc"
+    }, function() {
       return Spacebars.mustache(self.lookup("instruction"));
-    }, "\n  "), "\n" ];
+    }), "\n  ", HTML.SPAN({
+      "class": "comment"
+    }, function() {
+      return Spacebars.mustache(self.lookup("comment"));
+    }), "\n  "), "\n" ];
   }));
 }));
 
@@ -90,12 +150,16 @@ Template.__define__("regviewer", (function() {
       "class": [ "reg ", function() {
         return Spacebars.mustache(self.lookup("regactions"));
       } ]
-    }, "\n  ", function() {
+    }, "\n  ", HTML.SPAN({
+      "class": "register"
+    }, function() {
       return Spacebars.mustache(self.lookup("name"));
-    }, ": ", HTML.SPAN({
-      "class": function() {
+    }, ": "), HTML.SPAN({
+      "class": [ function() {
         return Spacebars.mustache(self.lookup("datatype"));
-      }
+      }, " ", function() {
+        return Spacebars.mustache(self.lookup("isselected"));
+      } ]
     }, function() {
       return Spacebars.mustache(self.lookup("hexvalue"));
     }), "\n  "), "\n" ];

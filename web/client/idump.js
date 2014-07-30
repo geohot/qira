@@ -1,4 +1,4 @@
-stream = io.connect("http://localhost:3002/qira");
+stream = io.connect(STREAM_URL);
 
 Meteor.startup(function() {
   $("#idump")[0].addEventListener("mousewheel", function(e) {
@@ -33,10 +33,16 @@ Template.idump.events({
   'click .change': function() {
     Session.set('clnum', this.clnum);
   },
+  'mousedown .datainstruction': function(e) { return false; },
   'click .datainstruction': function() {
     Session.set('iaddr', this.address);
+  },
+  'dblclick .datainstruction': function() {
+    update_dview(this.address);
   }
 });
+
+Template.idump.instruction = function() { return highlight_addresses(this.instruction); }
 
 // ** should move these to idump.js **
 

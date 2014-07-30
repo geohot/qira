@@ -1,4 +1,7 @@
 /* universal things */
+input {
+  font-family: monospace;
+}
 
 td {
   font-family: monospace;
@@ -10,13 +13,13 @@ body {
 }
 
 .highlight {
-  background-color: #FF7777;
+  background-color: #FF7777 !important;
 }
 
 .control {
   font-family: monospace;
   font-size: 16px;
-  width: 180px;
+  width: 165px;
   border: 1px solid black;
   padding: 2px;
   margin: 5px;
@@ -30,6 +33,14 @@ body {
 #control_fork {
   margin-left: 0px;
   width: 50px;
+  margin-right: 0px;
+}
+
+#control_analysis {
+  margin-left: 0px;
+  width: auto;
+  padding-left: 5px;
+  padding-right: 5px;
 }
 
 #control_forknum {
@@ -110,6 +121,22 @@ body {
   color: purple;
 }
 
+/* change editor */
+
+#changeeditor {
+  float: right;
+  height: 180px;
+  width: 200px;
+  padding: 10px;
+  display: none;
+}
+
+.changeedit {
+  width: 100px;
+  margin: 0;
+  padding: 0;
+}
+
 /* regviewer and datachanges */
 
 #regviewer {
@@ -133,16 +160,23 @@ body {
 
 .change {
   color: blue;
-  width: 50px;
+  width: 70px;
   display: inline-block;
 }
 
 .instruction {
   font-family: monospace;
+  white-space: nowrap;
+}
+
+.instructiondesc {
+  min-width: 180px;
+  display: inline-block;
 }
 
 .data {
   text-align: right;
+  /*padding-left: 2px;*/
 }
 
 .datachange {
@@ -154,6 +188,14 @@ body {
 }
 
 .datamemory {
+  color: #888800;
+}
+
+.hdatainstruction {
+  color: #CC0000;
+}
+
+.hdatamemory {
   color: #888800;
 }
 
@@ -174,5 +216,15 @@ body {
 .regreadwrite {
   /* order is lost here */
   background: linear-gradient(to right, #666644, #EEEE44);
+}
+
+#strace {
+  font-family: monospace;
+  height: 150px;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  padding: 10px;
+  white-space: nowrap;
+  width: 604px;
 }
 

@@ -3652,6 +3652,12 @@ static void handle_arg_qirachild(const char *arg) {
   }
 }
 
+extern int GLOBAL_tracelibraries;
+
+static void handle_arg_tracelibraries(const char *arg) {
+  GLOBAL_tracelibraries = 1;
+}
+
 static const struct qemu_argument arg_table[] = {
     {"h",          "",                 false, handle_arg_help,
      "",           "print this help"},
@@ -3687,6 +3693,8 @@ static const struct qemu_argument arg_table[] = {
     {"singlestep", "QEMU_SINGLESTEP",  false, handle_arg_singlestep,
      "",           "run in singlestep mode"},
     {"qirachild",  "QIRA_CHILD",  true, handle_arg_qirachild,
+     "",           "parent_id, start_clnum, id"},
+    {"tracelibraries",  "QIRA_TRACELIBRARIES",  false, handle_arg_tracelibraries,
      "",           "parent_id, start_clnum, id"},
     {"strace",     "QEMU_STRACE",      false, handle_arg_strace,
      "",           "log system calls"},
