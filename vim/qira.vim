@@ -24,14 +24,10 @@ sio = SocketIO('localhost', 3002)
 cda_namespace = sio.define(CdaNamespace, '/cda')
 cda_namespace.emit('navigateline', fn, row)
 
-#print fn, row
-
-#vim.current.buffer.append('bobobbb')
-#print dir(vim)
-
 EOF
 
-" autocmd CursorMoved * :call Bob()
-
 endfunction
+
+autocmd CursorMoved * :call Bob()
+
 

@@ -69,6 +69,7 @@ def mwpoller():
 
 @socketio.on('navigateline', namespace='/cda')
 def navigateline(fn, ln):
+  #print 'navigateline',fn,ln
   try:
     iaddr = program.rdwarves[fn+"#"+str(ln)]
   except:
