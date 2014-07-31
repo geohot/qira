@@ -26,5 +26,14 @@ sudo $PIP install html flask-socketio pillow pyelftools socketIO-client ./qiradb
 
 echo "making symlink"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira
-sudo ln -sf $(pwd)/cda/cda /usr/local/bin/cda
+
+if [ -f web/qira.html ]; then
+  echo "trunk detected"
+  if [ ! -d ~/.meteor ]; then
+    echo "installing meteor"
+    sudo apt-get install curl
+    curl https://install.meteor.com | /bin/sh
+    ~/.meteor/tools/latest/bin/npm install -g meteorite
+  fi
+fi
 
