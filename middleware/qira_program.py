@@ -183,6 +183,7 @@ class Program:
 
   def add_trace(self, fn, i):
     self.traces[i] = Trace(fn, i, self.tregs[1], len(self.tregs[0]), self.tregs[2])
+    return self.traces[i]
 
   def execqira(self, args=[]):
     eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
@@ -241,7 +242,9 @@ class Program:
               if s != None:
                 #print filename, s.line, len(lines)
                 dwarves[s.address] = (fns[s.file-1], s.line, lines[s.file-1][s.line-1])
-                rdwarves[fns[s.file-1]+"#"+str(s.line)] = s.address
+                rd = fns[s.file-1]+"#"+str(s.line)
+                if rd not in rdwarves:
+                  rdwarves[rd] = s.address
           except Exception as e:
             print "DWARF: error on",fn,"got",e
       return (files, dwarves, rdwarves, list(dirs))
@@ -270,9 +273,23 @@ class Trace:
   def __init__(self, fn, forknum, r1, r2, r3):
     self.forknum = forknum
     self.db = qiradb.Trace(fn, forknum, r1, r2, r3)
-    self.fetch_base_memory()
+    self.load_base_memory()
 
-  def fetch_base_memory(self):
+  # proxy the db call and fill in base memory
+  def fetch_memory(self, clnum, address, ln):
+    mem = self.db.fetch_memory(clnum, address, ln)
+    dat = {}
+    for i in range(ln):
+      ri = address+i
+      if mem[i] & 0x100:
+        dat[ri] = mem[i]&0xFF
+      else:
+        for (ss, se) in self.base_memory:
+          if ss <= ri and ri < se:
+            dat[ri] = ord(self.base_memory[(ss,se)][ri-ss])
+    return dat
+
+  def load_base_memory(self):
     self.base_memory = {}
     try:
       f = open("/tmp/qira_logs/"+str(self.forknum)+"_base")

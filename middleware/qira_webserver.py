@@ -215,17 +215,7 @@ def getmemory(forknum, clnum, address, ln):
   if clnum == None or address == None or ln == None:
     return
   address = int(address)
-  mem = trace.db.fetch_memory(clnum, address, ln)
-  dat = {}
-  for i in range(ln):
-    ri = address+i
-    if mem[i] & 0x100:
-      dat[ri] = mem[i]&0xFF
-    else:
-      for (ss, se) in trace.base_memory:
-        if ss <= ri and ri < se:
-          dat[ri] = ord(trace.base_memory[(ss,se)][ri-ss])
-      
+  dat = trace.fetch_memory(clnum, address, ln)
   ret = {'address': address, 'len': ln, 'dat': dat, 'is_big_endian': program.tregs[2], 'ptrsize': program.tregs[1]}
   emit('memory', ret)
 

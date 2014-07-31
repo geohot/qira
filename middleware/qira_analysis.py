@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 import qira_config
 import qira_program
 import time
@@ -16,7 +17,7 @@ def draw_multigraph(blocks):
   trace = []
   cls = []
   for i in range(len(blocks)):
-    h = ghex(blocks[i]['start']) + "-" + ghex(blocks[i]['end'])
+    h = ghex(blocks[i]['start']) + "-" + ghex(blocks[i]['end']) + "\n" + blocks[i]['dis'].replace("\n", "\\l") + "\\l"
     if h not in arr:
       arr.append(h)
     trace.append(arr.index(h))
@@ -42,6 +43,8 @@ def draw_multigraph(blocks):
   print "trace size",len(trace)
   print "realblock count",len(arr)
 
+  # coalesce loops
+  """
   print "counting edges"
   for i in range(0, len(trace)-1):
     #e = pydot.Edge(nodes[trace[i]], nodes[trace[i+1]], label=str(cls[i+1]), headport="n", tailport="s")
@@ -64,12 +67,18 @@ def draw_multigraph(blocks):
     else:
       e = pydot.Edge(te[0], te[1], headport="n", tailport="s")
     graph.add_edge(e)
+  """
 
-  print "drawing png"
+  print "adding edges"
+  for i in range(0, len(trace)-1):
+    e = pydot.Edge(nodes[trace[i]], nodes[trace[i+1]], label=str(cls[i+1]), headport="n", tailport="s")
+    graph.add_edge(e)
+
+  print "drawing png @ /tmp/graph.png"
   graph.write_png('/tmp/graph.png')
   
 
-def get_blocks(flow):
+def get_blocks(flow, static=True):
   # look at addresses
   # if an address can accept control from two addresses, it starts a basic block
   # if an address can give control to two addresses, it ends a basic block
@@ -85,12 +94,16 @@ def get_blocks(flow):
 
   basic_block_starts = set()
 
-  for (address, length, clnum) in flow:
+  dins = {}
+
+  for (address, length, clnum, ins) in flow:
+    dins[address] = ins
     if next_instruction != None and next_instruction != address:
       # anytime we don't run the next instruction in sequence
       # this is a basic block starts
       # print next_instruction, address, data
-      basic_block_starts.add(address)
+      if static:
+        basic_block_starts.add(address)
       #print " ** BLOCK START ** "
 
     #print clnum, hex(address), length
@@ -122,15 +135,22 @@ def get_blocks(flow):
   cchange = None
   last = None
 
+  def disasm(b, e):
+    ret = []
+    for i in range(b,e+1):
+      if i in dins:
+        ret.append(dins[i])
+    return '\n'.join(ret)
+
   for (address, length, clnum, ins) in flow:
     if cchange == None:
       cchange = (clnum, address)
     if address in basic_block_starts:
-      blocks.append({'clstart': cchange[0], 'clend': last[0], 'start': cchange[1], 'end': last[1]})
+      blocks.append({'clstart': cchange[0], 'clend': last[0], 'start': cchange[1], 'end': last[1], 'dis': disasm(cchange[1], last[1])})
       cchange = (clnum, address)
     last = (clnum, address)
 
-  blocks.append({'clstart': cchange[0], 'clend': last[0], 'start': cchange[1], 'end': last[1]})
+  blocks.append({'clstart': cchange[0], 'clend': last[0], 'start': cchange[1], 'end': last[1], 'dis': disasm(cchange[1], last[1])})
   return blocks
 
 def do_function_analysis(flow):
@@ -319,12 +339,18 @@ def analyze(trace, program):
 
 if __name__ == "__main__":
   # can run standalone for testing
-  t = qira_program.Trace("/tmp/qira_logs/0", 0, 4, 9, False)
+  fake_program = qira_program.Program("/tmp/qira_binary", [])
+  t = fake_program.add_trace("/tmp/qira_logs/0", 0)
   while not t.db.did_update():
     time.sleep(0.1)
   print "loaded"
-  fake_program = qira_program.Program("/tmp/qira_binary", [])
   fake_program.qira_asm_file = open("/tmp/qira_asm", "r")
   qira_program.Program.read_asm_file(fake_program)
-  analyze(t, fake_program)
+  #print analyze(t, fake_program)
+
+  flow = get_instruction_flow(t, fake_program, t.db.get_minclnum(), t.db.get_maxclnum())
+
+  blocks = get_blocks(flow, True)
+  #print blocks
+  draw_multigraph(blocks)
 
