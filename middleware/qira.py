@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
 import os
+basedir = os.path.dirname(os.path.realpath(__file__))
 import argparse
 import socket
 import threading
@@ -17,9 +18,10 @@ if __name__ == '__main__':
   parser.add_argument('-t', "--tracelibraries", help="trace into all libraries", action="store_true")
   parser.add_argument('binary', help="path to the binary")
   parser.add_argument('args', nargs='*', help="arguments to the binary")
-  parser.add_argument("--dwarf", help="parse program dwarf data", action="store_true")
-  parser.add_argument("--cda", help="use CDA to view source(implies dwarf)", action="store_true")
   parser.add_argument("--flush-cache", help="flush all QIRA caches", action="store_true")
+  parser.add_argument("--dwarf", help="parse program dwarf data", action="store_true")
+  if os.path.isdir(basedir+"/../cda"):
+    parser.add_argument("--cda", help="use CDA to view source(implies dwarf)", action="store_true")
 
   # parse arguments
   args = parser.parse_args()

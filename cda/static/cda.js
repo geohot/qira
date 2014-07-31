@@ -2,7 +2,7 @@
 stream = io.connect("http://localhost:3002/cda");
 
 stream.on('setline', function(filename, line) {
-  p('setline');
+  //p('setline');
   var b64xref = location.hash.split(",")[1];
   if (b64xref === undefined) b64xref = "";
   else b64xref = ","+b64xref;
@@ -15,18 +15,20 @@ function p(s) {
 }
 
 var highlighted = $();
+var sline = undefined;
 
 $(window).on('hashchange', function() {
   if (location.hash == "") location.replace("#0");
   var ln = location.hash.substr(1).split(",")[0];
   var b64xref = location.hash.split(",")[1];
-  highlighted.removeClass("line_highlighted")
-  highlighted = $("#l" + ln)
-  if (highlighted.length > 0) {
+
+  if (sline != parseInt(ln)) {
+    highlighted.removeClass("line_highlighted")
+    highlighted = $("#l" + ln)
     highlighted.addClass("line_highlighted");
-    p(highlighted);
-    $(window).scrollTo(highlighted, {offset: -150})
+    $('#program').scrollTo(highlighted, {offset: -150})
     stream.emit('navigateline', $('#filename')[0].innerHTML, parseInt(ln))
+    sline = parseInt(ln);
   }
   if (b64xref !== undefined) {
     selected.removeClass('highlighted');

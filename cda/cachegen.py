@@ -124,7 +124,10 @@ def parse_files(files, args=[]):
   args.append(basedir+"/clang/build/Release+Asserts/lib/clang/3.4.2/include")
   for fn in files:
     print "CDA: caching",fn
-    file_cache[fn] = parse_file(fn, args)
+    try:
+      file_cache[fn] = parse_file(fn, args)
+    except Exception as e:
+      print "CDA: error on",fn,":",e
   dat = (object_cache, file_cache, xref_cache)
   return dat
 
