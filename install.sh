@@ -12,6 +12,8 @@ elif [ $(which pacman) ]; then
   echo "installing pip"
   sudo pacman -S base-devel python2-pip
   PIP="pip2"
+elif [ $(which yum) ]; then
+  sudo yum install python-pip python-devel gcc gcc-c++
 fi
 
 if [ $(qemu/qira-i386 > /dev/null; echo $?) == 1 ]; then
