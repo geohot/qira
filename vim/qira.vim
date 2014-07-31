@@ -7,7 +7,7 @@ endif
 " hi CursorLine cterm=NONE ctermbg=darkblue
 set cursorline
 
-function! Bob()
+function! UpdateQIRALine()
 
 python << EOF
 
@@ -28,6 +28,5 @@ EOF
 
 endfunction
 
-autocmd CursorMoved * :call Bob()
-
+autocmd CursorMoved * :call UpdateQIRALine()
 
