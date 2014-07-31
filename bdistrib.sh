@@ -4,6 +4,7 @@ rm -rf distrib/
 mkdir -p distrib/qira
 
 QEMU_SOURCE=1
+QEMU_BINARIES=1
 VERSION=$(cat VERSION)
 echo "packaging version $VERSION"
 
@@ -50,7 +51,9 @@ if [ $QEMU_SOURCE ]; then
   #echo "copying qemu_mods for building qemu from source"
   cp -Rav qemu_mods distrib/qira/
   cp -av qemu_build.sh distrib/qira/
-else
+fi
+
+if [ $QEMU_BINARIES ]; then
   # fairly standard deps + librt, libglib, libpcre
   echo "copying qemu"
   mkdir -p distrib/qira/qemu

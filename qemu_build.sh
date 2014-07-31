@@ -1,5 +1,6 @@
 #!/bin/bash -e
 
+# get qemu if we don't have it
 if [ ! -d qemu/qemu-latest ]; then
   rm -rf qemu
   mkdir -p qemu
@@ -20,11 +21,13 @@ if [ ! -d qemu/qemu-latest ]; then
   mv linux-user/main.c linux-user/main.c.bak
   mv linux-user/strace.c linux-user/strace.c.bak
   cd ../../
+fi
 
-  if [ $(which apt-get) ]; then
-    echo "fetching qemu build-deps, enter your password"
-    sudo apt-get --no-install-recommends -y build-dep qemu
-  fi
+# if you don't have ubuntu you are on your own here
+if [ $(which apt-get) ]; then
+  echo "fetching qemu build-deps, enter your password"
+  sudo apt-get update
+  sudo apt-get --no-install-recommends -y build-dep qemu
 fi
 
 cd qemu/qemu-latest

@@ -64,9 +64,9 @@ window.onkeydown = function(e) {
     go_to_flag(true, false);
   } else if (e.keyCode == 75) {  // vim up, k
     go_to_flag(false, false);
-  } else if (e.keyCode == 85) {  // vim down, row up, data
+  } else if (e.keyCode == 85) {  // vim down, row up, data, u
     go_to_flag(true, true);
-  } else if (e.keyCode == 73) {  // vim up, row up, data
+  } else if (e.keyCode == 73) {  // vim up, row up, data, i
     go_to_flag(false, true);
   } else if (e.keyCode == 27) {  // esc
     history.back();
