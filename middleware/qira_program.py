@@ -5,7 +5,6 @@ from hashlib import sha1
 basedir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(basedir+"/../cda")
 
-import json
 import struct
 import qiradb
 
@@ -18,6 +17,8 @@ X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, F
 X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8, False)
 
 def cachewrap(cachedir, cachename, cachegen):
+  #import json
+  import pickle as json
   try:
     os.mkdir(cachedir)
   except:
