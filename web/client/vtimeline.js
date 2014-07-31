@@ -160,6 +160,7 @@ function redraw_vtimelines(scale) {
     }
 
     var range = Math.min(max[1], cview[1]) - Math.max(max[0], cview[0]);
+    range = Math.max(0, range);
     var topp = 0;
     if (maxclnum[forknum][0] > cview[0]) {
       topp = Math.ceil((maxclnum[forknum][0] - cview[0])/scale);
