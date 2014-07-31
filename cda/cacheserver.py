@@ -12,7 +12,7 @@ def escape(s, crap=False):
   return s.replace("<", "&lt;").replace(">", "&gt;").replace(" ", "&nbsp;").replace("\n", "<br/>").replace("\t", "&nbsp;"*4).replace("\x00", " ")
 cgi.escape = escape
 
-@app.route("/list")
+@app.route("/cda")
 def home():
   # add files
   objs = []
