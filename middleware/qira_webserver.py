@@ -74,7 +74,7 @@ def navigateline(fn, ln):
     iaddr = program.rdwarves[fn+"#"+str(ln)]
   except:
     return
-  #print 'navigateline',fn,ln,iaddr
+  print 'navigateline',fn,ln,iaddr
   socketio.emit('setiaddr', iaddr, namespace='/qira')
 
 @socketio.on('navigateiaddr', namespace='/qira')
@@ -85,7 +85,7 @@ def navigateiaddr(iaddr):
     (filename, line, linedat) = program.dwarves[iaddr]
   except:
     return
-  #print 'navigateiaddr', hex(iaddr), filename, line
+  print 'navigateiaddr', hex(iaddr), filename, line
   socketio.emit('setline', filename, line, namespace='/cda')
 
 @socketio.on('forkat', namespace='/qira')

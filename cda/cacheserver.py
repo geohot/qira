@@ -56,7 +56,7 @@ def display_file():
   h.head.link(rel="stylesheet", href="/cdastatic/cda.css")
   h.head.script(src="/cdastatic/socket.io.min.js")
   h.head.script(src="/cdastatic/jquery-2.1.0.js")
-  h.head.script(src="/cdastatic/jquery.scrollTo-1.4.3.1.js")
+  h.head.script(src="/cdastatic/jquery.scrollTo.min.js")
   h.head.script(src="/cdastatic/cda.js?"+os.urandom(16).encode("hex"))
   body = h.body
   body.div(path, id='filename')

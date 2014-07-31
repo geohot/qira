@@ -198,6 +198,7 @@ class Program:
     # DWARF IS STUPIDLY COMPLICATED
     def parse_dwarf():
       files = []
+      dirs = set()
       dwarves = {}
       rdwarves = {}
 
@@ -216,27 +217,38 @@ class Program:
               basedir = die.attributes['DW_AT_comp_dir'].value + "/"
           if basedir == None:
             continue
+          dirs.add(basedir)
           # get the line program?
+          fns = []
+          lines = []
           lp = di.line_program_for_CU(cu)
-          dir_index = lp['file_entry'][0].dir_index
-          if dir_index > 0:
-            basedir += lp['include_directory'][dir_index-1]+"/"
-          # now we have the filename
-          filename = basedir + lp['file_entry'][0].name
-          files.append(filename)
-          lines = open(filename).read().split("\n")
-          print "DWARF: parsing",filename
+          for f in lp['file_entry']:
+            if lp['include_directory'][f.dir_index-1][0] == '/':
+              fn = ""
+            else:
+              fn = basedir
+            if f.dir_index > 0:
+              fn += lp['include_directory'][f.dir_index-1]+"/"
+            # now we have the filename
+            fn += f.name
+            files.append(fn)
+            fns.append(fn)
+            lines.append(open(fn).read().split("\n"))
+            print "DWARF: parsing",fn
+
           for entry in lp.get_entries():
             s = entry.state
+            #print s
             if s != None:
               #print filename, s.line, len(lines)
-              dwarves[s.address] = (filename, s.line, lines[s.line-1])
-              rdwarves[filename+"#"+str(s.line)] = s.address
+              dwarves[s.address] = (fns[s.file-1], s.line, lines[s.file-1][s.line-1])
+              rdwarves[fns[s.file-1]+"#"+str(s.line)] = s.address
         except Exception as e:
-          print "DWARF: error on",filename,"got",e
-      return (files, dwarves, rdwarves)
+          print "DWARF: error on",fn,"got",e
+      return (files, dwarves, rdwarves, list(dirs))
 
-    (files, self.dwarves, self.rdwarves) = cachewrap("/tmp/qira_dwarfcaches", self.proghash, parse_dwarf)
+    (files, self.dwarves, self.rdwarves, dirs) = cachewrap("/tmp/qira_dwarfcaches", self.proghash, parse_dwarf)
+    #print dirs
 
     # cda
     if not qira_config.WITH_CDA:
@@ -244,7 +256,13 @@ class Program:
 
     def parse_cda():
       import cachegen
-      return cachegen.parse_files(files)
+      cfiles = filter(lambda x: x[-2:] != ".h", files)
+      args = []  # pass in on command line?
+      for d in dirs:
+        args.append("-I")
+        args.append(d)
+
+      return cachegen.parse_files(cfiles, args)
 
     self.cda = cachewrap("/tmp/qira_cdacaches", self.proghash, parse_cda)
 

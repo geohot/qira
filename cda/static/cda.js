@@ -24,6 +24,7 @@ $(window).on('hashchange', function() {
   highlighted = $("#l" + ln)
   if (highlighted.length > 0) {
     highlighted.addClass("line_highlighted");
+    p(highlighted);
     $(window).scrollTo(highlighted, {offset: -150})
     stream.emit('navigateline', $('#filename')[0].innerHTML, parseInt(ln))
   }

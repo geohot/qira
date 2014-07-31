@@ -1,5 +1,5 @@
-void swag();
-void swag2();
+#include <stdio.h>
+#include "swag.h"
 
 int main() {
   int i;
