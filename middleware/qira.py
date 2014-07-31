@@ -29,9 +29,12 @@ if __name__ == '__main__':
     qira_config.TRACE_LIBRARIES = True
   if args.dwarf:
     qira_config.WITH_DWARF = True
-  if args.cda:
-    qira_config.WITH_CDA = True
-    qira_config.WITH_DWARF = True
+  try:
+    if args.cda:
+      qira_config.WITH_CDA = True
+      qira_config.WITH_DWARF = True
+  except:
+    pass
   if args.flush_cache:
     print "*** flushing caches"
     os.system("rm -rfv /tmp/qira*")
