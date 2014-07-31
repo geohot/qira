@@ -204,47 +204,46 @@ class Program:
 
       from elftools.elf.elffile import ELFFile
       elf = ELFFile(open(self.program))
-      if not elf.has_dwarf_info():
-        return (files, dwarves, rdwarves)
-      filename = None
-      di = elf.get_dwarf_info()
-      for cu in di.iter_CUs():
-        try:
-          basedir = None
-          # get the base directory
-          for die in cu.iter_DIEs():
-            if die.tag == "DW_TAG_compile_unit":
-              basedir = die.attributes['DW_AT_comp_dir'].value + "/"
-          if basedir == None:
-            continue
-          dirs.add(basedir)
-          # get the line program?
-          fns = []
-          lines = []
-          lp = di.line_program_for_CU(cu)
-          for f in lp['file_entry']:
-            if lp['include_directory'][f.dir_index-1][0] == '/':
-              fn = ""
-            else:
-              fn = basedir
-            if f.dir_index > 0:
-              fn += lp['include_directory'][f.dir_index-1]+"/"
-            # now we have the filename
-            fn += f.name
-            files.append(fn)
-            fns.append(fn)
-            lines.append(open(fn).read().split("\n"))
-            print "DWARF: parsing",fn
+      if elf.has_dwarf_info():
+        fn = None
+        di = elf.get_dwarf_info()
+        for cu in di.iter_CUs():
+          try:
+            basedir = None
+            # get the base directory
+            for die in cu.iter_DIEs():
+              if die.tag == "DW_TAG_compile_unit":
+                basedir = die.attributes['DW_AT_comp_dir'].value + "/"
+            if basedir == None:
+              continue
+            dirs.add(basedir)
+            # get the line program?
+            fns = []
+            lines = []
+            lp = di.line_program_for_CU(cu)
+            for f in lp['file_entry']:
+              if lp['include_directory'][f.dir_index-1][0] == '/':
+                fn = ""
+              else:
+                fn = basedir
+              if f.dir_index > 0:
+                fn += lp['include_directory'][f.dir_index-1]+"/"
+              # now we have the filename
+              fn += f.name
+              files.append(fn)
+              fns.append(fn)
+              lines.append(open(fn).read().split("\n"))
+              print "DWARF: parsing",fn
 
-          for entry in lp.get_entries():
-            s = entry.state
-            #print s
-            if s != None:
-              #print filename, s.line, len(lines)
-              dwarves[s.address] = (fns[s.file-1], s.line, lines[s.file-1][s.line-1])
-              rdwarves[fns[s.file-1]+"#"+str(s.line)] = s.address
-        except Exception as e:
-          print "DWARF: error on",fn,"got",e
+            for entry in lp.get_entries():
+              s = entry.state
+              #print s
+              if s != None:
+                #print filename, s.line, len(lines)
+                dwarves[s.address] = (fns[s.file-1], s.line, lines[s.file-1][s.line-1])
+                rdwarves[fns[s.file-1]+"#"+str(s.line)] = s.address
+          except Exception as e:
+            print "DWARF: error on",fn,"got",e
       return (files, dwarves, rdwarves, list(dirs))
 
     (files, self.dwarves, self.rdwarves, dirs) = cachewrap("/tmp/qira_dwarfcaches", self.proghash, parse_dwarf)
