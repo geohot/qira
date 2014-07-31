@@ -60,6 +60,10 @@ window.onkeydown = function(e) {
     Session.set("clnum", Session.get("clnum")+1);
   } else if (e.keyCode == 90) {  // z
     zoom_out_max();
+  } else if (e.keyCode == 74) {  // vim down, j
+    go_to_flag(true);
+  } else if (e.keyCode == 75) {  // vim up, k
+    go_to_flag(false);
   } else if (e.keyCode == 27) {  // esc
     history.back();
   }

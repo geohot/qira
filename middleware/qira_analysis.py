@@ -339,16 +339,16 @@ def analyze(trace, program):
 
 if __name__ == "__main__":
   # can run standalone for testing
-  fake_program = qira_program.Program("/tmp/qira_binary", [])
-  t = fake_program.add_trace("/tmp/qira_logs/0", 0)
-  while not t.db.did_update():
+  program = qira_program.Program("/tmp/qira_binary", [])
+  trace = program.add_trace("/tmp/qira_logs/0", 0)
+  while not trace.db.did_update():
     time.sleep(0.1)
   print "loaded"
-  fake_program.qira_asm_file = open("/tmp/qira_asm", "r")
-  qira_program.Program.read_asm_file(fake_program)
-  #print analyze(t, fake_program)
+  program.qira_asm_file = open("/tmp/qira_asm", "r")
+  qira_program.Program.read_asm_file(program)
+  #print analyze(t, program)
 
-  flow = get_instruction_flow(t, fake_program, t.db.get_minclnum(), t.db.get_maxclnum())
+  flow = get_instruction_flow(trace, program, trace.db.get_minclnum(), trace.db.get_maxclnum())
 
   blocks = get_blocks(flow, True)
   #print blocks
