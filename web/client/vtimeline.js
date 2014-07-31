@@ -237,28 +237,38 @@ function remove_flags(type, forknum) {
 }
 
 // these are public functions, no var
-go_to_flag = function (next) {
+go_to_flag = function (next, data) {
   var gclnum = Session.get("clnum");
   var gforknum = Session.get("forknum");
   //var idx = flags.indexOf((forknum, clnum));
-  var cls = [];
+  var cls = [gclnum];
   for (arr in flags) {
     var forknum = parseInt(arr.split(",")[0]);
     var clnum = parseInt(arr.split(",")[1]);
-    if (forknum == gforknum) cls.push(clnum);
+    if (clnum == gclnum) continue;
+    if (data) {
+      if (flags[arr].indexOf("daddrr") != -1 ||
+          flags[arr].indexOf("daddrw") != -1) {
+        if (forknum == gforknum) cls.push(clnum);
+      }
+    } else {
+      if (flags[arr].indexOf("ciaddr") != -1) {
+        if (forknum == gforknum) cls.push(clnum);
+      }
+    }
   }
   cls.sort(function(a, b){return a-b});
   var idx = cls.indexOf(gclnum);
   if (idx == -1) return;
-  if (next && idx+1 < cls.length) {
-    Session.set("clnum", cls[idx+1])
-  } else if (idx-1 >= 0) {
-    Session.set("clnum", cls[idx-1])
+  if (next) {
+    if (idx+1 < cls.length) {
+      Session.set("clnum", cls[idx+1])
+    }
+  } else {
+    if (idx-1 >= 0) {
+      Session.set("clnum", cls[idx-1])
+    }
   }
-};
-
-go_to_prev_flag = function () {
-  p('prev');
 };
 
 Deps.autorun(function() {

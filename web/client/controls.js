@@ -61,9 +61,13 @@ window.onkeydown = function(e) {
   } else if (e.keyCode == 90) {  // z
     zoom_out_max();
   } else if (e.keyCode == 74) {  // vim down, j
-    go_to_flag(true);
+    go_to_flag(true, false);
   } else if (e.keyCode == 75) {  // vim up, k
-    go_to_flag(false);
+    go_to_flag(false, false);
+  } else if (e.keyCode == 85) {  // vim down, row up, data
+    go_to_flag(true, true);
+  } else if (e.keyCode == 73) {  // vim up, row up, data
+    go_to_flag(false, true);
   } else if (e.keyCode == 27) {  // esc
     history.back();
   }
