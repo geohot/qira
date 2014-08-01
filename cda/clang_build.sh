@@ -24,5 +24,5 @@ ln -sf ../../compiler-rt-3.4 llvm/projects/compiler-rt
 mkdir -p build
 cd build
 ../llvm/configure
-make -j32
+make -j
 

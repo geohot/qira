@@ -42,6 +42,6 @@ ln -sf ../../../qemu_mods/main.c linux-user/main.c
 ln -sf ../../../qemu_mods/strace.c linux-user/strace.c
 #./configure --target-list=i386-linux-user,arm-linux-user,x86_64-linux-user,sparc-linux-user,sparc32plus-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown
 ./configure --target-list=i386-linux-user,x86_64-linux-user,arm-linux-user,ppc-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown
-make -j32
+make -j
 
 
