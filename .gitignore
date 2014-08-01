@@ -18,4 +18,5 @@ libs/
 qiradb/build
 cda/clang
 qemu
+tests/system
 

@@ -419,6 +419,11 @@ static bool tci_compare64(uint64_t u0, uint64_t u1, TCGCond condition)
     return result;
 }
 
+// if it's not softmmu, assume it's user
+#ifndef CONFIG_SOFTMMU
+#define QEMU_USER
+#endif
+
 #define QIRA_TRACKING
 
 #ifdef QIRA_TRACKING
@@ -426,7 +431,10 @@ static bool tci_compare64(uint64_t u0, uint64_t u1, TCGCond condition)
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/file.h>
+
+#ifdef QEMU_USER
 #include "qemu.h"
+#endif
 
 #define QIRA_DEBUG(...) {}
 //#define QIRA_DEBUG qemu_debug
@@ -630,6 +638,8 @@ void track_write(target_ulong base, target_ulong offset, target_ulong data, int 
   //else add_change(offset, data, IS_WRITE | size);
 }
 
+#ifdef QEMU_USER
+
 void track_kernel_read(void *host_addr, target_ulong guest_addr, long len) {
   if (unlikely(GLOBAL_QIRA_did_init == 0)) return;
 
@@ -650,6 +660,8 @@ void track_kernel_write(void *host_addr, target_ulong guest_addr, long len) {
   //for (; i < len; i+=4) add_change(guest_addr+i, ((unsigned int*)host_addr)[i], IS_MEM | IS_WRITE | 32);
   for (; i < len; i+=1) add_change(guest_addr+i, ((unsigned char*)host_addr)[i], IS_MEM | IS_WRITE | 8);
 }
+
+#endif
 
 // careful, this does it twice, MMIO?
 #define R(x,y,z) (track_load(x,(uint64_t)y,z),y)
@@ -739,6 +751,7 @@ int run_QIRA_log_from_fd(CPUArchState *env, int qira_log_fd, uint32_t to_change)
     if (pchange.changelist_number >= to_change) break;
     QIRA_DEBUG("running old change %lX %d\n", pchange.address, pchange.changelist_number);
 
+#ifdef QEMU_USER
 #ifdef R_EAX
     if (flags & IS_SYSCALL) {
       // replay all the syscalls?
@@ -752,12 +765,14 @@ int run_QIRA_log_from_fd(CPUArchState *env, int qira_log_fd, uint32_t to_change)
     }
 #endif
 
+    // wrong for system, we need this
     if (flags & IS_WRITE) {
       void *base;
       if (flags & IS_MEM) { base = g2h(pchange.address); }
       else { base = ((void *)env) + pchange.address; }
       memcpy(base, &pchange.data, (flags&SIZE_MASK) >> 3);
     }
+#endif
     ret++;
   }
   return ret;
@@ -845,7 +860,9 @@ uint32_t GLOBAL_last_fork_change = -1;
 target_long last_pc = 0;
 
 void write_out_base(CPUArchState *env, int id);
+
 void write_out_base(CPUArchState *env, int id) {
+#ifdef QEMU_USER
   CPUState *cpu = ENV_GET_CPU(env);
   TaskState *ts = (TaskState *)cpu->opaque;
 
@@ -904,6 +921,7 @@ void write_out_base(CPUArchState *env, int id) {
   fprintf(f, TARGET_ABI_FMT_lx "-" TARGET_ABI_FMT_lx " %"PRIx64" %s\n", ss, se, (uint64_t)0, envfn);
 
   fclose(f);
+#endif
 }
 
 /* Interpret pseudo code in tb. */
