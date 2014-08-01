@@ -20,8 +20,13 @@ echo "making symlinks"
 ln -sf llvm-3.4.2.src llvm
 ln -sf ../../cfe-3.4.2.src llvm/tools/clang
 ln -sf ../../compiler-rt-3.4 llvm/projects/compiler-rt
-rm -rf ../clang
+rm -f ../clang
 ln -s clang-latest/llvm/tools/clang/bindings/python/clang ../clang
+rm -f ../include
+ln -s clang-latest/cfe-3.4.2.src/lib/Headers ../include
+
+# don't actually build clang because it takes forever and sucks
+exit 0
 
 mkdir -p build
 cd build

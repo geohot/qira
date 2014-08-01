@@ -122,7 +122,9 @@ def parse_file(filename, args=[]):
 
 def parse_files(files, args=[]):
   args.append("-I")
-  args.append(basedir+"/clang/build/Release+Asserts/lib/clang/3.4.2/include")
+  #args.append(basedir+"/clang-latest/build/Release+Asserts/lib/clang/3.4.2/include")
+  # for unbuilt clang
+  args.append(basedir+"/include")
   for fn in files:
     print "CDA: caching",fn
     try:
