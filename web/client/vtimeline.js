@@ -28,7 +28,7 @@ Meteor.startup(function() {
     var cscale = get_cscale(); if (cscale === undefined) return;
     var move = Math.round(cscale * 50.0); // 50 pixels
     // clamping
-    if (e.wheelDelta < 0) {
+    if (e.wheelDelta > 0) {
       if (cview[0] - move < 0) move = cview[0];
       Session.set("cview", [cview[0] - move, cview[1] - move]);
     } else {
