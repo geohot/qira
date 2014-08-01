@@ -70,7 +70,6 @@ def display_file():
   h = XHTML().html
   body = h.body
   body.div(path, id='filename')
-  prog = body.div(id="program")
   #body.iframe(id='bottomframe')
 
   # get parsed file
@@ -78,13 +77,13 @@ def display_file():
 
   # add line numbers
   lc = len(rdat.split("\n"))
-  ln = prog.div(id="ln")
+  ln = body.div(id="ln")
   for linenum in range(lc):
     ln.span("%5d \n" % (linenum+1), id="l"+str(linenum+1), onclick='go_to_line('+str(linenum+1)+')')
 
   # add the code
   #print object_cache
-  p = prog.div(id="code")
+  p = body.div(id="code")
   last = 0
   for (start, end, klass, usr) in care:
     if last > start:
@@ -106,7 +105,7 @@ def display_file():
     last = end
   p.span(rdat[last:])
 
-  return str(prog)
+  return str(body)
 
 def set_cache(cache):
   global object_cache, file_cache, xref_cache

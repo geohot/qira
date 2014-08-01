@@ -77,7 +77,12 @@ for (var i = 0; i < 3; i++) {
     } else {
       tmp[this] = val;
     }
-    location.replace("#"+tmp.join(","));
+    if (this == 2) {
+      location.replace("#"+tmp.join(","));
+    } else {
+      // for back and forward
+      location = "#"+tmp.join(",");
+    }
   }.bind(i));
 }
 
@@ -102,8 +107,6 @@ window.onmousedown = function() { return false; };
 window.onload = function() {
   $('#program').on('click', '.link', link_click_handler);
   $('#program').on('dblclick', '.link', link_dblclick_handler);
-
   refresh();
 };
-
 
