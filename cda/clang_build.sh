@@ -1,8 +1,8 @@
 #!/bin/bash -e
 sudo pip install html
 
-mkdir -p clang
-cd clang
+mkdir -p clang-latest
+cd clang-latest
 if [ ! -f .downloaded_clang ]; then
   echo "downloading"
   wget http://llvm.org/releases/3.4.2/cfe-3.4.2.src.tar.gz
@@ -20,9 +20,11 @@ echo "making symlinks"
 ln -sf llvm-3.4.2.src llvm
 ln -sf ../../cfe-3.4.2.src llvm/tools/clang
 ln -sf ../../compiler-rt-3.4 llvm/projects/compiler-rt
+rm -rf ../clang
+ln -s clang-latest/llvm/tools/clang/bindings/python/clang ../clang
 
 mkdir -p build
 cd build
-../llvm/configure
+../llvm/configure --enable-optimized
 make -j
 

@@ -3,7 +3,7 @@ import os
 import sys
 
 basedir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(basedir+"/clang/llvm/tools/clang/bindings/python")
+#sys.path.append(basedir+"/clang/llvm/tools/clang/bindings/python")
 import clang.cindex as ci
 ci.Config.set_library_file(basedir+"/clang/build/Release+Asserts/lib/libclang.so")
 
