@@ -187,7 +187,7 @@ class Program:
 
   def execqira(self, args=[]):
     eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
-    print "***",' '.join(eargs)
+    #print "***",' '.join(eargs)
     os.execvp(self.qirabinary, eargs)
 
   def getdwarf(self):
