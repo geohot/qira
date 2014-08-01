@@ -8,8 +8,7 @@ int main() {
   unsigned int bufnum, size, haxx, i;
   int ret;
   for (i = 0; i < NUMBUFS; i++) bufs[i] = NULL;
-  printf("exploit me bro\n");
-  fflush(stdout);
+  printf("exploit me bro\n"); fflush(stdout);
   while (1) {
     ret = read(0, &bufnum, sizeof(bufnum)); if (ret <= 0) break;
     if (bufnum >= NUMBUFS) continue;
@@ -21,6 +20,7 @@ int main() {
     } else {
       bufs[bufnum] = (char *)malloc(size);
       if (bufs[bufnum] != NULL) {
+        printf("%p\n", bufs[bufnum]); fflush(stdout);
         ret = read(0, bufs[bufnum], size); if (ret <= 0) break;
         if (haxx) {
           bufs[bufnum][size] = '\0';
