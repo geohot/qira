@@ -12,19 +12,16 @@ def escape(s, crap=False):
   return s.replace("<", "&lt;").replace(">", "&gt;").replace(" ", "&nbsp;").replace("\n", "<br/>").replace("\t", "&nbsp;"*4).replace("\x00", " ")
 cgi.escape = escape
 
+@app.route("/list")
+def list():
+  h = XHTML().html
+  for f in sorted(file_cache.keys()):
+    h.body.div.a(f, href="#"+f+",0,")
+  return str(h)
+
 # only path that should be here now
 @app.route("/cda")
 def home():
-  """
-  # add files
-  objs = []
-  if len(file_cache) == 1:
-    # one file, display it
-    return redirect("/f?"+file_cache.keys()[0], code=302)
-  for f in file_cache:
-    objs.append(("/f?"+f, f, "filelink"))
-  """
-
   # generate html
   h = XHTML().html
   h.head.link(rel="stylesheet", href="/cdastatic/cda.css")
@@ -36,16 +33,6 @@ def home():
   prog = body.div(id="program")
   xrefs = body.div(id="xrefs")
 
-  for f in file_cache:
-    prog.div.a(f, href="#"+f+",0,")
-
-  """
-  objs = list(set(objs))
-  objs.sort()
-  for obj in objs:
-    print obj
-    prog.div.a(obj[1], href=obj[0], klass=obj[2])
-  """
   return str(h)
 
 @app.route("/x/<b64xref>")

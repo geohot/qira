@@ -17,11 +17,21 @@ function p(s) {
 }
 
 var highlighted = $();
+
+// ugh hacks
 var sline = undefined;
 var sfile = undefined;
+var sb64xref = undefined;
 
 function refresh() {
-  if (location.hash == "") return;
+  if (location.hash == "") {
+    $.ajax("/list").done(function(a) {
+      $('#program')[0].innerHTML = a;
+    });
+    sfile = undefined;
+    sline = undefined;
+    return;
+  }
 
   //p(location.hash);
 
@@ -30,7 +40,7 @@ function refresh() {
   var b64xref = location.hash.split(",")[2];
 
   if (sfile !== file) {
-    $.ajax("/f?"+file, async=true).done(function(a) {
+    $.ajax("/f?"+file).done(function(a) {
       $('#program')[0].innerHTML = a;
       sfile = file;
       sline = undefined;
@@ -47,20 +57,19 @@ function refresh() {
       sline = parseInt(ln);
     }
   }
-  if (b64xref !== undefined && b64xref !== "") {
+  if (b64xref !== undefined && b64xref !== "" && b64xref != sb64xref) {
     selected.removeClass('highlighted');
     selected = $(document.getElementsByName(atob(b64xref)));
     selected.addClass('highlighted');
     $.ajax("/x/"+b64xref).done(function(a) {
       //p(a);
       $('#xrefs')[0].innerHTML = a;
+      sb64xref = b64xref;
     });
   }
 }
 
 // all of the session is stored in the hash
-$(window).on('hashchange', refresh);
-
 
 var session = [];
 var selected = $();
@@ -107,6 +116,7 @@ window.onmousedown = function() { return false; };
 window.onload = function() {
   $('#program').on('click', '.link', link_click_handler);
   $('#program').on('dblclick', '.link', link_dblclick_handler);
+  $(window).on('hashchange', refresh);
   refresh();
 };
 
