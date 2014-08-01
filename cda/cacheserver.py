@@ -12,25 +12,40 @@ def escape(s, crap=False):
   return s.replace("<", "&lt;").replace(">", "&gt;").replace(" ", "&nbsp;").replace("\n", "<br/>").replace("\t", "&nbsp;"*4).replace("\x00", " ")
 cgi.escape = escape
 
+# only path that should be here now
 @app.route("/cda")
 def home():
+  """
   # add files
   objs = []
   if len(file_cache) == 1:
     # one file, display it
     return redirect("/f?"+file_cache.keys()[0], code=302)
-
   for f in file_cache:
     objs.append(("/f?"+f, f, "filelink"))
+  """
 
   # generate html
   h = XHTML().html
   h.head.link(rel="stylesheet", href="/cdastatic/cda.css")
+  h.head.script(src="/cdastatic/socket.io.min.js")
+  h.head.script(src="/cdastatic/jquery-2.1.0.js")
+  h.head.script(src="/cdastatic/jquery.scrollTo.min.js")
+  h.head.script(src="/cdastatic/cda.js?"+os.urandom(16).encode("hex"))
   body = h.body
+  prog = body.div(id="program")
+  xrefs = body.div(id="xrefs")
+
+  for f in file_cache:
+    prog.div.a(f, href="#"+f+",0,")
+
+  """
   objs = list(set(objs))
   objs.sort()
   for obj in objs:
-    body.div.a(obj[1], href=obj[0], klass=obj[2])
+    print obj
+    prog.div.a(obj[1], href=obj[0], klass=obj[2])
+  """
   return str(h)
 
 @app.route("/x/<b64xref>")
@@ -44,7 +59,7 @@ def display_xref(b64xref):
     for obj in xref_cache[xref]:
       linkobj = obj+","+b64xref
       body.div.a(obj, onclick="parent.location = '/f?"+linkobj+"';", klass="filelink")
-  return str(h)
+  return str(body)
 
 @app.route("/f")
 def display_file():
@@ -53,15 +68,10 @@ def display_file():
     return "file "+str(path)+" not found"
   # generate the HTML
   h = XHTML().html
-  h.head.link(rel="stylesheet", href="/cdastatic/cda.css")
-  h.head.script(src="/cdastatic/socket.io.min.js")
-  h.head.script(src="/cdastatic/jquery-2.1.0.js")
-  h.head.script(src="/cdastatic/jquery.scrollTo.min.js")
-  h.head.script(src="/cdastatic/cda.js?"+os.urandom(16).encode("hex"))
   body = h.body
   body.div(path, id='filename')
   prog = body.div(id="program")
-  body.iframe(id='bottomframe')
+  #body.iframe(id='bottomframe')
 
   # get parsed file
   (care, rdat) = file_cache[path]
@@ -96,7 +106,7 @@ def display_file():
     last = end
   p.span(rdat[last:])
 
-  return str(h)
+  return str(prog)
 
 def set_cache(cache):
   global object_cache, file_cache, xref_cache

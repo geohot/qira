@@ -17,10 +17,15 @@ function p(s) {
 var highlighted = $();
 var sline = undefined;
 
+// all of the session is stored in the hash
 $(window).on('hashchange', function() {
-  if (location.hash == "") location.replace("#0");
-  var ln = location.hash.substr(1).split(",")[0];
-  var b64xref = location.hash.split(",")[1];
+  if (location.hash == "") return;
+
+  p(location.hash);
+
+  var file = location.hash.substr(1).split(",")[0];
+  var ln = location.hash.split(",")[1];
+  var b64xref = location.hash.split(",")[2];
 
   if (sline != parseInt(ln)) {
     highlighted.removeClass("line_highlighted")
@@ -40,27 +45,35 @@ $(window).on('hashchange', function() {
   }
 });
 
+var session = [];
 var selected = $();
+
+// 0 = filename
+// 1 = linenumber
+// 2 = xref
+for (var i = 0; i < 3; i++) {
+  session.__defineSetter__(i, function(val) {
+    var tmp = location.hash.split(",");
+    tmp[this] = val;
+    location.replace(tmp.join(","));
+  }.bind(i));
+}
 
 function link_click_handler(e) {
   var usr = e.target.getAttribute('name');
-  location.replace(location.hash.split(",")[0]+","+btoa(usr));
+  session[2] = btoa(usr);
 }
 
 function link_dblclick_handler(e) {
   var targets = e.target.getAttribute('targets').split(" ");
   p(targets);
   var usr = e.target.getAttribute('name');
-  location = "/f?"+targets[0]+","+btoa(usr);
+  // wrong
+  session[0] = targets[0];
 }
 
 function go_to_line(line) {
-  var b64xref = location.hash.split(",")[1];
-  var newl = "#"+line;
-  if (b64xref !== undefined) {
-    newl += ","+b64xref;
-  }
-  location.replace(newl);
+  session[1] = line;
 }
 
 window.onmousedown = function() { return false; };
