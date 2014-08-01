@@ -223,7 +223,7 @@ class Program:
             lines = []
             lp = di.line_program_for_CU(cu)
             for f in lp['file_entry']:
-              if lp['include_directory'][f.dir_index-1][0] == '/':
+              if f.dir_index > 0 and lp['include_directory'][f.dir_index-1][0] == '/':
                 fn = ""
               else:
                 fn = basedir

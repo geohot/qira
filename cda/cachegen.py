@@ -5,7 +5,8 @@ import sys
 basedir = os.path.dirname(os.path.realpath(__file__))
 #sys.path.append(basedir+"/clang/llvm/tools/clang/bindings/python")
 import clang.cindex as ci
-ci.Config.set_library_file(basedir+"/clang/build/Release+Asserts/lib/libclang.so")
+#ci.Config.set_library_file(basedir+"/clang/build/Release+Asserts/lib/libclang.so")
+ci.Config.set_library_file(basedir+"/libclang.so")
 
 import pickle
 from clang.cindex import CursorKind
