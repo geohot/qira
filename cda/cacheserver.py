@@ -57,8 +57,8 @@ def display_xref(b64xref):
   body.div.div(xref, klass="xrefstitle")
   if xref in xref_cache:
     for obj in xref_cache[xref]:
-      linkobj = obj+","+b64xref
-      body.div.a(obj, onclick="parent.location = '/f?"+linkobj+"';", klass="filelink")
+      linkobj = obj.replace("#",",")+","+b64xref
+      body.div.a(obj, onclick="location.replace('#"+linkobj+"')", klass="filelink")
   return str(body)
 
 @app.route("/f")

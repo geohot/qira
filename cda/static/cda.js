@@ -7,7 +7,9 @@ stream.on('setline', function(filename, line) {
   if (b64xref === undefined) b64xref = "";
   else b64xref = ","+b64xref;
 
-  location.replace("/f?"+filename+"#"+line+b64xref);
+  //location.replace("/f?"+filename+"#"+line+b64xref);
+  session[0] = filename;
+  session[1] = line;
 });
 
 function p(s) {
@@ -16,34 +18,49 @@ function p(s) {
 
 var highlighted = $();
 var sline = undefined;
+var sfile = undefined;
 
-// all of the session is stored in the hash
-$(window).on('hashchange', function() {
+function refresh() {
   if (location.hash == "") return;
 
-  p(location.hash);
+  //p(location.hash);
 
   var file = location.hash.substr(1).split(",")[0];
   var ln = location.hash.split(",")[1];
   var b64xref = location.hash.split(",")[2];
 
+  if (sfile !== file) {
+    $.ajax("/f?"+file, async=true).done(function(a) {
+      $('#program')[0].innerHTML = a;
+      sfile = file;
+      sline = undefined;
+      refresh();
+    });
+  }
   if (sline != parseInt(ln)) {
     highlighted.removeClass("line_highlighted")
     highlighted = $("#l" + ln)
-    highlighted.addClass("line_highlighted");
-    $('#program').scrollTo(highlighted, {offset: -150})
-    stream.emit('navigateline', $('#filename')[0].innerHTML, parseInt(ln))
-    sline = parseInt(ln);
+    if (highlighted.length > 0) {
+      highlighted.addClass("line_highlighted");
+      $('#program').scrollTo(highlighted, {offset: -150})
+      stream.emit('navigateline', sfile, parseInt(ln))
+      sline = parseInt(ln);
+    }
   }
-  if (b64xref !== undefined) {
+  if (b64xref !== undefined && b64xref !== "") {
     selected.removeClass('highlighted');
     selected = $(document.getElementsByName(atob(b64xref)));
     selected.addClass('highlighted');
-    if (frames[0].location.pathname != '/x/'+b64xref) {
-      frames[0].location.replace('/x/'+b64xref);
-    }
+    $.ajax("/x/"+b64xref).done(function(a) {
+      //p(a);
+      $('#xrefs')[0].innerHTML = a;
+    });
   }
-});
+}
+
+// all of the session is stored in the hash
+$(window).on('hashchange', refresh);
+
 
 var session = [];
 var selected = $();
@@ -53,9 +70,14 @@ var selected = $();
 // 2 = xref
 for (var i = 0; i < 3; i++) {
   session.__defineSetter__(i, function(val) {
-    var tmp = location.hash.split(",");
-    tmp[this] = val;
-    location.replace(tmp.join(","));
+    var tmp = location.hash.substr(1).split(",");
+    if (this == 0 && val.indexOf("#") != -1) {
+      tmp[0] = val.split("#")[0];
+      tmp[1] = val.split("#")[1];
+    } else {
+      tmp[this] = val;
+    }
+    location.replace("#"+tmp.join(","));
   }.bind(i));
 }
 
@@ -66,9 +88,7 @@ function link_click_handler(e) {
 
 function link_dblclick_handler(e) {
   var targets = e.target.getAttribute('targets').split(" ");
-  p(targets);
   var usr = e.target.getAttribute('name');
-  // wrong
   session[0] = targets[0];
 }
 
@@ -80,10 +100,10 @@ window.onmousedown = function() { return false; };
 
 // when the page loads we need to check the hash
 window.onload = function() {
-  window.dispatchEvent(new HashChangeEvent("hashchange"))
+  $('#program').on('click', '.link', link_click_handler);
+  $('#program').on('dblclick', '.link', link_dblclick_handler);
 
-  $('.link').bind('click', link_click_handler); 
-  $('.link').bind('dblclick', link_dblclick_handler); 
+  refresh();
 };
 
 
