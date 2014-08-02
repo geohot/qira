@@ -62,7 +62,7 @@ class Program:
     # call which to match the behavior of strace and gdb
     self.program = which(prog)
     self.args = args
-    self.proghash = sha1(open(prog).read()).hexdigest()
+    self.proghash = sha1(open(self.program).read()).hexdigest()
     print "*** program is",self.program,"with hash",self.proghash
 
     # bring this back
