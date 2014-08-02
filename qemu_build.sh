@@ -3,7 +3,6 @@
 # if you don't have ubuntu you are on your own here
 if [ $(which apt-get) ]; then
   echo "fetching qemu build-deps, enter your password"
-  sudo apt-get update
   sudo apt-get --no-install-recommends -y build-dep qemu
   sudo apt-get install wget
 fi
