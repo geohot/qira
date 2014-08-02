@@ -24,7 +24,7 @@ else
 fi
 
 echo "installing pip packages"
-sudo $PIP install html flask-socketio pillow pyelftools socketIO-client ./qiradb
+sudo $PIP install --upgrade html flask-socketio pillow pyelftools socketIO-client ./qiradb
 
 echo "making symlink"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira
