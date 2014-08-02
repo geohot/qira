@@ -4,7 +4,9 @@
 if [ $(which apt-get) ]; then
   echo "fetching qemu build-deps, enter your password"
   sudo apt-get --no-install-recommends -y build-dep qemu
-  sudo apt-get install wget
+  sudo apt-get install wget flex bison libtool automake autoconf autotools-dev
+else
+  echo "WARNING: you don't have apt-get, you are required to fetch the build deps of QEMU on your own"
 fi
 
 # ok, strict mode
@@ -42,5 +44,4 @@ ln -sf ../../../qemu_mods/strace.c linux-user/strace.c
 #./configure --target-list=i386-linux-user,arm-linux-user,x86_64-linux-user,sparc-linux-user,sparc32plus-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown
 ./configure --target-list=i386-linux-user,x86_64-linux-user,arm-linux-user,ppc-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown
 make -j
-
 
