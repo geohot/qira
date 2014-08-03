@@ -337,6 +337,42 @@ def analyze(trace, program):
   #loops = do_loop_analysis(blocks)
   #print loops
 
+def slice(inclnum):
+  def is_store(r):
+    return r['type'] == "W" or r['type'] == "S"
+  def is_load(r):
+    return r['type'] == "R" or r['type'] == "L"
+  def get_stores(clnum):
+    return set(map(lambda x: x['address'], filter(is_store, trace.db.fetch_changes_by_clnum(clnum, 100))))
+  def get_loads(clnum):
+    return set(map(lambda x: x['address'], filter(is_load, trace.db.fetch_changes_by_clnum(clnum, 100))))
+
+  clnum = inclnum
+  st = get_loads(clnum)
+  cls = [clnum]
+
+  # so only things before this can affect it
+  while clnum > max(0, inclnum-100):
+    if len(trace.db.fetch_changes_by_clnum(clnum, 100)) > 20:
+      break
+    overwrite = st.intersection(get_stores(clnum))
+    if len(overwrite) > 0:
+      st = st.difference(overwrite)
+      st = st.union(get_loads(clnum))
+      cls.append(clnum)
+      #print clnum, overwrite, st
+    
+    """
+    r = trace.db.fetch_changes_by_clnum(clnum, 100)
+    for e in r:
+      print e
+    """
+
+    clnum -= 1
+
+  return cls
+  
+
 if __name__ == "__main__":
   # can run standalone for testing
   program = qira_program.Program("/tmp/qira_binary", [])
@@ -346,11 +382,16 @@ if __name__ == "__main__":
   print "loaded"
   program.qira_asm_file = open("/tmp/qira_asm", "r")
   qira_program.Program.read_asm_file(program)
-  #print analyze(t, program)
+
+  # *** analysis time ***
 
   flow = get_instruction_flow(trace, program, trace.db.get_minclnum(), trace.db.get_maxclnum())
-
   blocks = get_blocks(flow, True)
+  
+  print slice(124)
+
+  #print analyze(t, program)
   #print blocks
-  draw_multigraph(blocks)
+  #draw_multigraph(blocks)
+
 

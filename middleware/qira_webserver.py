@@ -4,6 +4,15 @@ import sys
 basedir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(basedir+"/../cda")
 
+def debug():
+  import inspect
+  curframe = inspect.currentframe()
+  calframe = inspect.getouterframes(curframe, 2)
+  print calframe[1][3],"called"
+  #print inspect.getargvalues(calframe)
+  #print args, values
+  
+
 import qira_socat
 import time
 
@@ -125,8 +134,11 @@ def forkat(forknum, clnum, pending):
 def deletefork(forknum):
   global program
   print "deletefork", forknum
-  os.unlink("/tmp/qira_logs/"+str(int(forknum)))
-  del program.traces[forknum]
+  try:
+    os.unlink("/tmp/qira_logs/"+str(int(forknum)))
+    del program.traces[forknum]
+  except:
+    pass
   push_updates()
 
 @socketio.on('doanalysis', namespace='/qira')
@@ -134,6 +146,7 @@ def analysis(forknum):
   if forknum not in program.traces:
     return
   trace = program.traces[forknum]
+  debug()
   # this fails sometimes, who knows why
   try:
     data = qira_analysis.analyze(trace, program)
@@ -157,6 +170,7 @@ def getclnum(forknum, clnum, types, limit):
   trace = program.traces[forknum]
   if clnum == None or types == None or limit == None:
     return
+  debug()
   ret = []
   for c in trace.db.fetch_changes_by_clnum(clnum, LIMIT):
     if c['type'] not in types:
@@ -175,6 +189,7 @@ def getchanges(forknum, address, typ):
     return
   if forknum != -1 and forknum not in program.traces:
     return
+  debug()
   address = int(address)
 
   if forknum == -1:
@@ -193,6 +208,7 @@ def getinstructions(forknum, clstart, clend):
   trace = program.traces[forknum]
   if clstart == None or clend == None:
     return
+  debug()
   ret = []
   for i in range(clstart, clend):
     rret = trace.db.fetch_changes_by_clnum(i, 1)
@@ -214,6 +230,7 @@ def getmemory(forknum, clnum, address, ln):
   trace = program.traces[forknum]
   if clnum == None or address == None or ln == None:
     return
+  debug()
   address = int(address)
   dat = trace.fetch_memory(clnum, address, ln)
   ret = {'address': address, 'len': ln, 'dat': dat, 'is_big_endian': program.tregs[2], 'ptrsize': program.tregs[1]}
@@ -224,9 +241,9 @@ def getregisters(forknum, clnum):
   if forknum not in program.traces:
     return
   trace = program.traces[forknum]
-  #print "getregisters",clnum
   if clnum == None:
     return
+  debug()
   # register names shouldn't be here
   # though i'm not really sure where a better place is, qemu has this information
   ret = []
@@ -262,6 +279,7 @@ def get_strace(forknum):
   if forknum not in program.traces:
     return
   trace = program.traces[forknum]
+  debug()
   try:
     f = open("/tmp/qira_logs/"+str(int(forknum))+"_strace").read()
   except:
@@ -282,7 +300,8 @@ def get_strace(forknum):
     pid = int(ff[1])
     sc = " ".join(ff[2:])
     ret.append({"clnum": clnum, "pid":pid, "sc": sc})
-  emit('strace', ret)
+  # LIMIT for web interface
+  emit('strace', ret[0:LIMIT])
 
 
 # ***** generic webserver stuff *****
