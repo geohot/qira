@@ -10,6 +10,11 @@
 #define InterlockedIncrement(x) __sync_add_and_fetch((x), 1)
 #endif
 
+#ifndef fpurge
+#include <stdio_ext.h>
+#define fpurge __fpurge
+#endif
+
 #define IS_VALID    0x80000000
 #define IS_WRITE    0x40000000
 #define IS_MEM      0x20000000
@@ -17,7 +22,7 @@
 #define IS_SYSCALL  0x08000000
 #define SIZE_MASK   0xFF
 
-struct {
+struct logstate {
 	uint32_t change_count;
 	uint32_t changelist_number;
 	uint32_t is_filtered;
