@@ -23,5 +23,5 @@ qemu
 tests/system
 pin/pin-*
 pin/obj-*
-
+pin/pin.log
 

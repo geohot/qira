@@ -77,11 +77,23 @@ inline MemoryWithValid Trace::get_byte(Clnum clnum, Address a) {
 
 bool Trace::remap_backing(uint64_t new_size) {
   if (backing_size_ == new_size) return true;
+  while (1) {
+    off_t fs = lseek(fd_, 0, SEEK_END);
+    if (fs < new_size) {
+      printf("WARNING: requested %llx bytes, but only %llx are in the file...waiting\n", new_size, fs);
+      usleep(100 * 1000);
+    } else {
+      break;
+    }
+  }
   pthread_mutex_lock(&backing_mutex_);
   munmap((void*)backing_, backing_size_);
   backing_size_ = new_size;
   backing_ = (const struct change *)mmap(NULL, backing_size_, PROT_READ, MAP_SHARED, fd_, 0);
   pthread_mutex_unlock(&backing_mutex_);
+  if (backing_ == NULL) {
+    printf("ERROR: remap_backing is about to return NULL\n");
+  }
   return (backing_ != NULL);
 }
 
