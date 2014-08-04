@@ -837,7 +837,7 @@ bool is_filtered_address(target_ulong pc) {
   if (unlikely(GLOBAL_tracelibraries)) {
     return false;
   } else {
-    return ((bpc > 0x40000000 && bpc < 0xf6800000) || bpc >= 0x100000000);
+    return ((bpc > 0x80000000 && bpc < 0xf6800000) || bpc >= 0x100000000);
   }
 }
 

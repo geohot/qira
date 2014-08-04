@@ -5,6 +5,7 @@ basedir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(basedir+"/../cda")
 
 def debug():
+  return
   import inspect
   curframe = inspect.currentframe()
   calframe = inspect.getouterframes(curframe, 2)
