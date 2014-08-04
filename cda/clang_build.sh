@@ -31,5 +31,5 @@ exit 0
 mkdir -p build
 cd build
 ../llvm/configure --enable-optimized
-make -j
+make -j $(grep processor < /proc/cpuinfo | wc -l)
 
