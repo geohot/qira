@@ -34,10 +34,18 @@ Template.controls.events = {
     Session.set("forknum", parseInt(e.target.value));
   },
   'change #control_iaddr': function(e) {
-    Session.set("iaddr", e.target.value);
+    if (e.target.value == "") {
+      Session.set("iaddr", undefined);
+    } else {
+      Session.set("iaddr", e.target.value);
+    }
   },
   'change #control_daddr': function(e) {
-    update_dview(e.target.value);
+    if (e.target.value == "") {
+      Session.set("daddr", undefined);
+    } else {
+      update_dview(e.target.value);
+    }
   },
   'click #control_fork': function(e) {
     var clnum = Session.get("clnum");
