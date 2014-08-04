@@ -6,6 +6,11 @@ from hashlib import sha1
 basedir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(basedir+"/../cda")
 
+try:  
+  from capstone import *
+except:
+  pass
+
 import struct
 import qiradb
 
@@ -66,6 +71,10 @@ class Program:
     self.proghash = sha1(open(self.program).read()).hexdigest()
     print "*** program is",self.program,"with hash",self.proghash
 
+    # no traces yet
+    self.traces = {}
+    self.runnable = False
+
     # bring this back
     if self.program != "/tmp/qira_binary":
       try:
@@ -84,6 +93,10 @@ class Program:
 
     # pmaps is global, but updated by the traces
     self.instructions = {}
+
+    if open(self.program).read(2) == "MZ":
+      print "**** windows binary detected, only running the server"
+      return
 
     # get file type
     self.fb = struct.unpack("H", open(self.program).read(0x18)[0x12:0x14])[0]   # e_machine
@@ -123,10 +136,8 @@ class Program:
     self.qirabinary = os.path.realpath(self.qirabinary)
     print "**** using",self.qirabinary,"for",hex(self.fb)
 
-    # no traces yet
-    self.traces = {}
-
     self.getdwarf()
+    self.runnable = True
 
   def clear(self):
     # probably always good to do except in development of middleware
@@ -196,6 +207,8 @@ class Program:
     return self.traces[i]
 
   def execqira(self, args=[]):
+    if self.runnable == False:
+      exit(0)
     if qira_config.USE_PIN:
       eargs = [self.pinbinary, "-t", self.pintool, "--", self.program]+self.args
     else:
@@ -205,7 +218,6 @@ class Program:
 
   def disasm(self, raw, address):
     try:
-      from capstone import *
       if self.tregs[3] == "i386":
         md = Cs(CS_ARCH_X86, CS_MODE_32)
       elif self.tregs[3] == "x86-64":
@@ -215,7 +227,6 @@ class Program:
       for i in md.disasm(raw, address):
         # should only be one instruction
         return "%s\t%s" % (i.mnemonic, i.op_str)
-        
     except:
       pass
     return raw.encode("hex")
