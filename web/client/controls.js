@@ -84,6 +84,7 @@ $(document).ready(function() {
   });
   $('body').on('contextmenu', '.hdatainstruction', function(e) {
     Session.set("iaddr", e.target.innerHTML);
+    Session.set("dirtyiaddr", true);
     return false;
   });
 });
