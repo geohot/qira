@@ -82,7 +82,7 @@ static void add_change(uint64_t addr, uint64_t data, uint32_t flags) {
 static void add_big_change(uint64_t addr, const void *data, uint32_t flags, size_t size) {
 	const UINT64 *v = (const UINT64 *)data;
 	while(size >= 8) {
-		add_change(addr, *v, flags|8);
+		add_change(addr, *v, flags|64);
 		addr += 8; size -= 8; v++;
 	}
 	if(size) {
