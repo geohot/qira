@@ -1,3 +1,4 @@
+from qira_base import *
 import qira_config
 import os
 import sys
@@ -179,7 +180,12 @@ class Program:
           ret[a] = pm[a]
         elif ret[a] == "memory":
           ret[a] = pm[a]
-    return ret
+
+    # fix for numberless js
+    rret = {}
+    for k in ret:
+      rret[ghex(k)] = ret[k]
+    return rret
 
   def add_trace(self, fn, i):
     self.traces[i] = Trace(fn, i, self.tregs[1], len(self.tregs[0]), self.tregs[2])

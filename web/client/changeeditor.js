@@ -3,7 +3,6 @@ Template.changeeditor.events = {
     var pending = Session.get('pending');
     var daddr = Session.get('daddr');
     if (daddr === undefined) return;
-    daddr = hex(daddr);
     // no dups
     for (var i=0;i<pending.length;i++) {
       if (pending[i]['daddr'] == daddr) return;

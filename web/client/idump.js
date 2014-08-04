@@ -25,8 +25,9 @@ Template.idump.isiaddr = function() {
   else return "";
 }
 
+// can remove in template
 Template.idump.hexaddress = function() {
-  return hex(this.address);
+  return this.address;
 };
 
 Template.idump.events({

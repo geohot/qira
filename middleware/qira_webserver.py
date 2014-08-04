@@ -1,3 +1,4 @@
+from qira_base import *
 import qira_config
 import os
 import sys
@@ -40,11 +41,6 @@ gevent.monkey.patch_all()
 app = Flask(__name__)
 #app.config['DEBUG'] = True
 socketio = SocketIO(app)
-
-def ghex(a):
-  if a == None:
-    return None
-  return hex(a).strip("L")
 
 # ***** middleware moved here *****
 def push_updates():
@@ -191,7 +187,7 @@ def getchanges(forknum, address, typ):
   if forknum != -1 and forknum not in program.traces:
     return
   debug()
-  address = int(address)
+  address = int(address, 16)
 
   if forknum == -1:
     forknums = program.traces.keys()
@@ -221,6 +217,8 @@ def getinstructions(forknum, clstart, clend):
       rret['instruction'] = program.instructions[rret['address']]
     if rret['address'] in program.dwarves:
       rret['comment'] = program.dwarves[rret['address']][2]
+    # for numberless javascript
+    rret['address'] = ghex(rret['address'])
     ret.append(rret)
   emit('instructions', ret)
 
@@ -232,7 +230,7 @@ def getmemory(forknum, clnum, address, ln):
   if clnum == None or address == None or ln == None:
     return
   debug()
-  address = int(address)
+  address = int(address, 16)
   dat = trace.fetch_memory(clnum, address, ln)
   ret = {'address': address, 'len': ln, 'dat': dat, 'is_big_endian': program.tregs[2], 'ptrsize': program.tregs[1]}
   emit('memory', ret)

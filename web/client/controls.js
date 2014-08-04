@@ -19,11 +19,11 @@ Template.controls.forknum = function() {
 };
 
 Template.controls.iaddr = function() {
-  return hex(Session.get("iaddr"));
+  return Session.get("iaddr");
 };
 
 Template.controls.daddr = function() {
-  return hex(Session.get("daddr"));
+  return Session.get("daddr");
 };
 
 Template.controls.events = {
@@ -34,10 +34,10 @@ Template.controls.events = {
     Session.set("forknum", parseInt(e.target.value));
   },
   'change #control_iaddr': function(e) {
-    Session.set("iaddr", fhex(e.target.value));
+    Session.set("iaddr", e.target.value);
   },
   'change #control_daddr': function(e) {
-    update_dview(fhex(e.target.value));
+    update_dview(e.target.value);
   },
   'click #control_fork': function(e) {
     var clnum = Session.get("clnum");
@@ -75,13 +75,13 @@ window.onkeydown = function(e) {
 
 $(document).ready(function() {
   $('body').on('click', '.hdatamemory', function(e) {
-    update_dview(fhex(e.target.innerHTML));
+    update_dview(e.target.innerHTML);
   });
   $('body').on('click', '.hdatainstruction', function(e) {
-    update_dview(fhex(e.target.innerHTML));
+    update_dview(e.target.innerHTML);
   });
   $('body').on('contextmenu', '.hdatainstruction', function(e) {
-    Session.set("iaddr", fhex(e.target.innerHTML));
+    Session.set("iaddr", e.target.innerHTML);
     return false;
   });
 });

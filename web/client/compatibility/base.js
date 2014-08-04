@@ -7,30 +7,6 @@ if (window.location.port == 3000) {
 
 function p(a) { console.log(a); }
 
-pmaps = {}
-function get_data_type(v) {
-  if (typeof v == "string") v = parseInt(v, 16);
-  var a = pmaps[v - v%0x1000];
-  if (a === undefined) return "";
-  else return "data"+a;
-}
-
-function highlight_addresses(a) {
-  // no XSS :)
-  var d = UI.toHTML(a);
-  var re = /0x[0123456789abcdef]+/g;
-  var m = d.match(re);
-  if (m !== null) {
-    m = m.filter(function (v,i,a) { return a.indexOf (v) == i });
-    m.map(function(a) { 
-      var cl = get_data_type(a);
-      if (cl == "") return;
-      d = d.replace(a, "<span class='h"+cl+"'>"+a+"</span>");
-    });
-  }
-  return new Handlebars.SafeString(d);
-}
-
 function fhex(a) {
   return parseInt(a, 16);
 }
@@ -44,9 +20,56 @@ function hex(a) {
   }
 }
 
+// s is a hex number
+// num is the number of digits to round off
+function string_round(s, num) {
+  if ((s.length-2) <= num) {
+    ret = "0x0";
+  } else {
+    var ret = s.substring(0, s.length-num);
+    for (var i = 0; i < num; i++) {
+      ret += "0";
+    }
+  }
+  return ret;
+}
+
+function string_add(s, num) {
+  // still wrong for big numbers
+  return hex(fhex(s)+num);
+}
+
+pmaps = {}
+function get_data_type(v) {
+  if (typeof v == "number") v = hex(v);
+  //if (typeof v == "string") v = parseInt(v, 16);
+  //var a = pmaps[v - v%0x1000];
+
+  // haxx
+  var a = pmaps[string_round(v, 3)];
+  if (a === undefined) return "";
+  else return "data"+a;
+}
+
+function highlight_addresses(a) {
+  // no XSS :)
+  var d = UI.toHTML(a);
+  var re = /0x[0123456789abcdef]+/g;
+  var m = d.match(re);
+  if (m !== null) {
+    m = m.filter(function (v,i,a) { return a.indexOf(v) == i });
+    m.map(function(a) { 
+      var cl = get_data_type(a);
+      if (cl == "") return;
+      d = d.replace(a, "<span class='h"+cl+"'>"+a+"</span>");
+    });
+  }
+  return new Handlebars.SafeString(d);
+}
+
 function update_dview(addr) {
   Session.set('daddr', addr);
-  Session.set('dview', (addr-0x20)-(addr-0x20)%0x10);
+  Session.set('dview', string_add(string_round(addr, 1), -0x20));
 }
 
 function abs_maxclnum() {
@@ -92,28 +115,28 @@ var baseevents = {
   'mousedown .datainstruction': function(e) { return false; },
   // ugh highlights
   'click .datamemory': function(e) {
-    var daddr = parseInt(e.target.innerHTML, 16);
+    var daddr = e.target.innerHTML;
     update_dview(daddr);
   },
   'click .datainstruction': function(e) {
-    var daddr = parseInt(e.target.innerHTML, 16);
+    var daddr = e.target.innerHTML;
     update_dview(daddr);
   },
   'contextmenu .datainstruction': function(e) {
     // right click to follow in instruction dump
     // add menu maybe?
-    var iaddr = parseInt(e.target.innerHTML, 16);
+    var iaddr = e.target.innerHTML;
     Session.set("dirtyiaddr", true);
     Session.set('iaddr', iaddr);
     return false;
   },
   'click .data': function(e) {
-    var daddr = parseInt(e.target.getAttribute('daddr'));
+    var daddr = e.target.getAttribute('daddr');
     Session.set('daddr', daddr);
   },
   'click .register': function(e) {
     // the registers are in the zero page
-    Session.set('daddr', this.address);
+    Session.set('daddr', hex(this.address));
   }
 };
 
@@ -124,23 +147,23 @@ var basedblevents = {
   'mousedown .datainstruction': function(e) { return false; },
   // ugh highlights
   'dblclick .datamemory': function(e) {
-    var daddr = parseInt(e.target.innerHTML, 16);
+    var daddr = e.target.innerHTML;
     update_dview(daddr);
   },
   'dblclick .datainstruction': function(e) {
-    var daddr = parseInt(e.target.innerHTML, 16);
+    var daddr = e.target.innerHTML;
     update_dview(daddr);
   },
   'contextmenu .datainstruction': function(e) {
     // right click to follow in instruction dump
     // add menu maybe?
-    var iaddr = parseInt(e.target.innerHTML, 16);
+    var iaddr = e.target.innerHTML;
     Session.set("dirtyiaddr", true);
     Session.set('iaddr', iaddr);
     return false;
   },
   'click .data': function(e) {
-    var daddr = parseInt(e.target.getAttribute('daddr'));
+    var daddr = e.target.getAttribute('daddr');
     Session.set('daddr', daddr);
   },
 };

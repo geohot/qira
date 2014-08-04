@@ -11,9 +11,9 @@ stream.on('pmaps', function(msg) {
 Meteor.startup(function() {
   $("#hexdump")[0].addEventListener("mousewheel", function(e) {
     if (e.wheelDelta < 0) {
-      Session.set('dview', Session.get('dview')+0x10);
+      Session.set('dview', string_add(Session.get('dview'), 0x10));
     } else if (e.wheelDelta > 0) {
-      Session.set('dview', Session.get('dview')-0x10);
+      Session.set('dview', string_add(Session.get('dview'), -0x10));
     }
   });
 });
@@ -21,7 +21,9 @@ Meteor.startup(function() {
 
 stream.on('memory', function(msg) {
   // render the hex editor
+  // this isn't updated for numberless
   var addr = msg['address'];
+  var daddr = fhex(Session.get('daddr'))
   var PTRSIZE = msg['ptrsize'];
   html = "<table><tr>";
   for (var i = 0; i < msg['len']; i += PTRSIZE) {
@@ -33,7 +35,7 @@ stream.on('memory', function(msg) {
 
     if (msg['is_big_endian']) {
       for (var j = 0; j < PTRSIZE; j++) {
-        if (addr+i+j == Session.get('daddr')) {
+        if (addr+i+j == daddr) {
           exclass = "highlight";
         }
         v *= 0x100;
@@ -42,7 +44,7 @@ stream.on('memory', function(msg) {
       }
     } else {
       for (var j = PTRSIZE-1; j >= 0; j--) {
-        if (addr+i+j == Session.get('daddr')) {
+        if (addr+i+j == daddr) {
           exclass = "highlight";
         }
         v *= 0x100;
@@ -56,8 +58,8 @@ stream.on('memory', function(msg) {
       //while (me.length != 8) me = "0" + me;
       me = "0x"+me;
       var exclass = "";
-      if (addr+i == Session.get('daddr')) { exclass = "highlight"; }
-      html += '<td colspan="'+PTRSIZE+'" class="data '+a+' '+exclass+'" daddr='+(addr+i)+">"+me+"</td>";
+      if (addr+i == daddr) { exclass = "highlight"; }
+      html += '<td colspan="'+PTRSIZE+'" class="data '+a+' '+exclass+'" daddr='+hex(addr+i)+">"+me+"</td>";
     } else {
       for (var j = 0; j < PTRSIZE; j++) {
         var ii = msg['dat'][addr+i+j];
@@ -68,8 +70,8 @@ stream.on('memory', function(msg) {
           if (me.length == 1) me = "0" + me;
         }
         var exclass = "";
-        if (addr+i+j == Session.get('daddr')) { exclass = "highlight"; }
-        html += '<td class="data '+exclass+'" daddr='+(addr+i+j)+">"+me+"</td>";
+        if (addr+i+j == daddr) { exclass = "highlight"; }
+        html += '<td class="data '+exclass+'" daddr='+hex(addr+i+j)+">"+me+"</td>";
       }
     }
 
@@ -105,7 +107,8 @@ Template.regviewer.datatype = function() {
 };
 
 Template.regviewer.isselected = function() {
-  if (Session.get('daddr') == this.address) {
+  var daddr = fhex(Session.get('daddr'))
+  if (daddr == this.address) {
     return 'highlight';
   } else {
     return '';
