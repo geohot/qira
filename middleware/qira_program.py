@@ -93,13 +93,23 @@ class Program:
 
     # pmaps is global, but updated by the traces
     self.instructions = {}
+    progdat = open(self.program).read(0x800)
 
-    if open(self.program).read(2) == "MZ":
+    if progdat[0:2] == "MZ":
       print "**** windows binary detected, only running the server"
+      wh = struct.unpack("H", progdat[0x84:0x86])[0]
+      if wh == 0x14c:
+        print "*** 32-bit windows"
+        self.tregs = X86REGS
+      elif wh == 0x8664:
+        print "*** 64-bit windows"
+        self.tregs = X64REGS
+      else:
+        raise Exception("windows binary with machine "+hex(wh)+" not supported")
       return
 
     # get file type
-    self.fb = struct.unpack("H", open(self.program).read(0x18)[0x12:0x14])[0]   # e_machine
+    self.fb = struct.unpack("H", progdat[0x12:0x14])[0]   # e_machine
     qemu_dir = os.path.dirname(os.path.realpath(__file__))+"/../qemu/"
     pin_dir = os.path.dirname(os.path.realpath(__file__))+"/../pin/"
     self.pinbinary = pin_dir+"pin-latest/pin"
@@ -111,7 +121,6 @@ class Program:
         print "**** set QEMU_LD_PREFIX to",os.environ['QEMU_LD_PREFIX']
 
     if self.fb == 0x28:
-      progdat = open(self.program).read(0x800)
       if '/lib/ld-linux.so.3' in progdat:
         use_lib('armel')
       elif '/lib/ld-linux-armhf.so.3' in progdat:
