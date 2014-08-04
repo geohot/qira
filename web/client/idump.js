@@ -14,7 +14,9 @@ Template.idump.ischange = function() {
   var clnum = Session.get("clnum");
   if (this.clnum == clnum) {
     // keep the iaddr in sync with the change
-    Session.set('iaddr', this.address);
+    //Session.set('iaddr', this.address);
+    // let's try turning this off, might be more usable
+    // yea, i think it is, file a bug if you hate it
     return "highlight";
   } else return "";
 };
