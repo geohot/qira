@@ -87,7 +87,7 @@ static void add_big_change(uint64_t addr, const void *data, uint32_t flags, size
 	}
 	if(size) {
 		UINT64 x = *v & ~(~(UINT64)0 << size*8);
-		add_change(addr, x, flags|size);
+		add_change(addr, x, flags|(size*8));
 	}
 }
 
@@ -281,8 +281,9 @@ inline VOID SysBefore(ADDRINT ip, ADDRINT num,
 }
 
 VOID SyscallEntry(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOID *v) {
-	fprintf(strace_file, "%p: %ld(%p, %p, %p, %p, %p, %p)",
-		(void*)PIN_GetContextReg(ctxt, REG_INST_PTR), (long)PIN_GetSyscallNumber(ctxt, std),
+	fprintf(strace_file, "%u %u %ld(%p, %p, %p, %p, %p, %p)",
+    logstate.changelist_number, logstate.this_pid,
+		(long)PIN_GetSyscallNumber(ctxt, std),
 		(void*)PIN_GetSyscallArgument(ctxt, std, 0), (void*)PIN_GetSyscallArgument(ctxt, std, 1), (void*)PIN_GetSyscallArgument(ctxt, std, 2),
 		(void*)PIN_GetSyscallArgument(ctxt, std, 3), (void*)PIN_GetSyscallArgument(ctxt, std, 4), (void*)PIN_GetSyscallArgument(ctxt, std, 5)
 	);
