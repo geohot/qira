@@ -93,6 +93,7 @@ class Program:
 
     # pmaps is global, but updated by the traces
     self.instructions = {}
+    (self.dwarves, self.rdwarves) = ({}, {})
     progdat = open(self.program).read(0x800)
 
     if progdat[0:2] == "MZ":
@@ -102,9 +103,11 @@ class Program:
       if wh == 0x14c:
         print "*** 32-bit windows"
         self.tregs = X86REGS
+        self.fb = 0x03
       elif wh == 0x8664:
         print "*** 64-bit windows"
         self.tregs = X64REGS
+        self.fb = 0x3e
       else:
         raise Exception("windows binary with machine "+hex(wh)+" not supported")
       return
@@ -242,8 +245,6 @@ class Program:
     return raw.encode("hex")
 
   def getdwarf(self):
-    (self.dwarves, self.rdwarves) = ({}, {})
-
     if not qira_config.WITH_DWARF:
       return
 
