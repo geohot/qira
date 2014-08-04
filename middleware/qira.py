@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python2.7
 import os
 basedir = os.path.dirname(os.path.realpath(__file__))
 import argparse

@@ -21,4 +21,7 @@ cda/include
 cda/clang-latest
 qemu
 tests/system
+pin/pin-*
+pin/obj-*
+
 
