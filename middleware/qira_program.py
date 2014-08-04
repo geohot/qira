@@ -13,9 +13,9 @@ PPCREGS = ([], 4, True)
 for i in range(32):
   PPCREGS[0].append("r"+str(i))
 
-ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 4, False)
-X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, False)
-X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8, False)
+ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 4, False, "arm")
+X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, False, "i386")
+X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8, False, "x86-64")
 
 def cachewrap(cachedir, cachename, cachegen):
   #import json
@@ -202,6 +202,23 @@ class Program:
       eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
     print "***",' '.join(eargs)
     os.execvp(eargs[0], eargs)
+
+  def disasm(self, raw, address):
+    try:
+      from capstone import *
+      if self.tregs[3] == "i386":
+        md = Cs(CS_ARCH_X86, CS_MODE_32)
+      elif self.tregs[3] == "x86-64":
+        md = Cs(CS_ARCH_X86, CS_MODE_64)
+      else:
+        raise Exception('arch not in capstone')
+      for i in md.disasm(raw, address):
+        # should only be one instruction
+        return "%s\t%s" % (i.mnemonic, i.op_str)
+        
+    except:
+      pass
+    return raw.encode("hex")
 
   def getdwarf(self):
     (self.dwarves, self.rdwarves) = ({}, {})

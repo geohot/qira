@@ -223,8 +223,17 @@ def getinstructions(forknum, clnum, clstart, clend):
       continue
     else:
       rret = rret[0]
+
     if rret['address'] in program.instructions:
+      # fetch the instruction from the qemu dump
       rret['instruction'] = program.instructions[rret['address']]
+    else:
+      # otherwise use the memory
+      rawins = trace.fetch_memory(i, rret['address'], rret['data'])
+      if len(rawins) == rret['data']:
+        raw = ''.join(map(lambda x: chr(x[1]), sorted(rawins.items())))
+        rret['instruction'] = program.disasm(raw, rret['address'])
+
     if rret['address'] in program.dwarves:
       rret['comment'] = program.dwarves[rret['address']][2]
     if i in slce:
