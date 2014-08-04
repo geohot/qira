@@ -138,6 +138,20 @@ def deletefork(forknum):
     pass
   push_updates()
 
+
+@socketio.on('doslice', namespace='/qira')
+def slice(forknum, clnum):
+  if forknum not in program.traces:
+    return
+  trace = program.traces[forknum]
+  debug()
+  data = qira_analysis.slice(trace, clnum)
+  data = set(data)
+  data.remove(clnum)
+  print "slice",forknum,clnum, data
+  emit('slice', forknum, list(data));
+  
+
 @socketio.on('doanalysis', namespace='/qira')
 def analysis(forknum):
   if forknum not in program.traces:

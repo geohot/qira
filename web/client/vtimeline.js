@@ -187,6 +187,7 @@ function redraw_flags() {
     "ciaddr": "#AA0000", // keep it alphabetical
     "daddrr": "#888800",
     "daddrw": "yellow",
+    "slice": "#000088",
     "zoom": "gray"
   };
   for (arr in flags) {
@@ -351,6 +352,20 @@ stream.on('changes', function(msg) {
   }
   redraw_flags();
 });
+
+/* **** SLICE SUPPORT **** */
+Deps.autorun(function() {
+  stream.emit('doslice', Session.get('forknum'), Session.get('clnum'))
+  remove_flags('slice');
+});
+
+stream.on('slice', function(forknum, data) {
+  for (var i = 0; i < data.length; i++) {
+    add_flag('slice', forknum, data[i]);
+  }
+});
+
+
 
 
 

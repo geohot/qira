@@ -337,7 +337,7 @@ def analyze(trace, program):
   #loops = do_loop_analysis(blocks)
   #print loops
 
-def slice(inclnum):
+def slice(trace, inclnum):
   def is_store(r):
     return r['type'] == "W" or r['type'] == "S"
   def is_load(r):
@@ -388,7 +388,7 @@ if __name__ == "__main__":
   flow = get_instruction_flow(trace, program, trace.db.get_minclnum(), trace.db.get_maxclnum())
   blocks = get_blocks(flow, True)
   
-  print slice(124)
+  print slice(trace, 124)
 
   #print analyze(t, program)
   #print blocks
