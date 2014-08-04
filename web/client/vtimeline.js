@@ -354,7 +354,7 @@ stream.on('changes', function(msg) {
 });
 
 /* **** SLICE SUPPORT **** */
-Deps.autorun(function() {
+/*Deps.autorun(function() {
   stream.emit('doslice', Session.get('forknum'), Session.get('clnum'))
   remove_flags('slice');
 });
@@ -363,7 +363,7 @@ stream.on('slice', function(forknum, data) {
   for (var i = 0; i < data.length; i++) {
     add_flag('slice', forknum, data[i]);
   }
-});
+});*/
 
 
 

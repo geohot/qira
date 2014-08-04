@@ -19,7 +19,9 @@ Template.idump.ischange = function() {
     // let's try turning this off, might be more usable
     // yea, i think it is, file a bug if you hate it
     return "highlight";
-  } else return "";
+  }
+  else if (this.slice == true) return "halfhighlight";
+  else return "";
 };
 
 Template.idump.isiaddr = function() {
@@ -58,6 +60,6 @@ stream.on('instructions', function(msg) {
 Deps.autorun(function() {
   var clnum = Session.get("clnum");
   var forknum = Session.get("forknum");
-  stream.emit('getinstructions', forknum, clnum-4, clnum+8);
+  stream.emit('getinstructions', forknum, clnum, clnum-8, clnum+10);
 });
 

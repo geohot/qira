@@ -370,7 +370,9 @@ def slice(trace, inclnum):
 
     clnum -= 1
 
-  return cls
+  cls = set(cls)
+  cls.remove(inclnum)
+  return list(cls)
   
 
 if __name__ == "__main__":

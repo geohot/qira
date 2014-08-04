@@ -138,7 +138,6 @@ def deletefork(forknum):
     pass
   push_updates()
 
-
 @socketio.on('doslice', namespace='/qira')
 def slice(forknum, clnum):
   if forknum not in program.traces:
@@ -146,11 +145,8 @@ def slice(forknum, clnum):
   trace = program.traces[forknum]
   debug()
   data = qira_analysis.slice(trace, clnum)
-  data = set(data)
-  data.remove(clnum)
   print "slice",forknum,clnum, data
-  emit('slice', forknum, list(data));
-  
+  emit('slice', forknum, data);
 
 @socketio.on('doanalysis', namespace='/qira')
 def analysis(forknum):
@@ -213,13 +209,14 @@ def getchanges(forknum, address, typ):
   emit('changes', {'type': typ, 'clnums': ret})
 
 @socketio.on('getinstructions', namespace='/qira')
-def getinstructions(forknum, clstart, clend):
+def getinstructions(forknum, clnum, clstart, clend):
   if forknum not in program.traces:
     return
   trace = program.traces[forknum]
   if clstart == None or clend == None:
     return
   debug()
+  slce = qira_analysis.slice(trace, clnum)
   ret = []
   for i in range(clstart, clend):
     rret = trace.db.fetch_changes_by_clnum(i, 1)
@@ -231,6 +228,10 @@ def getinstructions(forknum, clstart, clend):
       rret['instruction'] = program.instructions[rret['address']]
     if rret['address'] in program.dwarves:
       rret['comment'] = program.dwarves[rret['address']][2]
+    if i in slce:
+      rret['slice'] = True
+    else:
+      rret['slice'] = False
     # for numberless javascript
     rret['address'] = ghex(rret['address'])
     ret.append(rret)
