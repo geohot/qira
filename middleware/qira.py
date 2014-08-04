@@ -23,6 +23,7 @@ if __name__ == '__main__':
   parser.add_argument("--dwarf", help="parse program dwarf data", action="store_true")
   if os.path.isdir(basedir+"/../cda"):
     parser.add_argument("--cda", help="use CDA to view source(implies dwarf)", action="store_true")
+  parser.add_argument("--pin", help="use pin as the backend", action="store_true")
   parser.add_argument("--web-host", help="listen address for web interface. 127.0.0.1 by default", default=qira_config.WEB_HOST)
   parser.add_argument("--web-port", help="listen port for web interface. 3002 by default", type=int, default=qira_config.WEB_PORT)
 
@@ -40,6 +41,7 @@ if __name__ == '__main__':
   # handle arguments
   qira_config.WEB_HOST = args.web_host
   qira_config.WEB_PORT = args.web_port
+  qira_config.USE_PIN = args.pin
   if args.tracelibraries:
     qira_config.TRACE_LIBRARIES = True
   if args.dwarf:

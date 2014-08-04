@@ -88,6 +88,8 @@ class Program:
     # get file type
     self.fb = struct.unpack("H", open(self.program).read(0x18)[0x12:0x14])[0]   # e_machine
     qemu_dir = os.path.dirname(os.path.realpath(__file__))+"/../qemu/"
+    pin_dir = os.path.dirname(os.path.realpath(__file__))+"/../pin/"
+    self.pinbinary = pin_dir+"pin-latest/pin"
 
     def use_lib(arch):
       maybe_path = qemu_dir+"/../libs/"+arch+"/"
@@ -106,9 +108,11 @@ class Program:
     elif self.fb == 0x3e:
       self.tregs = X64REGS
       self.qirabinary = qemu_dir + "qira-x86_64"
+      self.pintool = pin_dir + "obj-intel64/qirapin.so"
     elif self.fb == 0x03:
       self.tregs = X86REGS
       self.qirabinary = qemu_dir + "qira-i386"
+      self.pintool = pin_dir + "obj-ia32/qirapin.so"
     elif self.fb == 0x1400:   # big endian...
       use_lib('powerpc')
       self.tregs = PPCREGS
@@ -192,9 +196,12 @@ class Program:
     return self.traces[i]
 
   def execqira(self, args=[]):
-    eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
-    #print "***",' '.join(eargs)
-    os.execvp(self.qirabinary, eargs)
+    if qira_config.USE_PIN:
+      eargs = [self.pinbinary, "-t", self.pintool, "--", self.program]+self.args
+    else:
+      eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
+    print "***",' '.join(eargs)
+    os.execvp(eargs[0], eargs)
 
   def getdwarf(self):
     (self.dwarves, self.rdwarves) = ({}, {})
