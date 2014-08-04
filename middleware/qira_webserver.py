@@ -120,7 +120,7 @@ def forkat(forknum, clnum, pending):
     qira_log.write_log("/tmp/qira_logs/"+str(next_run_id)+"_mods", dat)
 
   if args.server:
-    qira_socat.start_bindserver(program, 4001, forknum, clnum)
+    qira_socat.start_bindserver(program, qira_config.FORK_PORT, forknum, clnum)
   else:
     if os.fork() == 0:
       program.execqira(["-qirachild", "%d %d %d" % (forknum, clnum, next_run_id)])
