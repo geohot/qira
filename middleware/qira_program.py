@@ -97,7 +97,8 @@ class Program:
 
     if progdat[0:2] == "MZ":
       print "**** windows binary detected, only running the server"
-      wh = struct.unpack("H", progdat[0x84:0x86])[0]
+      pe = struct.unpack("I", progdat[0x3c:0x40])[0]
+      wh = struct.unpack("H", progdat[pe+4:pe+6])[0]
       if wh == 0x14c:
         print "*** 32-bit windows"
         self.tregs = X86REGS
