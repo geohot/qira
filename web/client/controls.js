@@ -49,7 +49,7 @@ Template.controls.events = {
 
 // keyboard shortcuts
 window.onkeydown = function(e) {
-  //p(e.keyCode);
+  p(e.keyCode);
   if (e.keyCode == 37) {
     Session.set("forknum", Session.get("forknum")-1);
   } else if (e.keyCode == 39) {
@@ -70,6 +70,8 @@ window.onkeydown = function(e) {
     go_to_flag(false, true);
   } else if (e.keyCode == 27) {  // esc
     history.back();
+  } else if (e.keyCode == 76) {  // l
+    Session.set("iaddr", Session.get("ciaddr"));
   }
 };
 
