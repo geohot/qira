@@ -21,7 +21,6 @@ import time
 import qira_analysis
 import qira_log
 
-QIRA_WEB_PORT = 3002
 LIMIT = 400
 
 from flask import Flask, Response
@@ -355,5 +354,5 @@ def run_server(largs, lprogram):
     cacheserver.set_cache(program.cda)
   print "starting socketio server..."
   threading.Thread(target=mwpoller).start()
-  socketio.run(app, port=QIRA_WEB_PORT)
+  socketio.run(app, host=qira_config.WEB_HOST, port=qira_config.WEB_PORT)
 

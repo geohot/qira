@@ -2,6 +2,7 @@
 import os
 basedir = os.path.dirname(os.path.realpath(__file__))
 import argparse
+import ipaddr
 import socket
 import threading
 import time
@@ -22,9 +23,23 @@ if __name__ == '__main__':
   parser.add_argument("--dwarf", help="parse program dwarf data", action="store_true")
   if os.path.isdir(basedir+"/../cda"):
     parser.add_argument("--cda", help="use CDA to view source(implies dwarf)", action="store_true")
+  parser.add_argument("--web-host", help="listen address for web interface. 127.0.0.1 by default", default=qira_config.WEB_HOST)
+  parser.add_argument("--web-port", help="listen port for web interface. 3002 by default", type=int, default=qira_config.WEB_PORT)
 
   # parse arguments
   args = parser.parse_args()
+
+  # validate arguments
+  if args.web_port < 1 or args.web_port > 65535:
+    raise Exception("--web-port must be a valid port number (1-65535)")
+  try:
+    args.web_host = ipaddr.IPAddress(args.web_host).exploded
+  except ValueError:
+    raise Exception("--web-host must be a valid IPv4/IPv6 address")
+
+  # handle arguments
+  qira_config.WEB_HOST = args.web_host
+  qira_config.WEB_PORT = args.web_port
   if args.tracelibraries:
     qira_config.TRACE_LIBRARIES = True
   if args.dwarf:
@@ -44,7 +59,7 @@ if __name__ == '__main__':
 
   is_qira_running = 1
   try:
-    socket.create_connection(('127.0.0.1', qira_webserver.QIRA_WEB_PORT))
+    socket.create_connection(('127.0.0.1', qira_config.WEB_PORT))
     if args.server:
       raise Exception("can't run as server if QIRA is already running")
   except:

@@ -1,4 +1,6 @@
 WITH_CDA = False
 WITH_DWARF = False
 TRACE_LIBRARIES = False
+WEB_PORT = 3002
+WEB_HOST = '127.0.0.1'
 
