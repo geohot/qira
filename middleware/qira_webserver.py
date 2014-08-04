@@ -102,8 +102,8 @@ def forkat(forknum, clnum, pending):
   REGSIZE = program.tregs[1]
   dat = []
   for p in pending:
-    daddr = int(p['daddr'], 16)
-    ddata = int(p['ddata'], 16)
+    daddr = fhex(p['daddr'])
+    ddata = fhex(p['ddata'])
     if len(p['ddata']) > 4:
       # ugly hack
       dsize = REGSIZE
@@ -197,7 +197,7 @@ def getchanges(forknum, address, typ):
   if forknum != -1 and forknum not in program.traces:
     return
   debug()
-  address = int(address, 16)
+  address = fhex(address)
 
   if forknum == -1:
     forknums = program.traces.keys()
@@ -245,7 +245,7 @@ def getmemory(forknum, clnum, address, ln):
   if clnum == None or address == None or ln == None:
     return
   debug()
-  address = int(address, 16)
+  address = fhex(address)
   dat = trace.fetch_memory(clnum, address, ln)
   ret = {'address': address, 'len': ln, 'dat': dat, 'is_big_endian': program.tregs[2], 'ptrsize': program.tregs[1]}
   emit('memory', ret)

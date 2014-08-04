@@ -347,12 +347,15 @@ def slice(trace, inclnum):
   def get_loads(clnum):
     return set(map(lambda x: x['address'], filter(is_load, trace.db.fetch_changes_by_clnum(clnum, 100))))
 
+    
+
   clnum = inclnum
   st = get_loads(clnum)
   cls = [clnum]
 
   # so only things before this can affect it
   while clnum > max(0, inclnum-100):
+    st.discard(0x10)  # never follow the stack, X86 HAXX
     if len(trace.db.fetch_changes_by_clnum(clnum, 100)) > 20:
       break
     overwrite = st.intersection(get_stores(clnum))
@@ -371,7 +374,7 @@ def slice(trace, inclnum):
     clnum -= 1
 
   cls = set(cls)
-  cls.remove(inclnum)
+  cls.discard(inclnum)
   return list(cls)
   
 
