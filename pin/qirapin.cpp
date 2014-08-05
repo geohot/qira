@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <time.h>
+#include <iostream>
 
 #include "pin.H"
 
@@ -90,7 +91,10 @@ static void add_big_change(uint64_t addr, const void *data, uint32_t flags, size
 	}
 }
 
-REG writeea_scratch_reg;
+static REG writeea_scratch_reg;
+
+static ADDRINT filter_ip_low;
+static ADDRINT filter_ip_high;
 
 ////////////////////////////////////////////////////////////////
 // Memory & register instrumentation functions
@@ -166,6 +170,9 @@ UINT32 RegToQiraRegAddr(REG r) {
 
 VOID Instruction(INS ins, VOID *v) {
 	// TODO: Do Trace/BBL as per MemTrace example, and lock per BB to support threads.
+
+	ADDRINT address = INS_Address(ins);
+	if(address < filter_ip_low || filter_ip_high <= address) return;
 
 	INS_InsertCall(
 		ins, IPOINT_BEFORE, (AFUNPTR)RecordStart,
@@ -292,6 +299,15 @@ VOID SyscallExit(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOID
 ////////////////////////////////////////////////////////////////
 
 VOID ImageLoad(IMG img, VOID *v) {
+	static int once = 0;
+	if(!once) {
+		once = 1;
+		std::cerr << "qiraing " << IMG_Name(img) << std::endl;
+		filter_ip_low = IMG_LowAddress(img);
+		filter_ip_high = IMG_HighAddress(img)+1;
+	}
+	
+	// TODO: Might not be quite right; might neet to step through sections?
 	fprintf(base_file, "%p-%p 0 %s\n", (void*)IMG_LowAddress(img), (void*)(IMG_HighAddress(img)+1), IMG_Name(img).c_str());
 	fflush(base_file);
 }
