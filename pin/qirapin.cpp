@@ -10,9 +10,11 @@
 #define InterlockedIncrement(x) __sync_add_and_fetch((x), 1)
 #endif
 
+#ifdef TARGET_LINUX
 #ifndef fpurge
 #include <stdio_ext.h>
 #define fpurge __fpurge
+#endif
 #endif
 
 #define IS_VALID    0x80000000
@@ -34,7 +36,7 @@ struct logstate {
 FILE *trace_file = NULL;
 FILE *strace_file = NULL;
 FILE *base_file = NULL;
-unsigned char trace_file_buffer[16<<10];
+char trace_file_buffer[16<<10];
 void new_trace_files() {
 	char pathbase[1024];
 	char path[1024];
@@ -42,6 +44,7 @@ void new_trace_files() {
 	
 	if(trace_file) fpurge(trace_file), fclose(trace_file);
 	trace_file = fopen(pathbase, "w");
+	setbuffer(trace_file, trace_file_buffer, sizeof(trace_file_buffer));
 	
 	if(strace_file) fpurge(strace_file), fclose(strace_file);
 	sprintf(path, "%s_strace", pathbase);
