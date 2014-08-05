@@ -1,10 +1,11 @@
 import os
 import socket
 import signal
+import qira_config
 
 def get_next_run_id():
   ret = -1
-  for i in os.listdir("/tmp/qira_logs/"):
+  for i in os.listdir(qira_config.TRACE_FILE_BASE):
     if "_" in i:
       continue
     ret = max(ret, int(i))

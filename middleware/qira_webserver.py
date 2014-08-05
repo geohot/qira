@@ -48,13 +48,13 @@ def push_updates():
 
 def mwpoll():
   # poll for new traces, call this every once in a while
-  for i in os.listdir("/tmp/qira_logs/"):
+  for i in os.listdir(qira_config.TRACE_FILE_BASE):
     if "_" in i:
       continue
     i = int(i)
 
     if i not in program.traces:
-      program.add_trace("/tmp/qira_logs/"+str(i), i)
+      program.add_trace(qira_config.TRACE_FILE_BASE+str(i), i)
 
   did_update = False
   # poll for updates on existing
@@ -117,7 +117,7 @@ def forkat(forknum, clnum, pending):
   next_run_id = qira_socat.get_next_run_id()
 
   if len(dat) > 0:
-    qira_log.write_log("/tmp/qira_logs/"+str(next_run_id)+"_mods", dat)
+    qira_log.write_log(qira_config.TRACE_FILE_BASE+str(next_run_id)+"_mods", dat)
 
   if args.server:
     qira_socat.start_bindserver(program, qira_config.FORK_PORT, forknum, clnum)
@@ -131,7 +131,7 @@ def deletefork(forknum):
   global program
   print "deletefork", forknum
   try:
-    os.unlink("/tmp/qira_logs/"+str(int(forknum)))
+    os.unlink(qira_config.TRACE_FILE_BASE+str(int(forknum)))
     del program.traces[forknum]
   except:
     pass
@@ -303,7 +303,7 @@ def get_strace(forknum):
   trace = program.traces[forknum]
   debug()
   try:
-    f = open("/tmp/qira_logs/"+str(int(forknum))+"_strace").read()
+    f = open(qira_config.TRACE_FILE_BASE+str(int(forknum))+"_strace").read()
   except:
     return "no strace"
 

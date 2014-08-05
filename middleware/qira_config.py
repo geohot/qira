@@ -6,4 +6,5 @@ WEB_PORT = 3002
 SOCAT_PORT = 4000
 FORK_PORT = 4001
 USE_PIN = False
+TRACE_FILE_BASE = "/tmp/qira_logs/"
 

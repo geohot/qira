@@ -61,7 +61,7 @@ class Program:
   def __init__(self, prog, args):
     # create the logs dir
     try:
-      os.mkdir("/tmp/qira_logs")
+      os.mkdir(qira_config.TRACE_FILE_BASE)
     except:
       pass
 
@@ -190,8 +190,8 @@ class Program:
 
   def delete_old_runs(self):
     # delete the logs
-    for i in os.listdir("/tmp/qira_logs"):
-      os.unlink("/tmp/qira_logs/"+i)
+    for i in os.listdir(qira_config.TRACE_FILE_BASE):
+      os.unlink(qira_config.TRACE_FILE_BASE+i)
       
   def get_maxclnum(self):
     ret = {}
@@ -344,7 +344,7 @@ class Trace:
   def load_base_memory(self):
     self.base_memory = {}
     try:
-      f = open("/tmp/qira_logs/"+str(self.forknum)+"_base")
+      f = open(qira_config.TRACE_FILE_BASE+str(self.forknum)+"_base")
     except:
       # done
       return
