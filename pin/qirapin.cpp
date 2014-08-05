@@ -1,5 +1,7 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <time.h>
+
 #include "pin.H"
 
 #ifdef TARGET_MAC
@@ -11,10 +13,11 @@
 #endif
 
 #ifdef TARGET_LINUX
-#ifndef fpurge
 #include <stdio_ext.h>
 #define fpurge __fpurge
 #endif
+#ifdef TARGET_WINDOWS
+#define fpurge(x) ((void)(x)) // Windows doesn't fork.
 #endif
 
 #define IS_VALID    0x80000000
@@ -43,16 +46,16 @@ void new_trace_files() {
 	sprintf(pathbase, "/tmp/qira_logs/%ld%d", time(NULL), PIN_GetPid());
 	
 	if(trace_file) fpurge(trace_file), fclose(trace_file);
-	trace_file = fopen(pathbase, "w");
-	setbuffer(trace_file, trace_file_buffer, sizeof(trace_file_buffer));
+	trace_file = fopen(pathbase, "wb");
+	setvbuf(trace_file, trace_file_buffer, _IOFBF, sizeof(trace_file_buffer));
 	
 	if(strace_file) fpurge(strace_file), fclose(strace_file);
 	sprintf(path, "%s_strace", pathbase);
-	strace_file = fopen(path, "w");
+	strace_file = fopen(path, "wb");
 	
 	if(base_file) fpurge(base_file), fclose(base_file);
 	sprintf(path, "%s_base", pathbase);
-	base_file = fopen(path, "w");
+	base_file = fopen(path, "wb");
 }
 
 static inline void add_change(uint64_t addr, uint64_t data, uint32_t flags) {
@@ -61,12 +64,11 @@ static inline void add_change(uint64_t addr, uint64_t data, uint32_t flags) {
 		uint64_t data;
 		uint32_t changelist_number;
 		uint32_t flags;
-	} change = {
-		.address = addr,
-		.data = data,
-		.changelist_number = logstate.changelist_number,
-		.flags = flags|IS_VALID,
-	};
+	} change;
+	change.address = addr;
+	change.data = data;
+	change.changelist_number = logstate.changelist_number;
+	change.flags = flags|IS_VALID;
 	fwrite(&change, sizeof(change), 1, trace_file);
 	logstate.change_count++;
 }
