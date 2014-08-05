@@ -8,4 +8,12 @@ CONFIG_ROOT := $(PIN_ROOT)/source/tools/Config
 include $(CONFIG_ROOT)/makefile.config
 include $(TOOLS_ROOT)/Config/makefile.default.rules
 
-all: $(OBJDIR)qirapin$(PINTOOL_SUFFIX)
+QIRAPINTOOL := $(OBJDIR)qirapin$(PINTOOL_SUFFIX)
+
+.PHONY: all runls
+all: $(QIRAPINTOOL)
+
+runls: all
+	mkdir -p /tmp/qira_logs
+	$(PIN_ROOT)/pin -t $(QIRAPINTOOL) -- ls -l
+
