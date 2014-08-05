@@ -12,9 +12,9 @@
   #endif
 #endif
 #include <set>
-#include <stdint.h>
 
 #ifndef _WIN32
+#include <stdint.h>
 #include <pthread.h>
 #define THREAD pthread_t
 #define THREAD_CREATE(x, fxn, dat) pthread_create(&x, NULL, fxn, (void*)dat)
@@ -34,9 +34,13 @@
 
 #define QIRAFILE int
 #else
+typedef unsigned char uint8_t;
+typedef unsigned short int uint16_t;
+typedef unsigned int uint32_t;
+typedef unsigned long long uint64_t;
 #include <Windows.h>
 #define THREAD HANDLE
-#define THREAD_CREATE(x, fxn, dat) x=CreateThread(NULL, 0, fxn, dat, 0, NULL)
+#define THREAD_CREATE(x, fxn, dat) x=CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)fxn, dat, 0, NULL)
 #define THREAD_JOIN(x) WaitForSingleObject(x, INFINITE)
 
 #define RWLOCK SRWLOCK
@@ -52,6 +56,9 @@
 #define MUTEX_UNLOCK(x) RWLOCK_WRUNLOCK(x)
 
 #define QIRAFILE HANDLE
+
+#define usleep(ns) Sleep(ns/1000)
+
 #endif
 
 

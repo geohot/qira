@@ -2,11 +2,7 @@
 #include <structmember.h>
 #include "Trace.h"
 
-#if __cplusplus == 201103L
-#define FE(x,y) for (auto y = x.begin(); y != x.end(); ++y)
-#else
-#define FE(x,y) for (typeof(x.begin()) y = x.begin(); y != x.end(); ++y)
-#endif
+#define FE(z,x,y) for (z y = x.begin(); y != x.end(); ++y)
 
 extern "C" {
 
@@ -65,7 +61,7 @@ static PyObject *fetch_clnums_by_address_and_type(PyTrace *self, PyObject *args)
  
   PyObject *pyret = PyList_New(ret.size());
   int i = 0;
-  FE(ret, it) {
+  FE(vector<Clnum>::iterator, ret, it) {
     PyList_SetItem(pyret, i++, Py_BuildValue("I", *it));
   }
   return pyret;
@@ -81,7 +77,7 @@ static PyObject *fetch_changes_by_clnum(PyTrace *self, PyObject *args) {
 
   PyObject *pyret = PyList_New(ret.size());
   int i = 0;
-  FE(ret, it) {
+  FE(vector<struct change>::iterator, ret, it) {
     // copied (address, data, clnum, flags) from qira_log.py, but type instead of flags
     PyObject *iit = PyDict_New();
     PyDict_SetItem(iit, Py_BuildValue("s", "address"), Py_BuildValue("L", it->address));
@@ -105,7 +101,7 @@ static PyObject *fetch_memory(PyTrace *self, PyObject *args) {
 
   PyObject *pyret = PyList_New(ret.size());
   int i = 0;
-  FE(ret, it) {
+  FE(vector<MemoryWithValid>::iterator, ret, it) {
     PyList_SetItem(pyret, i++, Py_BuildValue("I", *it));
   }
 
@@ -121,7 +117,7 @@ static PyObject *fetch_registers(PyTrace *self, PyObject *args) {
 
   PyObject *pyret = PyList_New(ret.size());
   int i = 0;
-  FE(ret, it) {
+  FE(vector<uint64_t>::iterator, ret, it) {
     PyList_SetItem(pyret, i++, Py_BuildValue("L", *it));
   }
   return pyret;
@@ -133,10 +129,10 @@ static PyObject *get_pmaps(PyTrace *self, PyObject *args) {
   set<Address> dp = self->t->GetDataPages();
   PyObject *iit = PyDict_New();
   // eww these strings are long
-  FE(dp, it) {
+  FE(set<Address>::iterator, dp, it) {
     PyDict_SetItem(iit, Py_BuildValue("L", *it), Py_BuildValue("s", "memory"));
   }
-  FE(ip, it) {
+  FE(set<Address>::iterator, ip, it) {
     PyDict_SetItem(iit, Py_BuildValue("L", *it), Py_BuildValue("s", "instruction"));
   }
   return iit;
