@@ -88,6 +88,20 @@ bool Trace::remap_backing(uint64_t new_size) {
   if (backing_size_ == new_size) return true;
 
 #ifdef _WIN32
+  while (1) {
+    DWORD fs = GetFileSize(fd_, NULL);
+    if (fs < new_size) {
+      printf("WARNING: requested %llx bytes, but only %llx are in the file...waiting\n", new_size, fs);
+      usleep(100 * 1000);
+    } else {
+      break;
+    }
+  }
+  MUTEX_LOCK(backing_mutex_);
+  HANDLE fileMapping = CreateFileMapping(fd_, NULL, PAGE_READONLY, 0, 0, NULL);
+  backing_ = (const struct change *)MapViewOfFileEx(fileMapping, FILE_MAP_READ, 0, 0, new_size, NULL);
+  // LEAKS!!!
+  MUTEX_UNLOCK(backing_mutex_);
 #else
   while (1) {
     off_t fs = lseek(fd_, 0, SEEK_END);
