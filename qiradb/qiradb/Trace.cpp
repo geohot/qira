@@ -14,13 +14,13 @@
 #define PAGE_MASK 0xFFFFFFFFFFFFF000LL
 #define INVALID_CLNUM 0xFFFFFFFF
 
-
-
 void *thread_entry(void *trace_class) {
   Trace *t = (Trace *)trace_class;  // best c++ casting
 
   // lower priority thread for lock
+#ifndef _WIN32
   setpriority(PRIO_PROCESS, 0, getpriority(PRIO_PROCESS, 0)+1);
+#endif
   while (t->is_running_) {   // running?
     t->process();
     usleep(10 * 1000);

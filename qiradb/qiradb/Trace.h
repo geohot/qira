@@ -37,14 +37,14 @@
 #define THREAD_CREATE(x, fxn, dat) x=CreateThread(NULL, 0, fxn, dat, 0, NULL)
 #define THREAD_JOIN(x) WaitForSingleObject(x, INFINITE)
 
-#define RWLOCK SRWLock
+#define RWLOCK SRWLOCK
 #define RWLOCK_INIT(x) InitializeSRWLock(&x)
 #define RWLOCK_RDLOCK(x) AcquireSRWLockShared(&x)
 #define RWLOCK_WRLOCK(x) AcquireSRWLockExclusive(&x)
 #define RWLOCK_UNLOCK(x) ReleaseSRWLockShared(&x)
 #define RWLOCK_WRUNLOCK(x) ReleaseSRWLockExclusive(&x)
 
-#define MUTEX RWLOCK
+#define MUTEX SRWLOCK
 #define MUTEX_INIT(x) RWLOCK_INIT(x)
 #define MUTEX_LOCK(x) RWLOCK_WRLOCK(x)
 #define MUTEX_UNLOCK(x) RWLOCK_WRUNLOCK(x)
@@ -111,7 +111,7 @@ private:
 
   bool is_big_endian_;
   // the backing of the database
-  pthread_rwlock_t db_lock_;
+  RWLOCK db_lock_;
   unordered_map<pair<Address, char>, set<Clnum> > addresstype_to_clnums_;
   vector<EntryNumber> clnum_to_entry_number_;
   vector<RegisterCell> registers_; int register_size_, register_count_;
@@ -121,7 +121,7 @@ private:
   Clnum max_clnum_, min_clnum_;
   
   bool remap_backing(uint64_t);
-  pthread_mutex_t backing_mutex_;
+  MUTEX backing_mutex_;
   const struct change* backing_;
   uint64_t backing_size_;
   int fd_;
