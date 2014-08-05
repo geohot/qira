@@ -4,10 +4,6 @@
 
 #include "pin.H"
 
-#ifdef TARGET_MAC
-#define NOADDSYSCALLFUNC 1 // PIN_AddSyscallEntryFunction and PIN_AddSyscallExitFunction are unsupported
-#endif
-
 #ifndef TARGET_WINDOWS
 #define InterlockedIncrement(x) __sync_add_and_fetch((x), 1)
 #endif
@@ -36,6 +32,12 @@ struct logstate {
 	uint32_t this_pid;
 } logstate;
 
+#ifdef TARGET_WINDOWS
+#define TRACE_FILE_BASE "."
+#else
+#define TRACE_FILE_BASE "/tmp/qira_logs" // This should exist
+#endif
+
 FILE *trace_file = NULL;
 FILE *strace_file = NULL;
 FILE *base_file = NULL;
@@ -43,19 +45,22 @@ char trace_file_buffer[16<<10];
 void new_trace_files() {
 	char pathbase[1024];
 	char path[1024];
-	sprintf(pathbase, "/tmp/qira_logs/%ld%d", time(NULL), PIN_GetPid());
+	sprintf(pathbase, TRACE_FILE_BASE "/%ld%d", time(NULL), PIN_GetPid());
 	
 	if(trace_file) fpurge(trace_file), fclose(trace_file);
 	trace_file = fopen(pathbase, "wb");
+	ASSERT(trace_file, "Failed to open trace output.");
 	setvbuf(trace_file, trace_file_buffer, _IOFBF, sizeof(trace_file_buffer));
 	
 	if(strace_file) fpurge(strace_file), fclose(strace_file);
 	sprintf(path, "%s_strace", pathbase);
 	strace_file = fopen(path, "wb");
+	ASSERT(strace_file, "Failed to open trace output.");
 	
 	if(base_file) fpurge(base_file), fclose(base_file);
 	sprintf(path, "%s_base", pathbase);
 	base_file = fopen(path, "wb");
+	ASSERT(base_file, "Failed to open trace output.");
 }
 
 static inline void add_change(uint64_t addr, uint64_t data, uint32_t flags) {
@@ -142,8 +147,7 @@ VOID Instruction(INS ins, VOID *v) {
 
 	for(UINT32 i = 0; i < rRegs; i++) {
 		REG r = INS_RegR(ins, i);
-		if(REG_is_flags(r)) continue; //bleh
-		if(REG_is_fr(r)) continue; //bleh
+		if(!REG_is_gr(r)) continue;
 		INS_InsertPredicatedCall(
 			ins, IPOINT_BEFORE, (AFUNPTR)RecordRegRead,
 			IARG_REG_CONST_REFERENCE, r,
@@ -155,8 +159,7 @@ VOID Instruction(INS ins, VOID *v) {
 
 	for(UINT32 i = 0; i < wRegs; i++) {
 		REG r = INS_RegW(ins, i);
-		if(REG_is_flags(r)) continue; //bleh
-		if(REG_is_fr(r)) continue; //bleh
+		if(!REG_is_gr(r)) continue;
 		if(INS_HasFallThrough(ins)) {
 			INS_InsertPredicatedCall(
 				ins, IPOINT_AFTER, (AFUNPTR)RecordRegWrite,
@@ -233,59 +236,21 @@ inline VOID SysBefore(ADDRINT ip, ADDRINT num,
 	ADDRINT arg0, ADDRINT arg1, ADDRINT arg2,
 	ADDRINT arg3, ADDRINT arg4, ADDRINT arg5)
 {
-	fprintf(strace_file, "%p: %ld(%p, %p, %p, %p, %p, %p)",
-		(void*)ip, (long)num,
-		(void*)arg0, (void*)arg1, (void*)arg2,
-		(void*)arg3, (void*)arg4, (void*)arg5
-	);
-	fflush(strace_file);
 }
-
-inline VOID SysAfter(ADDRINT ret) {
-	fprintf(strace_file," = %p\n", (void*)ret);
-	fflush(strace_file);
-}
-
-inline VOID SysNoAfter() {
-	fprintf(strace_file," = -\n");
-	fflush(strace_file);
-}
-
-
-#ifdef NOADDSYSCALLFUNC
-
-VOID SyscallInstruction(INS ins, VOID *v) {
-	if(INS_IsSyscall(ins)) {
-		INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(SysBefore),
-			IARG_INST_PTR, IARG_SYSCALL_NUMBER,
-			IARG_SYSARG_VALUE, 0, IARG_SYSARG_VALUE, 1, IARG_SYSARG_VALUE, 2,
-			IARG_SYSARG_VALUE, 3, IARG_SYSARG_VALUE, 4, IARG_SYSARG_VALUE, 5,
-			IARG_END
-		);
-		
-		if(INS_HasFallThrough(ins)) {
-			INS_InsertCall(ins, IPOINT_AFTER, AFUNPTR(SysAfter), IARG_SYSRET_VALUE, IARG_END);
-		} else {
-			INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(SysNoAfter), IARG_CALL_ORDER, CALL_ORDER_LAST, IARG_END);
-		}
-	}
-}
-
-#else
 
 VOID SyscallEntry(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOID *v) {
-	SysBefore(PIN_GetContextReg(ctxt, REG_INST_PTR),
-		PIN_GetSyscallNumber(ctxt, std),
-		PIN_GetSyscallArgument(ctxt, std, 0), PIN_GetSyscallArgument(ctxt, std, 1), PIN_GetSyscallArgument(ctxt, std, 2),
-		PIN_GetSyscallArgument(ctxt, std, 3), PIN_GetSyscallArgument(ctxt, std, 4), PIN_GetSyscallArgument(ctxt, std, 5)
+	fprintf(strace_file, "%p: %ld(%p, %p, %p, %p, %p, %p)",
+		(void*)PIN_GetContextReg(ctxt, REG_INST_PTR), (long)PIN_GetSyscallNumber(ctxt, std),
+		(void*)PIN_GetSyscallArgument(ctxt, std, 0), (void*)PIN_GetSyscallArgument(ctxt, std, 1), (void*)PIN_GetSyscallArgument(ctxt, std, 2),
+		(void*)PIN_GetSyscallArgument(ctxt, std, 3), (void*)PIN_GetSyscallArgument(ctxt, std, 4), (void*)PIN_GetSyscallArgument(ctxt, std, 5)
 	);
+	fflush(strace_file);
 }
 
 VOID SyscallExit(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOID *v) {
-	SysAfter(PIN_GetSyscallReturn(ctxt, std));
+	fprintf(strace_file," = %p\n", (void*)PIN_GetSyscallReturn(ctxt, std));
+	fflush(strace_file);
 }
-
-#endif
 
 ////////////////////////////////////////////////////////////////
 // Other functions
@@ -323,11 +288,11 @@ VOID ForkChild(THREADID threadid, const CONTEXT *ctx, VOID *v) {
 }
 
 int main(int argc, char *argv[]) {
+	PIN_InitSymbols();
 	if(PIN_Init(argc, argv)) {
 		fprintf(stderr, "Error parsing command line.\n");
 		return -1;
 	}
-	PIN_InitSymbols();
 
 	writeea_scratch_reg = PIN_ClaimToolRegister();
 	if(!REG_valid(writeea_scratch_reg)) {
@@ -344,7 +309,6 @@ int main(int argc, char *argv[]) {
 	logstate.this_pid = PIN_GetPid();
 	fwrite(&logstate, sizeof(logstate), 1, trace_file);
 
-	PIN_AddForkFunction(FPOINT_AFTER_IN_CHILD, ForkChild, 0);
 	PIN_AddFiniFunction(Fini, 0);
 
 	IMG_AddInstrumentFunction(ImageLoad, 0);
@@ -352,15 +316,14 @@ int main(int argc, char *argv[]) {
 	PIN_AddThreadStartFunction(ThreadStart, 0);
 	PIN_AddThreadFiniFunction(ThreadFini, 0);
 
-	// TODO: Look into InstLib follow child for following execves (or do it custom)
-
 	INS_AddInstrumentFunction(Instruction, 0);
 
-#ifdef NOADDSYSCALLFUNC
-	INS_AddInstrumentFunction(SyscallInstruction, 0);
-#else
 	PIN_AddSyscallEntryFunction(SyscallEntry, 0);
 	PIN_AddSyscallExitFunction(SyscallExit, 0);
+
+#ifndef TARGET_WINDOWS
+	PIN_AddForkFunction(FPOINT_AFTER_IN_CHILD, ForkChild, 0);
+	// TODO: Look into InstLib follow child for following execves (or do it custom)
 #endif
 
 	PIN_StartProgram();
