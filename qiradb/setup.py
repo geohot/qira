@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python2.7
 from setuptools import setup, Extension
 
 # should be a symlink to the root
