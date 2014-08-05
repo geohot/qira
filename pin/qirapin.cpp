@@ -23,7 +23,7 @@
 #define IS_SYSCALL  0x08000000
 #define SIZE_MASK   0xFF
 
-struct logstate {
+static struct _logstate {
 	uint32_t change_count;
 	uint32_t changelist_number;
 	uint32_t is_filtered;
@@ -63,7 +63,7 @@ void new_trace_files() {
 	ASSERT(base_file, "Failed to open trace output.");
 }
 
-static inline void add_change(uint64_t addr, uint64_t data, uint32_t flags) {
+static void add_change(uint64_t addr, uint64_t data, uint32_t flags) {
 	struct {
 		uint64_t address;
 		uint64_t data;
@@ -76,6 +76,18 @@ static inline void add_change(uint64_t addr, uint64_t data, uint32_t flags) {
 	change.flags = flags|IS_VALID;
 	fwrite(&change, sizeof(change), 1, trace_file);
 	logstate.change_count++;
+}
+
+static void add_big_change(uint64_t addr, const void *data, uint32_t flags, size_t size) {
+	const UINT64 *v = (const UINT64 *)data;
+	while(size >= 8) {
+		add_change(addr, *v, flags|8);
+		addr += 8; size -= 8; v++;
+	}
+	if(size) {
+		UINT64 x = *v & ~(~(UINT64)0 << size*8);
+		add_change(addr, x, flags|size);
+	}
 }
 
 REG writeea_scratch_reg;
@@ -91,22 +103,19 @@ VOID RecordStart(ADDRINT ip, UINT32 size) {
 	add_change(ip, size, IS_START);
 }
 
-VOID RecordRegRead(PIN_REGISTER *value, UINT32 size, UINT32 reg) {
-	for(UINT32 i = 0; i*8 < size; i++) {
-		add_change(reg+i, value->qword[i], 8);
-	}
+VOID RecordRegRead(UINT32 regaddr, PIN_REGISTER *value, UINT32 size) {
+	add_big_change(regaddr, value->byte, 0, size);
 }
 
-VOID RecordRegWrite(PIN_REGISTER *value, UINT32 size, UINT32 reg) {
-	for(UINT32 i = 0; i*8 < size; i++) {
-		add_change(reg+i, value->qword[i], IS_WRITE|8);
-	}
+VOID RecordRegWrite(UINT32 regaddr, PIN_REGISTER *value, UINT32 size) {
+	add_big_change(regaddr, value->byte, IS_WRITE, size);
 }
 
 VOID RecordMemRead(ADDRINT addr, UINT32 size) {
-	UINT64 value;
-	PIN_SafeCopy(&value, (const VOID *)addr, size); // Can assume it worked.
-	add_change(addr, value, IS_MEM);
+	UINT64 value[16];
+	ASSERT(size <= sizeof(value), "wow");
+	PIN_SafeCopy(value, (const VOID *)addr, size); // Can assume it worked.
+	add_big_change(addr, value, IS_MEM, size);
 }
 
 ADDRINT RecordMemWrite1(ADDRINT addr, ADDRINT oldval) {
@@ -114,9 +123,10 @@ ADDRINT RecordMemWrite1(ADDRINT addr, ADDRINT oldval) {
 	return addr;
 }
 ADDRINT RecordMemWrite2(ADDRINT addr, UINT32 size) {
-	UINT64 value;
-	PIN_SafeCopy(&value, (const VOID *)addr, size); // Can assume it worked.
-	add_change(addr, value, IS_MEM|IS_WRITE);
+	UINT64 value[16];
+	ASSERT(size <= sizeof(value), "wow");
+	PIN_SafeCopy(value, (const VOID *)addr, size); // Can assume it worked.
+	add_big_change(addr, value, IS_MEM|IS_WRITE, size);
 	return 0;
 }
 
@@ -124,8 +134,34 @@ VOID RecordSyscall(ADDRINT num) {
 	add_change(num, 0, IS_SYSCALL);
 }
 
-UINT32 RegToQiraNo(REG r) {
-	return r; // TODO: FIXME
+UINT32 RegToQiraRegAddr(REG r) {
+	if(sizeof(ADDRINT) == 4) {
+		switch(REG_FullRegName(r)) {
+			case REG_EAX: return 0;
+			case REG_ECX: return 4;
+			case REG_EDX: return 8;
+			case REG_EBX: return 12;
+			case REG_ESP: return 16;
+			case REG_EBP: return 20;
+			case REG_ESI: return 24;
+			case REG_EDI: return 28;
+			case REG_EIP: return 32;
+			default: return 1024;
+		}
+	} else {
+		switch(REG_FullRegName(r)) {
+			case REG_GAX: return 0;
+			case REG_GCX: return 8;
+			case REG_GDX: return 16;
+			case REG_GBX: return 24;
+			case REG_STACK_PTR: return 32;
+			case REG_GBP: return 40;
+			case REG_GSI: return 48;
+			case REG_GDI: return 56;
+			case REG_INST_PTR: return 64;
+			default: return 1024;
+		}
+	}
 }
 
 VOID Instruction(INS ins, VOID *v) {
@@ -147,34 +183,34 @@ VOID Instruction(INS ins, VOID *v) {
 
 	for(UINT32 i = 0; i < rRegs; i++) {
 		REG r = INS_RegR(ins, i);
-		if(!REG_is_gr(r)) continue;
+		if(!REG_is_gr(REG_FullRegName(r))) continue;
 		INS_InsertPredicatedCall(
 			ins, IPOINT_BEFORE, (AFUNPTR)RecordRegRead,
+			IARG_UINT32, RegToQiraRegAddr(r),
 			IARG_REG_CONST_REFERENCE, r,
 			IARG_UINT32, REG_Size(r),
-			IARG_UINT32, RegToQiraNo(r),
 			IARG_END
 		);
 	}
 
 	for(UINT32 i = 0; i < wRegs; i++) {
 		REG r = INS_RegW(ins, i);
-		if(!REG_is_gr(r)) continue;
+		if(!REG_is_gr(REG_FullRegName(r))) continue;
 		if(INS_HasFallThrough(ins)) {
 			INS_InsertPredicatedCall(
 				ins, IPOINT_AFTER, (AFUNPTR)RecordRegWrite,
+				IARG_UINT32, RegToQiraRegAddr(r),
 				IARG_REG_CONST_REFERENCE, r,
 				IARG_UINT32, REG_Size(r),
-				IARG_UINT32, RegToQiraNo(r),
 				IARG_END
 			);
 		}
 		if(INS_IsBranchOrCall(ins)) {
 			INS_InsertPredicatedCall(
 				ins, IPOINT_TAKEN_BRANCH, (AFUNPTR)RecordRegWrite,
+				IARG_UINT32, RegToQiraRegAddr(r),
 				IARG_REG_CONST_REFERENCE, r,
 				IARG_UINT32, REG_Size(r),
-				IARG_UINT32, RegToQiraNo(r),
 				IARG_END
 			);
 		}
@@ -216,10 +252,9 @@ VOID Instruction(INS ins, VOID *v) {
 					IARG_END
 				);
 			}
-			
 		}
 	}
-	
+
 	if(INS_IsSyscall(ins)) {
 		INS_InsertPredicatedCall(
 			ins, IPOINT_BEFORE, (AFUNPTR)RecordSyscall,
@@ -323,7 +358,7 @@ int main(int argc, char *argv[]) {
 
 #ifndef TARGET_WINDOWS
 	PIN_AddForkFunction(FPOINT_AFTER_IN_CHILD, ForkChild, 0);
-	// TODO: Look into InstLib follow child for following execves (or do it custom)
+	// TODO: Look into InstLib follow child for following execves (and windows equiv)
 #endif
 
 	PIN_StartProgram();
