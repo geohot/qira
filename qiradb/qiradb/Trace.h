@@ -13,7 +13,43 @@
 #endif
 #include <set>
 #include <stdint.h>
+
+#ifndef _WIN32
 #include <pthread.h>
+#define THREAD pthread_t
+#define THREAD_CREATE(x, fxn, dat) pthread_create(&x, NULL, fxn, (void*)dat)
+#define THREAD_JOIN(x) pthread_join(x, NULL)
+
+#define MUTEX pthread_mutex_t
+#define MUTEX_INIT(x) pthread_mutex_init(&x, NULL)
+#define MUTEX_LOCK(x) pthread_mutex_lock(&x)
+#define MUTEX_UNLOCK(x) pthread_mutex_unlock(&x)
+
+#define RWLOCK pthread_rwlock_t
+#define RWLOCK_INIT(x) pthread_rwlock_init(&x, NULL)
+#define RWLOCK_RDLOCK(x) pthread_rwlock_rdlock(&x)
+#define RWLOCK_WRLOCK(x) pthread_rwlock_wrlock(&x)
+#define RWLOCK_UNLOCK(x) pthread_rwlock_unlock(&x)
+#define RWLOCK_WRUNLOCK(x) pthread_rwlock_unlock(&x)
+#else
+#include <Windows.h>
+#define THREAD HANDLE
+#define THREAD_CREATE(x, fxn, dat) x=CreateThread(NULL, 0, fxn, dat, 0, NULL)
+#define THREAD_JOIN(x) WaitForSingleObject(x, INFINITE)
+
+#define RWLOCK SRWLock
+#define RWLOCK_INIT(x) InitializeSRWLock(&x)
+#define RWLOCK_RDLOCK(x) AcquireSRWLockShared(&x)
+#define RWLOCK_WRLOCK(x) AcquireSRWLockExclusive(&x)
+#define RWLOCK_UNLOCK(x) ReleaseSRWLockShared(&x)
+#define RWLOCK_WRUNLOCK(x) ReleaseSRWLockExclusive(&x)
+
+#define MUTEX RWLOCK
+#define MUTEX_INIT(x) RWLOCK_INIT(x)
+#define MUTEX_LOCK(x) RWLOCK_WRLOCK(x)
+#define MUTEX_UNLOCK(x) RWLOCK_WRUNLOCK(x)
+#endif
+
 
 using namespace std;
 
@@ -68,7 +104,7 @@ public:
   void process();
   bool is_running_;
 private:
-  pthread_t thread;
+  THREAD thread;
 
   inline void commit_memory(Clnum clnum, Address a, uint8_t d);
   inline MemoryWithValid get_byte(Clnum clnum, Address a);
