@@ -45,8 +45,12 @@ Trace::~Trace() {
   is_running_ = false;
   THREAD_JOIN(thread);
   // mutex lock isn't required now that the thread stopped
+#ifdef _WIN32
+  CloseHandle(fd_);
+#else
   munmap((void*)backing_, backing_size_);
   close(fd_);
+#endif
   //printf("dead\n");
 }
 
@@ -82,6 +86,9 @@ inline MemoryWithValid Trace::get_byte(Clnum clnum, Address a) {
 
 bool Trace::remap_backing(uint64_t new_size) {
   if (backing_size_ == new_size) return true;
+
+#ifdef _WIN32
+#else
   while (1) {
     off_t fs = lseek(fd_, 0, SEEK_END);
     if (fs < new_size) {
@@ -96,6 +103,8 @@ bool Trace::remap_backing(uint64_t new_size) {
   backing_size_ = new_size;
   backing_ = (const struct change *)mmap(NULL, backing_size_, PROT_READ, MAP_SHARED, fd_, 0);
   MUTEX_UNLOCK(backing_mutex_);
+#endif
+
   if (backing_ == NULL) {
     printf("ERROR: remap_backing is about to return NULL\n");
   }
@@ -111,8 +120,12 @@ bool Trace::ConnectToFileAndStart(char *filename, int register_size, int registe
 
   registers_.resize(register_count_);
 
+#ifdef _WIN32
+  fd_ = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+#else
   fd_ = open(filename, O_RDONLY);
   if (fd_ <= 0) return false;
+#endif
 
   if (!remap_backing(sizeof(struct change))) return false;
 

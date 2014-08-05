@@ -1,3 +1,5 @@
+import os
+
 WITH_CDA = False
 WITH_DWARF = False
 TRACE_LIBRARIES = False
@@ -6,5 +8,8 @@ WEB_PORT = 3002
 SOCAT_PORT = 4000
 FORK_PORT = 4001
 USE_PIN = False
-TRACE_FILE_BASE = "/tmp/qira_logs/"
+if os.name == "nt":
+  TRACE_FILE_BASE = "c:/qiratmp"
+else:
+  TRACE_FILE_BASE = "/tmp/qira_logs/"
 

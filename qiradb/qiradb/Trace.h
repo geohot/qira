@@ -31,6 +31,8 @@
 #define RWLOCK_WRLOCK(x) pthread_rwlock_wrlock(&x)
 #define RWLOCK_UNLOCK(x) pthread_rwlock_unlock(&x)
 #define RWLOCK_WRUNLOCK(x) pthread_rwlock_unlock(&x)
+
+#define QIRAFILE int
 #else
 #include <Windows.h>
 #define THREAD HANDLE
@@ -48,6 +50,8 @@
 #define MUTEX_INIT(x) RWLOCK_INIT(x)
 #define MUTEX_LOCK(x) RWLOCK_WRLOCK(x)
 #define MUTEX_UNLOCK(x) RWLOCK_WRUNLOCK(x)
+
+#define QIRAFILE HANDLE
 #endif
 
 
@@ -124,7 +128,7 @@ private:
   MUTEX backing_mutex_;
   const struct change* backing_;
   uint64_t backing_size_;
-  int fd_;
+  QIRAFILE fd_;
   EntryNumber entries_done_;
 
   bool did_update_;
