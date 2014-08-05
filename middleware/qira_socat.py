@@ -1,7 +1,6 @@
 import os
 import socket
 import signal
-import fcntl
 
 def get_next_run_id():
   ret = -1
@@ -41,7 +40,11 @@ def start_bindserver(program, port, parent_id, start_cl, loop = False):
     fd = cs.fileno()
     # python nonblocking is a lie...
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-    fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL, 0) & ~os.O_NONBLOCK)
+    try:
+      import fcntl
+      fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL, 0) & ~os.O_NONBLOCK)
+    except:
+      pass
     os.dup2(fd, 0) 
     os.dup2(fd, 1) 
     os.dup2(fd, 2) 
