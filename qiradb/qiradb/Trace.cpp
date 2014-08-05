@@ -129,7 +129,8 @@ bool Trace::ConnectToFileAndStart(char *filename, int register_size, int registe
 
   if (!remap_backing(sizeof(struct change))) return false;
 
-  return THREAD_CREATE(thread, thread_entry, this) == 0;
+  THREAD_CREATE(thread, thread_entry, this);
+  return true;
 }
 
 void Trace::process() {
@@ -144,8 +145,10 @@ void Trace::process() {
   printf("on %u going from %u to %u...", trace_index_, entries_done_, entry_count);
   fflush(stdout);
 
+#ifndef _WIN32
   struct timeval tv_start, tv_end;
   gettimeofday(&tv_start, NULL);
+#endif
 
   // clamping
   if ((entries_done_ + 1000000) < entry_count) {
@@ -213,10 +216,14 @@ void Trace::process() {
     entries_done_++;
   }
 
+#ifndef _WIN32
   gettimeofday(&tv_end, NULL);
   double t = (tv_end.tv_usec-tv_start.tv_usec)/1000.0 +
              (tv_end.tv_sec-tv_start.tv_sec)*1000.0;
   printf("done %f ms\n", t);
+#else
+  printf("done\n");
+#endif
 
   // set this at the end
   did_update_ = true;
