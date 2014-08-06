@@ -360,6 +360,13 @@ class Trace:
       # done
       return
 
+    try:
+      from urllib import unquote
+      imd = qira_config.TRACE_FILE_BASE+str(self.forknum)+"_images/"
+      im = {unquote(i):imd+i for i in listdir(imd)}
+    except:
+      im = {}
+
     for ln in f.read().split("\n"):
       ln = ln.split(" ")
       if len(ln) < 3:
@@ -371,7 +378,7 @@ class Trace:
       fn = ' '.join(ln[2:])
 
       try:
-        f = open(fn)
+        f = open(im.get(fn, fn))
       except:
         continue
       f.seek(offset)

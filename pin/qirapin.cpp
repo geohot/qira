@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <time.h>
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 
 #include "pin.H"
 
@@ -13,8 +15,15 @@
 #include <stdio_ext.h>
 #define fpurge __fpurge
 #endif
+
 #ifdef TARGET_WINDOWS
+extern "C" {
+extern bool CreateDirectoryA(const char *x, void *y); // Fix with real windows headers
+}
 #define fpurge(x) ((void)(x)) // Windows doesn't fork.
+#define mkdir(x, y) CreateDirectoryA((x), NULL)
+#else
+#include <sys/stat.h>
 #endif
 
 #define IS_VALID    0x80000000
@@ -33,20 +42,31 @@ static struct _logstate {
 	uint32_t this_pid;
 } logstate;
 
+KNOB<string> KnobOutputDir(KNOB_MODE_WRITEONCE, "pintool", "o",
 #ifdef TARGET_WINDOWS
-#define TRACE_FILE_BASE "."
+	".",
 #else
-#define TRACE_FILE_BASE "/tmp/qira_logs" // This should exist
+	"/tmp/qira_logs",
+#endif
+	"specify output directory"
+);
+
+#ifndef TARGET_MAC
+	// IMG_StartAddress seems broken on OS X; returns an area of all nulls
+KNOB<BOOL> KnobMakeStandaloneTrace(KNOB_MODE_WRITEONCE, "pintool", "standalone", "0", "produce trace files suitable for moving to other systems.");
 #endif
 
 FILE *trace_file = NULL;
 FILE *strace_file = NULL;
 FILE *base_file = NULL;
+string *image_folder = NULL;
 char trace_file_buffer[16<<10];
 void new_trace_files() {
 	char pathbase[1024];
 	char path[1024];
-	sprintf(pathbase, TRACE_FILE_BASE "/%ld%d", time(NULL), PIN_GetPid());
+	sprintf(pathbase, "%s/%ld%d", KnobOutputDir.Value().c_str(), time(NULL), PIN_GetPid());
+	
+	mkdir(KnobOutputDir.Value().c_str(), 0755);
 	
 	if(trace_file) fpurge(trace_file), fclose(trace_file);
 	trace_file = fopen(pathbase, "wb");
@@ -62,6 +82,12 @@ void new_trace_files() {
 	sprintf(path, "%s_base", pathbase);
 	base_file = fopen(path, "wb");
 	ASSERT(base_file, "Failed to open trace output.");
+
+	if(KnobMakeStandaloneTrace) {
+		image_folder = new string(pathbase);
+		image_folder->append("_images/");
+		mkdir(image_folder->c_str(), 0755);
+	}
 }
 
 static void add_change(uint64_t addr, uint64_t data, uint32_t flags) {
@@ -299,18 +325,54 @@ VOID SyscallExit(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOID
 // Other functions
 ////////////////////////////////////////////////////////////////
 
+string urlencode(const string &s) {
+	std::ostringstream stream;
+	stream << std::setbase(16) << std::setfill('0');
+	for(int i = 0; i < s.length(); i++) {
+		char c = s[i];
+		if(('0' <= c && c <= '9') ||
+		   ('A' <= c && c <= 'Z') ||
+		   ('a' <= c && c <= 'z') ||
+		   c == '-' || c =='.' || c == '_' || c == '~'
+		) {
+			stream << c;
+		} else {
+			stream << '%' << std::setw(2) << (int)(unsigned char)c << std::setw(0);
+		}
+	}
+	return stream.str();
+}
+
 VOID ImageLoad(IMG img, VOID *v) {
 	static int once = 0;
 	if(!once) {
 		once = 1;
-		std::cerr << "qiraing " << IMG_Name(img) << std::endl;
+		std::cerr << "qira: filtering to image " << IMG_Name(img) << std::endl;
 		filter_ip_low = IMG_LowAddress(img);
 		filter_ip_high = IMG_HighAddress(img)+1;
 	}
 	
-	// TODO: Might not be quite right; might neet to step through sections?
-	fprintf(base_file, "%p-%p 0 %s\n", (void*)IMG_LowAddress(img), (void*)(IMG_HighAddress(img)+1), IMG_Name(img).c_str());
+	UINT32 numRegions = IMG_NumRegions(img);
+	ADDRINT imglow = IMG_LowAddress(img);
+	string imgname = IMG_Name(img);
+	
+	for(UINT32 i = 0; i < numRegions; i++) {
+		ADDRINT low = IMG_RegionLowAddress(img, i);
+		ADDRINT high = IMG_RegionHighAddress(img, i)+1;
+		fprintf(base_file, "%p-%p %p %s\n", (void*)low, (void*)high, (void*)(low - imglow), imgname.c_str());
+	}
 	fflush(base_file);
+
+	if(KnobMakeStandaloneTrace) {
+		// Dump image file here.
+		FILE *f = fopen((*image_folder+urlencode(imgname)).c_str(), "wb");
+		ASSERT(f, "Couldn't open image file destination.");
+		for(unsigned i = 0; i < IMG_SizeMapped(img); i += 4096) {
+			volatile int x = *(int*)(IMG_StartAddress(img)+i);
+		}
+		fwrite((void*)IMG_StartAddress(img), 1, IMG_SizeMapped(img), f);
+		fclose(f);
+	}
 }
 
 VOID ThreadStart(THREADID tid, CONTEXT *ctxt, INT32 flags, VOID *v) {
@@ -342,8 +404,9 @@ VOID ForkChild(THREADID threadid, const CONTEXT *ctx, VOID *v) {
 int main(int argc, char *argv[]) {
 	PIN_InitSymbols();
 	if(PIN_Init(argc, argv)) {
-		fprintf(stderr, "Error parsing command line.\n");
-		return -1;
+		std::cerr << "qira pintool" << std::endl;
+		std::cerr << std::endl << KNOB_BASE::StringKnobSummary() << std::endl;
+		return 2;
 	}
 
 	writeea_scratch_reg = PIN_ClaimToolRegister();
