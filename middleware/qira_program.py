@@ -238,7 +238,7 @@ class Program:
       eargs = [self.pinbinary, "-t", self.pintool, "--", self.program]+self.args
     else:
       eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
-    print "***",' '.join(eargs)
+    #print "***",' '.join(eargs)
     os.execvp(eargs[0], eargs)
 
   def disasm(self, raw, address):

@@ -55,5 +55,5 @@ def start_bindserver(program, port, parent_id, start_cl, loop = False):
       except:
         pass
     # fingerprint here
-    program.execqira(["-qirachild", "%d %d %d" % (parent_id, start_cl, run_id)])
+    program.execqira(["-qirachild", "%d %d %d" % (parent_id, start_cl, run_id)], shouldfork=False)
 
