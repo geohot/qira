@@ -11,8 +11,8 @@ function do_ida_socket(callme) {
       //p(msg.data);
       var dat = msg.data.split(" ");
       if (dat[0] == "setiaddr") {
+        Session.set("iaddr", hex(parseInt(dat[1])));
         Session.set("dirtyiaddr", true);
-        Session.set("iaddr", dat[1]);
       }
       if (dat[0] == "setdaddr") {
         if (get_data_type(dat[1]) != "datainstruction") {
@@ -28,7 +28,7 @@ function do_ida_socket(callme) {
 Deps.autorun(function() {
   var iaddr = Session.get('iaddr');
   do_ida_socket(function() {
-    ws.send('setaddress '+iaddr);
+    ws.send('setaddress '+fhex(iaddr));
   });
 });
 
