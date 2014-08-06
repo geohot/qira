@@ -74,8 +74,7 @@ if __name__ == '__main__':
     qira_socat.start_bindserver(program, qira_config.SOCAT_PORT, -1, 1, True)
   else:
     print "**** running "+program.program
-    if is_qira_running or os.fork() == 0:   # cute?
-      program.execqira()
+    program.execqira(shouldfork=not is_qira_running)
 
   if not is_qira_running:
     # start the http server
