@@ -45,16 +45,20 @@ def cachewrap(cachedir, cachename, cachegen):
   return dat
 
 def which(prog):
-  import subprocess
-  cmd = ["which", prog]
-  p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-  res = p.stdout.readlines()
-  if len(res) == 0:
+  try:
+    import subprocess
+    cmd = ["which", prog]
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    res = p.stdout.readlines()
+    if len(res) == 0:
+      raise Exception("binary not found")
+    return os.path.realpath(res[0].strip())
+  except:
     # fallback mode, look for the binary straight up
     if os.path.isfile(prog):
       return os.path.realpath(prog)
-    raise Exception("binary not found")
-  return os.path.realpath(res[0].strip())
+    else:
+      raise Exception("binary not found")
 
 # things that don't cross the fork
 class Program:
@@ -68,7 +72,7 @@ class Program:
     # call which to match the behavior of strace and gdb
     self.program = which(prog)
     self.args = args
-    self.proghash = sha1(open(self.program).read()).hexdigest()
+    self.proghash = sha1(open(self.program, "rb").read()).hexdigest()
     print "*** program is",self.program,"with hash",self.proghash
 
     # no traces yet
@@ -94,7 +98,7 @@ class Program:
     # pmaps is global, but updated by the traces
     self.instructions = {}
     (self.dwarves, self.rdwarves) = ({}, {})
-    progdat = open(self.program).read(0x800)
+    progdat = open(self.program, "rb").read(0x800)
 
     if progdat[0:2] == "MZ":
       print "**** windows binary detected, only running the server"
@@ -161,6 +165,8 @@ class Program:
     self.create_asm_file()
 
   def create_asm_file(self):
+    if os.name == "nt":
+      return
     try:
       os.unlink("/tmp/qira_asm")
     except:
@@ -169,6 +175,8 @@ class Program:
     self.qira_asm_file = open("/tmp/qira_asm", "r")
 
   def read_asm_file(self):
+    if os.name == "nt":
+      return
     dat = self.qira_asm_file.read()
     if len(dat) == 0:
       return
@@ -219,9 +227,12 @@ class Program:
     self.traces[i] = Trace(fn, i, self.tregs[1], len(self.tregs[0]), self.tregs[2])
     return self.traces[i]
 
-  def execqira(self, args=[]):
+  def execqira(self, args=[], shouldfork=True):
     if self.runnable == False:
-      exit(0)
+      return
+    if shouldfork:
+      if os.fork() != 0:
+        return
     if qira_config.USE_PIN:
       eargs = [self.pinbinary, "-t", self.pintool, "--", self.program]+self.args
     else:
