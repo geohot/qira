@@ -11,12 +11,14 @@ function do_ida_socket(callme) {
       //p(msg.data);
       var dat = msg.data.split(" ");
       if (dat[0] == "setiaddr") {
-        Session.set("iaddr", hex(parseInt(dat[1])));
+        var addr = hex(parseInt(dat[1]));
+        Session.set("iaddr", addr);
         Session.set("dirtyiaddr", true);
       }
       if (dat[0] == "setdaddr") {
-        if (get_data_type(dat[1]) != "datainstruction") {
-          update_dview(dat[1]);
+        var addr = hex(parseInt(dat[1]));
+        if (get_data_type(addr) != "datainstruction") {
+          update_dview(addr);
         }
       }
     };
