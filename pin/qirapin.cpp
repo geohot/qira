@@ -356,10 +356,14 @@ VOID ImageLoad(IMG img, VOID *v) {
 	ADDRINT imglow = IMG_LowAddress(img);
 	string imgname = IMG_Name(img);
 	
-	for(UINT32 i = 0; i < numRegions; i++) {
-		ADDRINT low = IMG_RegionLowAddress(img, i);
-		ADDRINT high = IMG_RegionHighAddress(img, i)+1;
-		fprintf(base_file, "%p-%p %p %s\n", (void*)low, (void*)high, (void*)(low - imglow), imgname.c_str());
+	if(!numRegions) { // TODO: Figure out if this is a windows bug
+		fprintf(base_file, "%p-%p %p %s\n", (void*)imglow, (void*)IMG_HighAddress(img), 0, imgname.c_str());
+	} else {
+		for(UINT32 i = 0; i < numRegions; i++) {
+			ADDRINT low = IMG_RegionLowAddress(img, i);
+			ADDRINT high = IMG_RegionHighAddress(img, i)+1;
+			fprintf(base_file, "%p-%p %p %s\n", (void*)low, (void*)high, (void*)(low - imglow), imgname.c_str());
+		}
 	}
 	fflush(base_file);
 
