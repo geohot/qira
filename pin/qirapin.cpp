@@ -43,17 +43,22 @@ static struct _logstate {
 } logstate;
 
 KNOB<string> KnobOutputDir(KNOB_MODE_WRITEONCE, "pintool", "o",
-#ifdef TARGET_WINDOWS
+	#ifdef TARGET_WINDOWS
 	".",
-#else
+	#else
 	"/tmp/qira_logs",
-#endif
+	#endif
 	"specify output directory"
 );
 
-#ifndef TARGET_MAC
-	// IMG_StartAddress seems broken on OS X; returns an area of all nulls
-KNOB<BOOL> KnobMakeStandaloneTrace(KNOB_MODE_WRITEONCE, "pintool", "standalone", "0", "produce trace files suitable for moving to other systems.");
+#ifndef TARGET_MAC // TODO: IMG_StartAddress is broken on OS X; returns an area of all zero bytes.
+KNOB<BOOL> KnobMakeStandaloneTrace(KNOB_MODE_WRITEONCE, "pintool", "standalone",
+	#ifdef TARGET_WINDOWS
+	"1", // Enable by default on windows, since qira doesn't work there yet
+	#else
+	"0",
+	#endif
+"produce trace files suitable for moving to other systems.");
 #endif
 
 FILE *trace_file = NULL;
