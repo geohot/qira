@@ -1,6 +1,7 @@
 from qira_base import *
 import qira_config
 import os
+import shutil
 import sys
 from hashlib import sha1
 basedir = os.path.dirname(os.path.realpath(__file__))
@@ -198,9 +199,9 @@ class Program:
 
   def delete_old_runs(self):
     # delete the logs
-    for i in os.listdir(qira_config.TRACE_FILE_BASE):
-      os.unlink(qira_config.TRACE_FILE_BASE+i)
-      
+    shutil.rmtree(qira_config.TRACE_FILE_BASE)
+    os.mkdir(qira_config.TRACE_FILE_BASE)
+  
   def get_maxclnum(self):
     ret = {}
     for t in self.traces:
@@ -331,7 +332,6 @@ class Program:
 
     self.cda = cachewrap("/tmp/qira_cdacaches", self.proghash, parse_cda)
 
-
 class Trace:
   def __init__(self, fn, forknum, r1, r2, r3):
     self.forknum = forknum
@@ -363,8 +363,11 @@ class Trace:
     try:
       from urllib import unquote
       imd = qira_config.TRACE_FILE_BASE+str(self.forknum)+"_images/"
-      im = {unquote(i):imd+i for i in listdir(imd)}
-    except:
+      im = {unquote(i):imd+i for i in os.listdir(imd)}
+    except OSError:
+      im = {}
+    except Exception, e:
+      print "Unexpected exception while dealing with _images/:", e
       im = {}
 
     for ln in f.read().split("\n"):
