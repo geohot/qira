@@ -307,6 +307,7 @@ def get_strace(forknum):
   except:
     return "no strace"
 
+  f = ''.join(filter(lambda x: ord(x) < 0x80, f))
   ret = []
   for ff in f.split("\n"):
     if ff == '':
@@ -323,7 +324,7 @@ def get_strace(forknum):
     sc = " ".join(ff[2:])
     ret.append({"clnum": clnum, "pid":pid, "sc": sc})
   # LIMIT for web interface
-  emit('strace', ret[0:LIMIT])
+  emit('strace', ret[0:LIMIT*5])
 
 
 # ***** generic webserver stuff *****

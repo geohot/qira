@@ -30,7 +30,9 @@ function do_ida_socket(callme) {
 Deps.autorun(function() {
   var iaddr = Session.get('iaddr');
   do_ida_socket(function() {
-    ws.send('setaddress '+fhex(iaddr));
+    cmd = 'setaddress '+fhex(iaddr)
+    //p(cmd);
+    ws.send(cmd);
   });
 });
 
