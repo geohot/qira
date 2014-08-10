@@ -271,10 +271,10 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
     if len(r) != 1:
       continue
     ins = ""
-    if r[0]['address'] in program.instructions:
-      ins = program.instructions[r[0]['address']]
+    if program != None:
+      if r[0]['address'] in program.instructions:
+        ins = program.instructions[r[0]['address']]
     ret.append((r[0]['address'], r[0]['data'], r[0]['clnum'], ins))
-      
   return ret
 
 def get_hacked_depth_map(flow):
@@ -283,12 +283,38 @@ def get_hacked_depth_map(flow):
   for (address, length, clnum, ins) in flow:
     if address in return_stack:
       return_stack = return_stack[0:return_stack.index(address)]
-    if ins[0:5] == "call " or ins[0:6] == "callq ":
+    if ins[0:5] == "call " or ins[0:6] == "callq " or ins[0:3] == "bl ":
       return_stack.append(address+length)
     #print return_stack
     ret.append(len(return_stack))
   return ret
-      
+
+def get_vtimeline_picture(trace):
+  trace.update_analysis_depends()
+  maxd = max(trace.dmap)
+
+  if maxd == 0:
+    return None
+
+  r = trace.maxclnum-trace.minclnum
+  sampling = int(math.ceil(r/50000.0))
+
+  from PIL import Image   # sudo pip install pillow
+  import base64
+  import StringIO
+  im = Image.new( 'RGB', (1, (trace.maxclnum/sampling)+1), "black")
+  px = im.load()
+
+  for i in range(0, r, sampling):
+    # could average the sampled
+    c = int((trace.dmap[i]*128.0)/maxd)
+    px[0, i/sampling] = (0,c,c)
+
+  buf = StringIO.StringIO()
+  im.save(buf, format='PNG')
+
+  dat = "data:image/png;base64,"+base64.b64encode(buf.getvalue())
+  return dat
 
 def analyze(trace, program):
   minclnum = trace.db.get_minclnum()
@@ -310,36 +336,6 @@ def analyze(trace, program):
 
   #dmap = get_depth_map(fxns, maxclnum)
   dmap = get_hacked_depth_map(flow)
-  maxd = max(dmap)
-
-  if maxd == 0:
-    return None
-
-  #print dmap
-  #print maxclnum, maxd
-
-  r = maxclnum-minclnum
-  sampling = int(math.ceil(r/50000.0))
-
-  from PIL import Image   # sudo pip install pillow
-  import base64
-  import StringIO
-  im = Image.new( 'RGB', (1, (maxclnum/sampling)+1), "black")
-  px = im.load()
-
-  for i in range(0, r, sampling):
-    # could average the sampled
-    c = int((dmap[i]*128.0)/maxd)
-    #px[0, i] = (int((dmap[i]*255.0)/maxd), 0, 0)
-    #px[0, i] = (c,c,c)
-    px[0, i/sampling] = (0,c,c)
-
-  #im = im.resize((50, 1000), Image.ANTIALIAS)
-  buf = StringIO.StringIO()
-  im.save(buf, format='PNG')
-
-  dat = "data:image/png;base64,"+base64.b64encode(buf.getvalue())
-  return dat
   
   #loops = do_loop_analysis(blocks)
   #print loops

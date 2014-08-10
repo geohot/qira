@@ -1,5 +1,6 @@
 from qira_base import *
 import qira_config
+import qira_analysis
 import os
 import shutil
 import sys
@@ -225,7 +226,7 @@ class Program:
     return rret
 
   def add_trace(self, fn, i):
-    self.traces[i] = Trace(fn, i, self.tregs[1], len(self.tregs[0]), self.tregs[2])
+    self.traces[i] = Trace(fn, i, self, self.tregs[1], len(self.tregs[0]), self.tregs[2])
     return self.traces[i]
 
   def execqira(self, args=[], shouldfork=True):
@@ -333,10 +334,20 @@ class Program:
     self.cda = cachewrap("/tmp/qira_cdacaches", self.proghash, parse_cda)
 
 class Trace:
-  def __init__(self, fn, forknum, r1, r2, r3):
+  def __init__(self, fn, forknum, program, r1, r2, r3):
     self.forknum = forknum
+    self.maxclnum = None
+    self.program = program
     self.db = qiradb.Trace(fn, forknum, r1, r2, r3)
     self.load_base_memory()
+    self.update_analysis_depends()
+
+  def update_analysis_depends(self):
+    if self.maxclnum == None or self.db.get_maxclnum() != self.maxclnum:
+      self.minclnum = self.db.get_minclnum()
+      self.maxclnum = self.db.get_maxclnum()
+      self.flow = qira_analysis.get_instruction_flow(self, self.program, self.minclnum, self.maxclnum)
+      self.dmap = qira_analysis.get_hacked_depth_map(self.flow)
 
   # proxy the db call and fill in base memory
   def fetch_memory(self, clnum, address, ln):
