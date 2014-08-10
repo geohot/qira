@@ -60,8 +60,13 @@ Template.strace.sc = function() { return highlight_addresses(this.sc); }
 Meteor.startup(function() {
   $("#strace")[0].addEventListener("mousewheel", function(e) {
     var sv = Session.get('sview');
+    var forknum = Session.get("forknum");
+    if (traces[forknum] === undefined) return;
+    var t = traces[forknum];
     if (e.wheelDelta < 0) {
-      Session.set('sview', [sv[0]+1, sv[1]+1]);
+      if (sv[1] < t.length) {
+        Session.set('sview', [sv[0]+1, sv[1]+1]);
+      }
     } else if (e.wheelDelta > 0) {
       if (sv[0] > 0) {
         Session.set('sview', [sv[0]-1, sv[1]-1]);
