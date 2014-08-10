@@ -35,6 +35,7 @@ sudo ln -sf $(pwd)/qira /usr/local/bin/cda
 
 if [ -f web/qira.html ]; then
   echo "trunk detected"
+  sudo apt-get install yui-compressor
   if [ ! -d ~/.meteor ]; then
     echo "installing meteor"
     sudo apt-get install curl

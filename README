@@ -50,6 +50,8 @@ Run install.bat
 
 Pass either --cda or --cda-only to QIRA, or just call "cda binary"
 
+The binary must have DWARF data, and the source files must exist on the system
+
 Without cda-only, you have to go to localhost:3002/cda
 Everything should be intuitive, except press '/' to regex search
 
