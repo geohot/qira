@@ -8,14 +8,22 @@ sys.path.append(basedir+"/../cda")
 
 def socket_method(func):
   def func_wrapper(*args, **kwargs):
+    # before things are initted in the js, we get this
+    for i in args:
+      if i == None:
+        #print "BAD ARGS TO %-20s" % (func.func_name), "with",args
+        return
     try:
       start = time.time()
       ret = func(*args, **kwargs)
-      end = time.time()
-      print "SOCKET %6.2f ms in %-20s with" % ((end-start)*1000, func.func_name), args
+      tm = (time.time() - start) * 1000
+
+      # print slow calls
+      if tm > 100:
+        print "SOCKET %6.2f ms in %-20s with" % (tm, func.func_name), args
       return ret
     except Exception, e:
-      print "error",e,"in",func
+      print "ERROR",e,"in",func.func_name,"with",args
   return func_wrapper
 
 import qira_socat
@@ -88,14 +96,11 @@ def navigateline(fn, ln):
 @socketio.on('navigateiaddr', namespace='/qira')
 @socket_method
 def navigateiaddr(iaddr):
-  if iaddr == None:
-    return
-  try:
+  iaddr = fhex(iaddr)
+  if iaddr in program.dwarves:
     (filename, line, linedat) = program.dwarves[iaddr]
-  except:
-    return
-  #print 'navigateiaddr', hex(iaddr), filename, line
-  socketio.emit('setline', filename, line, namespace='/cda')
+    #print 'navigateiaddr', hex(iaddr), filename, line
+    socketio.emit('setline', filename, line, namespace='/cda')
 
 @socketio.on('forkat', namespace='/qira')
 @socket_method
@@ -136,18 +141,13 @@ def forkat(forknum, clnum, pending):
 def deletefork(forknum):
   global program
   print "deletefork", forknum
-  try:
-    os.unlink(qira_config.TRACE_FILE_BASE+str(int(forknum)))
-    del program.traces[forknum]
-  except:
-    pass
+  os.unlink(qira_config.TRACE_FILE_BASE+str(int(forknum)))
+  del program.traces[forknum]
   push_updates()
 
 @socketio.on('doslice', namespace='/qira')
 @socket_method
 def slice(forknum, clnum):
-  if forknum not in program.traces:
-    return
   trace = program.traces[forknum]
   data = qira_analysis.slice(trace, clnum)
   print "slice",forknum,clnum, data
@@ -156,8 +156,6 @@ def slice(forknum, clnum):
 @socketio.on('doanalysis', namespace='/qira')
 @socket_method
 def analysis(forknum):
-  if forknum not in program.traces:
-    return
   trace = program.traces[forknum]
   # this fails sometimes, who knows why
   try:
@@ -179,11 +177,7 @@ def connect():
 @socketio.on('getclnum', namespace='/qira')
 @socket_method
 def getclnum(forknum, clnum, types, limit):
-  if forknum not in program.traces:
-    return
   trace = program.traces[forknum]
-  if clnum == None or types == None or limit == None:
-    return
   ret = []
   for c in trace.db.fetch_changes_by_clnum(clnum, LIMIT):
     if c['type'] not in types:
@@ -199,8 +193,6 @@ def getclnum(forknum, clnum, types, limit):
 @socketio.on('getchanges', namespace='/qira')
 @socket_method
 def getchanges(forknum, address, typ, cview):
-  if address == None or typ == None or cview == None:
-    return
   if forknum != -1 and forknum not in program.traces:
     return
   address = fhex(address)
@@ -217,11 +209,7 @@ def getchanges(forknum, address, typ, cview):
 @socketio.on('getinstructions', namespace='/qira')
 @socket_method
 def getinstructions(forknum, clnum, clstart, clend):
-  if forknum not in program.traces:
-    return
   trace = program.traces[forknum]
-  if clstart == None or clend == None:
-    return
   slce = qira_analysis.slice(trace, clnum)
   ret = []
   for i in range(clstart, clend):
@@ -255,11 +243,7 @@ def getinstructions(forknum, clnum, clstart, clend):
 @socketio.on('getmemory', namespace='/qira')
 @socket_method
 def getmemory(forknum, clnum, address, ln):
-  if forknum not in program.traces:
-    return
   trace = program.traces[forknum]
-  if clnum == None or address == None or ln == None:
-    return
   address = fhex(address)
   dat = trace.fetch_memory(clnum, address, ln)
   ret = {'address': address, 'len': ln, 'dat': dat, 'is_big_endian': program.tregs[2], 'ptrsize': program.tregs[1]}
@@ -269,11 +253,7 @@ def getmemory(forknum, clnum, address, ln):
 @socketio.on('getregisters', namespace='/qira')
 @socket_method
 def getregisters(forknum, clnum):
-  if forknum not in program.traces:
-    return
   trace = program.traces[forknum]
-  if clnum == None:
-    return
   # register names shouldn't be here
   # though i'm not really sure where a better place is, qemu has this information
   ret = []
@@ -307,8 +287,6 @@ def getregisters(forknum, clnum):
 @socketio.on('getstrace', namespace='/qira')
 @socket_method
 def get_strace(forknum):
-  if forknum not in program.traces:
-    return
   trace = program.traces[forknum]
   try:
     f = open(qira_config.TRACE_FILE_BASE+str(int(forknum))+"_strace").read()
