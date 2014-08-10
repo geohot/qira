@@ -9,6 +9,7 @@ include $(CONFIG_ROOT)/makefile.config
 include $(TOOLS_ROOT)/Config/makefile.default.rules
 
 QIRAPINTOOL := $(OBJDIR)qirapin$(PINTOOL_SUFFIX)
+TOOL_CXXFLAGS := $(TOOL_CXXFLAGS) -Wno-error
 
 .PHONY: all runls
 all: $(QIRAPINTOOL)

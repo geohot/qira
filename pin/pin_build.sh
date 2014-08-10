@@ -4,6 +4,7 @@ if [ ! -d pin-latest ]; then
   ln -s pin-2.13-65163-gcc.4.4.7-linux pin-latest
 fi
 
+mkdir -p obj-ia32 obj-intel64
 PIN_ROOT=./pin-latest make
 PIN_ROOT=./pin-latest TARGET=ia32 make
 
