@@ -31,6 +31,8 @@ down  -- +1 clnum
 
 esc -- back
 
+shift-c -- clear all forks
+
 == Installation on Windows (experimental) ==
 
 Install git

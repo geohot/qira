@@ -174,6 +174,13 @@ function redraw_vtimelines(scale) {
   }
 }
 
+delete_all_forks = function() {
+  for (forknum in Session.get('max_clnum')) {
+    stream.emit("deletefork", parseInt(forknum));
+  }
+  redraw_flags();
+};
+
 function redraw_flags() {
   var cview = Session.get("cview");
   if (cview === undefined) return undefined;
