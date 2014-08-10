@@ -11,11 +11,10 @@ stream.on('strace', function(msg) {
 function redraw_strace() {
   var forknum = Session.get("forknum");
   var sview = Session.get('sview');
-  if (traces[forknum] !== undefined) {
-    var msg = traces[forknum].slice(sview[0], sview[1])
-    $('#strace')[0].innerHTML = "";
-    UI.insert(UI.renderWithData(Template.strace, {strace: msg}), $('#strace')[0]);
-  }
+  if (traces[forknum] === undefined) return;
+  var msg = traces[forknum].slice(sview[0], sview[1])
+  $('#strace')[0].innerHTML = "";
+  UI.insert(UI.renderWithData(Template.strace, {strace: msg}), $('#strace')[0]);
 }
 
 Deps.autorun(function() {
@@ -35,6 +34,20 @@ Deps.autorun(function() {
   var maxclnum = Session.get("max_clnum");
   stream.emit("getstrace", forknum);
 });
+
+Deps.autorun(function() {
+  var forknum = Session.get("forknum");
+  var clnum = Session.get("clnum");
+  if (traces[forknum] === undefined) return;
+  var t = traces[forknum];
+  var i;
+  for (i = 0; i < t.length; i++) {
+    if (t[i]['clnum'] > clnum) break;
+  }
+  p(i);
+  Session.set('sview', [i-3, i+7]);
+});
+
 
 Template.strace.events({
   'click .change': function() {
@@ -56,3 +69,5 @@ Meteor.startup(function() {
     }
   });
 });
+
+

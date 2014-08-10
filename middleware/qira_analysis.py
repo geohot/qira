@@ -283,7 +283,8 @@ def get_hacked_depth_map(flow):
   for (address, length, clnum, ins) in flow:
     if address in return_stack:
       return_stack = return_stack[0:return_stack.index(address)]
-    if ins[0:5] == "call " or ins[0:6] == "callq " or ins[0:3] == "bl ":
+    # ugh, so gross
+    if ins[0:5] == "call " or ins[0:6] == "callq " or ins[0:3] == "bl\t" or ins[0:4] == "blx\t":
       return_stack.append(address+length)
     #print return_stack
     ret.append(len(return_stack))
@@ -302,13 +303,15 @@ def get_vtimeline_picture(trace):
   from PIL import Image   # sudo pip install pillow
   import base64
   import StringIO
-  im = Image.new( 'RGB', (1, (trace.maxclnum/sampling)), "black")
+  im_y = int(trace.maxclnum/sampling)
+  im = Image.new( 'RGB', (1, im_y), "black")
   px = im.load()
 
   for i in range(0, r, sampling):
     # could average the sampled
     c = int((trace.dmap[i]*128.0)/maxd)
-    px[0, i/sampling] = (0,c,c)
+    if i/sampling < im_y:
+      px[0, i/sampling] = (0,c,c)
 
   buf = StringIO.StringIO()
   im.save(buf, format='PNG')
