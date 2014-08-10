@@ -5,12 +5,15 @@ QIRA is an IDA plugin to reverse using QEMU
 ./install.sh should handle everything for both release and trunk
 ./fetchlibs.sh will fetch the libraries for armhf, armel, and ppc
 
+
 == Mouse Actions ==
+
 Click on vtimeline to navigate around
 Right click forks to delete them
 
 Click on data(or doubleclick if highlightable) to follow in data
 Right click on instruction address to follow in instruction
+
 
 == Keyboard Shortcuts in web/client/controls.js ==
 
@@ -33,6 +36,7 @@ esc -- back
 
 shift-c -- clear all forks
 
+
 == Installation on Windows (experimental) ==
 
 Install git
@@ -40,4 +44,12 @@ Install python 2.7.8
 Install pip
 
 Run install.bat
+
+
+== Using CDA ==
+
+Pass either --cda or --cda-only to QIRA
+
+Without cda-only, you have to go to localhost:3002/cda
+Everything should be intuitive, except press '/' to regex search
 
