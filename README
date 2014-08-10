@@ -5,6 +5,13 @@ QIRA is an IDA plugin to reverse using QEMU
 ./install.sh should handle everything for both release and trunk
 ./fetchlibs.sh will fetch the libraries for armhf, armel, and ppc
 
+== Mouse Actions ==
+Click on vtimeline to navigate around
+Right click forks to delete them
+
+Click on data(or doubleclick if highlightable) to follow in data
+Right click on instruction address to follow in instruction
+
 == Keyboard Shortcuts in web/client/controls.js ==
 
 j -- next invocation of instruction
