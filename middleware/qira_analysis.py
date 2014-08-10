@@ -2,6 +2,7 @@
 import qira_config
 import qira_program
 import time
+import math
 
 def ghex(a):
   if a == None:
@@ -292,9 +293,11 @@ def get_hacked_depth_map(flow):
 def analyze(trace, program):
   minclnum = trace.db.get_minclnum()
   maxclnum = trace.db.get_maxclnum()
+  """
   if maxclnum > 10000:
     # don't analyze if the program is bigger than this
     return None
+  """
   
   flow = get_instruction_flow(trace, program, minclnum, maxclnum)
 
@@ -315,17 +318,21 @@ def analyze(trace, program):
   #print dmap
   #print maxclnum, maxd
 
+  r = maxclnum-minclnum
+  sampling = int(math.ceil(r/50000.0))
+
   from PIL import Image   # sudo pip install pillow
   import base64
   import StringIO
-  im = Image.new( 'RGB', (1, maxclnum), "black")
+  im = Image.new( 'RGB', (1, (maxclnum/sampling)+1), "black")
   px = im.load()
 
-  for i in range(maxclnum-minclnum):
+  for i in range(0, r, sampling):
+    # could average the sampled
     c = int((dmap[i]*128.0)/maxd)
     #px[0, i] = (int((dmap[i]*255.0)/maxd), 0, 0)
     #px[0, i] = (c,c,c)
-    px[0, i] = (0,c,c)
+    px[0, i/sampling] = (0,c,c)
 
   #im = im.resize((50, 1000), Image.ANTIALIAS)
   buf = StringIO.StringIO()
