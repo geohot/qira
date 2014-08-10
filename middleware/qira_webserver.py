@@ -35,7 +35,7 @@ import qira_log
 
 LIMIT = 200
 
-from flask import Flask, Response
+from flask import Flask, Response, redirect
 from flask.ext.socketio import SocketIO, emit
 
 # http://stackoverflow.com/questions/8774958/keyerror-in-module-threading-after-a-successful-py-test-run
@@ -329,6 +329,8 @@ def do_search(b64search):
 @app.route('/', defaults={'path': 'index.html'})
 @app.route('/<path:path>')
 def serve(path):
+  if args.cda_only and path=="index.html":
+    return redirect('/cda')
   # best security?
   if ".." in path:
     return

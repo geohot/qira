@@ -23,6 +23,7 @@ if __name__ == '__main__':
   parser.add_argument("--dwarf", help="parse program dwarf data", action="store_true")
   if os.path.isdir(basedir+"/../cda"):
     parser.add_argument("--cda", help="use CDA to view source(implies dwarf)", action="store_true")
+    parser.add_argument("--cda-only", help="use CDA to view source ONLY", action="store_true")
   parser.add_argument("--pin", help="use pin as the backend", action="store_true")
   parser.add_argument("--web-host", help="listen address for web interface. 127.0.0.1 by default", default=qira_config.WEB_HOST)
   parser.add_argument("--web-port", help="listen port for web interface. 3002 by default", type=int, default=qira_config.WEB_PORT)
@@ -47,7 +48,7 @@ if __name__ == '__main__':
   if args.dwarf:
     qira_config.WITH_DWARF = True
   try:
-    if args.cda:
+    if args.cda or args.cda_only:
       qira_config.WITH_CDA = True
       qira_config.WITH_DWARF = True
   except:
@@ -70,11 +71,12 @@ if __name__ == '__main__':
     program.clear()
 
   # start the binary runner
-  if args.server:
-    qira_socat.start_bindserver(program, qira_config.SOCAT_PORT, -1, 1, True)
-  else:
-    print "**** running "+program.program
-    program.execqira(shouldfork=not is_qira_running)
+  if not args.cda_only:
+    if args.server:
+      qira_socat.start_bindserver(program, qira_config.SOCAT_PORT, -1, 1, True)
+    else:
+      print "**** running "+program.program
+      program.execqira(shouldfork=not is_qira_running)
 
   if not is_qira_running:
     # start the http server
