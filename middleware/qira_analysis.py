@@ -354,8 +354,6 @@ def slice(trace, inclnum):
   def get_loads(clnum):
     return set(map(lambda x: x['address'], filter(is_load, trace.db.fetch_changes_by_clnum(clnum, 100))))
 
-    
-
   clnum = inclnum
   st = get_loads(clnum)
   cls = [clnum]
@@ -383,7 +381,6 @@ def slice(trace, inclnum):
   cls = set(cls)
   cls.discard(inclnum)
   return list(cls)
-  
 
 if __name__ == "__main__":
   # can run standalone for testing

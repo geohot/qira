@@ -21,7 +21,7 @@ import time
 import qira_analysis
 import qira_log
 
-LIMIT = 400
+LIMIT = 200
 
 from flask import Flask, Response
 from flask.ext.socketio import SocketIO, emit
@@ -190,8 +190,8 @@ def getclnum(forknum, clnum, types, limit):
   emit('clnum', ret)
 
 @socketio.on('getchanges', namespace='/qira')
-def getchanges(forknum, address, typ):
-  if address == None or typ == None:
+def getchanges(forknum, address, typ, cview):
+  if address == None or typ == None or cview == None:
     return
   if forknum != -1 and forknum not in program.traces:
     return
@@ -204,7 +204,7 @@ def getchanges(forknum, address, typ):
     forknums = [forknum]
   ret = {}
   for forknum in forknums:
-    ret[forknum] = program.traces[forknum].db.fetch_clnums_by_address_and_type(address, chr(ord(typ[0])), 0, LIMIT)
+    ret[forknum] = program.traces[forknum].db.fetch_clnums_by_address_and_type(address, chr(ord(typ[0])), cview[0], LIMIT)
   emit('changes', {'type': typ, 'clnums': ret})
 
 @socketio.on('getinstructions', namespace='/qira')

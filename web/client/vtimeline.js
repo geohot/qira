@@ -306,15 +306,17 @@ Deps.autorun(function() {
   //var forknum = Session.get("forknum");
   var iaddr = Session.get('iaddr');
   var maxclnum = Session.get('max_clnum');
-  stream.emit('getchanges', -1, iaddr, 'I')
+  var cview = Session.get('cview');
+  stream.emit('getchanges', -1, iaddr, 'I', cview)
 });
 
 Deps.autorun(function() {
   //var forknum = Session.get("forknum");
   var daddr = Session.get('daddr');
   var maxclnum = Session.get('max_clnum');
-  stream.emit('getchanges', -1, daddr, 'L')
-  stream.emit('getchanges', -1, daddr, 'S')
+  var cview = Session.get('cview');
+  stream.emit('getchanges', -1, daddr, 'L', cview)
+  stream.emit('getchanges', -1, daddr, 'S', cview)
 });
 
 stream.on('changes', function(msg) {
