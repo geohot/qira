@@ -1,5 +1,6 @@
 #!/usr/bin/env python2.7
 import os
+import sys
 basedir = os.path.dirname(os.path.realpath(__file__))
 import argparse
 import ipaddr
@@ -40,6 +41,10 @@ if __name__ == '__main__':
     raise Exception("--web-host must be a valid IPv4/IPv6 address")
 
   # handle arguments
+  if sys.argv[0] == "cda":
+    print "*** called as cda, not running QIRA"
+    args.cda_only = True
+
   qira_config.WEB_HOST = args.web_host
   qira_config.WEB_PORT = args.web_port
   qira_config.USE_PIN = args.pin

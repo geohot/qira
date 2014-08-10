@@ -29,6 +29,7 @@ sudo $PIP install --upgrade html flask-socketio pillow pyelftools socketIO-clien
 
 echo "making symlink"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira
+sudo ln -sf $(pwd)/qira /usr/local/bin/cda
 
 if [ -f web/qira.html ]; then
   echo "trunk detected"

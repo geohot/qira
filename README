@@ -48,7 +48,7 @@ Run install.bat
 
 == Using CDA ==
 
-Pass either --cda or --cda-only to QIRA
+Pass either --cda or --cda-only to QIRA, or just call "cda binary"
 
 Without cda-only, you have to go to localhost:3002/cda
 Everything should be intuitive, except press '/' to regex search
