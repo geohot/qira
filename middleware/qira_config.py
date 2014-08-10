@@ -13,3 +13,5 @@ if os.name == "nt":
 else:
   TRACE_FILE_BASE = "/tmp/qira_logs/"
 
+BASEDIR = os.path.realpath(os.path.dirname(os.path.realpath(__file__))+"/../")
+

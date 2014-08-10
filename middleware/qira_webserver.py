@@ -3,6 +3,7 @@ import qira_config
 import os
 import sys
 import time
+import base64
 basedir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(basedir+"/../cda")
 
@@ -91,7 +92,7 @@ def navigateline(fn, ln):
   except:
     return
   #print 'navigateline',fn,ln,iaddr
-  socketio.emit('setiaddr', iaddr, namespace='/qira')
+  socketio.emit('setiaddr', ghex(iaddr), namespace='/qira')
 
 @socketio.on('navigateiaddr', namespace='/qira')
 @socket_method
@@ -312,6 +313,16 @@ def get_strace(forknum):
   # LIMIT for web interface
   emit('strace', {'forknum': forknum, 'dat': ret})
 
+@app.route("/s/<b64search>")
+def do_search(b64search):
+  results = program.research(base64.b64decode(b64search))
+  ret = []
+  for r in results:
+    swag = r.split(":")
+    ln = str(int(swag[1])+1)
+    s = '<a class="filelink" onclick=go_to_filename_line("'+swag[0]+'",'+ln+')>' + swag[0]+"#"+ln+"</a>"+":".join(swag[2:])
+    ret.append(s)
+  return '<br/>'.join(ret)
 
 # ***** generic webserver stuff *****
   

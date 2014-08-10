@@ -4,9 +4,9 @@ import qira_analysis
 import os
 import shutil
 import sys
+import subprocess
 from hashlib import sha1
-basedir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(basedir+"/../cda")
+sys.path.append(qira_config.BASEDIR+"/cda")
 
 try:  
   from capstone import *
@@ -25,14 +25,17 @@ ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12',
 X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, False, "i386")
 X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8, False, "x86-64")
 
-def cachewrap(cachedir, cachename, cachegen):
-  #import json
-  import pickle as json
+def get_cachename(cachedir, cachename):
   try:
     os.mkdir(cachedir)
   except:
     pass
-  cachename = cachedir + "/" + cachename
+  return cachedir + "/" + cachename
+
+def cachewrap(cachedir, cachename, cachegen):
+  cachename = get_cachename(cachedir, cachename)
+  #import json
+  import pickle as json
   if os.path.isfile(cachename):
     dat = json.load(open(cachename))
     print "read cache",cachename
@@ -49,7 +52,6 @@ def cachewrap(cachedir, cachename, cachegen):
 
 def which(prog):
   try:
-    import subprocess
     cmd = ["which", prog]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     res = p.stdout.readlines()
@@ -258,6 +260,12 @@ class Program:
       pass
     return raw.encode("hex")
 
+  def research(self, re):
+    csearch = qira_config.BASEDIR + "/cda/codesearch-latest/csearch"
+    out = subprocess.Popen([csearch, "-n", "--", re], stdout=subprocess.PIPE, env={"CSEARCHINDEX": self.cindexname})
+    dat = out.communicate()
+    return dat[0].split("\n")[:-1]
+
   def getdwarf(self):
     if not qira_config.WITH_DWARF:
       return
@@ -316,7 +324,13 @@ class Program:
       return (files, dwarves, rdwarves, list(dirs))
 
     (files, self.dwarves, self.rdwarves, dirs) = cachewrap("/tmp/qira_dwarfcaches", self.proghash, parse_dwarf)
-    #print dirs
+
+    cindex = qira_config.BASEDIR + "/cda/codesearch-latest/cindex"
+    self.cindexname = get_cachename("/tmp/qira_cindexcaches", self.proghash)
+    if not os.path.isfile(self.cindexname):
+      if os.fork() == 0:
+        os.execve(cindex, [cindex,"--"]+files, {"CSEARCHINDEX": self.cindexname})
+      # no need to wait
 
     # cda
     if not qira_config.WITH_CDA:

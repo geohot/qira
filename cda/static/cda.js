@@ -1,7 +1,7 @@
 // connect to the QIRA stream
 stream = io.connect("http://localhost:3002/cda");
 
-stream.on('setline', function(filename, line) {
+function go_to_filename_line(filename, line) {
   //p('setline');
   var b64xref = location.hash.split(",")[1];
   if (b64xref === undefined) b64xref = "";
@@ -10,6 +10,10 @@ stream.on('setline', function(filename, line) {
   //location.replace("/f?"+filename+"#"+line+b64xref);
   session[0] = filename;
   session[1] = line;
+}
+
+stream.on('setline', function(filename, line) {
+  go_to_filename_line(filename, line);
 });
 
 function p(s) {
@@ -118,5 +122,14 @@ window.onload = function() {
   $('#program').on('dblclick', '.link', link_dblclick_handler);
   $(window).on('hashchange', refresh);
   refresh();
+};
+
+window.onkeydown = function(e) {
+  if (e.keyCode == 191) { // /
+    re = prompt("enter regex")
+    $.ajax("/s/"+btoa(re)).done(function(a) {
+      $('#xrefs')[0].innerHTML = a;
+    });
+  }
 };
 
