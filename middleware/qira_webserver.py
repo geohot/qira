@@ -157,12 +157,12 @@ def slice(forknum, clnum):
 @socket_method
 def analysis(forknum):
   trace = program.traces[forknum]
-  # this fails sometimes, who knows why
-  try:
-    data = qira_analysis.get_vtimeline_picture(trace)
-  except Exception as e:
-    print "!!! analysis failed on",forknum,"because",e
-    data = None
+  # hacks
+  if trace.db.get_maxclnum() > 300000:
+    print "*** not running the analyzer, too many changes"
+    return
+
+  data = qira_analysis.get_vtimeline_picture(trace)
   if data != None:
     emit('setpicture', {"forknum":forknum, "data":data})
   
