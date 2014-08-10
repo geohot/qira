@@ -41,7 +41,7 @@ if __name__ == '__main__':
     raise Exception("--web-host must be a valid IPv4/IPv6 address")
 
   # handle arguments
-  if sys.argv[0] == "cda":
+  if sys.argv[0][-3:] == "cda":
     print "*** called as cda, not running QIRA"
     args.cda_only = True
 

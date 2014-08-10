@@ -261,10 +261,15 @@ class Program:
     return raw.encode("hex")
 
   def research(self, re):
-    csearch = qira_config.BASEDIR + "/cda/codesearch-latest/csearch"
-    out = subprocess.Popen([csearch, "-n", "--", re], stdout=subprocess.PIPE, env={"CSEARCHINDEX": self.cindexname})
-    dat = out.communicate()
-    return dat[0].split("\n")[:-1]
+    try:
+      #csearch = qira_config.BASEDIR + "/cda/codesearch-latest/csearch"
+      csearch = "/usr/bin/csearch"
+      out = subprocess.Popen([csearch, "-n", "--", re], stdout=subprocess.PIPE, env={"CSEARCHINDEX": self.cindexname})
+      dat = out.communicate()
+      return dat[0].split("\n")[:-1]
+    except:
+      print "ERROR: csearch not found"
+      return []
 
   def getdwarf(self):
     if not qira_config.WITH_DWARF:
@@ -325,11 +330,17 @@ class Program:
 
     (files, self.dwarves, self.rdwarves, dirs) = cachewrap("/tmp/qira_dwarfcaches", self.proghash, parse_dwarf)
 
-    cindex = qira_config.BASEDIR + "/cda/codesearch-latest/cindex"
     self.cindexname = get_cachename("/tmp/qira_cindexcaches", self.proghash)
     if not os.path.isfile(self.cindexname):
       if os.fork() == 0:
-        os.execve(cindex, [cindex,"--"]+files, {"CSEARCHINDEX": self.cindexname})
+        try:
+          #cindex = qira_config.BASEDIR + "/cda/codesearch-latest/cindex"
+          cindex = "/usr/bin/cindex"
+          os.execve(cindex, [cindex,"--"]+files, {"CSEARCHINDEX": self.cindexname})
+        except:
+          print "ERROR: cindex not found"
+        exit(0)
+          
       # no need to wait
 
     # cda

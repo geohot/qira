@@ -1,12 +1,12 @@
 #!/usr/bin/env python2.7
 import os
 import sys
+import cda_config
 
 basedir = os.path.dirname(os.path.realpath(__file__))
 #sys.path.append(basedir+"/clang/llvm/tools/clang/bindings/python")
 import clang.cindex as ci
-#ci.Config.set_library_file(basedir+"/clang/build/Release+Asserts/lib/libclang.so")
-ci.Config.set_library_file(basedir+"/libclang.so")
+ci.Config.set_library_file(cda_config.LIBCLANG_PATH)
 
 import pickle
 from clang.cindex import CursorKind
@@ -122,9 +122,8 @@ def parse_file(filename, args=[]):
 
 def parse_files(files, args=[]):
   args.append("-I")
-  #args.append(basedir+"/clang-latest/build/Release+Asserts/lib/clang/3.4.2/include")
   # for unbuilt clang
-  args.append(basedir+"/include")
+  args.append(cda_config.CLANG_INCLUDES)
   for fn in files:
     print "CDA: caching",fn
     try:
