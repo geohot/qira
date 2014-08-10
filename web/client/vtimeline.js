@@ -54,7 +54,6 @@ function register_drag_zoom() {
     return clret;
   }
   function get_forknum(e) {
-    if (e.target.id == "trash") return -1;
     var fn = e.target.id.split("vtimeline")[1];
     if (fn == "box") return -1;
     return parseInt(fn);
@@ -70,15 +69,18 @@ function register_drag_zoom() {
     downforknum = get_forknum(e);
     return false;
   });
+  $("#vtimelinebox").contextmenu(function(e) {
+    // right click to delete forks
+    forknum = get_forknum(e);
+    if (forknum != -1) {
+      stream.emit("deletefork", forknum);
+      redraw_flags();
+    }
+    return false;
+  });
   $("#vtimelinebox").mouseup(function(e) {
     p("mouseup");
     if (e.button != 0) return;
-    if (e.target.id == "trash" && downforknum != -1) {
-      stream.emit("deletefork", downforknum);
-      redraw_flags();
-      return;
-    }
-
     var up = get_clnum(e);
     if (up === undefined) return;
     var forknum = get_forknum(e);
