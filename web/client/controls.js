@@ -97,12 +97,3 @@ $(document).ready(function() {
   });
 });
 
-// don't pull the window
-window.onmousewheel = function(e) {
-  if (e.target.id.substr(0,9) == "vtimeline")
-    return true;
-  else
-    return false;
-}
-
-
