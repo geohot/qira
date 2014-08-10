@@ -16,7 +16,8 @@ except:
 import struct
 import qiradb
 
-PPCREGS = ([], 4, True)
+# (regname, regsize, is_big_endian, arch_name)
+PPCREGS = ([], 4, True, "ppc")
 for i in range(32):
   PPCREGS[0].append("r"+str(i))
 

@@ -47,6 +47,7 @@ mkdir -p distrib/qira/ida/bin
 echo "copying ida plugin"
 cp -av ida/bin/* distrib/qira/ida/bin/
 
+echo "copying qemu source"
 if [ $QEMU_SOURCE ]; then
   #echo "copying qemu_mods for building qemu from source"
   cp -Rav qemu_mods distrib/qira/
@@ -58,7 +59,7 @@ if [ $QEMU_BINARIES ]; then
   echo "copying qemu"
   mkdir -p distrib/qira/qemu
   for arch in "i386" "arm" "x86_64" "ppc"; do
-    cp "qemu/qira-$arch" "distrib/qira/qemu/qira-$arch"
+    cp -v "qemu/qira-$arch" "distrib/qira/qemu/qira-$arch"
     strip "distrib/qira/qemu/qira-$arch"
     #upx -9 "distrib/qira/qemu/qira-$arch"
   done
@@ -67,6 +68,10 @@ fi
 echo "copying qiradb"
 mkdir -p distrib/qira/qiradb
 cp -Rav qiradb/* distrib/qira/qiradb/
+
+echo "copying pin"
+mkdir -p distrib/qira/pin
+cp -av pin/makefile pin/pin_build.sh pin/qirapin.cpp distrib/qira/pin/
 
 # package up the python, hopefully this includes pymongo driver
 # hmm, it doesn't, user will need to install

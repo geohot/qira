@@ -302,7 +302,7 @@ def get_vtimeline_picture(trace):
   from PIL import Image   # sudo pip install pillow
   import base64
   import StringIO
-  im = Image.new( 'RGB', (1, (trace.maxclnum/sampling)+1), "black")
+  im = Image.new( 'RGB', (1, (trace.maxclnum/sampling)), "black")
   px = im.load()
 
   for i in range(0, r, sampling):
