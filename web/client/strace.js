@@ -1,10 +1,27 @@
 stream = io.connect(STREAM_URL);
+Session.setDefault('sview', [0,10]);
+
+traces = {}
 
 stream.on('strace', function(msg) {
-  //p(msg);
-  $('#strace')[0].innerHTML = "";
-  UI.insert(UI.renderWithData(Template.strace, {strace: msg}), $('#strace')[0]);
+  traces[msg['forknum']] = msg['dat']
+  redraw_strace();
 });
+
+function redraw_strace() {
+  var forknum = Session.get("forknum");
+  var sview = Session.get('sview');
+  if (traces[forknum] !== undefined) {
+    var msg = traces[forknum].slice(sview[0], sview[1])
+    $('#strace')[0].innerHTML = "";
+    UI.insert(UI.renderWithData(Template.strace, {strace: msg}), $('#strace')[0]);
+  }
+}
+
+Deps.autorun(function() {
+  redraw_strace();
+});
+
 
 Template.strace.ischange = function() {
   var clnum = Session.get("clnum");
@@ -12,6 +29,7 @@ Template.strace.ischange = function() {
   else return '';
 }
 
+// regetting strace whenever we change forks...perf hit
 Deps.autorun(function() {
   var forknum = Session.get("forknum");
   var maxclnum = Session.get("max_clnum");
@@ -26,3 +44,15 @@ Template.strace.events({
 
 Template.strace.sc = function() { return highlight_addresses(this.sc); }
 
+Meteor.startup(function() {
+  $("#strace")[0].addEventListener("mousewheel", function(e) {
+    var sv = Session.get('sview');
+    if (e.wheelDelta < 0) {
+      Session.set('sview', [sv[0]+1, sv[1]+1]);
+    } else if (e.wheelDelta > 0) {
+      if (sv[0] > 0) {
+        Session.set('sview', [sv[0]-1, sv[1]-1]);
+      }
+    }
+  });
+});

@@ -19,7 +19,7 @@ def socket_method(func):
       tm = (time.time() - start) * 1000
 
       # print slow calls
-      if tm > 100:
+      if tm > 10:
         print "SOCKET %6.2f ms in %-20s with" % (tm, func.func_name), args
       return ret
     except Exception, e:
@@ -310,7 +310,7 @@ def get_strace(forknum):
     sc = " ".join(ff[2:])
     ret.append({"clnum": clnum, "pid":pid, "sc": sc})
   # LIMIT for web interface
-  emit('strace', ret[0:LIMIT*5])
+  emit('strace', {'forknum': forknum, 'dat': ret[0:LIMIT*5]})
 
 
 # ***** generic webserver stuff *****
