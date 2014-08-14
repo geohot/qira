@@ -47,7 +47,7 @@ static int callback_qira(struct libwebsocket_context* context,
         msg("QIRARX:%s\n", (char *)in);
       #endif
       if (memcmp(in, "setaddress ", sizeof("setaddress ")-1) == 0) {
-        ea_t addr = atoi((char*)in+sizeof("setaddress ")-1);
+        ea_t addr = strtoul((char*)in+sizeof("setaddress ")-1, NULL, 10);
         thread_safe_jump_to(addr);
       }
       break;

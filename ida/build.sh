@@ -1,15 +1,14 @@
 #!/bin/bash
 set -e
 
+SDKROOT=~/build/idasdk66
 unamestr=$(uname)
 if [[ "$unamestr" == 'Linux' ]]; then
-  SDKROOT=~/build/idasdk66
   IDAROOT=~/ida-6.6
   OUTPUT="qira.plx"
   OUTPUT64="qira.plx64"
   ln -sf libs/linux_libwebsockets.a libwebsockets.a
 elif [[ "$unamestr" == 'Darwin' ]]; then
-  SDKROOT=~/idasrc
   IDAROOT="/Applications/IDA Pro 6.6/idaq.app/Contents/MacOS/"
   OUTPUT="qira.pmc"
   OUTPUT64="qira.pmc64"
