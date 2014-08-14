@@ -2,6 +2,7 @@
 #include <idp.hpp>
 #include <loader.hpp>
 #include <bytes.hpp>
+#include <dbg.hpp>
 
 //#define DEBUG
 
@@ -15,12 +16,18 @@ static int callback_http(struct libwebsocket_context* context,
   return 0;
 }
 
+ea_t qira_address = BADADDR;
 static void thread_safe_jump_to(ea_t a) {
   struct uireq_jumpto_t: public ui_request_t {
     uireq_jumpto_t(ea_t a) {
       la = a;
     }
     virtual bool idaapi run() {
+      if (qira_address != BADADDR) {
+        del_bpt(qira_address);
+      }
+      qira_address = la;
+      add_bpt(qira_address);
       jumpto(la);
       return false;
     }
@@ -167,6 +174,7 @@ int idaapi IDAP_init(void) {
 
 void idaapi IDAP_term(void) {
   unhook_from_notification_point(HT_VIEW, hook);
+  //set_user_defined_prefix(0, NULL);
   exit_websocket_thread();
 	return;
 }
