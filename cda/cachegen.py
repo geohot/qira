@@ -98,7 +98,8 @@ def parse_node(node, d, filename, care):
 
 def parse_file(filename, args=[]):
   # traversal attack
-  tu = index.parse(filename, args=args)
+  exargs = ["-I", cda_config.CLANG_INCLUDES]
+  tu = index.parse(filename, args=exargs+args)
 
   # bad shit happened
   bad = False
@@ -121,9 +122,7 @@ def parse_file(filename, args=[]):
   return (care, rdat)
 
 def parse_files(files, args=[]):
-  args.append("-I")
   # for unbuilt clang
-  args.append(cda_config.CLANG_INCLUDES)
   for fn in files:
     print "CDA: caching",fn
     try:

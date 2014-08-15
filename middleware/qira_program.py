@@ -277,7 +277,7 @@ class Program:
 
     # DWARF IS STUPIDLY COMPLICATED
     def parse_dwarf():
-      files = []
+      files = set()
       dirs = set()
       dwarves = {}
       rdwarves = {}
@@ -301,6 +301,7 @@ class Program:
             fns = []
             lines = []
             lp = di.line_program_for_CU(cu)
+            print "DWARF: CU", basedir, lp['file_entry'][0]
             for f in lp['file_entry']:
               if f.dir_index > 0 and lp['include_directory'][f.dir_index-1][0] == '/':
                 fn = ""
@@ -310,10 +311,11 @@ class Program:
                 fn += lp['include_directory'][f.dir_index-1]+"/"
               # now we have the filename
               fn += f.name
-              files.append(fn)
+              files.add(fn)
               fns.append(fn)
               lines.append(open(fn).read().split("\n"))
-              print "DWARF: parsing",fn
+              #print "  DWARF: parsing",fn
+              # add all include dirs
 
             for entry in lp.get_entries():
               s = entry.state
@@ -326,7 +328,26 @@ class Program:
                   rdwarves[rd] = s.address
           except Exception as e:
             print "DWARF: error on",fn,"got",e
-      return (files, dwarves, rdwarves, list(dirs))
+            continue
+
+          # parse in CDA
+          if qira_config.WITH_CDA:
+            import cachegen
+            cfiles = filter(lambda x: x[-2:] != ".h", fns)
+            hfiles = filter(lambda x: x[-2:] == ".h", fns)
+            ldirs = set()
+            for fn in hfiles:
+              ep = fn[len(basedir):].split("/")
+              for i in range(len(ep)):
+                ldirs.add(basedir + "/" + '/'.join(ep[0:i]))
+            tmp = []
+            for ld in ldirs:
+              tmp.append("-I")
+              tmp.append(ld)
+            #print tmp
+            cachegen.parse_files(cfiles, tmp)
+
+      return (list(files), dwarves, rdwarves, list(dirs))
 
     (files, self.dwarves, self.rdwarves, dirs) = cachewrap("/tmp/qira_dwarfcaches", self.proghash, parse_dwarf)
 
@@ -349,13 +370,7 @@ class Program:
 
     def parse_cda():
       import cachegen
-      cfiles = filter(lambda x: x[-2:] != ".h", files)
-      args = []  # pass in on command line?
-      for d in dirs:
-        args.append("-I")
-        args.append(d)
-
-      return cachegen.parse_files(cfiles, args)
+      return cachegen.parse_files([], [])
 
     self.cda = cachewrap("/tmp/qira_cdacaches", self.proghash, parse_cda)
 
