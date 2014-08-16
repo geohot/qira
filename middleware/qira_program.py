@@ -21,6 +21,7 @@ PPCREGS = ([], 4, True, "ppc")
 for i in range(32):
   PPCREGS[0].append("r"+str(i))
 
+AARCH64REGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 8, False, "aarch64")
 ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 4, False, "arm")
 X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, False, "i386")
 X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', 'RIP'], 8, False, "x86-64")
@@ -140,6 +141,10 @@ class Program:
         use_lib('armhf')
       self.tregs = ARMREGS
       self.qirabinary = qemu_dir + "qira-arm"
+    elif self.fb == 0xb7:
+      use_lib('arm64')
+      self.tregs = AARCH64REGS
+      self.qirabinary = qemu_dir + "qira-aarch64"
     elif self.fb == 0x3e:
       self.tregs = X64REGS
       self.qirabinary = qemu_dir + "qira-x86_64"
