@@ -55,7 +55,7 @@ Template.__define__("controls", (function() {
     value: function() {
       return Spacebars.mustache(self.lookup("daddr"));
     }
-  }) ];
+  }), HTML.Raw('\n<input type="button" value="c" id="control_changeeditor" class="control">') ];
 }));
 
 Template.__define__("strace", (function() {
