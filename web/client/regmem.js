@@ -134,9 +134,6 @@ stream.on('registers', function(msg) {
   var tsize = msg[0]['size'];
   if (tsize > 0) PTRSIZE = tsize;
   UI.insert(UI.renderWithData(Template.regviewer, {regs: msg}), $('#regviewer')[0]);
-
-  // hack to display the change editor on x86 only
-  if (msg[0]['name']=="EAX") $('#changeeditor').show();
 });
 
 // events, add the editing here

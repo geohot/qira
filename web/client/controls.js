@@ -52,7 +52,18 @@ Template.controls.events = {
     var forknum = Session.get("forknum");
     var pending = Session.get('pending');
     stream.emit('forkat', forknum, clnum, pending);
-  }
+  },
+  'click #control_changeeditor': function(e) {
+    if (Session.get("showing_changeeditor") === true) {
+      Session.set("showing_changeeditor", false);
+      $('#changeeditor').hide();
+      $('#control_changeeditor').css('background-color', '');
+    } else {
+      Session.set("showing_changeeditor", true);
+      $('#changeeditor').show();
+      $('#control_changeeditor').css('background-color', '#FF8888');
+    }
+  },
 };
 
 // keyboard shortcuts

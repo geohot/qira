@@ -213,6 +213,7 @@ def getinstructions(forknum, clnum, clstart, clend):
   trace = program.traces[forknum]
   slce = qira_analysis.slice(trace, clnum)
   ret = []
+  trace.update_analysis_depends()
   for i in range(clstart, clend):
     rret = trace.db.fetch_changes_by_clnum(i, 1)
     if len(rret) == 0:
@@ -238,6 +239,10 @@ def getinstructions(forknum, clnum, clstart, clend):
       rret['slice'] = False
     # for numberless javascript
     rret['address'] = ghex(rret['address'])
+    if i in trace.dmap:
+      rret['depth'] = trace.dmap[i]
+    else:
+      rret['depth'] = 0
     ret.append(rret)
   emit('instructions', ret)
 
