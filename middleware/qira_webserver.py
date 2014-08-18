@@ -307,6 +307,7 @@ def getregisters(forknum, clnum):
         rret['regactions'] = "regreadwrite"
       else:
         rret['regactions'] = "regwrite"
+    rret['num'] = i
     ret.append(rret)
 
   emit('registers', ret)

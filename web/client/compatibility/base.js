@@ -131,7 +131,7 @@ var baseevents = {
     return false;
   },
   'click .data': function(e) {
-    var daddr = e.target.getAttribute('daddr');
+    var daddr = e.target.getAttribute('id').split("_")[1];
     Session.set('daddr', daddr);
   },
   'click .register': function(e) {
@@ -163,7 +163,7 @@ var basedblevents = {
     return false;
   },
   'click .data': function(e) {
-    var daddr = e.target.getAttribute('daddr');
+    var daddr = e.target.getAttribute('id').split("_")[1];
     Session.set('daddr', daddr);
   },
 };

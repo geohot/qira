@@ -1,5 +1,9 @@
 stream = io.connect(STREAM_URL);
 
+var regcolors = ['#59AE3F', '#723160', '#2A80A2', '#9E66BD', '#BC8D6B', '#3F3EAC', '#BC48B8', '#6B7C76', '#5FAC7F', '#A69B71', '#874535', '#AD49BF', '#73356F', '#55A4AC', '#988590', '#505C62', '#404088', '#56726B', '#BAAC62', '#454066', '#BCAEAA', '#4E7F6A', '#3960B5', '#295231', '#3B37A5', '#6A9191', '#976394', '#7F957D', '#B7AFBD', '#BD4A70', '#A35169', '#2F2D95', '#8879A8', '#8D3A8E', '#636E7C', '#82688D', '#9FA893', '#2A6885', '#812C87', '#568E71'];
+
+var current_regs = undefined;
+
 stream.on('maxclnum', function(msg) {
   update_maxclnum(msg);
 });
@@ -7,6 +11,21 @@ stream.on('maxclnum', function(msg) {
 stream.on('pmaps', function(msg) {
   Session.set('pmaps', msg)
 });
+
+function redraw_reg_flags() {
+  $(".rflag").remove();
+  if (current_regs !== undefined) {
+    for (r in current_regs) {
+      var th = current_regs[r];
+      var t = $('#data_'+th.value);
+      if (t.length == 1) {
+        var rr = $('<div class="rflag"></div>');
+        rr.css("background-color", regcolors[th.num]);
+        t.prepend(rr);
+      }
+    }
+  }
+}
 
 Meteor.startup(function() {
   $("#hexdump")[0].addEventListener("mousewheel", function(e) {
@@ -59,7 +78,7 @@ stream.on('memory', function(msg) {
       me = "0x"+me;
       var exclass = "";
       if (addr+i == daddr) { exclass = "highlight"; }
-      html += '<td colspan="'+PTRSIZE+'" class="data '+a+' '+exclass+'" daddr='+hex(addr+i)+">"+me+"</td>";
+      html += '<td colspan="'+PTRSIZE+'" class="data '+a+' '+exclass+'" id=data_'+hex(addr+i)+">"+me+"</td>";
     } else {
       for (var j = 0; j < PTRSIZE; j++) {
         var ii = msg['dat'][addr+i+j];
@@ -71,7 +90,7 @@ stream.on('memory', function(msg) {
         }
         var exclass = "";
         if (addr+i+j == daddr) { exclass = "highlight"; }
-        html += '<td class="data '+exclass+'" daddr='+hex(addr+i+j)+">"+me+"</td>";
+        html += '<td class="data '+exclass+'" id=data_'+hex(addr+i+j)+">"+me+"</td>";
       }
     }
 
@@ -94,12 +113,14 @@ stream.on('memory', function(msg) {
   }
   html += "</tr></table>";
   $("#hexdump")[0].innerHTML = html;
+  redraw_reg_flags();
 });
 
 
-
-Template.regviewer.hexvalue = function() {
-  return this.value;
+Template.regviewer.regcolor = function() {
+  // draw the hflags here
+  draw_hflag(this.value, this.name, regcolors[this.num]);
+  return regcolors[this.num];
 };
 
 Template.regviewer.datatype = function() {
@@ -130,6 +151,8 @@ Deps.autorun(function() {
 });
 
 stream.on('registers', function(msg) {
+  current_regs = msg;
+  redraw_reg_flags();
   $('#regviewer')[0].innerHTML = "";
   var tsize = msg[0]['size'];
   if (tsize > 0) PTRSIZE = tsize;

@@ -87,7 +87,7 @@
 <template name="regviewer">
 {{#each regs}}
   <div class="reg {{regactions}}">
-  <span class="register">{{name}}: </span><span class="{{datatype}} {{isselected}}">{{hexvalue}}</span>
+  <span class="register" style="color:{{regcolor}}">{{name}}: </span><span class="{{datatype}} {{isselected}}">{{value}}</span>
   </div>
 {{/each}}
 </template>

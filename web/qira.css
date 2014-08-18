@@ -231,7 +231,9 @@ body {
 
 .data {
   text-align: right;
-  /*padding-left: 2px;*/
+  min-width: 18px;
+  padding-top: 0px;
+  padding-bottom: 0px;
 }
 
 .datachange {
@@ -240,10 +242,12 @@ body {
 
 .datainstruction {
   color: #CC0000;
+  min-width: 84px;
 }
 
 .datamemory {
   color: #888800;
+  min-width: 84px;
 }
 
 .hdatainstruction {
@@ -258,6 +262,12 @@ body {
   display: inline-block;
   width: 200px;
   font-family: monospace;
+}
+
+.rflag {
+  width: 3px;
+  height: 12px;
+  display: inline-block;
 }
 
 .regread {

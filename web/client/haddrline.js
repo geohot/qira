@@ -35,30 +35,30 @@ Deps.autorun(function() {
   }
 });
 
-function draw_hflag(addr, name, color) {
+draw_hflag = function(addr, name, color, alwaysontop) {
   $("#hflag_"+name).remove();
   var t = $("#pchunk_"+string_round(addr, 3));
   if (t.length == 1) {
-    p("drawing hflag");
+    //p("drawing hflag");
     var hflag = $('<div class="hflag" id="hflag_'+name+'"></div>');
+    if (alwaysontop) hflag.css("z-index", 2);
     hflag.css("background-color", color);
     var off = ((((fhex(addr)%PAGE_SIZE)*1.0)/PAGE_SIZE) * t.width()) - (hflag.width()/2.0);
-    p(off);
     hflag.css("margin-left", off+"px");
     t.append(hflag);
   }
-}
+};
 
 Deps.autorun(function() {
   var addr = Session.get('iaddr');
   if (addr === undefined) return;
-  draw_hflag(addr, 'iaddr', '#AA0000');
+  draw_hflag(addr, 'iaddr', '#AA0000', true);
 });
 
 Deps.autorun(function() {
   var addr = Session.get('daddr');
   if (addr === undefined) return;
-  draw_hflag(addr, 'daddr', 'yellow');
+  draw_hflag(addr, 'daddr', 'yellow', true);
 });
 
 
