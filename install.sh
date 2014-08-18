@@ -9,7 +9,7 @@ if [ $(which apt-get) ]; then
   echo "installing apt packages"
   sudo apt-get install build-essential python-dev python-pip debootstrap
   echo "installing cda packages"
-  sudo apt-get install clang
+  sudo apt-get install libclang-3.4-dev
 elif [ $(which pacman) ]; then
   echo "installing pip"
   sudo pacman -S base-devel python2-pip
