@@ -44,7 +44,7 @@ Deps.autorun(function() {
   for (i = 0; i < t.length; i++) {
     if (t[i]['clnum'] > clnum) break;
   }
-  p(i);
+  //p(i);
   Session.set('sview', [i-3, i+7]);
 });
 

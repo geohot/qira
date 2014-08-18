@@ -40,6 +40,9 @@ k -- prev invocation of instruction
 u -- next toucher of data
 i -- prev toucher of data
 
+m -- go to return from current function
+, -- go to start of current function
+
 z -- zoom out max on vtimeline
 
 l -- set iaddr to instruction at current clnum

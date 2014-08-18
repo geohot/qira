@@ -5,6 +5,11 @@ stream.on('setiaddr', function(iaddr) {
   Session.set('iaddr', iaddr);
 });
 
+stream.on('setclnum', function(forknum, clnum) {
+  Session.set('forknum', forknum);
+  Session.set('clnum', clnum);
+});
+
 Deps.autorun(function() {
   var iaddr = Session.get('iaddr');
   stream.emit('navigateiaddr', iaddr);
@@ -68,7 +73,7 @@ Template.controls.events = {
 
 // keyboard shortcuts
 window.onkeydown = function(e) {
-  //p(e.keyCode);
+  p(e.keyCode);
   //p(e);
   if (e.keyCode == 37) {
     Session.set("forknum", Session.get("forknum")-1);
@@ -78,6 +83,10 @@ window.onkeydown = function(e) {
     Session.set("clnum", Session.get("clnum")-1);
   } else if (e.keyCode == 40) {
     Session.set("clnum", Session.get("clnum")+1);
+  } else if (e.keyCode == 77) {  // m -- end of function
+    stream.emit('navigatefunction', Session.get("forknum"), Session.get("clnum"), false);
+  } else if (e.keyCode == 188) {  // , -- start of function
+    stream.emit('navigatefunction', Session.get("forknum"), Session.get("clnum"), true);
   } else if (e.keyCode == 90) {  // z
     zoom_out_max();
   } else if (e.keyCode == 74) {  // vim down, j

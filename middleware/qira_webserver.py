@@ -207,6 +207,27 @@ def getchanges(forknum, address, typ, cview):
     ret[forknum] = program.traces[forknum].db.fetch_clnums_by_address_and_type(address, chr(ord(typ[0])), cview[0], LIMIT)
   emit('changes', {'type': typ, 'clnums': ret})
 
+@socketio.on('navigatefunction', namespace='/qira')
+@socket_method
+def navigatefunction(forknum, clnum, start):
+  trace = program.traces[forknum]
+  trace.update_analysis_depends()
+  myd = trace.dmap[clnum]
+  ret = clnum
+  while 1:
+    if trace.dmap[clnum] == myd-1:
+      break
+    ret = clnum
+    if start:
+      clnum -= 1
+    else:
+      clnum += 1
+    if clnum == trace.minclnum or clnum == trace.maxclnum:
+      ret = clnum
+      break
+  emit('setclnum', forknum, ret)
+
+
 @socketio.on('getinstructions', namespace='/qira')
 @socket_method
 def getinstructions(forknum, clnum, clstart, clend):

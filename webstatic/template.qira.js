@@ -114,7 +114,10 @@ Template.__define__("idump", (function() {
   }, UI.block(function() {
     var self = this;
     return [ "\n  ", HTML.DIV({
-      "class": "instruction"
+      "class": "instruction",
+      style: [ "margin-left: ", function() {
+        return Spacebars.mustache(self.lookup("depth"));
+      }, "px" ]
     }, "\n  ", HTML.DIV({
       "class": [ "change ", function() {
         return Spacebars.mustache(self.lookup("ischange"));
