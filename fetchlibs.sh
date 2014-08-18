@@ -45,10 +45,10 @@ mkdir -p libs
 cd libs
 
 LIBS="libc-bin libstdc++6"
-fetcharch arm64 saucy
 fetcharch armhf precise
 fetcharch armel precise
 fetcharch powerpc precise
+fetcharch arm64 saucy
 
 # mini debootstrap 
 
