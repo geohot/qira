@@ -239,9 +239,9 @@ def getinstructions(forknum, clnum, clstart, clend):
       rret['slice'] = False
     # for numberless javascript
     rret['address'] = ghex(rret['address'])
-    if i in trace.dmap:
+    try:
       rret['depth'] = trace.dmap[i]
-    else:
+    except:
       rret['depth'] = 0
     ret.append(rret)
   emit('instructions', ret)

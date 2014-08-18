@@ -284,17 +284,16 @@ def get_hacked_depth_map(flow):
     if address in return_stack:
       return_stack = return_stack[0:return_stack.index(address)]
     # ugh, so gross
+    ret.append(len(return_stack))
     if ins[0:5] == "call " or ins[0:6] == "callq " or ins[0:3] == "bl\t" or ins[0:4] == "blx\t":
       return_stack.append(address+length)
     #print return_stack
-    ret.append(len(return_stack))
   return ret
 
 def get_vtimeline_picture(trace):
   trace.update_analysis_depends()
-  maxd = max(trace.dmap)
 
-  if maxd == 0:
+  if trace.maxd == 0:
     return None
 
   r = trace.maxclnum-trace.minclnum
@@ -309,7 +308,7 @@ def get_vtimeline_picture(trace):
 
   for i in range(0, r, sampling):
     # could average the sampled
-    c = int((trace.dmap[i]*128.0)/maxd)
+    c = int((trace.dmap[i]*128.0)/trace.maxd)
     if i/sampling < im_y:
       px[0, i/sampling] = (0,c,c)
 

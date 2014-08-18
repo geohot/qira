@@ -74,7 +74,7 @@
 
 <template name="idump">
 {{#each instructions}}
-  <div class="instruction">
+  <div class="instruction" style="margin-left: {{depth}}px">
   <div class="change {{ischange}}">{{clnum}}</div>
   <span class="datainstruction {{isiaddr}}">{{hexaddress}}</span>
   <div class="instructiondesc">{{instruction}}</div>

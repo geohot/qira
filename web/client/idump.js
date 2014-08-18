@@ -35,6 +35,10 @@ Template.idump.hexaddress = function() {
   return this.address;
 };
 
+Template.idump.depth = function() {
+  return this.depth * 10;
+};
+
 Template.idump.events({
   'click .change': function() {
     Session.set('clnum', this.clnum);

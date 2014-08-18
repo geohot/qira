@@ -394,6 +394,7 @@ class Trace:
       self.maxclnum = self.db.get_maxclnum()
       self.flow = qira_analysis.get_instruction_flow(self, self.program, self.minclnum, self.maxclnum)
       self.dmap = qira_analysis.get_hacked_depth_map(self.flow)
+      self.maxd = max(self.dmap)
 
   # proxy the db call and fill in base memory
   def fetch_memory(self, clnum, address, ln):
