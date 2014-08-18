@@ -1,4 +1,4 @@
-QIRA is an IDA plugin to reverse using QEMU
+QIRA is a competitor to strace and gdb
 
 == Installation ==
 
