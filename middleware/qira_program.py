@@ -267,8 +267,7 @@ class Program:
 
   def research(self, re):
     try:
-      #csearch = qira_config.BASEDIR + "/cda/codesearch-latest/csearch"
-      csearch = "/usr/bin/csearch"
+      csearch = qira.config.CODESEARCHDIR + "/csearch"
       out = subprocess.Popen([csearch, "-n", "--", re], stdout=subprocess.PIPE, env={"CSEARCHINDEX": self.cindexname})
       dat = out.communicate()
       return dat[0].split("\n")[:-1]
@@ -360,8 +359,7 @@ class Program:
     if not os.path.isfile(self.cindexname):
       if os.fork() == 0:
         try:
-          #cindex = qira_config.BASEDIR + "/cda/codesearch-latest/cindex"
-          cindex = "/usr/bin/cindex"
+          cindex = qira_config.CODESEARCHDIR + "/cindex"
           os.execve(cindex, [cindex,"--"]+files, {"CSEARCHINDEX": self.cindexname})
         except:
           print "ERROR: cindex not found"
@@ -445,5 +443,4 @@ class Trace:
       dat = f.read(se-ss)
       self.base_memory[(ss, se)] = dat
       f.close()
-
 

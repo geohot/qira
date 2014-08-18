@@ -14,4 +14,6 @@ else:
   TRACE_FILE_BASE = "/tmp/qira_logs/"
 
 BASEDIR = os.path.realpath(os.path.dirname(os.path.realpath(__file__))+"/../")
+CODESEARCHDIR = BASEDIR+"/cda/codesearch-latest/"
+#CODESEARCHDIR = "/usr/bin/"
 
