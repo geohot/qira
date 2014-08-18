@@ -73,7 +73,7 @@ Template.controls.events = {
 
 // keyboard shortcuts
 window.onkeydown = function(e) {
-  p(e.keyCode);
+  //p(e.keyCode);
   //p(e);
   if (e.keyCode == 37) {
     Session.set("forknum", Session.get("forknum")-1);

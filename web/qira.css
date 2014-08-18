@@ -12,6 +12,29 @@ body {
   height: 100%;
 }
 
+/* haddrline */
+
+.pchunks {
+  margin-left: 10px;
+  margin-right: 10px;
+  display: inline-block;
+}
+
+.pchunk {
+  height: 40px;
+  width: 25px;
+  display: inline-block;
+  background-color: #555555;
+}
+
+.pchunkinstruction {
+  background-color: #550000 !important;
+}
+
+.pchunkmemory {
+  background-color: #555500 !important;
+}
+
 .highlight {
   background-color: #FF7777 !important;
 }
@@ -19,6 +42,28 @@ body {
 .halfhighlight {
   background: rgba(255, 119, 119, 0.3);
 }
+
+#haddrline {
+  height: 40px;
+  border-bottom: 1px solid black;
+  border-left: 1px solid black;
+  border-right: 1px solid black;
+  background-color: #282828;
+  overflow: hidden;
+  width: 624px;
+  white-space: nowrap;
+}
+
+.hflag {
+  width: 2px;
+  height: 40px;
+  position: absolute;
+  font-family: monospace;
+  color: gray;
+}
+
+
+/* controls */
 
 .control {
   font-family: monospace;

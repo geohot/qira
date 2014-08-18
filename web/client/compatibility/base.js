@@ -39,13 +39,13 @@ function string_add(s, num) {
   return hex(fhex(s)+num);
 }
 
-pmaps = {}
 function get_data_type(v) {
   if (typeof v == "number") v = hex(v);
   //if (typeof v == "string") v = parseInt(v, 16);
   //var a = pmaps[v - v%0x1000];
 
   // haxx
+  var pmaps = Session.get('pmaps');
   var a = pmaps[string_round(v, 3)];
   if (a === undefined) return "";
   else return "data"+a;

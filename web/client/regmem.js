@@ -5,7 +5,7 @@ stream.on('maxclnum', function(msg) {
 });
 
 stream.on('pmaps', function(msg) {
-  pmaps = msg
+  Session.set('pmaps', msg)
 });
 
 Meteor.startup(function() {
