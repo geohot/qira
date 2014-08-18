@@ -7,7 +7,7 @@ PIP="pip"
 # build for building qiradb and stuff for flask like gevent
 if [ $(which apt-get) ]; then
   echo "installing apt packages"
-  sudo apt-get install build-essential python-dev python-pip debootstrap
+  sudo apt-get install build-essential python-dev python-pip debootstrap libjpeg-dev zlib1g-dev unzip
   echo "installing cda packages"
   sudo apt-get install libclang-3.4-dev
 elif [ $(which pacman) ]; then
@@ -32,6 +32,12 @@ sudo $PIP install --upgrade html flask-socketio pillow pyelftools socketIO-clien
 echo "making symlink"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira
 sudo ln -sf $(pwd)/qira /usr/local/bin/cda
+
+echo "installing codesearch"
+pushd .
+cd cda
+./codesearch_build.sh
+popd
 
 if [ -f web/qira.html ]; then
   echo "trunk detected"

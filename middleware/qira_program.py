@@ -244,7 +244,8 @@ class Program:
       if os.fork() != 0:
         return
     if qira_config.USE_PIN:
-      eargs = [self.pinbinary, "-t", self.pintool, "--", self.program]+self.args
+      # is "-injection child" good?
+      eargs = [self.pinbinary, "-injection", "child", "-t", self.pintool, "--", self.program]+self.args
     else:
       eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
     #print "***",' '.join(eargs)
@@ -307,6 +308,8 @@ class Program:
             lp = di.line_program_for_CU(cu)
             print "DWARF: CU", basedir, lp['file_entry'][0]
             for f in lp['file_entry']:
+              if f == "<built-in>":
+                continue
               if f.dir_index > 0 and lp['include_directory'][f.dir_index-1][0] == '/':
                 fn = ""
               else:
@@ -332,7 +335,6 @@ class Program:
                   rdwarves[rd] = s.address
           except Exception as e:
             print "DWARF: error on",fn,"got",e
-            continue
 
           # parse in CDA
           if qira_config.WITH_CDA:

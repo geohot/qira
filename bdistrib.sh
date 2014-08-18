@@ -78,6 +78,7 @@ mkdir -p distrib/qira/cda distrib/qira/cda/clang
 cp -av cda/*.py distrib/qira/cda/
 cp -av cda/clang/*.py distrib/qira/cda/clang/
 cp -Rav cda/static distrib/qira/cda/
+cp -av cda/codesearch_build.sh distrib/qira/cda/
 
 # package up the python, hopefully this includes pymongo driver
 # hmm, it doesn't, user will need to install
