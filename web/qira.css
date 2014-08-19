@@ -39,6 +39,10 @@ body {
   background-color: #FF7777 !important;
 }
 
+.autohighlight {
+  background-color: #FF7777 !important;
+}
+
 .halfhighlight {
   background: rgba(255, 119, 119, 0.3);
 }
@@ -286,8 +290,7 @@ body {
 #strace {
   font-family: monospace;
   height: 150px;
-  overflow-x: hidden;
-  overflow-y: scroll;
+  overflow: hidden;
   padding: 10px;
   white-space: nowrap;
   width: 604px;

@@ -66,6 +66,7 @@ function highlight_addresses(a) {
       d = d.replace(a, "<span class='h"+cl+"'>"+a+"</span>");
     });
   }
+  // does this work outside templates?
   return new Handlebars.SafeString(d);
 }
 
@@ -84,6 +85,21 @@ function abs_maxclnum() {
   }
   return ret;
 }
+
+function rehighlight() {
+  var clnum = Session.get("clnum");
+  var iaddr = Session.get("iaddr");
+  var daddr = Session.get("daddr");
+  $(".autohighlight").removeClass("autohighlight");
+  $(".clnum_"+clnum).addClass("autohighlight");
+  $(".iaddr_"+iaddr).addClass("autohighlight");
+  $(".daddr_"+daddr).addClass("autohighlight");
+}
+
+Deps.autorun(function() { DA("rehighlight");
+  rehighlight();
+});
+
 
 function update_maxclnum(clnum) {
   //p("update maxclnum "+clnum);

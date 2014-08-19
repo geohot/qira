@@ -77,8 +77,7 @@ function on_memory(msg) { DS("memory");
       var me = v.toString(16);
       //while (me.length != 8) me = "0" + me;
       me = "0x"+me;
-      var exclass = "";
-      if (addr+i == daddr) { exclass = "highlight"; }
+      var exclass = "daddr daddr_"+hex(addr+i);
       html += '<td colspan="'+PTRSIZE+'" class="data '+a+' '+exclass+'" id=data_'+hex(addr+i)+">"+me+"</td>";
     } else {
       for (var j = 0; j < PTRSIZE; j++) {
@@ -89,8 +88,7 @@ function on_memory(msg) { DS("memory");
           var me = ii.toString(16);
           if (me.length == 1) me = "0" + me;
         }
-        var exclass = "";
-        if (addr+i+j == daddr) { exclass = "highlight"; }
+        var exclass = "daddr daddr_"+hex(addr+i+j);
         html += '<td class="data '+exclass+'" id=data_'+hex(addr+i+j)+">"+me+"</td>";
       }
     }
@@ -115,6 +113,7 @@ function on_memory(msg) { DS("memory");
   html += "</tr></table>";
   $("#hexdump")[0].innerHTML = html;
   redraw_reg_flags();
+  rehighlight();
 } stream.on('memory', on_memory);
 
 
@@ -157,6 +156,7 @@ Deps.autorun(function() { DA("emit getregisters");
 });
 
 function on_registers(msg) { DS("registers");
+  return;
   current_regs = msg;
   redraw_reg_flags();
   $('#regviewer')[0].innerHTML = "";
@@ -200,6 +200,8 @@ Deps.autorun(function() { DA("emit getclnum for datachanges");
 
 // TODO: misleading name
 function on_clnum(msg) { DS("clnum");
+  return;
   $('#datachanges')[0].innerHTML = "";
   UI.insert(UI.renderWithData(Template.datachanges, {memactions: msg}), $('#datachanges')[0]);
 } stream.on('clnum', on_clnum);
+

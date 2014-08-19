@@ -58,8 +58,28 @@ Template.idump.instruction = function() { return highlight_addresses(this.instru
 // ** should move these to idump.js **
 
 function on_instructions(msg) { DS("instructions");
-  $('#idump')[0].innerHTML = "";
-  UI.insert(UI.renderWithData(Template.idump, {instructions: msg}), $('#idump')[0]);
+  var clnum = Session.get("clnum");
+  var idump = "";
+
+  var iaddr = Session.get("iaddr");
+  for (var i = 0; i<msg.length;i++) {
+    var ins = msg[i];
+
+    if (ins.clnum === clnum) {
+      Session.set('iaddr', ins.address);
+    }
+
+    // compute the dynamic stuff
+    idump +=
+       '<div class="instruction" style="margin-left: '+(ins.depth*10)+'px">'+
+        '<div class="change '+(ins.slice ? "halfhighlight": "")+' clnum clnum_'+ins.clnum+'">'+ins.clnum+'</div> '+
+        '<span class="datainstruction iaddr iaddr_'+ins.address+'">'+ins.address+'</span> '+
+        '<div class="instructiondesc">'+highlight_addresses(ins.instruction)+'</div> '+
+        '<span class="comment">'+(ins.comment !== undefined ? ins.comment : "")+'</span>'+
+      '</div>';
+  }
+  $('#idump').html(idump);
+  rehighlight();
 } stream.on('instructions', on_instructions);
 
 Deps.autorun(function() { DA("emit getinstructions");

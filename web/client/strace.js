@@ -13,8 +13,17 @@ function redraw_strace() {
   var sview = Session.get('sview');
   if (traces[forknum] === undefined) return;
   var msg = traces[forknum].slice(sview[0], sview[1])
-  $('#strace')[0].innerHTML = "";
-  UI.insert(UI.renderWithData(Template.strace, {strace: msg}), $('#strace')[0]);
+
+  var strace = "";
+  for (i in msg) {
+    var st = msg[i];
+    strace += '<div class="syscall">'+
+        '<div class="change clnum clnum_'+st.clnum+'">'+st.clnum+'</div>'+
+        highlight_addresses(st.sc)+
+      '</div>';
+  }
+  p(strace);
+  $('#strace').html(strace);
 }
 
 Deps.autorun(function() { DA("redrawing strace");
