@@ -48,7 +48,7 @@ body {
 }
 
 #haddrline {
-  height: 40px;
+  height: 40px; 
   border-bottom: 1px solid black;
   border-left: 1px solid black;
   border-right: 1px solid black;
@@ -63,6 +63,8 @@ body {
   height: 40px;
   font-family: monospace;
   color: gray;
+  position: relative;
+  display: inline-block;
 }
 
 

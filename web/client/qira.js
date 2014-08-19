@@ -13,9 +13,9 @@ Deps.autorun(function() { DA("update window.location.hash for history");
   json['cview'] = Session.get('cview');
   json['dview'] = Session.get('dview');
   json['clnum'] = Session.get('clnum');
+  json['daddr'] = Session.get('daddr');
   /*json['forknum'] = Session.get('forknum');
   json['iaddr'] = Session.get('iaddr');
-  json['daddr'] = Session.get('daddr');
   json['max_clnum'] = Session.get('max_clnum');*/
   var hash = JSON.stringify(json);
   current_hash = hash;

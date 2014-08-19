@@ -121,6 +121,9 @@ $(document).ready(function() {
   $('body').on('click', '.hdatainstruction', function(e) {
     update_dview(e.target.innerHTML);
   });
+  $('body').on('dblclick', '.datamemory', function(e) {
+    update_dview(e.target.innerHTML);
+  });
   $('body').on('contextmenu', '.hdatainstruction', function(e) {
     Session.set("iaddr", e.target.innerHTML);
     Session.set("dirtyiaddr", true);

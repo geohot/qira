@@ -117,25 +117,6 @@ function on_memory(msg) { DS("memory");
 } stream.on('memory', on_memory);
 
 
-Template.regviewer.regcolor = function() {
-  // draw the hflags here
-  draw_hflag(this.value, this.name, regcolors[this.num]);
-  return regcolors[this.num];
-};
-
-Template.regviewer.datatype = function() {
-  return get_data_type(this.value);
-};
-
-Template.regviewer.isselected = function() {
-  var daddr = fhex(Session.get('daddr'))
-  if (daddr == this.address) {
-    return 'highlight';
-  } else {
-    return '';
-  }
-};
-
 // keep these updated
 Deps.autorun(function() { DA("emit getmemory");
   var forknum = Session.get("forknum");
@@ -164,11 +145,10 @@ function on_registers(msg) { DS("registers");
   var regviewer = "";
   for (i in msg) {
     var r = msg[i];
-    p(r);
     draw_hflag(r.value, r.name, regcolors[r.num]);
     regviewer += '<div class="reg '+r.regactions+'">'+
         '<span class="register" style="color:'+regcolors[r.num]+'">'+r.name+': </span>'+
-        '<span class="'+get_data_type(r.value)+' daddr daddr_'+hex(r.address)+'">'+r.value+'</span>'+
+        '<span class="h'+get_data_type(r.value)+' daddr daddr_'+hex(r.address)+'">'+r.value+'</span>'+
       '</div>';
   }
   $('#regviewer').html(regviewer);

@@ -49,7 +49,7 @@ draw_hflag = function(addr, name, color, alwaysontop) {
     }
     hflag.css("background-color", color);
     var off = ((((fhex(addr)%PAGE_SIZE)*1.0)/PAGE_SIZE) * t.width()) - (hflag.width()/2.0);
-    hflag.css("margin-left", off+"px");
+    hflag.css("left", off+"px");
     t.append(hflag);
   }
 };
