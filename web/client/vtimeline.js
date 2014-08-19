@@ -1,15 +1,15 @@
 stream = io.connect(STREAM_URL);
 
 // *** the analysis overlay ***
+var overlays = {};
 
 Deps.autorun(function() {
   var maxclnum = Session.get("max_clnum");
+  overlays = {};
   for (i in maxclnum) {
     stream.emit('doanalysis', parseInt(i))
   }
 });
-
-var overlays = {};
 
 stream.on('setpicture', function(msg) {
   //p(msg);
@@ -145,6 +145,7 @@ function redraw_vtimelines(scale) {
     var max = maxclnum[forknum];
 
     if (overlays[forknum] !== undefined) vt.css('background-image', "url('"+overlays[forknum]+"')");
+    else vt.css('background-image', "");
     var cscale = get_cscale();
 
     if (max[0] < cview[0] && cview[0] < max[1]) { add_flag("zoom", forknum, cview[0]); }
