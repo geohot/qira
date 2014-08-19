@@ -164,27 +164,6 @@ Template.datachanges.events(baseevents);
 
 // *** datachanges ***
 
-Template.datachanges.hexaddress = function() {
-  return this.address;
-};
-
-Template.datachanges.typeclass = function() {
-  if (this.type == "L") return "regread";
-  else if (this.type == "S") return "regwrite";
-};
-
-Template.datachanges.hexdata = function() {
-  return this.data;
-};
-
-Template.datachanges.addrtype = function() {
-  return get_data_type(this.address);
-};
-
-Template.datachanges.datatype = function() {
-  return get_data_type(this.data);
-};
-
 Deps.autorun(function() { DA("emit getclnum for datachanges");
   var forknum = Session.get("forknum");
   stream.emit('getclnum', forknum, Session.get('clnum'), ['L', 'S'], 2)  // justification for more than 2?
@@ -192,7 +171,19 @@ Deps.autorun(function() { DA("emit getclnum for datachanges");
 
 // TODO: misleading name
 function on_clnum(msg) { DS("clnum");
-  $('#datachanges')[0].innerHTML = "";
-  UI.insert(UI.renderWithData(Template.datachanges, {memactions: msg}), $('#datachanges')[0]);
+  var datachanges = "";
+  for (i in msg) {
+    var dc = msg[i];
+    p(dc);
+    var typeclass = ""
+    if (dc.type == "L") typeclass = "regread";
+    else if (dc.type == "S") typeclass = "regwrite";
+    datachanges += '<div class="datachanges '+typeclass+'"> '+
+        '<span class="h'+get_data_type(dc.address)+'">'+dc.address+'</span> '+
+        ((dc.type == "S")?'&lt;--':'--')+' '+
+        '<span class="h'+get_data_type(dc.data)+'">'+dc.data+'</span> '+
+      '</div> ';
+  }
+  $('#datachanges').html(datachanges);
 } stream.on('clnum', on_clnum);
 
