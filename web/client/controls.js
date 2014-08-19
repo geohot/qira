@@ -43,6 +43,7 @@ Template.controls.events = {
       Session.set("iaddr", undefined);
     } else {
       Session.set("iaddr", e.target.value);
+      Session.set("dirtyiaddr", true);
     }
   },
   'change #control_daddr': function(e) {
@@ -103,9 +104,7 @@ window.onkeydown = function(e) {
   } else if (e.keyCode == 67 && e.shiftKey == true) {
     // shift-C = clear all forks
     delete_all_forks();
-  } /* else if (e.keyCode == 76) {  // l
-    Session.set("iaddr", Session.get("ciaddr"));
-  }*/
+  }
 };
 
 $(document).ready(function() {
