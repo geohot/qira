@@ -3,9 +3,10 @@ stream = io.connect(STREAM_URL);
 // *** the analysis overlay ***
 var overlays = {};
 
-Deps.autorun(function() {
+Deps.autorun(function() { DA("regetting analysis pictures, should be PUSH");
   var maxclnum = Session.get("max_clnum");
   overlays = {};
+  // TODO: only get the updated analysis
   for (i in maxclnum) {
     stream.emit('doanalysis', parseInt(i))
   }
@@ -283,16 +284,12 @@ go_to_flag = function (next, data) {
   }
 };
 
-Deps.autorun(function() {
+Deps.autorun(function() { DA("calling zoom_out_max, confusing autorun");
   // false here forces update on max_clnum update
   zoom_out_max(false);
 });
 
-Deps.autorun(function() {
-  /*var cview = Session.get("cview");
-  if (cview === undefined) return undefined;
-  add_flag("bounds", 0, cview[0]);
-  add_flag("bounds", 0, cview[1]);*/
+Deps.autorun(function() { DA("updating bounds flags");
   var maxclnum = Session.get("max_clnum");
   if (maxclnum === undefined) return;
   remove_flags("bounds");
@@ -304,7 +301,7 @@ Deps.autorun(function() {
   redraw_flags();
 });
 
-Deps.autorun(function() {
+Deps.autorun(function() { DA("adding current change flag");
   var forknum = Session.get("forknum");
   var clnum = Session.get("clnum");
   remove_flags("change");
@@ -312,19 +309,17 @@ Deps.autorun(function() {
   redraw_flags();
 });
 
-Deps.autorun(function() {
-  //var forknum = Session.get("forknum");
-  var iaddr = Session.get('iaddr');
+Deps.autorun(function() { DA("emit getchanges for iaddr change");
   var maxclnum = Session.get('max_clnum');
   var cview = Session.get('cview');
+  var iaddr = Session.get('iaddr');
   stream.emit('getchanges', -1, iaddr, 'I', cview)
 });
 
-Deps.autorun(function() {
-  //var forknum = Session.get("forknum");
-  var daddr = Session.get('daddr');
+Deps.autorun(function() { DA("emit getchanges for daddr change");
   var maxclnum = Session.get('max_clnum');
   var cview = Session.get('cview');
+  var daddr = Session.get('daddr');
   stream.emit('getchanges', -1, daddr, 'L', cview)
   stream.emit('getchanges', -1, daddr, 'S', cview)
 });
@@ -364,20 +359,5 @@ stream.on('changes', function(msg) {
   }
   redraw_flags();
 });
-
-/* **** SLICE SUPPORT **** */
-/*Deps.autorun(function() {
-  stream.emit('doslice', Session.get('forknum'), Session.get('clnum'))
-  remove_flags('slice');
-});
-
-stream.on('slice', function(forknum, data) {
-  for (var i = 0; i < data.length; i++) {
-    add_flag('slice', forknum, data[i]);
-  }
-});*/
-
-
-
 
 

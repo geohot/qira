@@ -27,7 +27,7 @@ function do_ida_socket(callme) {
   }
 }
 
-Deps.autorun(function() {
+Deps.autorun(function() { DA("send setaddress to ida");
   var iaddr = Session.get('iaddr');
   do_ida_socket(function() {
     cmd = 'setaddress '+fhex(iaddr)

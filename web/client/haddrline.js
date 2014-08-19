@@ -1,6 +1,6 @@
 var PAGE_SIZE = 0x1000;
 
-Deps.autorun(function() {
+Deps.autorun(function() { DA("pmaps changed, updating haddrline");
   var pmaps = Session.get('pmaps');
   if (pmaps === undefined) return;
   //p(pmaps);
@@ -54,18 +54,17 @@ draw_hflag = function(addr, name, color, alwaysontop) {
   }
 };
 
-Deps.autorun(function() {
+Deps.autorun(function() { DA("draw haddrline iaddr flag");
   var addr = Session.get('iaddr');
   if (addr === undefined) return;
   draw_hflag(addr, 'iaddr', '#AA0000', true);
 });
 
-Deps.autorun(function() {
+Deps.autorun(function() { DA("draw haddrline daddr flag");
   var addr = Session.get('daddr');
   if (addr === undefined) return;
   draw_hflag(addr, 'daddr', 'yellow', true);
 });
-
 
 Meteor.startup(function() {
   var ee = $("#haddrline")[0];

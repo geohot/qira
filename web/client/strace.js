@@ -17,7 +17,7 @@ function redraw_strace() {
   UI.insert(UI.renderWithData(Template.strace, {strace: msg}), $('#strace')[0]);
 }
 
-Deps.autorun(function() {
+Deps.autorun(function() { DA("redrawing strace");
   redraw_strace();
 });
 
@@ -28,19 +28,21 @@ Template.strace.ischange = function() {
   else return '';
 }
 
-// regetting strace whenever we change forks...perf hit
-Deps.autorun(function() {
-  var forknum = Session.get("forknum");
+Deps.autorun(function() { DA("regetting straces, should be PUSH");
   var maxclnum = Session.get("max_clnum");
-  stream.emit("getstrace", forknum);
+  // TODO: only get the updated straces
+  for (i in maxclnum) {
+    stream.emit("getstrace", i);
+  }
 });
 
-Deps.autorun(function() {
+Deps.autorun(function() { DA("updating sview on fork/cl change");
   var forknum = Session.get("forknum");
   var clnum = Session.get("clnum");
   if (traces[forknum] === undefined) return;
   var t = traces[forknum];
   var i;
+  // ugh, slow...binary search here
   for (i = 0; i < t.length; i++) {
     if (t[i]['clnum'] > clnum) break;
   }

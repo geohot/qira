@@ -61,9 +61,9 @@ stream.on('instructions', function(msg) {
   UI.insert(UI.renderWithData(Template.idump, {instructions: msg}), $('#idump')[0]);
 });
 
-Deps.autorun(function() {
-  var clnum = Session.get("clnum");
+Deps.autorun(function() { DA("emit getinstructions");
   var forknum = Session.get("forknum");
+  var clnum = Session.get("clnum");
   stream.emit('getinstructions', forknum, clnum, clnum-8, clnum+10);
 });
 

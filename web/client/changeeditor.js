@@ -16,7 +16,7 @@ Template.changeeditor.events = {
   },
 };
 
-Deps.autorun(function() {
+Deps.autorun(function() { DA("update pending changeeditor");
   var pending = Session.get('pending');
   if ($('#pending').length == 0) return;
   $('#pending')[0].innerHTML = "";

@@ -287,7 +287,6 @@ def get_hacked_depth_map(flow):
     ret.append(len(return_stack))
     if ins[0:5] == "call " or ins[0:6] == "callq " or ins[0:3] == "bl\t" or ins[0:4] == "blx\t":
       return_stack.append(address+length)
-    #print return_stack
   ret.append(len(return_stack))  # missing last instruction
   return ret
 

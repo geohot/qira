@@ -4,16 +4,19 @@ var current_hash = "";
 Session.setDefault('pending', []);
 
 // there should be a library for this
-Deps.autorun(function() {
+Deps.autorun(function() { DA("update window.location.hash for history");
   var json = {};
-  // for dep tracking, can't use keys
+  // only those should be tracked in the history
+  // TODO: use the proper history API
+  // this is bad, scrolling will pwn the history
+  // refactor required
+  json['cview'] = Session.get('cview');
+  json['dview'] = Session.get('dview');
   json['clnum'] = Session.get('clnum');
-  json['forknum'] = Session.get('forknum');
+  /*json['forknum'] = Session.get('forknum');
   json['iaddr'] = Session.get('iaddr');
   json['daddr'] = Session.get('daddr');
-  json['dview'] = Session.get('dview');
-  json['cview'] = Session.get('cview');
-  json['max_clnum'] = Session.get('max_clnum');
+  json['max_clnum'] = Session.get('max_clnum');*/
   var hash = JSON.stringify(json);
   current_hash = hash;
   //p("updating hash to "+hash);

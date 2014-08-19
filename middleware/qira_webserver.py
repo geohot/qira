@@ -19,8 +19,8 @@ def socket_method(func):
       ret = func(*args, **kwargs)
       tm = (time.time() - start) * 1000
 
-      # print slow calls
-      if tm > 30:
+      # print slow calls, slower than 20ms
+      if tm > 20:
         print "SOCKET %6.2f ms in %-20s with" % (tm, func.func_name), args
       return ret
     except Exception, e:
@@ -33,7 +33,7 @@ import time
 import qira_analysis
 import qira_log
 
-LIMIT = 200
+LIMIT = 50
 
 from flask import Flask, Response, redirect
 from flask.ext.socketio import SocketIO, emit
@@ -158,10 +158,6 @@ def slice(forknum, clnum):
 @socket_method
 def analysis(forknum):
   trace = program.traces[forknum]
-  # hacks
-  if trace.db.get_maxclnum() > 300000:
-    print "*** not running the analyzer, too many changes"
-    return
 
   data = qira_analysis.get_vtimeline_picture(trace)
   if data != None:

@@ -10,7 +10,7 @@ stream.on('setclnum', function(forknum, clnum) {
   Session.set('clnum', clnum);
 });
 
-Deps.autorun(function() {
+Deps.autorun(function() { DA("set backend know iaddr changed");
   var iaddr = Session.get('iaddr');
   stream.emit('navigateiaddr', iaddr);
 });

@@ -7,6 +7,10 @@ if (window.location.port == 3000) {
 
 function p(a) { console.log(a); }
 
+function DA(a) {
+  p("debug autorun: "+a);
+}
+
 function fhex(a) {
   return parseInt(a, 16);
 }
@@ -84,7 +88,7 @@ function abs_maxclnum() {
 }
 
 function update_maxclnum(clnum) {
-  p("update maxclnum "+clnum);
+  //p("update maxclnum "+clnum);
   var old_maxclnum = Session.get("max_clnum");
   Session.set("max_clnum", clnum);
 

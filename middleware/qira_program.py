@@ -384,12 +384,25 @@ class Trace:
     self.forknum = forknum
     self.maxclnum = None
     self.mixclnum = None
+    self.flow = None
+    self.dmap = None
+    self.maxd = 0
     self.program = program
     self.db = qiradb.Trace(fn, forknum, r1, r2, r3)
     self.load_base_memory()
     self.update_analysis_depends()
 
+  # so this can be slow...what do?
   def update_analysis_depends(self):
+    # ewww
+    if self.db.get_maxclnum() > 50000:
+      self.minclnum = self.db.get_minclnum()
+      self.maxclnum = self.db.get_maxclnum()
+      self.flow = None
+      self.dmap = None
+      self.maxd = 0
+      return
+      
     if self.maxclnum == None or self.db.get_maxclnum() != self.maxclnum:
       self.minclnum = self.db.get_minclnum()
       self.maxclnum = self.db.get_maxclnum()

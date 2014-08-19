@@ -139,17 +139,18 @@ Template.regviewer.isselected = function() {
 };
 
 // keep these updated
-Deps.autorun(function() {
+Deps.autorun(function() { DA("emit getmemory");
+  var forknum = Session.get("forknum");
   var daddr = Session.get('daddr');
   var dview = Session.get('dview');
   var clnum = Session.get('clnum');
-  var forknum = Session.get("forknum");
   stream.emit('getmemory', forknum, clnum-1, dview, 0x100);
 });
 
-Deps.autorun(function() {
+Deps.autorun(function() { DA("emit getregisters");
   var forknum = Session.get("forknum");
-  stream.emit('getregisters', forknum, Session.get('clnum')-1);
+  var clnum = Session.get('clnum');
+  stream.emit('getregisters', forknum, clnum-1);
 });
 
 stream.on('registers', function(msg) {
@@ -189,7 +190,7 @@ Template.datachanges.datatype = function() {
   return get_data_type(this.data);
 };
 
-Deps.autorun(function() {
+Deps.autorun(function() { DA("emit getclnum for datachanges");
   var forknum = Session.get("forknum");
   stream.emit('getclnum', forknum, Session.get('clnum'), ['L', 'S'], 2)  // justification for more than 2?
 });
