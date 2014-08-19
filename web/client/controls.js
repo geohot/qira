@@ -15,64 +15,37 @@ Deps.autorun(function() { DA("set backend know iaddr changed");
   stream.emit('navigateiaddr', iaddr);
 });
 
-Template.controls.clnum = function() {
-  return Session.get("clnum");
-};
-
-Template.controls.forknum = function() {
-  return Session.get("forknum");
-};
-
-Template.controls.iaddr = function() {
-  return Session.get("iaddr");
-};
-
-Template.controls.daddr = function() {
-  return Session.get("daddr");
-};
-
-Template.controls.events = {
-  'change #control_clnum': function(e) {
+Deps.autorun(function() { DA("update controls");
+  $("#control_clnum").val(Session.get("clnum"));
+  $("#control_forknum").val(Session.get("forknum"));
+  $("#control_iaddr").val(Session.get("iaddr"));
+  $("#control_daddr").val(Session.get("daddr"));
+});
+  
+$(document).ready(function() {
+  $('#control_clnum').on('change', function(e) {
     Session.set("clnum", parseInt(e.target.value));
-  },
-  'change #control_forknum': function(e) {
+  });
+  $('#control_forknum').on('change', function(e) {
     Session.set("forknum", parseInt(e.target.value));
-  },
-  'change #control_iaddr': function(e) {
+  });
+  $('#control_iaddr').on('change', function(e) {
     if (e.target.value == "") {
       Session.set("iaddr", undefined);
     } else {
       Session.set("iaddr", e.target.value);
       Session.set("dirtyiaddr", true);
     }
-  },
-  'change #control_daddr': function(e) {
+  });
+  $('#control_daddr').on('change', function(e) {
     if (e.target.value == "") {
       Session.set("daddr", undefined);
       Session.set("dview", undefined);
     } else {
       update_dview(e.target.value);
     }
-  },
-  // removed for v1 since it was so broken
-  /*'click #control_fork': function(e) {
-    var clnum = Session.get("clnum");
-    var forknum = Session.get("forknum");
-    var pending = Session.get('pending');
-    stream.emit('forkat', forknum, clnum, pending);
-  },
-  'click #control_changeeditor': function(e) {
-    if (Session.get("showing_changeeditor") === true) {
-      Session.set("showing_changeeditor", false);
-      $('#changeeditor').hide();
-      $('#control_changeeditor').css('background-color', '');
-    } else {
-      Session.set("showing_changeeditor", true);
-      $('#changeeditor').show();
-      $('#control_changeeditor').css('background-color', '#FF8888');
-    }
-  },*/
-};
+  });
+});
 
 // keyboard shortcuts
 window.onkeydown = function(e) {
@@ -110,42 +83,42 @@ window.onkeydown = function(e) {
 
 $(document).ready(function() {
   $('body').on('click', '.clnum', function(e) {
-    Session.set('clnum', parseInt(e.target.innerHTML));
+    Session.set('clnum', parseInt(e.target.textContent));
   });
   $('body').on('click', '.iaddr', function(e) {
-    Session.set('iaddr', e.target.innerHTML);
+    Session.set('iaddr', e.target.textContent);
+  });
+  $('body').on('click', '.daddr', function(e) {
+    var daddr = e.target.getAttribute('id').split("_")[1];
+    Session.set('daddr', daddr);
   });
   $('body').on('click', '.hdatamemory', function(e) {
-    update_dview(e.target.innerHTML);
+    update_dview(e.target.textContent);
   });
   $('body').on('click', '.hdatainstruction', function(e) {
-    update_dview(e.target.innerHTML);
+    update_dview(e.target.textContent);
   });
   $('body').on('dblclick', '.datamemory', function(e) {
-    update_dview(e.target.innerHTML);
+    update_dview(e.target.textContent);
   });
   $('body').on('dblclick', '.datainstruction', function(e) {
-    update_dview(e.target.innerHTML);
+    update_dview(e.target.textContent);
   });
   $('body').on('contextmenu', '.datainstruction', function(e) {
-    Session.set("iaddr", e.target.innerHTML);
+    Session.set("iaddr", e.target.textContent);
     Session.set("dirtyiaddr", true);
     return false;
   });
   $('body').on('click', '.flag', function(e) {
     var forknum = parseInt(e.target.parentNode.id.substr(9));
-    var clnum = parseInt(e.target.innerHTML);
+    var clnum = parseInt(e.target.textContent);
     Session.set("forknum", forknum);
     Session.set("clnum", clnum);
   });
   $('body').on('contextmenu', '.hdatainstruction', function(e) {
-    Session.set("iaddr", e.target.innerHTML);
+    Session.set("iaddr", e.target.textContent);
     Session.set("dirtyiaddr", true);
     return false;
-  });
-  $('body').on('click', '.data', function(e) {
-    var daddr = e.target.getAttribute('id').split("_")[1];
-    Session.set('daddr', daddr);
   });
   $('body').on('mousedown', '.datamemory', function(e) { return false; });
   $('body').on('mousedown', '.datainstruction', function(e) { return false; });

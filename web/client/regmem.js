@@ -78,7 +78,7 @@ function on_memory(msg) { DS("memory");
       //while (me.length != 8) me = "0" + me;
       me = "0x"+me;
       var exclass = "daddr daddr_"+hex(addr+i);
-      html += '<td colspan="'+PTRSIZE+'" class="data '+a+' '+exclass+'" id=data_'+hex(addr+i)+">"+me+"</td>";
+      html += '<td colspan="'+PTRSIZE+'" class="data '+a+' '+exclass+'" id="data_'+hex(addr+i)+'">'+me+"</td>";
     } else {
       for (var j = 0; j < PTRSIZE; j++) {
         var ii = msg['dat'][addr+i+j];
@@ -89,7 +89,7 @@ function on_memory(msg) { DS("memory");
           if (me.length == 1) me = "0" + me;
         }
         var exclass = "daddr daddr_"+hex(addr+i+j);
-        html += '<td class="data '+exclass+'" id=data_'+hex(addr+i+j)+">"+me+"</td>";
+        html += '<td class="data '+exclass+'" id="data_'+hex(addr+i+j)+'">'+me+"</td>";
       }
     }
 
@@ -147,8 +147,8 @@ function on_registers(msg) { DS("registers");
     var r = msg[i];
     draw_hflag(r.value, r.name, regcolors[r.num]);
     regviewer += '<div class="reg '+r.regactions+'">'+
-        '<div class="register" style="color:'+regcolors[r.num]+'">'+r.name+': </div>'+
-        '<span class="h'+get_data_type(r.value)+' daddr daddr_'+hex(r.address)+'">'+r.value+'</span>'+
+        '<div class="register daddr daddr_'+hex(r.address)+'" id="data_'+hex(r.address)+'" style="color:'+regcolors[r.num]+'">'+r.name+': </div>'+
+        '<span class="h'+get_data_type(r.value)+'">'+r.value+'</span>'+
       '</div>';
   }
   $('#regviewer').html(regviewer);
@@ -166,7 +166,7 @@ function on_clnum(msg) { DS("clnum");
   var datachanges = "";
   for (i in msg) {
     var dc = msg[i];
-    p(dc);
+    //p(dc);
     var typeclass = ""
     if (dc.type == "L") typeclass = "regread";
     else if (dc.type == "S") typeclass = "regwrite";

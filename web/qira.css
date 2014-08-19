@@ -79,11 +79,6 @@ body {
   margin: 5px;
 }
 
-#control_clnum {
-  width: 115px;
-  margin-right: 0px;
-}
-
 #control_fork {
   margin-left: 0px;
   width: 50px;
@@ -103,11 +98,25 @@ body {
   padding-right: 5px;
 }
 
+#control_clnum {
+  width: 115px;
+  margin-right: 0px;
+  color: blue;
+}
+
 #control_forknum {
   margin-left: 0px;
   margin-right: 20px;
   width: 100px;
   color: #555555;
+}
+
+#control_iaddr {
+  color: #CC0000;
+}
+
+#control_daddr {
+  color: #888800;
 }
 
 /* vertical timeline and flags */
