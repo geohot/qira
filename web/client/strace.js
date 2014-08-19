@@ -72,7 +72,7 @@ Template.strace.events({
 
 Template.strace.sc = function() { return highlight_addresses(this.sc); }
 
-Meteor.startup(function() {
+$(document).ready(function() {
   $("#strace")[0].addEventListener("mousewheel", function(e) {
     var sv = Session.get('sview');
     var forknum = Session.get("forknum");

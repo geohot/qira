@@ -71,7 +71,8 @@ cp -Rav qiradb/* distrib/qira/qiradb/
 
 echo "copying pin"
 mkdir -p distrib/qira/pin
-cp -av pin/makefile pin/pin_build.sh pin/qirapin.cpp distrib/qira/pin/
+cp -av pin_build.sh distrib/qira/
+cp -av pin/makefile pin/qirapin.cpp distrib/qira/pin/
 
 echo "copying cda"
 mkdir -p distrib/qira/cda distrib/qira/cda/clang

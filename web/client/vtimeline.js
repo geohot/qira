@@ -22,7 +22,7 @@ function on_setpicture(msg) { DS("setpicture");
 
 // *** functions for dealing with the zoom function ***
 
-Meteor.startup(function() {
+$(document).ready(function() {
   $("#vtimelinebox")[0].addEventListener("mousewheel", function(e) {
     var max = abs_maxclnum(); if (max === undefined) return;
     var cview = Session.get("cview"); if (cview === undefined) return;

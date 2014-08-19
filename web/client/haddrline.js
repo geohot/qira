@@ -68,7 +68,7 @@ Deps.autorun(function() { DA("draw haddrline daddr flag");
   draw_hflag(addr, 'daddr', 'yellow', true);
 });
 
-Meteor.startup(function() {
+$(document).ready(function() {
   var ee = $("#haddrline")[0];
   ee.addEventListener("mousewheel", function(e) {
     ee.scrollLeft += e.wheelDelta;

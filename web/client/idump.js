@@ -1,6 +1,6 @@
 stream = io.connect(STREAM_URL);
 
-Meteor.startup(function() {
+$(document).ready(function() {
   $("#idump")[0].addEventListener("mousewheel", function(e) {
     p("idump mousewheel");
     if (e.wheelDelta < 0) {

@@ -29,7 +29,7 @@ function redraw_reg_flags() {
   }
 }
 
-Meteor.startup(function() {
+$(document).ready(function() {
   $("#hexdump")[0].addEventListener("mousewheel", function(e) {
     if (e.wheelDelta < 0) {
       Session.set('dview', string_add(Session.get('dview'), 0x10));
