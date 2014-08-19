@@ -54,7 +54,7 @@ static PyObject *fetch_clnums_by_address_and_type(PyTrace *self, PyObject *args)
   char type;
   Clnum start_clnum;
   unsigned int limit;
-  if (!PyArg_ParseTuple(args, "LcII", &address, &type, &start_clnum, &limit)) { return NULL; }
+  if (!PyArg_ParseTuple(args, "KcII", &address, &type, &start_clnum, &limit)) { return NULL; }
   if (self->t == NULL) { return NULL; }
   
   vector<Clnum> ret = self->t->FetchClnumsByAddressAndType(address, type, start_clnum, limit);
@@ -80,8 +80,8 @@ static PyObject *fetch_changes_by_clnum(PyTrace *self, PyObject *args) {
   FE(vector<struct change>::iterator, ret, it) {
     // copied (address, data, clnum, flags) from qira_log.py, but type instead of flags
     PyObject *iit = PyDict_New();
-    PyDict_SetItem(iit, Py_BuildValue("s", "address"), Py_BuildValue("L", it->address));
-    PyDict_SetItem(iit, Py_BuildValue("s", "data"), Py_BuildValue("L", it->data));
+    PyDict_SetItem(iit, Py_BuildValue("s", "address"), Py_BuildValue("K", it->address));
+    PyDict_SetItem(iit, Py_BuildValue("s", "data"), Py_BuildValue("K", it->data));
     PyDict_SetItem(iit, Py_BuildValue("s", "clnum"), Py_BuildValue("I", it->clnum));
     PyDict_SetItem(iit, Py_BuildValue("s", "type"), Py_BuildValue("c", Trace::get_type_from_flags(it->flags)));
     PyDict_SetItem(iit, Py_BuildValue("s", "size"), Py_BuildValue("I", it->flags & SIZE_MASK));
@@ -94,7 +94,7 @@ static PyObject *fetch_memory(PyTrace *self, PyObject *args) {
   Clnum clnum;
   Address address;
   int len;
-  if (!PyArg_ParseTuple(args, "ILi", &clnum, &address, &len)) { return NULL; }
+  if (!PyArg_ParseTuple(args, "IKi", &clnum, &address, &len)) { return NULL; }
   if (self->t == NULL) { return NULL; }
 
   vector<MemoryWithValid> ret = self->t->FetchMemory(clnum, address, len);
@@ -118,7 +118,7 @@ static PyObject *fetch_registers(PyTrace *self, PyObject *args) {
   PyObject *pyret = PyList_New(ret.size());
   int i = 0;
   FE(vector<uint64_t>::iterator, ret, it) {
-    PyList_SetItem(pyret, i++, Py_BuildValue("L", *it));
+    PyList_SetItem(pyret, i++, Py_BuildValue("K", *it));
   }
   return pyret;
 }
@@ -130,10 +130,10 @@ static PyObject *get_pmaps(PyTrace *self, PyObject *args) {
   PyObject *iit = PyDict_New();
   // eww these strings are long
   FE(set<Address>::iterator, dp, it) {
-    PyDict_SetItem(iit, Py_BuildValue("L", *it), Py_BuildValue("s", "memory"));
+    PyDict_SetItem(iit, Py_BuildValue("K", *it), Py_BuildValue("s", "memory"));
   }
   FE(set<Address>::iterator, ip, it) {
-    PyDict_SetItem(iit, Py_BuildValue("L", *it), Py_BuildValue("s", "instruction"));
+    PyDict_SetItem(iit, Py_BuildValue("K", *it), Py_BuildValue("s", "instruction"));
   }
   return iit;
 }

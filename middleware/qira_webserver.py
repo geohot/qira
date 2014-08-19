@@ -287,6 +287,8 @@ def getregisters(forknum, clnum):
   regs = trace.db.fetch_registers(clnum)
 
   for i in range(0, len(REGS)):
+    if REGS[i] == None:
+      continue
     rret = {"name": REGS[i], "address": i*REGSIZE, "value": ghex(regs[i]), "size": REGSIZE, "regactions": ""}
       
     act = set()
