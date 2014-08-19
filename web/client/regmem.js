@@ -147,7 +147,7 @@ function on_registers(msg) { DS("registers");
     var r = msg[i];
     draw_hflag(r.value, r.name, regcolors[r.num]);
     regviewer += '<div class="reg '+r.regactions+'">'+
-        '<span class="register" style="color:'+regcolors[r.num]+'">'+r.name+': </span>'+
+        '<div class="register" style="color:'+regcolors[r.num]+'">'+r.name+': </div>'+
         '<span class="h'+get_data_type(r.value)+' daddr daddr_'+hex(r.address)+'">'+r.value+'</span>'+
       '</div>';
   }

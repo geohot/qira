@@ -199,6 +199,11 @@ body {
 
 /* regviewer and datachanges */
 
+.register {
+  min-width: 42px;
+  display: inline-block;
+}
+
 #regviewer {
   /*height: 120px;*/
   background-color: #DDDDDD;
