@@ -8,7 +8,7 @@ if (window.location.port == 3000) {
 function p(a) { console.log(a); }
 
 function DA(a) {
-  p("debug autorun: "+a);
+  p("DA: "+a);
 }
 
 function fhex(a) {

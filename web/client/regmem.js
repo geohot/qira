@@ -144,7 +144,11 @@ Deps.autorun(function() { DA("emit getmemory");
   var daddr = Session.get('daddr');
   var dview = Session.get('dview');
   var clnum = Session.get('clnum');
-  stream.emit('getmemory', forknum, clnum-1, dview, 0x100);
+  if (dview == undefined) {
+    $('#hexdump').empty();
+  } else {
+    stream.emit('getmemory', forknum, clnum-1, dview, 0x100);
+  }
 });
 
 Deps.autorun(function() { DA("emit getregisters");

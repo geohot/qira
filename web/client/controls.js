@@ -48,6 +48,7 @@ Template.controls.events = {
   'change #control_daddr': function(e) {
     if (e.target.value == "") {
       Session.set("daddr", undefined);
+      Session.set("dview", undefined);
     } else {
       update_dview(e.target.value);
     }
