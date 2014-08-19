@@ -73,12 +73,15 @@ Meteor.startup(function() {
     ee.scrollLeft += e.wheelDelta;
   });
   function get_addr(e) {
-    var t = $(e.target);
-    if (t.hasClass("pchunk")) {
-      var addr = fhex(t.attr('id').split("_")[1]);
-      var relX = ((e.pageX - t.offset().left)*1.0)/(t.width());
-      addr += Math.floor(relX*PAGE_SIZE);
-      return addr
+    var tt = [$(e.target), $(e.target).parent()];
+    for (i in tt) {
+      var t = tt[i];
+      if (t.hasClass("pchunk")) {
+        var addr = fhex(t.attr('id').split("_")[1]);
+        var relX = ((e.pageX - t.offset().left)*1.0)/(t.width());
+        addr += Math.floor(relX*PAGE_SIZE);
+        return addr
+      }
     }
     return undefined;
   }
