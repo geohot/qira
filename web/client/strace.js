@@ -3,10 +3,10 @@ Session.setDefault('sview', [0,10]);
 
 traces = {}
 
-stream.on('strace', function(msg) {
+function on_strace(msg) { DS("strace");
   traces[msg['forknum']] = msg['dat']
   redraw_strace();
-});
+} stream.on('strace', on_strace);
 
 function redraw_strace() {
   var forknum = Session.get("forknum");

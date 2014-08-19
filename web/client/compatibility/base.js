@@ -6,10 +6,8 @@ if (window.location.port == 3000) {
 }
 
 function p(a) { console.log(a); }
-
-function DA(a) {
-  p("DA: "+a);
-}
+function DA(a) { p("DA: "+a); }
+function DS(a) { p("DS: "+a); }
 
 function fhex(a) {
   return parseInt(a, 16);

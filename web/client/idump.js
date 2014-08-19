@@ -57,10 +57,10 @@ Template.idump.instruction = function() { return highlight_addresses(this.instru
 
 // ** should move these to idump.js **
 
-stream.on('instructions', function(msg) {
+function on_instructions(msg) { DS("instructions");
   $('#idump')[0].innerHTML = "";
   UI.insert(UI.renderWithData(Template.idump, {instructions: msg}), $('#idump')[0]);
-});
+} stream.on('instructions', on_instructions);
 
 Deps.autorun(function() { DA("emit getinstructions");
   var forknum = Session.get("forknum");

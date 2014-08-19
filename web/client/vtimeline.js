@@ -12,13 +12,13 @@ Deps.autorun(function() { DA("regetting analysis pictures, should be PUSH");
   }
 });
 
-stream.on('setpicture', function(msg) {
+function on_setpicture(msg) { DS("setpicture");
   //p(msg);
   forknum = msg['forknum'];
   overlays[forknum] = msg['data'];
   var vt = $('#vtimeline'+forknum);
   vt.css('background-image', "url('"+overlays[forknum]+"')");
-});
+} stream.on('setpicture', on_setpicture);
 
 // *** functions for dealing with the zoom function ***
 
@@ -324,7 +324,7 @@ Deps.autorun(function() { DA("emit getchanges for daddr change");
   stream.emit('getchanges', -1, daddr, 'S', cview)
 });
 
-stream.on('changes', function(msg) {
+function on_changes(msg) { DS("changes");
   var types = {'I': 'ciaddr', 'L': 'daddrr', 'S': 'daddrw'};
   var forknum = Session.get("forknum");
   var clnums = msg['clnums'][forknum];
@@ -358,6 +358,6 @@ stream.on('changes', function(msg) {
     }
   }
   redraw_flags();
-});
+} stream.on('changes', on_changes);
 
 

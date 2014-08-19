@@ -1,14 +1,14 @@
 stream = io.connect(STREAM_URL);
 
-stream.on('setiaddr', function(iaddr) {
+function on_setiaddr(iaddr) { DS("setiaddr");
   Session.set("dirtyiaddr", true);
   Session.set('iaddr', iaddr);
-});
+} stream.on('setiaddr', on_setiaddr);
 
-stream.on('setclnum', function(forknum, clnum) {
+function on_setclnum(forknum, clnum) { DS("setclnum");
   Session.set('forknum', forknum);
   Session.set('clnum', clnum);
-});
+} stream.on('setclnum', on_setclnum);
 
 Deps.autorun(function() { DA("set backend know iaddr changed");
   var iaddr = Session.get('iaddr');

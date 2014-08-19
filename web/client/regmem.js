@@ -4,13 +4,13 @@ var regcolors = ['#59AE3F', '#723160', '#2A80A2', '#9E66BD', '#BC8D6B', '#3F3EAC
 
 var current_regs = undefined;
 
-stream.on('maxclnum', function(msg) {
+function on_maxclnum(msg) { DS("maxclnum");
   update_maxclnum(msg);
-});
+} stream.on('maxclnum', on_maxclnum);
 
-stream.on('pmaps', function(msg) {
+function on_pmaps(msg) { DS("pmaps");
   Session.set('pmaps', msg)
-});
+} stream.on('pmaps', on_pmaps);
 
 function redraw_reg_flags() {
   $(".rflag").remove();
@@ -39,8 +39,7 @@ Meteor.startup(function() {
   });
 });
 
-
-stream.on('memory', function(msg) {
+function on_memory(msg) { DS("memory");
   // render the hex editor
   // this isn't updated for numberless
   var addr = msg['address'];
@@ -116,7 +115,7 @@ stream.on('memory', function(msg) {
   html += "</tr></table>";
   $("#hexdump")[0].innerHTML = html;
   redraw_reg_flags();
-});
+} stream.on('memory', on_memory);
 
 
 Template.regviewer.regcolor = function() {
@@ -157,14 +156,14 @@ Deps.autorun(function() { DA("emit getregisters");
   stream.emit('getregisters', forknum, clnum-1);
 });
 
-stream.on('registers', function(msg) {
+function on_registers(msg) { DS("registers");
   current_regs = msg;
   redraw_reg_flags();
   $('#regviewer')[0].innerHTML = "";
   var tsize = msg[0]['size'];
   if (tsize > 0) PTRSIZE = tsize;
   UI.insert(UI.renderWithData(Template.regviewer, {regs: msg}), $('#regviewer')[0]);
-});
+} stream.on('registers', on_registers);
 
 // events, add the editing here
 Template.memviewer.events(basedblevents);
@@ -199,8 +198,8 @@ Deps.autorun(function() { DA("emit getclnum for datachanges");
   stream.emit('getclnum', forknum, Session.get('clnum'), ['L', 'S'], 2)  // justification for more than 2?
 });
 
-stream.on('clnum', function(msg) {
+// TODO: misleading name
+function on_clnum(msg) { DS("clnum");
   $('#datachanges')[0].innerHTML = "";
   UI.insert(UI.renderWithData(Template.datachanges, {memactions: msg}), $('#datachanges')[0]);
-});
-
+} stream.on('clnum', on_clnum);
