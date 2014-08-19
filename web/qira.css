@@ -24,7 +24,7 @@ body {
   height: 40px;
   width: 25px;
   display: inline-block;
-  background-color: #555555;
+  background-color: #444444;
 }
 
 .pchunkinstruction {
@@ -32,7 +32,7 @@ body {
 }
 
 .pchunkmemory {
-  background-color: #555500 !important;
+  background-color: #444422 !important;
 }
 
 .highlight {
@@ -266,8 +266,9 @@ body {
 
 .rflag {
   width: 3px;
-  height: 12px;
-  display: inline-block;
+  height: 15px;
+  position: absolute;
+  opacity: 0.8;
 }
 
 .regread {

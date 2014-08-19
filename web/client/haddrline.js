@@ -41,7 +41,12 @@ draw_hflag = function(addr, name, color, alwaysontop) {
   if (t.length == 1) {
     //p("drawing hflag");
     var hflag = $('<div class="hflag" id="hflag_'+name+'"></div>');
-    if (alwaysontop) hflag.css("z-index", 2);
+    if (alwaysontop) {
+      hflag.css("z-index", 2);
+      hflag.css("opacity", "0.8");
+    } else {
+      hflag.css("opacity", "0.4");
+    }
     hflag.css("background-color", color);
     var off = ((((fhex(addr)%PAGE_SIZE)*1.0)/PAGE_SIZE) * t.width()) - (hflag.width()/2.0);
     hflag.css("margin-left", off+"px");

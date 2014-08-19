@@ -21,6 +21,8 @@ function redraw_reg_flags() {
       if (t.length == 1) {
         var rr = $('<div class="rflag"></div>');
         rr.css("background-color", regcolors[th.num]);
+        var pos = t.children().length*3;  // rflag width
+        rr.css("margin-left", pos+"px");
         t.prepend(rr);
       }
     }

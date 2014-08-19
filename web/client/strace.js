@@ -45,7 +45,9 @@ Deps.autorun(function() {
     if (t[i]['clnum'] > clnum) break;
   }
   //p(i);
-  Session.set('sview', [i-3, i+7]);
+  var off = 0;
+  if (i+7 > t.length) { off = (i+7)-t.length; }
+  Session.set('sview', [Math.max(0, i-3-off), i+7-off]);
 });
 
 
