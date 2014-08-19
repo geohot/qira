@@ -190,7 +190,7 @@ function redraw_flags() {
   if (maxclnum === undefined) return;
   var cscale = get_cscale();
   if (cscale === undefined) return;
-  $(".flag").remove();
+  //$(".flag").remove();
   redraw_vtimelines(cscale);
   var colors = {
     "bounds": "green",
@@ -201,6 +201,7 @@ function redraw_flags() {
     "slice": "#000088",
     "zoom": "gray"
   };
+  var flags_out = {};
   for (arr in flags) {
     var classes = "flag";
     var forknum = parseInt(arr.split(",")[0]);
@@ -222,11 +223,12 @@ function redraw_flags() {
     }
     
     if (maxclnum[forknum] === undefined) continue;
+    if (flags_out[forknum] === undefined) flags_out[forknum] = "";
 
-    var flag = $('<div id="flag'+clnum+'" class="flag" style="'+sty+'">'+clnum+'</div>');
-    flag[0].style.marginTop = ((clnum-Math.max(maxclnum[forknum][0], cview[0]))/cscale) + "px";
-    flag.click(function(cln) { Session.set("forknum", cln[0]); Session.set("clnum", cln[1]); }.bind(undefined, [forknum, clnum]));
-    $('#vtimeline'+forknum).append(flag);
+    flags_out[forknum] += '<div id="flag'+clnum+'" class="flag" style="'+sty+'; margin-top: '+((clnum-Math.max(maxclnum[forknum][0], cview[0]))/cscale) + "px"+'">'+clnum+'</div>'
+  }
+  for (forknum in flags_out) {
+    $('#vtimeline'+forknum).html(flags_out[forknum]);
   }
 }
 

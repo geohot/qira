@@ -124,6 +124,12 @@ $(document).ready(function() {
   $('body').on('dblclick', '.datamemory', function(e) {
     update_dview(e.target.innerHTML);
   });
+  $('body').on('click', '.flag', function(e) {
+    var forknum = parseInt(e.target.parentNode.id.substr(9));
+    var clnum = parseInt(e.target.innerHTML);
+    Session.set("forknum", forknum);
+    Session.set("clnum", clnum);
+  });
   $('body').on('contextmenu', '.hdatainstruction', function(e) {
     Session.set("iaddr", e.target.innerHTML);
     Session.set("dirtyiaddr", true);
