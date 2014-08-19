@@ -3,7 +3,7 @@ UI.body.contentParts.push(UI.Component.extend({render: (function() {
   var self = this;
   return [ HTML.Raw('<div id="vtimelinebox">\n</div>\n'), HTML.DIV({
     id: "onlypanel"
-  }, "\n", HTML.DIV({
+  }, HTML.Raw('\n<div id="haddrline"></div>\n'), HTML.DIV({
     id: "controls"
   }, "\n", Spacebars.include(self.lookupTemplate("controls")), "\n"), "\n\n", HTML.DIV("\n\n", HTML.DIV({
     "class": "panelthing",
@@ -154,7 +154,10 @@ Template.__define__("regviewer", (function() {
         return Spacebars.mustache(self.lookup("regactions"));
       } ]
     }, "\n  ", HTML.SPAN({
-      "class": "register"
+      "class": "register",
+      style: [ "color:", function() {
+        return Spacebars.mustache(self.lookup("regcolor"));
+      } ]
     }, function() {
       return Spacebars.mustache(self.lookup("name"));
     }, ": "), HTML.SPAN({
@@ -164,7 +167,7 @@ Template.__define__("regviewer", (function() {
         return Spacebars.mustache(self.lookup("isselected"));
       } ]
     }, function() {
-      return Spacebars.mustache(self.lookup("hexvalue"));
+      return Spacebars.mustache(self.lookup("value"));
     }), "\n  "), "\n" ];
   }));
 }));
