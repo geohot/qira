@@ -26,7 +26,7 @@ for i in range(8):
   AARCH64REGS[0].append(None)
 for i in range(32):
   AARCH64REGS[0].append("x"+str(i))
-AARCH64REGS[0][8+29] = "fp"
+#AARCH64REGS[0][8+29] = "fp"
 AARCH64REGS[0][8+31] = "sp"
 AARCH64REGS[0].append("pc")
 

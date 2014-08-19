@@ -23,6 +23,7 @@ function redraw_strace() {
       '</div>';
   }
   $('#strace').html(strace);
+  rehighlight();
 }
 
 Deps.autorun(function() { DA("redrawing strace");
