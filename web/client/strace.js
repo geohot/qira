@@ -31,12 +31,6 @@ Deps.autorun(function() { DA("redrawing strace");
 });
 
 
-Template.strace.ischange = function() {
-  var clnum = Session.get("clnum");
-  if (this.clnum == clnum) return 'highlight';
-  else return '';
-}
-
 Deps.autorun(function() { DA("regetting straces, should be PUSH");
   var maxclnum = Session.get("max_clnum");
   var forknum = Session.get("forknum");
@@ -62,15 +56,6 @@ Deps.autorun(function() { DA("updating sview on fork/cl change");
   if (i+7 > t.length) { off = (i+7)-t.length; }
   Session.set('sview', [Math.max(0, i-3-off), i+7-off]);
 });
-
-
-Template.strace.events({
-  'click .change': function() {
-    Session.set('clnum', this.clnum);
-  },
-});
-
-Template.strace.sc = function() { return highlight_addresses(this.sc); }
 
 $(document).ready(function() {
   $("#strace")[0].addEventListener("mousewheel", function(e) {

@@ -124,6 +124,14 @@ $(document).ready(function() {
   $('body').on('dblclick', '.datamemory', function(e) {
     update_dview(e.target.innerHTML);
   });
+  $('body').on('dblclick', '.datainstruction', function(e) {
+    update_dview(e.target.innerHTML);
+  });
+  $('body').on('contextmenu', '.datainstruction', function(e) {
+    Session.set("iaddr", e.target.innerHTML);
+    Session.set("dirtyiaddr", true);
+    return false;
+  });
   $('body').on('click', '.flag', function(e) {
     var forknum = parseInt(e.target.parentNode.id.substr(9));
     var clnum = parseInt(e.target.innerHTML);
@@ -135,5 +143,11 @@ $(document).ready(function() {
     Session.set("dirtyiaddr", true);
     return false;
   });
+  $('body').on('click', '.data', function(e) {
+    var daddr = e.target.getAttribute('id').split("_")[1];
+    Session.set('daddr', daddr);
+  });
+  $('body').on('mousedown', '.datamemory', function(e) { return false; });
+  $('body').on('mousedown', '.datainstruction', function(e) { return false; });
 });
 

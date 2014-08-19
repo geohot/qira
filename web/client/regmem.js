@@ -152,15 +152,7 @@ function on_registers(msg) { DS("registers");
       '</div>';
   }
   $('#regviewer').html(regviewer);
-
-
-  //UI.insert(UI.renderWithData(Template.regviewer, {regs: msg}), $('#regviewer')[0]);
 } stream.on('registers', on_registers);
-
-// events, add the editing here
-Template.memviewer.events(basedblevents);
-Template.regviewer.events(baseevents);
-Template.datachanges.events(baseevents);
 
 // *** datachanges ***
 

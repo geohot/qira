@@ -80,7 +80,7 @@ body {
 }
 
 #control_clnum {
-  width: 100px;
+  width: 115px;
   margin-right: 0px;
 }
 
@@ -105,8 +105,8 @@ body {
 
 #control_forknum {
   margin-left: 0px;
-  margin-right: 0px;
-  width: 30px;
+  margin-right: 20px;
+  width: 100px;
   color: #555555;
 }
 
