@@ -2,7 +2,7 @@ stream = io.connect(STREAM_URL);
 
 $(document).ready(function() {
   $("#idump")[0].addEventListener("mousewheel", function(e) {
-    p("idump mousewheel");
+    //p("idump mousewheel");
     if (e.wheelDelta < 0) {
       Session.set('clnum', Session.get('clnum')+1);
     } else if (e.wheelDelta > 0) {

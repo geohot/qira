@@ -18,7 +18,7 @@ function redraw_reg_flags() {
     for (r in current_regs) {
       var th = current_regs[r];
       var t = $('#data_'+th.value);
-      if (t.length == 1) {
+      if (t.length == 1 && !t.hasClass("register")) {
         var rr = $('<div class="rflag"></div>');
         rr.css("background-color", regcolors[th.num]);
         var pos = t.children().length*3;  // rflag width
@@ -152,6 +152,7 @@ function on_registers(msg) { DS("registers");
       '</div>';
   }
   $('#regviewer').html(regviewer);
+  rehighlight();
 } stream.on('registers', on_registers);
 
 // *** datachanges ***
