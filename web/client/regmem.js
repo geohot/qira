@@ -156,13 +156,25 @@ Deps.autorun(function() { DA("emit getregisters");
 });
 
 function on_registers(msg) { DS("registers");
-  return;
   current_regs = msg;
   redraw_reg_flags();
-  $('#regviewer')[0].innerHTML = "";
   var tsize = msg[0]['size'];
   if (tsize > 0) PTRSIZE = tsize;
-  UI.insert(UI.renderWithData(Template.regviewer, {regs: msg}), $('#regviewer')[0]);
+
+  var regviewer = "";
+  for (i in msg) {
+    var r = msg[i];
+    p(r);
+    draw_hflag(r.value, r.name, regcolors[r.num]);
+    regviewer += '<div class="reg '+r.regactions+'">'+
+        '<span class="register" style="color:'+regcolors[r.num]+'">'+r.name+': </span>'+
+        '<span class="'+get_data_type(r.value)+' daddr daddr_'+hex(r.address)+'">'+r.value+'</span>'+
+      '</div>';
+  }
+  $('#regviewer').html(regviewer);
+
+
+  //UI.insert(UI.renderWithData(Template.regviewer, {regs: msg}), $('#regviewer')[0]);
 } stream.on('registers', on_registers);
 
 // events, add the editing here
@@ -200,7 +212,6 @@ Deps.autorun(function() { DA("emit getclnum for datachanges");
 
 // TODO: misleading name
 function on_clnum(msg) { DS("clnum");
-  return;
   $('#datachanges')[0].innerHTML = "";
   UI.insert(UI.renderWithData(Template.datachanges, {memactions: msg}), $('#datachanges')[0]);
 } stream.on('clnum', on_clnum);

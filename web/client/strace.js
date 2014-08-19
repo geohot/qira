@@ -22,7 +22,6 @@ function redraw_strace() {
         highlight_addresses(st.sc)+
       '</div>';
   }
-  p(strace);
   $('#strace').html(strace);
 }
 

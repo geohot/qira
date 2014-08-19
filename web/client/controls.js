@@ -109,6 +109,12 @@ window.onkeydown = function(e) {
 };
 
 $(document).ready(function() {
+  $('body').on('click', '.clnum', function(e) {
+    Session.set('clnum', parseInt(e.target.innerHTML));
+  });
+  $('body').on('click', '.iaddr', function(e) {
+    Session.set('iaddr', e.target.innerHTML);
+  });
   $('body').on('click', '.hdatamemory', function(e) {
     update_dview(e.target.innerHTML);
   });

@@ -50,7 +50,7 @@ function get_data_type(v) {
   var pmaps = Session.get('pmaps');
   var a = pmaps[string_round(v, 3)];
   if (a === undefined) return "";
-  else return "data"+a;
+  else return "hdata"+a;
 }
 
 function highlight_addresses(a) {

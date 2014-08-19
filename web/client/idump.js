@@ -58,10 +58,11 @@ Template.idump.instruction = function() { return highlight_addresses(this.instru
 // ** should move these to idump.js **
 
 function on_instructions(msg) { DS("instructions");
+  /*$('#idump')[0].innerHTML = "";
+  UI.insert(UI.renderWithData(Template.idump, {instructions: msg}), $('#idump')[0]);*/
   var clnum = Session.get("clnum");
-  var idump = "";
-
   var iaddr = Session.get("iaddr");
+  var idump = "";
   for (var i = 0; i<msg.length;i++) {
     var ins = msg[i];
 
