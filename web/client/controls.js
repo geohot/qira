@@ -54,7 +54,8 @@ Template.controls.events = {
       update_dview(e.target.value);
     }
   },
-  'click #control_fork': function(e) {
+  // removed for v1 since it was so broken
+  /*'click #control_fork': function(e) {
     var clnum = Session.get("clnum");
     var forknum = Session.get("forknum");
     var pending = Session.get('pending');
@@ -70,7 +71,7 @@ Template.controls.events = {
       $('#changeeditor').show();
       $('#control_changeeditor').css('background-color', '#FF8888');
     }
-  },
+  },*/
 };
 
 // keyboard shortcuts
