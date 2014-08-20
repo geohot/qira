@@ -73,7 +73,7 @@ function highlight_addresses(a) {
     m.map(function(a) { 
       var cl = get_data_type(a);
       if (cl == "") return;
-      d = d.replace(a, "<span class='h"+cl+"'>"+a+"</span>");
+      d = d.replace(a, "<span class='"+cl+"'>"+a+"</span>");
     });
   }
   // does this work outside templates?
@@ -104,6 +104,7 @@ function rehighlight() {
   $(".clnum_"+clnum).addClass("autohighlight");
   $(".iaddr_"+iaddr).addClass("autohighlight");
   $(".daddr_"+daddr).addClass("autohighlight");
+  $(".data_"+daddr).addClass("autohighlight");
 }
 
 Deps.autorun(function() { DA("rehighlight");

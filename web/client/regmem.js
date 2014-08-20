@@ -77,8 +77,8 @@ function on_memory(msg) { DS("memory");
       var me = v.toString(16);
       //while (me.length != 8) me = "0" + me;
       me = "0x"+me;
-      var exclass = "daddr daddr_"+hex(addr+i);
-      html += '<td colspan="'+PTRSIZE+'" class="data '+a+' '+exclass+'" id="data_'+hex(addr+i)+'">'+me+"</td>";
+      var exclass = "data_"+hex(addr+i);
+      html += '<td colspan="'+PTRSIZE+'" class="data hexdump'+a+' '+exclass+'" id="data_'+hex(addr+i)+'">'+me+"</td>";
     } else {
       for (var j = 0; j < PTRSIZE; j++) {
         var ii = msg['dat'][addr+i+j];
@@ -88,7 +88,7 @@ function on_memory(msg) { DS("memory");
           var me = ii.toString(16);
           if (me.length == 1) me = "0" + me;
         }
-        var exclass = "daddr daddr_"+hex(addr+i+j);
+        var exclass = "data_"+hex(addr+i+j);
         html += '<td class="data '+exclass+'" id="data_'+hex(addr+i+j)+'">'+me+"</td>";
       }
     }
@@ -148,7 +148,7 @@ function on_registers(msg) { DS("registers");
     draw_hflag(r.value, r.name, regcolors[r.num]);
     regviewer += '<div class="reg '+r.regactions+'">'+
         '<div class="register daddr daddr_'+hex(r.address)+'" id="data_'+hex(r.address)+'" style="color:'+regcolors[r.num]+'">'+r.name+': </div>'+
-        '<span class="h'+get_data_type(r.value)+'">'+r.value+'</span>'+
+        '<span class="'+get_data_type(r.value)+'">'+r.value+'</span>'+
       '</div>';
   }
   $('#regviewer').html(regviewer);
@@ -172,9 +172,9 @@ function on_clnum(msg) { DS("clnum");
     if (dc.type == "L") typeclass = "regread";
     else if (dc.type == "S") typeclass = "regwrite";
     datachanges += '<div class="datachanges '+typeclass+'"> '+
-        '<span class="h'+get_data_type(dc.address)+'">'+dc.address+'</span> '+
+        '<span class="'+get_data_type(dc.address)+'">'+dc.address+'</span> '+
         ((dc.type == "S")?'&lt;--':'--')+' '+
-        '<span class="h'+get_data_type(dc.data)+'">'+dc.data+'</span> '+
+        '<span class="'+get_data_type(dc.data)+'">'+dc.data+'</span> '+
       '</div> ';
   }
   $('#datachanges').html(datachanges);

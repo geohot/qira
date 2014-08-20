@@ -82,45 +82,54 @@ window.onkeydown = function(e) {
 };
 
 $(document).ready(function() {
+  // control the highlighting of things
   $('body').on('click', '.clnum', function(e) {
     Session.set('clnum', parseInt(e.target.textContent));
   });
   $('body').on('click', '.iaddr', function(e) {
     Session.set('iaddr', e.target.textContent);
   });
-  $('body').on('click', '.daddr', function(e) {
+  $('body').on('click', '.data', function(e) {
     var daddr = e.target.getAttribute('id').split("_")[1];
     Session.set('daddr', daddr);
   });
-  $('body').on('click', '.hdatamemory', function(e) {
+
+
+  // registers and other places
+  $('body').on('click', '.datamemory', function(e) {
     update_dview(e.target.textContent);
   });
-  $('body').on('click', '.hdatainstruction', function(e) {
+  $('body').on('click', '.datainstruction', function(e) {
     update_dview(e.target.textContent);
   });
-  $('body').on('dblclick', '.datamemory', function(e) {
-    update_dview(e.target.textContent);
-  });
-  $('body').on('dblclick', '.datainstruction', function(e) {
-    update_dview(e.target.textContent);
-  });
+
   $('body').on('contextmenu', '.datainstruction', function(e) {
     Session.set("iaddr", e.target.textContent);
     Session.set("dirtyiaddr", true);
     return false;
   });
+
+  // hexdump
+  $('body').on('dblclick', '.hexdumpdatamemory', function(e) {
+    update_dview(e.target.textContent);
+  });
+  $('body').on('dblclick', '.hexdumpdatainstruction', function(e) {
+    update_dview(e.target.textContent);
+  });
+  $('body').on('contextmenu', '.hexdumpdatainstruction', function(e) {
+    Session.set("iaddr", e.target.textContent);
+    Session.set("dirtyiaddr", true);
+    return false;
+  });
+  $('body').on('mousedown', '.hexdumpdatamemory', function(e) { return false; });
+  $('body').on('mousedown', '.hexdumpdatainstruction', function(e) { return false; });
+
+  // vtimeline flags
   $('body').on('click', '.flag', function(e) {
     var forknum = parseInt(e.target.parentNode.id.substr(9));
     var clnum = parseInt(e.target.textContent);
     Session.set("forknum", forknum);
     Session.set("clnum", clnum);
   });
-  $('body').on('contextmenu', '.hdatainstruction', function(e) {
-    Session.set("iaddr", e.target.textContent);
-    Session.set("dirtyiaddr", true);
-    return false;
-  });
-  $('body').on('mousedown', '.datamemory', function(e) { return false; });
-  $('body').on('mousedown', '.datainstruction', function(e) { return false; });
 });
 

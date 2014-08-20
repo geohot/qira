@@ -268,11 +268,11 @@ body {
   min-width: 84px;
 }
 
-.hdatainstruction {
+.hexdumpdatainstruction {
   color: #CC0000;
 }
 
-.hdatamemory {
+.hexdumpdatamemory {
   color: #888800;
 }
 
