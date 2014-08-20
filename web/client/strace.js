@@ -52,9 +52,18 @@ Deps.autorun(function() { DA("updating sview on fork/cl change");
     if (t[i]['clnum'] > clnum) break;
   }
   //p(i);
-  var off = 0;
-  if (i+7 > t.length) { off = (i+7)-t.length; }
-  Session.set('sview', [Math.max(0, i-3-off), i+7-off]);
+  var min = Math.max(0, i-3);
+  var max = min+10;
+  // ugh
+  if (max > t.length) { 
+    var off = max-t.length;
+    max -= off; min -= off;
+    if (min < 0) {
+      max -= min;
+      min = 0;
+    }
+  }
+  Session.set('sview', [min, max]);
 });
 
 $(document).ready(function() {
