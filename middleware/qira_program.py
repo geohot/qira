@@ -452,15 +452,17 @@ class Trace:
           off = int(args[5].split(")")[0], 0)
           mapp = (files[fil], sz, off, return_code)
           if mapp not in self.mapped:
+            # if it fails once, don't try again
             self.mapped.append(mapp)
-            print "*** mapping", files[fil], hex(sz), hex(off), "@", hex(return_code),
             try:
               try:
                 f = open(os.environ['QEMU_LD_PREFIX']+"/"+files[fil])
               except:
                 f = open(files[fil])
-              f.seek(off)
-              dat = f.read(sz)
+              alldat = f.read()
+              st = "*** mapping %s %s sz:0x%x off:0x%x @ 0x%X" % (sha1(alldat).hexdigest(), files[fil], sz, off, return_code)
+              print st,
+              dat = alldat[off:off+sz]
               self.base_memory[(return_code, return_code+len(dat))] = dat
               print "done"
             except Exception, e:
