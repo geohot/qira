@@ -53,9 +53,21 @@ app = Flask(__name__)
 socketio = SocketIO(app)
 
 # ***** middleware moved here *****
-def push_updates():
+def push_trace_update(i):
+  t = program.traces[i]
+  if t.picture != None:
+    #print t.forknum, t.picture
+    socketio.emit('setpicture', {"forknum":t.forknum, "data":t.picture,
+      "minclnum":t.minclnum, "maxclnum":t.maxclnum}, namespace='/qira')
+  t.needs_update = False
+
+def push_updates(full = True):
   socketio.emit('pmaps', program.get_pmaps(), namespace='/qira')
   socketio.emit('maxclnum', program.get_maxclnum(), namespace='/qira')
+  if not full:
+    return
+  for i in program.traces:
+    push_trace_update(i)
 
 def mwpoll():
   # poll for new traces, call this every once in a while
@@ -72,9 +84,14 @@ def mwpoll():
   for tn in program.traces:
     if program.traces[tn].db.did_update():
       did_update = True
+
+    # trace specific stuff
+    if program.traces[tn].needs_update:
+      push_trace_update(tn)
+
   if did_update:
     program.read_asm_file()
-    push_updates()
+    push_updates(False)
 
 def mwpoller():
   while 1:
@@ -167,8 +184,7 @@ def analysis(forknum):
 def connect():
   global program
   print "client connected", program.get_maxclnum()
-  emit('pmaps', program.get_pmaps())
-  emit('maxclnum', program.get_maxclnum())
+  push_updates()
 
 @socketio.on('getclnum', namespace='/qira')
 @socket_method
@@ -206,7 +222,6 @@ def getchanges(forknum, address, typ, cview):
 @socket_method
 def navigatefunction(forknum, clnum, start):
   trace = program.traces[forknum]
-  trace.update_analysis_depends()
   myd = trace.dmap[clnum]
   ret = clnum
   while 1:
@@ -229,7 +244,6 @@ def getinstructions(forknum, clnum, clstart, clend):
   trace = program.traces[forknum]
   slce = qira_analysis.slice(trace, clnum)
   ret = []
-  trace.update_analysis_depends()
   for i in range(clstart, clend):
     rret = trace.db.fetch_changes_by_clnum(i, 1)
     if len(rret) == 0:

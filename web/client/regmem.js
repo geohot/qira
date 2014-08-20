@@ -75,10 +75,11 @@ function on_memory(msg) { DS("memory");
     var a = get_data_type(v);
     if (a !== "") {
       var me = v.toString(16);
-      //while (me.length != 8) me = "0" + me;
       me = "0x"+me;
       var exclass = "data_"+hex(addr+i);
-      html += '<td colspan="'+PTRSIZE+'" class="data hexdump'+a+' '+exclass+'" id="data_'+hex(addr+i)+'">'+me+"</td>";
+      var minwidth = 84;
+      if (PTRSIZE == 8) minwidth = 172;
+      html += '<td colspan="'+PTRSIZE+'" style="min-width:'+minwidth+'px" class="data hexdump'+a+' '+exclass+'" id="data_'+hex(addr+i)+'">'+me+"</td>";
     } else {
       for (var j = 0; j < PTRSIZE; j++) {
         var ii = msg['dat'][addr+i+j];

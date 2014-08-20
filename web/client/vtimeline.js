@@ -3,21 +3,33 @@ stream = io.connect(STREAM_URL);
 // *** the analysis overlay ***
 var overlays = {};
 
-Deps.autorun(function() { DA("regetting analysis pictures, should be PUSH");
+function update_picture(forknum) {
+  var vt = $('#vtimeline'+forknum);
+  if (vt.length == 0) return;
+  vt.css('background-image', "");
+  if (overlays[forknum] === undefined) return;
+  var cview = Session.get("cview");
+  if (cview === undefined) return;
   var maxclnum = Session.get("max_clnum");
-  overlays = {};
-  // TODO: only get the updated analysis
-  for (i in maxclnum) {
-    stream.emit('doanalysis', parseInt(i))
-  }
-});
+  if (maxclnum === undefined) return;
+
+  var max = maxclnum[forknum];
+
+  var loading_scale = ((overlays[forknum][1]-overlays[forknum][0])*1.0)/(max[1]-max[0]);
+
+  vt.css('background-image', "url('"+overlays[forknum][2]+"')");
+  // so it looks like size is applied before position, hence we divide position by cscale
+  var cscale = get_cscale();
+  vt.css('background-size', "100% " + (max[1] / cscale) * loading_scale + "px")
+  vt.css('background-position-y', -1*((Math.max(max[0],cview[0])-max[0])/cscale) + "px");
+  vt.css('background-repeat', "no-repeat");
+}
 
 function on_setpicture(msg) { DS("setpicture");
   //p(msg);
   forknum = msg['forknum'];
-  overlays[forknum] = msg['data'];
-  var vt = $('#vtimeline'+forknum);
-  vt.css('background-image', "url('"+overlays[forknum]+"')");
+  overlays[forknum] = [msg['minclnum'], msg['maxclnum'], msg['data']];
+  update_picture(forknum);
 } stream.on('setpicture', on_setpicture);
 
 // *** functions for dealing with the zoom function ***
@@ -80,14 +92,14 @@ function register_drag_zoom() {
     return false;
   });
   $("#vtimelinebox").mouseup(function(e) {
-    p("mouseup");
+    //p("mouseup");
     if (e.button != 0) return;
     var up = get_clnum(e);
     if (up === undefined) return;
     var forknum = get_forknum(e);
     if (down != -1) {
       // should check absolute length of drag, not clnums
-      p("drag "+down+"-"+up);
+      //p("drag "+down+"-"+up);
       if (down == up) {
         if (forknum != -1) {
           Session.set("clnum", down);
@@ -144,25 +156,14 @@ function redraw_vtimelines(scale) {
   for (forknum in maxclnum) {
     var vt = $('#vtimeline'+forknum);
     var max = maxclnum[forknum];
-
-    if (overlays[forknum] !== undefined) vt.css('background-image', "url('"+overlays[forknum]+"')");
-    else vt.css('background-image', "");
-    var cscale = get_cscale();
-
     if (max[0] < cview[0] && cview[0] < max[1]) { add_flag("zoom", forknum, cview[0]); }
     if (max[0] < cview[1] && cview[1] < max[1]) { add_flag("zoom", forknum, cview[1]); }
 
-    // so it looks like size is applied before position, hence we divide position by cscale
-    //vt.css('background-size', "100% " + ((max[1]-max[0]) / cscale) + "px")
-    //vt.css('background-position-y', -1*(cview[0]/cscale) + "px");
-    vt.css('background-size', "100% " + (max[1] / cscale) + "px")
-    vt.css('background-position-y', -1*((Math.max(max[0],cview[0])-max[0])/cscale) + "px");
-    vt.css('background-repeat', "no-repeat");
     if (vt.length == 0) {
       $("#vtimelinebox").append($('<div class="vtimeline" id="vtimeline'+forknum+'"></div>'))
       vt = $('#vtimeline'+forknum);
     }
-
+    update_picture(forknum);
     var range = Math.min(max[1], cview[1]) - Math.max(max[0], cview[0]);
     range = Math.max(0, range);
     var topp = 0;
@@ -361,5 +362,4 @@ function on_changes(msg) { DS("changes");
   }
   redraw_flags();
 } stream.on('changes', on_changes);
-
 

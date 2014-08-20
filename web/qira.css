@@ -180,6 +180,7 @@ body {
 #idump {
   height: 270px;
   padding: 10px;
+  overflow: hidden;
 }
 
 .name {
@@ -261,12 +262,10 @@ body {
 
 .datainstruction {
   color: #CC0000;
-  min-width: 84px;
 }
 
 .datamemory {
   color: #888800;
-  min-width: 84px;
 }
 
 .hexdumpdatainstruction {

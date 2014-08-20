@@ -5,6 +5,8 @@ import os
 import shutil
 import sys
 import subprocess
+import threading
+import time
 from hashlib import sha1
 sys.path.append(qira_config.BASEDIR+"/cda")
 
@@ -390,33 +392,38 @@ class Program:
 class Trace:
   def __init__(self, fn, forknum, program, r1, r2, r3):
     self.forknum = forknum
+    self.program = program
+    self.db = qiradb.Trace(fn, forknum, r1, r2, r3)
+    self.load_base_memory()
+
+    # analysis stuff
     self.maxclnum = None
     self.mixclnum = None
     self.flow = None
     self.dmap = None
     self.maxd = 0
-    self.program = program
-    self.db = qiradb.Trace(fn, forknum, r1, r2, r3)
-    self.load_base_memory()
-    self.update_analysis_depends()
+    self.analysisready = False
+    self.picture = None
+    self.needs_update = False
 
-  # so this can be slow...what do?
-  def update_analysis_depends(self):
-    # ewww
-    if self.db.get_maxclnum() > 50000:
-      self.minclnum = self.db.get_minclnum()
-      self.maxclnum = self.db.get_maxclnum()
-      self.flow = None
-      self.dmap = None
-      self.maxd = 0
-      return
-      
-    if self.maxclnum == None or self.db.get_maxclnum() != self.maxclnum:
-      self.minclnum = self.db.get_minclnum()
-      self.maxclnum = self.db.get_maxclnum()
-      self.flow = qira_analysis.get_instruction_flow(self, self.program, self.minclnum, self.maxclnum)
-      self.dmap = qira_analysis.get_hacked_depth_map(self.flow)
-      self.maxd = max(self.dmap)
+    threading.Thread(target=self.analysis_thread).start()
+
+  def analysis_thread(self):
+    #print "*** started analysis_thread"
+    while 1:
+      time.sleep(0.2)
+      if self.maxclnum == None or self.db.get_maxclnum() != self.maxclnum:
+        self.analysisready = False
+        minclnum = self.db.get_minclnum()
+        maxclnum = self.db.get_maxclnum()
+        self.flow = qira_analysis.get_instruction_flow(self, self.program, minclnum, maxclnum)
+        self.dmap = qira_analysis.get_hacked_depth_map(self.flow)
+        self.maxd = max(self.dmap)
+        self.picture = qira_analysis.get_vtimeline_picture(self, minclnum, maxclnum)
+        self.minclnum = minclnum
+        self.maxclnum = maxclnum
+        self.needs_update = True
+        #print "analysis is ready"
 
   # proxy the db call and fill in base memory
   def fetch_memory(self, clnum, address, ln):

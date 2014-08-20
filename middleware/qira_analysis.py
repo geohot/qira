@@ -265,19 +265,26 @@ def get_depth_map(fxns, maxclnum):
   return dmap
 
 def get_instruction_flow(trace, program, minclnum, maxclnum):
+  start = time.time()
   ret = []
   for i in range(minclnum, maxclnum):
     r = trace.db.fetch_changes_by_clnum(i, 1)
     if len(r) != 1:
       continue
     ins = ""
-    if program != None:
-      if r[0]['address'] in program.instructions:
-        ins = program.instructions[r[0]['address']]
+    if program != None and r[0]['data'] > 0:
+      while r[0]['address'] not in program.instructions:
+        #print "sleeping ", hex(r[0]['address'])
+        time.sleep(0.1)
+      ins = program.instructions[r[0]['address']]
     ret.append((r[0]['address'], r[0]['data'], r[0]['clnum'], ins))
+    if (time.time() - start) > 0.01:
+      time.sleep(0.01)
+      start = time.time()
   return ret
 
 def get_hacked_depth_map(flow):
+  start = time.time()
   return_stack = []
   ret = [0]
   for (address, length, clnum, ins) in flow:
@@ -287,22 +294,23 @@ def get_hacked_depth_map(flow):
     ret.append(len(return_stack))
     if ins[0:5] == "call " or ins[0:6] == "callq " or ins[0:3] == "bl\t" or ins[0:4] == "blx\t":
       return_stack.append(address+length)
+    if (time.time() - start) > 0.01:
+      time.sleep(0.01)
+      start = time.time()
   ret.append(len(return_stack))  # missing last instruction
   return ret
 
-def get_vtimeline_picture(trace):
-  trace.update_analysis_depends()
-
+def get_vtimeline_picture(trace, minclnum, maxclnum):
   if trace.maxd == 0:
     return None
 
-  r = trace.maxclnum-trace.minclnum
+  r = maxclnum-minclnum
   sampling = int(math.ceil(r/50000.0))
 
   from PIL import Image   # sudo pip install pillow
   import base64
   import StringIO
-  im_y = int(trace.maxclnum/sampling)
+  im_y = int(maxclnum/sampling)
   im = Image.new( 'RGB', (1, im_y), "black")
   px = im.load()
 
