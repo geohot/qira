@@ -55,9 +55,17 @@ function get_data_type(v) {
   else return "data"+a;
 }
 
+var escapeHTML = (function () {
+    'use strict';
+    var chr = { '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' };
+    return function (text) {
+        return text.replace(/[\"&<>]/g, function (a) { return chr[a]; });
+    };
+}());
+
 function highlight_addresses(a) {
   // no XSS :)
-  var d = UI.toHTML(a);
+  var d = escapeHTML(a);
   var re = /0x[0123456789abcdef]+/g;
   var m = d.match(re);
   if (m !== null) {
@@ -69,7 +77,7 @@ function highlight_addresses(a) {
     });
   }
   // does this work outside templates?
-  return new Handlebars.SafeString(d);
+  return d;
 }
 
 function update_dview(addr) {
