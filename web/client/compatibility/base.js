@@ -117,6 +117,10 @@ function update_maxclnum(clnum) {
   var old_maxclnum = Session.get("max_clnum");
   Session.set("max_clnum", clnum);
 
+  // if we are zoomed out, zoom out all the way
+  var cview = Session.get("cview")
+  if (cview == undefined || cview[0] == 0) zoom_out_max(false);
+
   Session.setDefault("forknum", 0);
   var forknum = Session.get("forknum");
 

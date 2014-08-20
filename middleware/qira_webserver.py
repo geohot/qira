@@ -204,7 +204,7 @@ def getclnum(forknum, clnum, types, limit):
 
 @socketio.on('getchanges', namespace='/qira')
 @socket_method
-def getchanges(forknum, address, typ, cview):
+def getchanges(forknum, address, typ, cview, cscale, clnum):
   if forknum != -1 and forknum not in program.traces:
     return
   address = fhex(address)
@@ -215,7 +215,28 @@ def getchanges(forknum, address, typ, cview):
     forknums = [forknum]
   ret = {}
   for forknum in forknums:
-    ret[forknum] = program.traces[forknum].db.fetch_clnums_by_address_and_type(address, chr(ord(typ[0])), cview[0], cview[1], LIMIT)
+    db = program.traces[forknum].db.fetch_clnums_by_address_and_type(address, chr(ord(typ[0])), cview[0], cview[1], LIMIT)
+    # send the clnum and the bunch closest on each side
+    if len(db) > 100:
+      send = set()
+      bisect = 0
+      last = None
+      cnt = 0
+      for cl in db:
+        if cl <= clnum:
+          bisect = cnt
+        cnt += 1
+        if last != None and (cl - last) < cscale:
+          continue
+        send.add(cl)
+        last = cl
+      add = db[max(0,bisect-4):min(len(db), bisect+5)]
+      print bisect, add, clnum
+      for tmp in add:
+        send.add(tmp)
+      ret[forknum] = list(send)
+    else:
+      ret[forknum] = db
   emit('changes', {'type': typ, 'clnums': ret})
 
 @socketio.on('navigatefunction', namespace='/qira')

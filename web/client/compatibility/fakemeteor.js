@@ -24,8 +24,8 @@ Session = {
   },
   _track: undefined,
   _session: {},
-  get: function(name) {
-    if (Session._track !== undefined) Session._track.push(name);
+  get: function(name, donttrack) {
+    if (Session._track !== undefined && donttrack != true) Session._track.push(name);
     return Session._session[name];
   },
   set: function(name, data) {

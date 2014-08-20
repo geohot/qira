@@ -203,7 +203,6 @@ function redraw_flags() {
     "zoom": "gray"
   };
   var flags_out = {};
-  var lastflagpos = -1.0;
   //var flag_count = 0;
   for (arr in flags) {
     if (flags[arr].length == 0) continue;
@@ -214,9 +213,6 @@ function redraw_flags() {
     if (clnum < cview[0] || clnum > cview[1]) continue;
 
     var flagpos = ((clnum-Math.max(maxclnum[forknum][0], cview[0]))/cscale);
-
-    // replacement for limit, don't draw flags too closely
-    if (Math.abs(flagpos-lastflagpos) < 2) continue;
 
     sty = "";
     if (flags[arr].length == 1) {
@@ -236,7 +232,6 @@ function redraw_flags() {
 
     flags_out[forknum] += '<div id="flag'+clnum+'" class="flag" style="'+sty+'; margin-top: '+flagpos+"px"+'">'+clnum+'</div>'
     //flag_count += 1;
-    lastflagpos = flagpos;
   }
   //p("drew "+flag_count+" flags");
   for (forknum in flags_out) {
@@ -298,11 +293,6 @@ go_to_flag = function (next, data) {
   }
 };
 
-Deps.autorun(function() { DA("calling zoom_out_max, confusing autorun");
-  // false here forces update on max_clnum update
-  zoom_out_max(false);
-});
-
 Deps.autorun(function() { DA("updating bounds flags");
   var maxclnum = Session.get("max_clnum");
   if (maxclnum === undefined) return;
@@ -327,15 +317,19 @@ Deps.autorun(function() { DA("emit getchanges for iaddr change");
   var maxclnum = Session.get('max_clnum');
   var cview = Session.get('cview');
   var iaddr = Session.get('iaddr');
-  stream.emit('getchanges', -1, iaddr, 'I', cview)
+  var clnum = Session.get('clnum');
+  var cscale = get_cscale();
+  stream.emit('getchanges', -1, iaddr, 'I', cview, cscale, clnum)
 });
 
 Deps.autorun(function() { DA("emit getchanges for daddr change");
   var maxclnum = Session.get('max_clnum');
   var cview = Session.get('cview');
   var daddr = Session.get('daddr');
-  stream.emit('getchanges', -1, daddr, 'L', cview)
-  stream.emit('getchanges', -1, daddr, 'S', cview)
+  var clnum = Session.get('clnum');
+  var cscale = get_cscale();
+  stream.emit('getchanges', -1, daddr, 'L', cview, cscale, clnum)
+  stream.emit('getchanges', -1, daddr, 'S', cview, cscale, clnum)
 });
 
 function on_changes(msg) { DS("changes");
