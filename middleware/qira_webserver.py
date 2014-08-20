@@ -388,7 +388,7 @@ def do_search(b64search):
 @app.route('/', defaults={'path': 'index.html'})
 @app.route('/<path:path>')
 def serve(path):
-  if args.cda_only and path=="index.html":
+  if qira_config.CALLED_AS_CDA and path=="index.html":
     return redirect('/cda')
   # best security?
   if ".." in path:
