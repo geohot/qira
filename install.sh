@@ -39,14 +39,5 @@ cd cda
 ./codesearch_build.sh
 popd
 
-if [ -f web/qira.html ]; then
-  echo "trunk detected"
-  sudo apt-get install yui-compressor
-  if [ ! -d ~/.meteor ]; then
-    echo "installing meteor"
-    sudo apt-get install curl
-    curl https://install.meteor.com | /bin/sh
-    ~/.meteor/tools/latest/bin/npm install -g meteorite
-  fi
-fi
+# meteor is removed :)
 
