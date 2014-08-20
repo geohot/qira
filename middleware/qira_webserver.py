@@ -4,8 +4,7 @@ import os
 import sys
 import time
 import base64
-basedir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(basedir+"/../cda")
+sys.path.append(qira_config.BASEDIR+"/cda")
 
 def socket_method(func):
   def func_wrapper(*args, **kwargs):
@@ -359,12 +358,10 @@ def serve(path):
   # best security?
   if ".." in path:
     return
-  webstatic = os.path.dirname(os.path.realpath(__file__))+"/../webstatic/"
-
   ext = path.split(".")[-1]
 
   try:
-    dat = open(webstatic+path).read()
+    dat = open(qira_config.BASEDIR + "/web/"+path).read()
   except:
     return ""
   if ext == 'js' and not path.startswith('client/compatibility/') and path.startswith('client/'):
