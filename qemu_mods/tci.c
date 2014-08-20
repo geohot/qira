@@ -495,6 +495,7 @@ uint32_t GLOBAL_start_clnum = 1;
 int GLOBAL_parent_id = -1, GLOBAL_id = -1;
 
 int GLOBAL_tracelibraries = 0;
+uint64_t GLOBAL_gatetrace = 0;
 
 #define OPEN_GLOBAL_ASM_FILE { if (unlikely(GLOBAL_asm_file == NULL)) { GLOBAL_asm_file = fopen("/tmp/qira_asm", "a"); } }
 FILE *GLOBAL_asm_file = NULL;
@@ -837,6 +838,10 @@ bool is_filtered_address(target_ulong pc) {
   if (unlikely(GLOBAL_tracelibraries)) {
     return false;
   } else {
+    if (unlikely(GLOBAL_gatetrace)) {
+      if (GLOBAL_gatetrace == pc) GLOBAL_gatetrace = 0;
+      else return true;
+    }
     return ((bpc > 0x80000000 && bpc < 0xf6800000) || bpc >= 0x100000000);
   }
 }

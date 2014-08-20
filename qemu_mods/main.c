@@ -3658,6 +3658,11 @@ static void handle_arg_tracelibraries(const char *arg) {
   GLOBAL_tracelibraries = 1;
 }
 
+extern uint64_t GLOBAL_gatetrace;
+static void handle_arg_gatetrace(const char *arg) {
+  GLOBAL_gatetrace = strtoull(arg, NULL, 0);
+}
+
 static const struct qemu_argument arg_table[] = {
     {"h",          "",                 false, handle_arg_help,
      "",           "print this help"},
@@ -3695,7 +3700,9 @@ static const struct qemu_argument arg_table[] = {
     {"qirachild",  "QIRA_CHILD",  true, handle_arg_qirachild,
      "",           "parent_id, start_clnum, id"},
     {"tracelibraries",  "QIRA_TRACELIBRARIES",  false, handle_arg_tracelibraries,
-     "",           "parent_id, start_clnum, id"},
+     "",           ""},
+    {"gatetrace",  "QIRA_GATETRACE",  true, handle_arg_gatetrace,
+     "",           "address to gate starting trace on"},
     {"strace",     "QEMU_STRACE",      false, handle_arg_strace,
      "",           "log system calls"},
     {"version",    "QEMU_VERSION",     false, handle_arg_version,

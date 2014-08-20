@@ -20,6 +20,7 @@ if __name__ == '__main__':
   parser.add_argument('-t', "--tracelibraries", help="trace into all libraries", action="store_true")
   parser.add_argument('binary', help="path to the binary")
   parser.add_argument('args', nargs='*', help="arguments to the binary")
+  parser.add_argument("--gate-trace", help="don't start tracing until this address is hit")
   parser.add_argument("--flush-cache", help="flush all QIRA caches", action="store_true")
   parser.add_argument("--dwarf", help="parse program dwarf data", action="store_true")
   if os.path.isdir(basedir+"/../cda"):
@@ -62,8 +63,14 @@ if __name__ == '__main__':
     print "*** flushing caches"
     os.system("rm -rfv /tmp/qira*")
 
+  # qemu args from command line
+  qemu_args = []
+  if args.gate_trace != None:
+    qemu_args.append("-gatetrace")
+    qemu_args.append(args.gate_trace)
+
   # creates the file symlink, program is constant through server run
-  program = qira_program.Program(args.binary, args.args)
+  program = qira_program.Program(args.binary, args.args, qemu_args)
 
   is_qira_running = 1
   try:
