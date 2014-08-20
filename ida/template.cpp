@@ -27,7 +27,7 @@ static void thread_safe_jump_to(ea_t a) {
       qira_address = la;
       add_bpt(qira_address);
       disable_bpt(qira_address);
-      jumpto(la);
+      jumpto(la, -1, 0);  // don't UIJMP_ACTIVATE to not steal focus
       return false;
     }
     ea_t la;

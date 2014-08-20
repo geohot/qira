@@ -28,10 +28,10 @@ cp -av VERSION README distrib/qira/
 # the advantage of this over the bundle is it ships mongo
 echo "copying webapp"
 cp -R web distrib/qira/
-rm -rf distrib/qira/web/.meteor/local
-rm -f distrib/qira/web/qira.html   # this doesn't work to change, so don't allow the user to
+#rm -rf distrib/qira/web/.meteor/local
+#rm -f distrib/qira/web/qira.html   # this doesn't work to change, so don't allow the user to
 #mrt bundle ../bin/qira_web.tar.gz
-cp -R webstatic distrib/qira/
+#cp -R webstatic distrib/qira/
 
 # sudo apt-get install python-pip
 # sudo pip install pymongo
