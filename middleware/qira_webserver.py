@@ -363,9 +363,12 @@ def get_strace(forknum):
       clnum = int(ff[0])
     except:
       continue
+    # i think this filter isn't so useful now
+    """
     if clnum == trace.db.get_minclnum():
       # filter the boring syscalls
       continue
+    """
     pid = int(ff[1])
     sc = " ".join(ff[2:])
     ret.append({"clnum": clnum, "pid":pid, "sc": sc})
