@@ -412,6 +412,7 @@ class Trace:
     #print "*** started analysis_thread"
     while 1:
       time.sleep(0.2)
+      # so this is done poorly, analysis can be incremental
       if self.maxclnum == None or self.db.get_maxclnum() != self.maxclnum:
         self.analysisready = False
         minclnum = self.db.get_minclnum()
