@@ -19,9 +19,16 @@ import struct
 import qiradb
 
 # (regname, regsize, is_big_endian, arch_name, branches)
-PPCREGS = ([], 4, True, "ppc", [])
+PPCREGS = ([], 4, True, "ppc", ["bl "])
 for i in range(32):
   PPCREGS[0].append("r"+str(i))
+for i in range(32):
+  PPCREGS[0].append(None)
+PPCREGS[0].append("lr")
+PPCREGS[0].append("ctr")
+
+for i in range(8):
+  PPCREGS[0].append("cr"+str(i))
 
 AARCH64REGS = ([], 8, False, "aarch64", ["bl ", "blx "])
 for i in range(8):

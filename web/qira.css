@@ -179,7 +179,7 @@ body {
 
 #idump {
   height: 270px;
-  padding: 10px;
+  padding: 5px;
   overflow: hidden;
 }
 
@@ -314,9 +314,9 @@ body {
   font-family: monospace;
   height: 150px;
   overflow: hidden;
-  padding: 10px;
+  padding: 5px;
   white-space: nowrap;
-  width: 604px;
+  width: 614px;
 }
 
 html {
