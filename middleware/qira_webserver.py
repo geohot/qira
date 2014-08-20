@@ -18,8 +18,8 @@ def socket_method(func):
       ret = func(*args, **kwargs)
       tm = (time.time() - start) * 1000
 
-      # print slow calls, slower than 20ms
-      if tm > 20:
+      # print slow calls, slower than 50ms
+      if tm > 50:
         print "SOCKET %6.2f ms in %-20s with" % (tm, func.func_name), args
       return ret
     except Exception, e:
@@ -217,7 +217,7 @@ def getchanges(forknum, address, typ, cview, cscale, clnum):
   for forknum in forknums:
     db = program.traces[forknum].db.fetch_clnums_by_address_and_type(address, chr(ord(typ[0])), cview[0], cview[1], LIMIT)
     # send the clnum and the bunch closest on each side
-    if len(db) > 100:
+    if len(db) > 50:
       send = set()
       bisect = 0
       last = None
@@ -231,7 +231,7 @@ def getchanges(forknum, address, typ, cview, cscale, clnum):
         send.add(cl)
         last = cl
       add = db[max(0,bisect-4):min(len(db), bisect+5)]
-      print bisect, add, clnum
+      #print bisect, add, clnum
       for tmp in add:
         send.add(tmp)
       ret[forknum] = list(send)
