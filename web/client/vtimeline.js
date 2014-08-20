@@ -220,12 +220,16 @@ function redraw_flags() {
       sty = "background-color:"+col+"; color:"+col;
     }
     else {
+      var haschange = false;
       sty = "background: linear-gradient(to right"
       var cols = flags[arr].sort()
       for (var i = 0; i < cols.length; i++) {
+        if (cols[i]) haschange = true;
         sty += ","+colors[cols[i]];
       }
       sty += ")";
+      // always put the current change in front
+      if (haschange) sty += ";z-index:2";
     }
     
     if (flags_out[forknum] === undefined) flags_out[forknum] = "";
