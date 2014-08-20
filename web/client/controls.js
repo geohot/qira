@@ -96,6 +96,9 @@ $(document).ready(function() {
 
 
   // registers and other places
+  $('body').on('click', '.dataromemory', function(e) {
+    update_dview(e.target.textContent);
+  });
   $('body').on('click', '.datamemory', function(e) {
     update_dview(e.target.textContent);
   });
@@ -113,6 +116,9 @@ $(document).ready(function() {
   $('body').on('dblclick', '.hexdumpdatamemory', function(e) {
     update_dview(e.target.textContent);
   });
+  $('body').on('dblclick', '.hexdumpdataromemory', function(e) {
+    update_dview(e.target.textContent);
+  });
   $('body').on('dblclick', '.hexdumpdatainstruction', function(e) {
     update_dview(e.target.textContent);
   });
@@ -121,6 +127,7 @@ $(document).ready(function() {
     Session.set("dirtyiaddr", true);
     return false;
   });
+  $('body').on('mousedown', '.hexdumpdataromemory', function(e) { return false; });
   $('body').on('mousedown', '.hexdumpdatamemory', function(e) { return false; });
   $('body').on('mousedown', '.hexdumpdatainstruction', function(e) { return false; });
 

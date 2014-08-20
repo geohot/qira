@@ -215,7 +215,7 @@ def getchanges(forknum, address, typ, cview):
     forknums = [forknum]
   ret = {}
   for forknum in forknums:
-    ret[forknum] = program.traces[forknum].db.fetch_clnums_by_address_and_type(address, chr(ord(typ[0])), cview[0], LIMIT)
+    ret[forknum] = program.traces[forknum].db.fetch_clnums_by_address_and_type(address, chr(ord(typ[0])), cview[0], cview[1], LIMIT)
   emit('changes', {'type': typ, 'clnums': ret})
 
 @socketio.on('navigatefunction', namespace='/qira')

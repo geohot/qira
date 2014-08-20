@@ -268,11 +268,19 @@ body {
   color: #888800;
 }
 
+.dataromemory {
+  color: #888800;
+}
+
 .hexdumpdatainstruction {
   color: #CC0000;
 }
 
 .hexdumpdatamemory {
+  color: #888800;
+}
+
+.hexdumpdataromemory {
   color: #888800;
 }
 

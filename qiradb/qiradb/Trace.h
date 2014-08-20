@@ -87,6 +87,10 @@ struct change {
 #define IS_SYSCALL    0x08000000
 #define SIZE_MASK     0xFF
 
+#define PAGE_INSTRUCTION 1
+#define PAGE_READ 2
+#define PAGE_WRITE 4
+
 void *thread_entry(void *);
 
 class Trace {
@@ -96,14 +100,13 @@ public:
   bool ConnectToFileAndStart(char *filename, int register_size, int register_count, bool is_big_endian);
 
   // these must be threadsafe
-  vector<Clnum> FetchClnumsByAddressAndType(Address address, char type, Clnum start_clnum, unsigned int limit);
+  vector<Clnum> FetchClnumsByAddressAndType(Address address, char type, Clnum start_clnum, Clnum end_clnum, unsigned int limit);
   vector<struct change> FetchChangesByClnum(Clnum clnum, unsigned int limit);
   vector<MemoryWithValid> FetchMemory(Clnum clnum, Address address, int len);
   vector<uint64_t> FetchRegisters(Clnum clnum);
 
   // simple ones
-  set<Address> GetInstructionPages();
-  set<Address> GetDataPages();
+  map<Address, char> GetPages();
   Clnum GetMaxClnum() { return max_clnum_; }
   Clnum GetMinClnum() { return min_clnum_; }
 
@@ -127,8 +130,7 @@ private:
   vector<EntryNumber> clnum_to_entry_number_;
   vector<RegisterCell> registers_; int register_size_, register_count_;
   map<Address, MemoryCell> memory_;
-  set<Address> instruction_pages_;
-  set<Address> data_pages_;
+  map<Address, char> pages_;
   Clnum max_clnum_, min_clnum_;
   
   bool remap_backing(uint64_t);

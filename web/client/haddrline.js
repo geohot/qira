@@ -5,13 +5,21 @@ Deps.autorun(function() { DA("pmaps changed, updating haddrline");
   if (pmaps === undefined) return;
   //p(pmaps);
   // eww, numbers. broken for 64-bit
-  var addrs = Object.keys(pmaps).map(fhex).sort(function(a, b){return a-b});
+  var addrs = [];
+  for (k in pmaps) {
+    // ignore the memory that's only read from
+    if (pmaps[k] == "romemory") continue;
+    addrs.push(fhex(k));
+  }
+  addrs = addrs.sort(function(a, b){return a-b});
+
   //p(addrs);
   // fill in the holes up to 16 pages
   var pchunks = [];
   for (var i = 0; i < addrs.length;) {
     var pchunk = [];
     var caddr = addrs[i];
+
     pchunk.push(caddr);
     i++;
     while ((addrs[i]-caddr) < PAGE_SIZE*8) {

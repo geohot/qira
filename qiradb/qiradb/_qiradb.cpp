@@ -52,12 +52,12 @@ static PyObject *did_update(PyTrace *self) {
 static PyObject *fetch_clnums_by_address_and_type(PyTrace *self, PyObject *args) { 
   Address address;
   char type;
-  Clnum start_clnum;
+  Clnum start_clnum, end_clnum;
   unsigned int limit;
-  if (!PyArg_ParseTuple(args, "KcII", &address, &type, &start_clnum, &limit)) { return NULL; }
+  if (!PyArg_ParseTuple(args, "KcIII", &address, &type, &start_clnum, &end_clnum, &limit)) { return NULL; }
   if (self->t == NULL) { return NULL; }
   
-  vector<Clnum> ret = self->t->FetchClnumsByAddressAndType(address, type, start_clnum, limit);
+  vector<Clnum> ret = self->t->FetchClnumsByAddressAndType(address, type, start_clnum, end_clnum, limit);
  
   PyObject *pyret = PyList_New(ret.size());
   int i = 0;
@@ -125,15 +125,19 @@ static PyObject *fetch_registers(PyTrace *self, PyObject *args) {
 
 static PyObject *get_pmaps(PyTrace *self, PyObject *args) {
   if (self->t == NULL) { return NULL; }
-  set<Address> ip = self->t->GetInstructionPages();
-  set<Address> dp = self->t->GetDataPages();
+  map<Address, char> p = self->t->GetPages();
   PyObject *iit = PyDict_New();
-  // eww these strings are long
-  FE(set<Address>::iterator, dp, it) {
-    PyDict_SetItem(iit, Py_BuildValue("K", *it), Py_BuildValue("s", "memory"));
-  }
-  FE(set<Address>::iterator, ip, it) {
-    PyDict_SetItem(iit, Py_BuildValue("K", *it), Py_BuildValue("s", "instruction"));
+  // no comma allowed in the template
+  typedef map<Address, char>::iterator p_iter;
+  FE(p_iter, p, it) {
+    // eww these strings are long
+    if (it->second & PAGE_INSTRUCTION) {
+      PyDict_SetItem(iit, Py_BuildValue("K", it->first), Py_BuildValue("s", "instruction"));
+    } else if (it->second & PAGE_WRITE) {
+      PyDict_SetItem(iit, Py_BuildValue("K", it->first), Py_BuildValue("s", "memory"));
+    } else if (it->second & PAGE_READ) {
+      PyDict_SetItem(iit, Py_BuildValue("K", it->first), Py_BuildValue("s", "romemory"));
+    }
   }
   return iit;
 }

@@ -182,7 +182,7 @@ void Trace::process() {
         clnum_to_entry_number_.resize(c->clnum);
       }
       clnum_to_entry_number_.push_back(entries_done_);
-      instruction_pages_.insert(c->address & PAGE_MASK);
+      pages_[c->address & PAGE_MASK] |= PAGE_INSTRUCTION;
     }
 
     // addresstype_to_clnums_
@@ -198,8 +198,11 @@ void Trace::process() {
 
     // memory_, data_pages_
     if (type == 'L' || type == 'S') {
-      data_pages_.insert(c->address & PAGE_MASK);
+      if (type == 'L') {
+        pages_[c->address & PAGE_MASK] |= PAGE_READ;
+      }
       if (type == 'S') {
+        pages_[c->address & PAGE_MASK] |= PAGE_WRITE;
         int byte_count = (c->flags&SIZE_MASK)/8;
         uint64_t data = c->data;
         if (is_big_endian_) {
@@ -243,14 +246,15 @@ void Trace::process() {
   did_update_ = true;
 }
 
-vector<Clnum> Trace::FetchClnumsByAddressAndType(Address address, char type, Clnum start_clnum, unsigned int limit) {
+vector<Clnum> Trace::FetchClnumsByAddressAndType(Address address, char type,
+      Clnum start_clnum, Clnum end_clnum, unsigned int limit) {
   RWLOCK_RDLOCK(db_lock_);
   vector<Clnum> ret;
   pair<Address, char> p = MP(address, type);
   unordered_map<pair<Address, char>, set<Clnum> >::iterator it = addresstype_to_clnums_.find(p);
   if (it != addresstype_to_clnums_.end()) {
     for (set<Clnum>::iterator it2 = it->second.lower_bound(start_clnum);
-         it2 != it->second.end(); ++it2) {
+         it2 != it->second.end() && *it2 < end_clnum; ++it2) {
       ret.push_back(*it2);
       if (ret.size() == limit) break;
     }
@@ -304,16 +308,9 @@ vector<uint64_t> Trace::FetchRegisters(Clnum clnum) {
   return ret;
 }
 
-set<Address> Trace::GetInstructionPages() {
+map<Address, char> Trace::GetPages() {
   RWLOCK_RDLOCK(db_lock_);
-  set<Address> ret = instruction_pages_;
-  RWLOCK_UNLOCK(db_lock_);
-  return ret;
-}
-
-set<Address> Trace::GetDataPages() {
-  RWLOCK_RDLOCK(db_lock_);
-  set<Address> ret = data_pages_;
+  map<Address, char> ret = pages_;
   RWLOCK_UNLOCK(db_lock_);
   return ret;
 }
