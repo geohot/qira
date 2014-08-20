@@ -18,12 +18,12 @@ except:
 import struct
 import qiradb
 
-# (regname, regsize, is_big_endian, arch_name)
-PPCREGS = ([], 4, True, "ppc")
+# (regname, regsize, is_big_endian, arch_name, branches)
+PPCREGS = ([], 4, True, "ppc", [])
 for i in range(32):
   PPCREGS[0].append("r"+str(i))
 
-AARCH64REGS = ([], 8, False, "aarch64")
+AARCH64REGS = ([], 8, False, "aarch64", ["bl ", "blx "])
 for i in range(8):
   AARCH64REGS[0].append(None)
 for i in range(32):
@@ -32,9 +32,9 @@ for i in range(32):
 AARCH64REGS[0][8+31] = "sp"
 AARCH64REGS[0].append("pc")
 
-ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 4, False, "arm")
-X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, False, "i386")
-X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15", 'RIP'], 8, False, "x86-64")
+ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 4, False, "arm", ["bl\t", "blx\t"])
+X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, False, "i386", ["call "])
+X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15", 'RIP'], 8, False, "x86-64", ["callq "])
 
 def get_cachename(cachedir, cachename):
   try:
@@ -209,6 +209,8 @@ class Program:
       #print repr(d)
       if self.fb == 0x28:   # ARM
         inst = d[d.rfind("  ")+2:]
+      elif self.fb == 0xb7:   # aarch64
+        inst = d[d.rfind("     ")+5:]
       else:
         inst = d[d.find(":")+3:]
       self.instructions[addr] = inst
@@ -418,7 +420,7 @@ class Trace:
         minclnum = self.db.get_minclnum()
         maxclnum = self.db.get_maxclnum()
         self.flow = qira_analysis.get_instruction_flow(self, self.program, minclnum, maxclnum)
-        self.dmap = qira_analysis.get_hacked_depth_map(self.flow)
+        self.dmap = qira_analysis.get_hacked_depth_map(self.flow, self.program)
         self.maxd = max(self.dmap)
         self.picture = qira_analysis.get_vtimeline_picture(self, minclnum, maxclnum)
         self.minclnum = minclnum

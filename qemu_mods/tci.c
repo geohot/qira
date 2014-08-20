@@ -830,18 +830,21 @@ void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
   printf("+++ REPLAY %d DONE to %d with entry count %d\n", this_id, to_change, count);
 }
 
-bool is_filtered_address(target_ulong pc);
-bool is_filtered_address(target_ulong pc) {
+bool is_filtered_address(target_ulong pc, bool ignore_gatetrace);
+bool is_filtered_address(target_ulong pc, bool ignore_gatetrace) {
   // to remove the warning
   uint64_t bpc = (uint64_t)pc;
+
+  // do this check before the tracelibraries one
+  if (unlikely(GLOBAL_gatetrace) && !ignore_gatetrace) {
+    if (GLOBAL_gatetrace == bpc) GLOBAL_gatetrace = 0;
+    else return true;
+  }
+
   // TODO(geohot): FIX THIS!, filter anything that isn't the user binary and not dynamic
   if (unlikely(GLOBAL_tracelibraries)) {
     return false;
   } else {
-    if (unlikely(GLOBAL_gatetrace)) {
-      if (GLOBAL_gatetrace == pc) GLOBAL_gatetrace = 0;
-      else return true;
-    }
     return ((bpc > 0x80000000 && bpc < 0xf6800000) || bpc >= 0x100000000);
   }
 }
@@ -850,7 +853,7 @@ void real_target_disas(FILE *out, CPUArchState *env, target_ulong code, target_u
 void target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong size, int flags) {
   OPEN_GLOBAL_ASM_FILE
 
-  if (is_filtered_address(code)) return;
+  if (is_filtered_address(code, true)) return;
 
   flock(fileno(GLOBAL_asm_file), LOCK_EX);
   real_target_disas(GLOBAL_asm_file, env, code, size, flags);
@@ -977,7 +980,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
       GLOBAL_last_was_syscall = 0;
     }
 
-    if (is_filtered_address(tb->pc)) {
+    if (is_filtered_address(tb->pc, false)) {
       GLOBAL_logstate->is_filtered = 1;
     } else {
       if (GLOBAL_logstate->is_filtered == 1) {

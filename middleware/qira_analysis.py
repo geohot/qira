@@ -283,7 +283,7 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
       start = time.time()
   return ret
 
-def get_hacked_depth_map(flow):
+def get_hacked_depth_map(flow, program):
   start = time.time()
   return_stack = []
   ret = [0]
@@ -292,8 +292,10 @@ def get_hacked_depth_map(flow):
       return_stack = return_stack[0:return_stack.index(address)]
     # ugh, so gross
     ret.append(len(return_stack))
-    if ins[0:5] == "call " or ins[0:6] == "callq " or ins[0:3] == "bl\t" or ins[0:4] == "blx\t":
-      return_stack.append(address+length)
+    for test in program.tregs[4]:
+      if ins[0:len(test)] == test:
+        return_stack.append(address+length)
+        break
     if (time.time() - start) > 0.01:
       time.sleep(0.01)
       start = time.time()
