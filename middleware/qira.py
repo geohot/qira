@@ -20,7 +20,7 @@ if __name__ == '__main__':
   parser.add_argument('-t', "--tracelibraries", help="trace into all libraries", action="store_true")
   parser.add_argument('binary', help="path to the binary")
   parser.add_argument('args', nargs='*', help="arguments to the binary")
-  parser.add_argument("--gate-trace", help="don't start tracing until this address is hit")
+  parser.add_argument("--gate-trace", metavar="ADDRESS", help="don't start tracing until this address is hit")
   parser.add_argument("--flush-cache", help="flush all QIRA caches", action="store_true")
   parser.add_argument("--dwarf", help="parse program dwarf data", action="store_true")
   if os.path.isdir(basedir+"/../cda"):
