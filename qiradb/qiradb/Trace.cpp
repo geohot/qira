@@ -275,7 +275,7 @@ vector<struct change> Trace::FetchChangesByClnum(Clnum clnum, unsigned int limit
   if (en != 0) {
     MUTEX_LOCK(backing_mutex_);
     const struct change* c = &backing_[en];
-    for (unsigned int i = 0; i < limit; i++) {
+    for (unsigned int i = 0; limit == 0 || i < limit; i++) {
       if (en+i >= entries_done_) break;  // don't run off the end
       if (c->clnum != clnum) break; // on next change already
       ret.push_back(*c);  // copy?
