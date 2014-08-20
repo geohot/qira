@@ -208,7 +208,8 @@ body {
 /* regviewer and datachanges */
 
 .register {
-  min-width: 42px;
+  text-align: left !important;
+  min-width: 42px !important;
   display: inline-block;
 }
 
