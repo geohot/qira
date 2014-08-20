@@ -26,6 +26,15 @@ extern bool CreateDirectoryA(const char *x, void *y); // Fix with real windows h
 #include <sys/stat.h>
 #endif
 
+#ifdef TARGET_LINUX
+  #include "strace/syscalls.h"
+  #if defined(TARGET_IA32E)
+    #include "strace/syscallents_64.h"
+  #else
+    #include "strace/syscallents_32.h"
+  #endif
+#endif
+
 #define IS_VALID    0x80000000
 #define IS_WRITE    0x40000000
 #define IS_MEM      0x20000000
@@ -355,17 +364,47 @@ inline VOID SysBefore(ADDRINT ip, ADDRINT num,
 }
 
 VOID SyscallEntry(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOID *v) {
-	fprintf(strace_file, "%u %u %ld(%p, %p, %p, %p, %p, %p)",
-    logstate->changelist_number, logstate->this_pid,
-		(long)PIN_GetSyscallNumber(ctxt, std),
-		(void*)PIN_GetSyscallArgument(ctxt, std, 0), (void*)PIN_GetSyscallArgument(ctxt, std, 1), (void*)PIN_GetSyscallArgument(ctxt, std, 2),
-		(void*)PIN_GetSyscallArgument(ctxt, std, 3), (void*)PIN_GetSyscallArgument(ctxt, std, 4), (void*)PIN_GetSyscallArgument(ctxt, std, 5)
-	);
-	fflush(strace_file);
+  #ifdef TARGET_LINUX
+    int sys_nr = PIN_GetSyscallNumber(ctxt, std);
+    if (sys_nr < MAX_SYSCALL_NUM) {
+      fprintf(strace_file, "%u %u %s(", logstate->changelist_number, logstate->this_pid, syscalls[sys_nr].name);
+      int first = 1;
+      int i;
+      for (i=0;i<syscalls[sys_nr].nargs; i++) {
+        if (first == 0) {
+          fprintf(strace_file, ", ");
+        } else {
+          first = 0;
+        }
+        void *arg = (void *)PIN_GetSyscallArgument(ctxt, std, i);
+        switch (syscalls[sys_nr].args[i]) {
+          case ARG_STR:
+            // risky
+            fprintf(strace_file, "%p@\"%s\"", arg, (char *)arg);
+            break;
+          case ARG_INT:
+            fprintf(strace_file, "%lu", (long)arg);
+            break;
+          case ARG_PTR:
+          default:
+            fprintf(strace_file, "%p", (void *)arg);
+            break;
+        }
+      }
+    }
+  #else
+    fprintf(strace_file, "%u %u %ld(%p, %p, %p, %p, %p, %p",
+      logstate->changelist_number, logstate->this_pid,
+      (long)PIN_GetSyscallNumber(ctxt, std),
+      (void*)PIN_GetSyscallArgument(ctxt, std, 0), (void*)PIN_GetSyscallArgument(ctxt, std, 1), (void*)PIN_GetSyscallArgument(ctxt, std, 2),
+      (void*)PIN_GetSyscallArgument(ctxt, std, 3), (void*)PIN_GetSyscallArgument(ctxt, std, 4), (void*)PIN_GetSyscallArgument(ctxt, std, 5)
+    );
+    fflush(strace_file);
+  #endif
 }
 
 VOID SyscallExit(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOID *v) {
-	fprintf(strace_file," = %p\n", (void*)PIN_GetSyscallReturn(ctxt, std));
+	fprintf(strace_file,") = %p\n", (void*)PIN_GetSyscallReturn(ctxt, std));
 	fflush(strace_file);
 }
 
