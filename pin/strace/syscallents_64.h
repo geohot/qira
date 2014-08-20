@@ -3,11 +3,11 @@ struct syscall_entry syscalls[] = {
    {   // 0
   /*.name  =*/ "read",
   /*.nargs =*/ 3,
-  /*.args  =*/ {ARG_INT, ARG_STR, ARG_INT, ARG_UNKNOWN, ARG_UNKNOWN, ARG_UNKNOWN}},
+  /*.args  =*/ {ARG_INT, ARG_PTR, ARG_INT, ARG_UNKNOWN, ARG_UNKNOWN, ARG_UNKNOWN}},
    {   // 1
   /*.name  =*/ "write",
   /*.nargs =*/ 3,
-  /*.args  =*/ {ARG_INT, ARG_STR, ARG_INT, ARG_UNKNOWN, ARG_UNKNOWN, ARG_UNKNOWN}},
+  /*.args  =*/ {ARG_INT, ARG_PTR, ARG_INT, ARG_UNKNOWN, ARG_UNKNOWN, ARG_UNKNOWN}},
    {   // 2
   /*.name  =*/ "open",
   /*.nargs =*/ 3,

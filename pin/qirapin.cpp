@@ -380,7 +380,7 @@ VOID SyscallEntry(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOI
         switch (syscalls[sys_nr].args[i]) {
           case ARG_STR:
             // risky
-            fprintf(strace_file, "%p@\"%s\"", arg, (char *)arg);
+            fprintf(strace_file, "%p=\"%s\"", arg, (char *)arg);
             break;
           case ARG_INT:
             fprintf(strace_file, "%lu", (long)arg);
