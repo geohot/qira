@@ -81,6 +81,29 @@ window.onkeydown = function(e) {
   }
 };
 
+function push_history() {
+  var json = {};
+  // the three views
+  json['cview'] = Session.get('cview');
+  json['dview'] = Session.get('dview');
+  json['sview'] = Session.get('sview');
+
+  // any addresses that we navigated to in a reasonable way
+  json['clnum'] = Session.get('clnum');
+  json['daddr'] = Session.get('daddr');
+  json['iaddr'] = Session.get('iaddr');
+}
+
+
+window.onpopstate = function(e) {
+  p(e);
+  for (k in e.state) {
+    if (Session.get(k) != e.state[k]) { 
+      Session.set(k, e.state[k]);
+    }
+  }
+};
+
 $(document).ready(function() {
   // control the highlighting of things
   $('body').on('click', '.clnum', function(e) {

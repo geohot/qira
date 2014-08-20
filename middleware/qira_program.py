@@ -501,6 +501,7 @@ class Trace:
       if mem[i] & 0x100:
         dat[ri] = mem[i]&0xFF
       else:
+        # move this loop outside the address loop, so slow
         for (ss, se) in self.base_memory:
           if ss <= ri and ri < se:
             dat[ri] = ord(self.base_memory[(ss,se)][ri-ss])
