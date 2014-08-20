@@ -198,9 +198,8 @@ void Trace::process() {
 
     // memory_, data_pages_
     if (type == 'L' || type == 'S') {
-      // loads shouldn't mark a page as data
+      data_pages_.insert(c->address & PAGE_MASK);
       if (type == 'S') {
-        data_pages_.insert(c->address & PAGE_MASK);
         int byte_count = (c->flags&SIZE_MASK)/8;
         uint64_t data = c->data;
         if (is_big_endian_) {
