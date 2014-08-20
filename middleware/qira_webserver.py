@@ -32,7 +32,7 @@ import time
 import qira_analysis
 import qira_log
 
-LIMIT = 200
+LIMIT = 0
 
 from flask import Flask, Response, redirect
 from flask.ext.socketio import SocketIO, emit

@@ -203,14 +203,23 @@ function redraw_flags() {
     "zoom": "gray"
   };
   var flags_out = {};
+  var lastflagpos = -1.0;
+  //var flag_count = 0;
   for (arr in flags) {
+    if (flags[arr].length == 0) continue;
     var classes = "flag";
     var forknum = parseInt(arr.split(",")[0]);
+    if (maxclnum[forknum] === undefined) continue;
     var clnum = parseInt(arr.split(",")[1]);
     if (clnum < cview[0] || clnum > cview[1]) continue;
+
+    var flagpos = ((clnum-Math.max(maxclnum[forknum][0], cview[0]))/cscale);
+
+    // replacement for limit, don't draw flags too closely
+    if (Math.abs(flagpos-lastflagpos) < 2) continue;
+
     sty = "";
-    if (flags[arr].length == 0) continue;
-    else if (flags[arr].length == 1) {
+    if (flags[arr].length == 1) {
       var col = colors[flags[arr][0]];
       sty = "background-color:"+col+"; color:"+col;
     }
@@ -223,11 +232,13 @@ function redraw_flags() {
       sty += ")";
     }
     
-    if (maxclnum[forknum] === undefined) continue;
     if (flags_out[forknum] === undefined) flags_out[forknum] = "";
 
-    flags_out[forknum] += '<div id="flag'+clnum+'" class="flag" style="'+sty+'; margin-top: '+((clnum-Math.max(maxclnum[forknum][0], cview[0]))/cscale) + "px"+'">'+clnum+'</div>'
+    flags_out[forknum] += '<div id="flag'+clnum+'" class="flag" style="'+sty+'; margin-top: '+flagpos+"px"+'">'+clnum+'</div>'
+    //flag_count += 1;
+    lastflagpos = flagpos;
   }
+  //p("drew "+flag_count+" flags");
   for (forknum in flags_out) {
     $('#vtimeline'+forknum).html(flags_out[forknum]);
   }
@@ -245,7 +256,7 @@ function remove_flags(type, forknum) {
     if (forknum !== undefined && forknum != tforknum) continue;
     var index = flags[arr].indexOf(type);
     while (index != -1) {
-      flags[arr].splice(index, 1)
+      flags[arr].splice(index, 1);
       index = flags[arr].indexOf(type);
     }
     if (flags[arr].length == 0) delete flags[arr];
