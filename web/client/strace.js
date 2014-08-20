@@ -30,17 +30,6 @@ Deps.autorun(function() { DA("redrawing strace");
   redraw_strace();
 });
 
-
-Deps.autorun(function() { DA("regetting straces, should be PUSH");
-  var maxclnum = Session.get("max_clnum");
-  var forknum = Session.get("forknum");
-  // TODO: only get the updated straces
-  stream.emit("getstrace", forknum);
-  /*for (i in maxclnum) {
-    stream.emit("getstrace", i);
-  }*/
-});
-
 Deps.autorun(function() { DA("updating sview on fork/cl change");
   var forknum = Session.get("forknum");
   var clnum = Session.get("clnum");

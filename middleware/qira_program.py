@@ -407,8 +407,32 @@ class Trace:
     self.analysisready = False
     self.picture = None
     self.needs_update = False
+    self.strace = []
 
     threading.Thread(target=self.analysis_thread).start()
+
+  def read_strace_file(self):
+    try:
+      f = open(qira_config.TRACE_FILE_BASE+str(int(self.forknum))+"_strace").read()
+    except:
+      return "no strace"
+
+    f = ''.join(filter(lambda x: ord(x) < 0x80, f))
+    ret = []
+    for ff in f.split("\n"):
+      if ff == '':
+        continue
+      ff = ff.split(" ")
+      try:
+        clnum = int(ff[0])
+      except:
+        continue
+      # i think this filter isn't so useful now
+      pid = int(ff[1])
+      sc = " ".join(ff[2:])
+      ret.append({"clnum": clnum, "pid":pid, "sc": sc})
+
+    self.strace = ret
 
   def analysis_thread(self):
     #print "*** started analysis_thread"

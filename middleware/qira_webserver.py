@@ -59,6 +59,7 @@ def push_trace_update(i):
     #print t.forknum, t.picture
     socketio.emit('setpicture', {"forknum":t.forknum, "data":t.picture,
       "minclnum":t.minclnum, "maxclnum":t.maxclnum}, namespace='/qira')
+  socketio.emit('strace', {'forknum': t.forknum, 'dat': t.strace}, namespace='/qira')
   t.needs_update = False
 
 def push_updates(full = True):
@@ -83,6 +84,9 @@ def mwpoll():
   # poll for updates on existing
   for tn in program.traces:
     if program.traces[tn].db.did_update():
+      t = program.traces[tn]
+      t.read_strace_file()
+      socketio.emit('strace', {'forknum': t.forknum, 'dat': t.strace}, namespace='/qira')
       did_update = True
 
     # trace specific stuff
@@ -343,37 +347,6 @@ def getregisters(forknum, clnum):
     ret.append(rret)
 
   emit('registers', ret)
-
-@socketio.on('getstrace', namespace='/qira')
-@socket_method
-def get_strace(forknum):
-  trace = program.traces[forknum]
-  try:
-    f = open(qira_config.TRACE_FILE_BASE+str(int(forknum))+"_strace").read()
-  except:
-    return "no strace"
-
-  f = ''.join(filter(lambda x: ord(x) < 0x80, f))
-  ret = []
-  for ff in f.split("\n"):
-    if ff == '':
-      continue
-    ff = ff.split(" ")
-    try:
-      clnum = int(ff[0])
-    except:
-      continue
-    # i think this filter isn't so useful now
-    """
-    if clnum == trace.db.get_minclnum():
-      # filter the boring syscalls
-      continue
-    """
-    pid = int(ff[1])
-    sc = " ".join(ff[2:])
-    ret.append({"clnum": clnum, "pid":pid, "sc": sc})
-  # LIMIT for web interface
-  emit('strace', {'forknum': forknum, 'dat': ret})
 
 @app.route("/s/<b64search>")
 def do_search(b64search):
