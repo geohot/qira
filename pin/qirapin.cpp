@@ -29,8 +29,10 @@ extern bool CreateDirectoryA(const char *x, void *y); // Fix with real windows h
 #ifdef TARGET_LINUX
   #include "strace/syscalls.h"
   #if defined(TARGET_IA32E)
+    #define SYS_READ 0
     #include "strace/syscallents_64.h"
   #else
+    #define SYS_READ 3
     #include "strace/syscallents_32.h"
   #endif
 #endif
@@ -116,7 +118,7 @@ string *image_folder = NULL;
 void new_trace_files() {
 	char pathbase[1024];
 	char path[1024];
-	sprintf(pathbase, "%s/%ld%d", KnobOutputDir.Value().c_str(), time(NULL), PIN_GetPid());
+	sprintf(pathbase, "%s/%ld%d", KnobOutputDir.Value().c_str(), time(NULL)-1408570000, PIN_GetPid());
 
 	mkdir(KnobOutputDir.Value().c_str(), 0755);
 	
@@ -203,9 +205,14 @@ ADDRINT RecordMemWrite1(ADDRINT addr, ADDRINT oldval) {
 }
 ADDRINT RecordMemWrite2(ADDRINT addr, UINT32 size) {
 	UINT64 value[16];
-	ASSERT(size <= sizeof(value), "wow");
-	PIN_SafeCopy(value, (const VOID *)addr, size); // Can assume it worked.
-	add_big_change(addr, value, IS_MEM|IS_WRITE, size);
+  if (size > sizeof(value)) {
+    // dangerous address access!
+    add_big_change(addr, value, IS_MEM|IS_WRITE, size);
+  } else {
+    ASSERT(size <= sizeof(value), "wow");
+    PIN_SafeCopy(value, (const VOID *)addr, size); // Can assume it worked.
+    add_big_change(addr, value, IS_MEM|IS_WRITE, size);
+  }
 	return 0;
 }
 
@@ -363,9 +370,13 @@ inline VOID SysBefore(ADDRINT ip, ADDRINT num,
 {
 }
 
+int sys_nr;
+ADDRINT arg1;
+
 VOID SyscallEntry(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOID *v) {
   #ifdef TARGET_LINUX
-    int sys_nr = PIN_GetSyscallNumber(ctxt, std);
+    sys_nr = (int)PIN_GetSyscallNumber(ctxt, std);
+    arg1 = PIN_GetSyscallArgument(ctxt, std, 1);
     if (sys_nr < MAX_SYSCALL_NUM) {
       fprintf(strace_file, "%u %u %s(", logstate->changelist_number, logstate->this_pid, syscalls[sys_nr].name);
       int first = 1;
@@ -404,8 +415,15 @@ VOID SyscallEntry(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOI
 }
 
 VOID SyscallExit(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOID *v) {
-	fprintf(strace_file,") = %p\n", (void*)PIN_GetSyscallReturn(ctxt, std));
+  long syscall_return = PIN_GetSyscallReturn(ctxt, std);
+	fprintf(strace_file,") = %p\n", (void*)syscall_return);
 	fflush(strace_file);
+  #ifdef TARGET_LINUX
+    // geohot doesn't approve of this hack, even though he wrote it
+    if (sys_nr == SYS_READ) {
+      RecordMemWrite2(arg1, syscall_return);
+    }
+  #endif
 }
 
 ////////////////////////////////////////////////////////////////

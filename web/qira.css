@@ -76,13 +76,12 @@ body {
   width: 165px;
   border: 1px solid black;
   padding: 2px;
-  margin: 5px;
+  margin: 3px;
 }
 
 #control_fork {
   margin-left: 0px;
   width: 50px;
-  margin-right: 0px;
 }
 
 #control_changeeditor {
@@ -100,13 +99,11 @@ body {
 
 #control_clnum {
   width: 115px;
-  margin-right: 0px;
   color: blue;
 }
 
 #control_forknum {
-  margin-left: 0px;
-  width: 100px;
+  width: 120px;
   color: #555555;
 }
 
