@@ -430,6 +430,10 @@ class Trace:
       # i think this filter isn't so useful now
       pid = int(ff[1])
       sc = " ".join(ff[2:])
+      try:
+        return_code = int(sc.split(") = ")[1].split(" ")[0], 0)
+      except:
+        pass
       ret.append({"clnum": clnum, "pid":pid, "sc": sc})
 
     self.strace = ret

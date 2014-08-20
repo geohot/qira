@@ -135,7 +135,7 @@ bool Trace::ConnectToFileAndStart(char *filename, int register_size, int registe
   registers_.resize(register_count_);
 
 #ifdef _WIN32
-  fd_ = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+  fd_ = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 #else
   fd_ = open(filename, O_RDONLY);
   if (fd_ <= 0) return false;

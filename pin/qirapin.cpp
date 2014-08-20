@@ -33,14 +33,23 @@ extern bool CreateDirectoryA(const char *x, void *y); // Fix with real windows h
 #define IS_SYSCALL  0x08000000
 #define SIZE_MASK   0xFF
 
-static struct _logstate {
+static struct logstate {
 	uint32_t change_count;
 	uint32_t changelist_number;
 	uint32_t is_filtered;
 	uint32_t first_changelist_number;
 	uint32_t parent_id;
 	uint32_t this_pid;
-} logstate;
+} *logstate;
+
+static struct change {
+  uint64_t address;
+  uint64_t data;
+  uint32_t changelist_number;
+  uint32_t flags;
+} *change;
+
+size_t change_length;
 
 KNOB<string> KnobOutputDir(KNOB_MODE_WRITEONCE, "pintool", "o",
 	#ifdef TARGET_WINDOWS
@@ -61,32 +70,61 @@ KNOB<BOOL> KnobMakeStandaloneTrace(KNOB_MODE_WRITEONCE, "pintool", "standalone",
 "produce trace files suitable for moving to other systems.");
 #endif
 
-FILE *trace_file = NULL;
+#ifdef TARGET_WINDOWS
+#include <Windows.h>
+#define TRACEFILE_TYPE HANDLE
+#define OPEN_TRACEFILE(fn) CreateFile(filename, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE, \
+  NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL)
+#define CLOSE_TRACEFILE(x) CloseHandle(x)
+#define MMAP_TRACEFILE(x, size) { \
+  if (change == NULL) UnmapViewOfFile(change); \
+  ftruncate(x, size); \
+  HANDLE fileMapping = CreateFileMapping(fd_, NULL, PAGE_READWRITE, 0, 0, NULL); \
+  change = (struct change *)MapViewOfFileEx(fileMapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, size, NULL); \
+  change_length = size; \
+  logstate = (struct logstate*)change; \
+}
+#else
+#include <fcntl.h>
+#include <sys/mman.h>
+#define TRACEFILE_TYPE int
+#define OPEN_TRACEFILE(fn) open(fn, O_RDWR|O_CREAT, 0644)
+#define CLOSE_TRACEFILE(x) close(x)
+#define MMAP_TRACEFILE(x, size) { \
+  if (change == NULL) munmap(change, change_length); \
+  ftruncate(x, size); \
+  change = (struct change*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, x, 0); \
+  change_length = size; \
+  logstate = (struct logstate*)change; \
+}
+#endif
+
+TRACEFILE_TYPE trace_file = 0;
 FILE *strace_file = NULL;
 FILE *base_file = NULL;
 string *image_folder = NULL;
-char trace_file_buffer[16<<10];
+
 void new_trace_files() {
 	char pathbase[1024];
 	char path[1024];
 	sprintf(pathbase, "%s/%ld%d", KnobOutputDir.Value().c_str(), time(NULL), PIN_GetPid());
-	
+
 	mkdir(KnobOutputDir.Value().c_str(), 0755);
 	
-	if(trace_file) fpurge(trace_file), fclose(trace_file);
-	trace_file = fopen(pathbase, "wb");
+	if(trace_file) CLOSE_TRACEFILE(trace_file);
+  trace_file = OPEN_TRACEFILE(pathbase);
 	ASSERT(trace_file, "Failed to open trace output.");
-	setvbuf(trace_file, trace_file_buffer, _IOFBF, sizeof(trace_file_buffer));
+  MMAP_TRACEFILE(trace_file, sizeof(struct logstate));
 	
 	if(strace_file) fpurge(strace_file), fclose(strace_file);
 	sprintf(path, "%s_strace", pathbase);
 	strace_file = fopen(path, "wb");
-	ASSERT(strace_file, "Failed to open trace output.");
+	ASSERT(strace_file, "Failed to open strace output.");
 	
 	if(base_file) fpurge(base_file), fclose(base_file);
 	sprintf(path, "%s_base", pathbase);
 	base_file = fopen(path, "wb");
-	ASSERT(base_file, "Failed to open trace output.");
+	ASSERT(base_file, "Failed to open base output.");
 
 	if(KnobMakeStandaloneTrace) {
 		image_folder = new string(pathbase);
@@ -96,18 +134,15 @@ void new_trace_files() {
 }
 
 static void add_change(uint64_t addr, uint64_t data, uint32_t flags) {
-	struct {
-		uint64_t address;
-		uint64_t data;
-		uint32_t changelist_number;
-		uint32_t flags;
-	} change;
-	change.address = addr;
-	change.data = data;
-	change.changelist_number = logstate.changelist_number;
-	change.flags = flags|IS_VALID;
-	fwrite(&change, sizeof(change), 1, trace_file);
-	logstate.change_count++;
+  int cn = logstate->change_count;
+  if (change_length < cn * sizeof(struct change)) {
+    MMAP_TRACEFILE(trace_file, change_length*2);
+  }
+	change[cn].address = addr;
+	change[cn].data = data;
+	change[cn].changelist_number = logstate->changelist_number;
+	change[cn].flags = flags|IS_VALID;
+	logstate->change_count++;
 }
 
 static void add_big_change(uint64_t addr, const void *data, uint32_t flags, size_t size) {
@@ -134,7 +169,7 @@ static ADDRINT filter_ip_high;
 // TODO: See if merging analysis routines improves perf.
 
 VOID RecordStart(ADDRINT ip, UINT32 size) {
-	logstate.changelist_number++;
+	logstate->changelist_number++;
 	add_change(ip, size, IS_START);
 }
 
@@ -170,7 +205,28 @@ VOID RecordSyscall(ADDRINT num) {
 }
 
 UINT32 RegToQiraRegAddr(REG r) {
-	if(sizeof(ADDRINT) == 4) {
+  #if defined(TARGET_IA32E)
+		switch(REG_FullRegName(r)) {
+			case REG_GAX: return 0;
+			case REG_GCX: return 8;
+			case REG_GDX: return 16;
+			case REG_GBX: return 24;
+			case REG_STACK_PTR: return 32;
+			case REG_GBP: return 40;
+			case REG_GSI: return 48;
+			case REG_GDI: return 56;
+			case REG_R8:  return 8*8;
+			case REG_R9:  return 9*8;
+			case REG_R10: return 10*8;
+			case REG_R11: return 11*8;
+			case REG_R12: return 12*8;
+			case REG_R13: return 13*8;
+			case REG_R14: return 14*8;
+			case REG_R15: return 15*8;
+			case REG_INST_PTR: return 16*8;
+			default: return 1024;
+		}
+  #else
 		switch(REG_FullRegName(r)) {
 			case REG_EAX: return 0;
 			case REG_ECX: return 4;
@@ -183,20 +239,7 @@ UINT32 RegToQiraRegAddr(REG r) {
 			case REG_EIP: return 32;
 			default: return 1024;
 		}
-	} else {
-		switch(REG_FullRegName(r)) {
-			case REG_GAX: return 0;
-			case REG_GCX: return 8;
-			case REG_GDX: return 16;
-			case REG_GBX: return 24;
-			case REG_STACK_PTR: return 32;
-			case REG_GBP: return 40;
-			case REG_GSI: return 48;
-			case REG_GDI: return 56;
-			case REG_INST_PTR: return 64;
-			default: return 1024;
-		}
-	}
+  #endif
 }
 
 VOID Instruction(INS ins, VOID *v) {
@@ -313,7 +356,7 @@ inline VOID SysBefore(ADDRINT ip, ADDRINT num,
 
 VOID SyscallEntry(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOID *v) {
 	fprintf(strace_file, "%u %u %ld(%p, %p, %p, %p, %p, %p)",
-    logstate.changelist_number, logstate.this_pid,
+    logstate->changelist_number, logstate->this_pid,
 		(long)PIN_GetSyscallNumber(ctxt, std),
 		(void*)PIN_GetSyscallArgument(ctxt, std, 0), (void*)PIN_GetSyscallArgument(ctxt, std, 1), (void*)PIN_GetSyscallArgument(ctxt, std, 2),
 		(void*)PIN_GetSyscallArgument(ctxt, std, 3), (void*)PIN_GetSyscallArgument(ctxt, std, 4), (void*)PIN_GetSyscallArgument(ctxt, std, 5)
@@ -395,19 +438,15 @@ VOID ThreadFini(THREADID tid, const CONTEXT *ctxt, INT32 code, VOID *v) {
 }
 
 VOID Fini(INT32 code, VOID *v) {
-	fflush(trace_file);
-	fseek(trace_file, 0L, SEEK_SET);
-	fwrite(&logstate, sizeof(logstate), 1, trace_file);
-	fclose(trace_file);
+	CLOSE_TRACEFILE(trace_file);
 }
 
 VOID ForkChild(THREADID threadid, const CONTEXT *ctx, VOID *v) {
 	new_trace_files();
-	logstate.parent_id = logstate.this_pid;
-	logstate.this_pid = PIN_GetPid();
-	logstate.first_changelist_number = logstate.change_count;
-	logstate.change_count = 0;
-	fwrite(&logstate, sizeof(logstate), 1, trace_file);
+	logstate->parent_id = logstate->this_pid;
+	logstate->this_pid = PIN_GetPid();
+	logstate->first_changelist_number = logstate->change_count;
+	logstate->change_count = 1;
 }
 
 int main(int argc, char *argv[]) {
@@ -425,13 +464,12 @@ int main(int argc, char *argv[]) {
 	}
 
 	new_trace_files();
-	logstate.change_count = 0;
-	logstate.changelist_number = 0;
-	logstate.is_filtered = 0;
-	logstate.first_changelist_number = 0;
-	logstate.parent_id = -1;
-	logstate.this_pid = PIN_GetPid();
-	fwrite(&logstate, sizeof(logstate), 1, trace_file);
+	logstate->change_count = 1;
+	logstate->changelist_number = 0;
+	logstate->is_filtered = 0;
+	logstate->first_changelist_number = 0;
+	logstate->parent_id = -1;
+  logstate->this_pid = PIN_GetPid();
 
 	PIN_AddFiniFunction(Fini, 0);
 
@@ -452,3 +490,4 @@ int main(int argc, char *argv[]) {
 
 	PIN_StartProgram();
 }
+
