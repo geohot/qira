@@ -415,6 +415,7 @@ class Trace:
     self.picture = None
     self.needs_update = False
     self.strace = []
+    self.mapped = []
 
     threading.Thread(target=self.analysis_thread).start()
 
@@ -426,6 +427,7 @@ class Trace:
 
     f = ''.join(filter(lambda x: ord(x) < 0x80, f))
     ret = []
+    files = {}
     for ff in f.split("\n"):
       if ff == '':
         continue
@@ -439,6 +441,31 @@ class Trace:
       sc = " ".join(ff[2:])
       try:
         return_code = int(sc.split(") = ")[1].split(" ")[0], 0)
+        fxn = sc.split("(")[0]
+        if fxn == "open" and return_code != -1:
+          firststr = sc.split('\"')[1]
+          files[return_code] = firststr
+        elif fxn[0:4] == "mmap":
+          args = sc.split(",")
+          sz = int(args[1], 0)
+          fil = int(args[4], 0)
+          off = int(args[5].split(")")[0], 0)
+          mapp = (files[fil], sz, off, return_code)
+          if mapp not in self.mapped:
+            self.mapped.append(mapp)
+            print "*** mapping", files[fil], hex(sz), hex(off), "@", hex(return_code),
+            try:
+              try:
+                f = open(os.environ['QEMU_LD_PREFIX']+"/"+files[fil])
+              except:
+                f = open(files[fil])
+              f.seek(off)
+              dat = f.read(sz)
+              self.base_memory[(return_code, return_code+len(dat))] = dat
+              print "done"
+            except Exception, e:
+              print e
+
       except:
         pass
       ret.append({"clnum": clnum, "pid":pid, "sc": sc})
