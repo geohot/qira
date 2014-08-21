@@ -97,11 +97,7 @@ static void update_address(const char *type, ea_t addr) {
   ws_send(tmp);
 }
 
-#ifdef _WIN32
-static int __stdcall hook(void *user_data, int event_id, va_list va) {
-#else
-static int hook(void *user_data, int event_id, va_list va) {
-#endif
+static int idaapi hook(void *user_data, int event_id, va_list va) {
   static ea_t old_addr = 0;
   ea_t addr;
   if (event_id == view_curpos) {
@@ -133,7 +129,7 @@ static struct libwebsocket_protocols protocols[] = {
 qthread_t websockets_thread;
 int websockets_running;
 
-int websocket_thread(void *) {
+int idaapi websocket_thread(void *) {
   struct libwebsocket_context* context;
 
 	struct lws_context_creation_info info;
@@ -165,7 +161,7 @@ int websocket_thread(void *) {
 
 void start_websocket_thread() {
   websockets_running = 1;
-  websockets_thread = qthread_create((qthread_cb_t)websocket_thread, NULL);
+  websockets_thread = qthread_create(websocket_thread, NULL);
 }
 
 void exit_websocket_thread() {
