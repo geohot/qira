@@ -14,7 +14,6 @@ old/qiradb/qiradb
 db/
 qemu/qemu-2*
 distrib/
-libs/
 qiradb/build
 cda/clang
 cda/include
@@ -27,4 +26,5 @@ pin.log
 *~
 cda/codesearch-*
 *.DS_Store
+/libs/
 

@@ -1,5 +1,4 @@
-#!/bin/bash
-set -e
+#!/bin/bash -e
 
 SDKROOT=~/build/idasdk66
 unamestr=$(uname)

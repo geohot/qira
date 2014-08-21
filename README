@@ -1,9 +1,16 @@
 QIRA is a competitor to strace and gdb
+See http://qira.me/
 
 == Installation ==
 
-./install.sh should handle everything for both release and trunk
-./fetchlibs.sh will fetch the libraries for armhf, armel, and ppc
+./install.sh should handle everything for a base QIRA install
+
+
+== Installation Extras
+
+./fetchlibs.sh will fetch the libraries for armhf, armel, aarch64, and ppc
+./cda_build.sh will install CDA, allowing cda and --cda to work
+./pin_build.sh will install the QIRA PIN plugin, allowing --pin to work
 
 
 == UI ==
@@ -68,10 +75,10 @@ Run install.bat
 
 == Using CDA ==
 
-Pass either --cda or --cda-only to QIRA, or just call "cda binary"
+Pass either --cda to QIRA, or just call "cda binary"
 
 The binary must have DWARF data, and the source files must exist on the system
 
-Without cda-only, you have to go to localhost:3002/cda
+If you used --cda, you have to go to localhost:3002/cda
 Everything should be intuitive, except press '/' to regex search
 
