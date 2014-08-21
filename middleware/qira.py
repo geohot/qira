@@ -23,12 +23,11 @@ if __name__ == '__main__':
   parser.add_argument("--gate-trace", metavar="ADDRESS", help="don't start tracing until this address is hit")
   parser.add_argument("--flush-cache", help="flush all QIRA caches", action="store_true")
   parser.add_argument("--dwarf", help="parse program dwarf data", action="store_true")
-  if os.path.isdir(basedir+"/../cda"):
-    parser.add_argument("--cda", help="use CDA to view source(implies dwarf)", action="store_true")
-  parser.add_argument("--pin", help="use pin as the backend", action="store_true")
-  parser.add_argument("--web-host", help="listen address for web interface. 127.0.0.1 by default", default=qira_config.WEB_HOST)
-  parser.add_argument("--web-port", help="listen port for web interface. 3002 by default", type=int, default=qira_config.WEB_PORT)
-  parser.add_argument("--socat-port", help="listen port for socat. 4000 by default", type=int, default=qira_config.SOCAT_PORT)
+  parser.add_argument("--cda", help="use CDA to view source, requires ./cda_build.sh", action="store_true")
+  parser.add_argument("--pin", help="use pin as the backend, requires ./pin_build.sh", action="store_true")
+  parser.add_argument("--web-host", metavar="HOST", help="listen address for web interface. 127.0.0.1 by default", default=qira_config.WEB_HOST)
+  parser.add_argument("--web-port", metavar="PORT", help="listen port for web interface. 3002 by default", type=int, default=qira_config.WEB_PORT)
+  parser.add_argument("--socat-port", metavar="PORT", help="listen port for socat. 4000 by default", type=int, default=qira_config.SOCAT_PORT)
 
   # parse arguments, first try
   args, unknown = parser.parse_known_args()
@@ -64,12 +63,9 @@ if __name__ == '__main__':
     qira_config.TRACE_LIBRARIES = True
   if args.dwarf:
     qira_config.WITH_DWARF = True
-  try:
-    if args.cda:
-      qira_config.WITH_CDA = True
-      qira_config.WITH_DWARF = True
-  except:
-    pass
+  if args.cda:
+    qira_config.WITH_CDA = True
+    qira_config.WITH_DWARF = True
   if args.flush_cache:
     print "*** flushing caches"
     os.system("rm -rfv /tmp/qira*")
