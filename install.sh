@@ -30,3 +30,12 @@ sudo $PIP install --upgrade html flask-socketio pillow pyelftools socketIO-clien
 echo "making symlink"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira
 
+echo "***************************************"
+echo "  Thanks for installing QIRA"
+echo "  Check out README for more info"
+echo "  Or just dive in with 'qira /bin/ls'"
+echo "  And point chrome to localhost:3002"
+echo "    ~geohot" 
+
+
+
