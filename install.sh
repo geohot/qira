@@ -37,5 +37,3 @@ echo "  Or just dive in with 'qira /bin/ls'"
 echo "  And point chrome to localhost:3002"
 echo "    ~geohot" 
 
-
-
