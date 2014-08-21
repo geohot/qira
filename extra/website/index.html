@@ -26,7 +26,7 @@
 </style>
 
     <title>qira</title>
-    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap.min.css" rel="stylesheet">
   </head>
 
   <body>
@@ -79,7 +79,9 @@ Or navigate between them with j and k</pre>
         Writes are <span class="datawrite">bright yellow</span>.<br/><br/>
         The selected change is <span class="change">blue</span>.</h4>
         </td></tr></table>
-        </dl>
+        <h2>IDA Integration</h2>
+        <img class="img-responsive" src="img/ida.png"></img>
+        <h4>Just install the plugin in ~/qira/ida!</h4>
         <h2>qira -s ./a.out</h2>
         <kbd># or if you like long commands</kbd><br/>
         <kbd>socat tcp-l:4000,reuseaddr,fork exec:"qira ./a.out"</kbd>
@@ -87,8 +89,8 @@ Or navigate between them with j and k</pre>
     </div>
 
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-    <script src="/js/bootstrap.min.js"></script>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
   </body>
 </html>
 
