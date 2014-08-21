@@ -1,3 +1,11 @@
+function p(a) { console.log(a); }
+//function DA(a) { p("DA: "+a); }
+//function DS(a) { p("DS: "+a); }
+function DH(a) { p("DH: "+a); }
+function DA(a) {}
+function DS(a) {}
+//function DH(a) {}
+
 if (window.location.port == 3000) {
   // for meteor development
   STREAM_URL = "http://localhost:3002/qira";
@@ -5,11 +13,49 @@ if (window.location.port == 3000) {
   STREAM_URL = window.location.origin+"/qira";
 }
 
-function p(a) { console.log(a); }
-//function DA(a) { p("DA: "+a); }
-//function DS(a) { p("DS: "+a); }
-function DA(a) {}
-function DS(a) {}
+// ** history ***
+function push_history(reason, replace) {
+  var json = {};
+  // the three views
+  json['cview'] = Session.get('cview');
+  json['dview'] = Session.get('dview');
+  json['sview'] = Session.get('sview');
+
+  // any addresses that we navigated to in a reasonable way
+  json['clnum'] = Session.get('clnum');
+  json['daddr'] = Session.get('daddr');
+  //json['iaddr'] = Session.get('iaddr');
+  
+  if (JSON.stringify(history.state) != JSON.stringify(json)) {
+    if (replace == true) {
+      DH("REPL " + JSON.stringify(json) + " from "+reason);
+      history.replaceState(json, "qira", "");
+    } else {
+      DH("PUSH " + JSON.stringify(json) + " from "+reason);
+      history.pushState(json, "qira", "");
+    }
+  }
+}
+
+window.onpopstate = function(e) {
+  DH("POP  " + JSON.stringify(e.state));
+  for (k in e.state) {
+    if (Session.get(k) != e.state[k]) { 
+      Session.set(k, e.state[k]);
+    }
+  }
+};
+
+// this deals with scrolling
+var historyTimeout = undefined;
+Deps.autorun(function() { DA("history");
+  Session.get('cview'); Session.get('dview'); Session.get('sview');
+  Session.get('clnum'); Session.get('daddr');
+  window.clearTimeout(historyTimeout);
+  window.setTimeout(function() { push_history("autorun"); }, 1000);
+});
+
+// ** end history ***
 
 function fhex(a) {
   return parseInt(a, 16);
@@ -23,6 +69,7 @@ function hex(a) {
     return "0x"+a.toString(16);
   }
 }
+
 
 // s is a hex number
 // num is the number of digits to round off
@@ -56,11 +103,11 @@ function get_data_type(v) {
 }
 
 var escapeHTML = (function () {
-    'use strict';
-    var chr = { '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' };
-    return function (text) {
-        return text.replace(/[\"&<>]/g, function (a) { return chr[a]; });
-    };
+  'use strict';
+  var chr = { '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' };
+  return function (text) {
+    return text.replace(/[\"&<>]/g, function (a) { return chr[a]; });
+  };
 }());
 
 function highlight_addresses(a) {
@@ -83,6 +130,13 @@ function highlight_addresses(a) {
 function update_dview(addr) {
   Session.set('daddr', addr);
   Session.set('dview', string_add(string_round(addr, 1), -0x20));
+  push_history("update dview");
+}
+
+function update_iaddr(addr) {
+  Session.set("iaddr", e.target.textContent);
+  Session.set("dirtyiaddr", true);
+  push_history("update iaddr");
 }
 
 function abs_maxclnum() {
@@ -139,5 +193,6 @@ function zoom_out_max(dontforce) {
   if (max === undefined) return;
   if (dontforce === true)  Session.setDefault("cview", [0, max]);
   else Session.set("cview", [0, max]);
+  push_history("zoom out cview");
 }
 

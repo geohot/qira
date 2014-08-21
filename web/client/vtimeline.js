@@ -104,11 +104,14 @@ function register_drag_zoom() {
         if (forknum != -1) {
           Session.set("clnum", down);
           Session.set("forknum", forknum);
+          push_history("click vtimeline");
         }
       } else if (down < up) {
         Session.set("cview", [down, up]);
+        push_history("zoom cview");
       } else if (down > up) {
         Session.set("cview", [up, down]);
+        push_history("zoom cview");
       }
     }
     return false;
@@ -295,6 +298,7 @@ go_to_flag = function (next, data) {
       Session.set("clnum", cls[idx-1])
     }
   }
+  push_history("go to flag");
 };
 
 Deps.autorun(function() { DA("updating bounds flags");

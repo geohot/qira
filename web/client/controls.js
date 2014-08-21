@@ -1,13 +1,14 @@
 stream = io.connect(STREAM_URL);
 
+
 function on_setiaddr(iaddr) { DS("setiaddr");
-  Session.set("dirtyiaddr", true);
-  Session.set('iaddr', iaddr);
+  update_iaddr(iaddr);
 } stream.on('setiaddr', on_setiaddr);
 
 function on_setclnum(forknum, clnum) { DS("setclnum");
   Session.set('forknum', forknum);
   Session.set('clnum', clnum);
+  push_history("remote setclnum");
 } stream.on('setclnum', on_setclnum);
 
 Deps.autorun(function() { DA("set backend know iaddr changed");
@@ -81,40 +82,22 @@ window.onkeydown = function(e) {
   }
 };
 
-function push_history() {
-  var json = {};
-  // the three views
-  json['cview'] = Session.get('cview');
-  json['dview'] = Session.get('dview');
-  json['sview'] = Session.get('sview');
 
-  // any addresses that we navigated to in a reasonable way
-  json['clnum'] = Session.get('clnum');
-  json['daddr'] = Session.get('daddr');
-  json['iaddr'] = Session.get('iaddr');
-}
-
-
-window.onpopstate = function(e) {
-  p(e);
-  for (k in e.state) {
-    if (Session.get(k) != e.state[k]) { 
-      Session.set(k, e.state[k]);
-    }
-  }
-};
 
 $(document).ready(function() {
   // control the highlighting of things
   $('body').on('click', '.clnum', function(e) {
     Session.set('clnum', parseInt(e.target.textContent));
+    push_history("click clnum");
   });
   $('body').on('click', '.iaddr', function(e) {
     Session.set('iaddr', e.target.textContent);
+    push_history("click iaddr");
   });
   $('body').on('click', '.data', function(e) {
     var daddr = e.target.getAttribute('id').split("_")[1];
     Session.set('daddr', daddr);
+    push_history("click data");
   });
 
 
@@ -130,8 +113,7 @@ $(document).ready(function() {
   });
 
   $('body').on('contextmenu', '.datainstruction', function(e) {
-    Session.set("iaddr", e.target.textContent);
-    Session.set("dirtyiaddr", true);
+    update_iaddr(e.target.textContent);
     return false;
   });
 
@@ -146,8 +128,7 @@ $(document).ready(function() {
     update_dview(e.target.textContent);
   });
   $('body').on('contextmenu', '.hexdumpdatainstruction', function(e) {
-    Session.set("iaddr", e.target.textContent);
-    Session.set("dirtyiaddr", true);
+    update_iaddr(e.target.textContent);
     return false;
   });
   $('body').on('mousedown', '.hexdumpdataromemory', function(e) { return false; });
@@ -160,6 +141,7 @@ $(document).ready(function() {
     var clnum = parseInt(e.target.textContent);
     Session.set("forknum", forknum);
     Session.set("clnum", clnum);
+    push_history("click flag");
   });
 });
 
