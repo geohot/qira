@@ -307,7 +307,7 @@ def getmemory(forknum, clnum, address, ln):
   trace = program.traces[forknum]
   address = fhex(address)
   dat = trace.fetch_memory(clnum, address, ln)
-  ret = {'address': address, 'len': ln, 'dat': dat, 'is_big_endian': program.tregs[2], 'ptrsize': program.tregs[1]}
+  ret = {'address': ghex(address), 'len': ln, 'dat': dat, 'is_big_endian': program.tregs[2], 'ptrsize': program.tregs[1]}
   emit('memory', ret)
 
 

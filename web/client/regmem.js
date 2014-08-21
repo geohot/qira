@@ -43,11 +43,11 @@ function on_memory(msg) { DS("memory");
   // render the hex editor
   // this isn't updated for numberless
   var addr = msg['address'];
-  var daddr = fhex(Session.get('daddr'))
+  var daddr = Session.get('daddr');
   var PTRSIZE = msg['ptrsize'];
   html = "<table><tr>";
   for (var i = 0; i < msg['len']; i += PTRSIZE) {
-    if ((i&0xF) == 0) html += "</tr><tr><td>"+hex(addr+i)+":</td>";
+    if ((i&0xF) == 0) html += "</tr><tr><td>"+bn_add(addr, i)+":</td>";
     html += "<td></td>";
 
     // check if it's an address
@@ -55,20 +55,14 @@ function on_memory(msg) { DS("memory");
 
     if (msg['is_big_endian']) {
       for (var j = 0; j < PTRSIZE; j++) {
-        if (addr+i+j == daddr) {
-          exclass = "highlight";
-        }
         v *= 0x100;
-        var t = msg['dat'][addr+i+j];
+        var t = msg['dat'][i+j];
         if (t !== undefined) v += t;
       }
     } else {
       for (var j = PTRSIZE-1; j >= 0; j--) {
-        if (addr+i+j == daddr) {
-          exclass = "highlight";
-        }
         v *= 0x100;
-        var t = msg['dat'][addr+i+j];
+        var t = msg['dat'][i+j];
         if (t !== undefined) v += t;
       }
     }
@@ -76,21 +70,21 @@ function on_memory(msg) { DS("memory");
     if (a !== "") {
       var me = v.toString(16);
       me = "0x"+me;
-      var exclass = "data_"+hex(addr+i);
+      var exclass = "data_"+bn_add(addr, i);
       var minwidth = 84;
       if (PTRSIZE == 8) minwidth = 172;
-      html += '<td colspan="'+PTRSIZE+'" style="min-width:'+minwidth+'px" class="data hexdump'+a+' '+exclass+'" id="data_'+hex(addr+i)+'">'+me+"</td>";
+      html += '<td colspan="'+PTRSIZE+'" style="min-width:'+minwidth+'px" class="data hexdump'+a+' '+exclass+'" id="'+exclass+'">'+me+"</td>";
     } else {
       for (var j = 0; j < PTRSIZE; j++) {
-        var ii = msg['dat'][addr+i+j];
+        var ii = msg['dat'][i+j];
         if (ii === undefined) {
           var me = "__";
         } else {
           var me = ii.toString(16);
           if (me.length == 1) me = "0" + me;
         }
-        var exclass = "data_"+hex(addr+i+j);
-        html += '<td class="data '+exclass+'" id="data_'+hex(addr+i+j)+'">'+me+"</td>";
+        var exclass = "data_"+bn_add(addr, i+j);
+        html += '<td class="data '+exclass+'" id="'+exclass+'">'+me+"</td>";
       }
     }
 
@@ -99,7 +93,7 @@ function on_memory(msg) { DS("memory");
       str = "";
       for (var j = 0; j < 0x10; j++) {
         // ewww
-        var ii = msg['dat'][addr+i-(0x10-PTRSIZE)+j];
+        var ii = msg['dat'][i-(0x10-PTRSIZE)+j];
         if (ii == 0x20) str += "&nbsp;";
         else if (ii == 0x26) str += "&amp;";
         else if (ii == 0x3C) str += "&lt;";

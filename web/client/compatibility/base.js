@@ -98,7 +98,7 @@ function update_dview(addr) {
 }
 
 function update_iaddr(addr) {
-  Session.set("iaddr", e.target.textContent);
+  Session.set("iaddr", addr);
   Session.set("dirtyiaddr", true);
   push_history("update iaddr");
 }
