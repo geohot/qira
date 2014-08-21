@@ -57,7 +57,7 @@ function bn_add(s, num) {
     var ts = _fhex("0x"+s.substr(0,s.length-8));
     var ls = _fhex("0x"+s.substr(s.length-8));
     ls += num;
-    ts += (ls/0x10000000) >> 0;
+    ts += (ls/0x100000000) >> 0;
     ls &= 0xFFFFFFFF;
     ret = hex(ls).substr(2);
     while (ret.length != 8) ret = "0" + ret;
