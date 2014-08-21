@@ -96,6 +96,8 @@ KNOB<BOOL> KnobMakeStandaloneTrace(KNOB_MODE_WRITEONCE, "pintool", "standalone",
   logstate = (struct logstate*)change; \
 }
 #else
+#include <unistd.h>
+#include <sys/types.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #define TRACEFILE_TYPE int
