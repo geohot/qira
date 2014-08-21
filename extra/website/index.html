@@ -26,7 +26,7 @@
 </style>
 
     <title>qira</title>
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
   </head>
 
   <body>
@@ -62,10 +62,10 @@
         <p>Linux required, 64-bit Ubuntu recommended</p>
         <kbd>cd ~/ && wget -q0- http://qira.me/dl | unxz | tar x && cd qira && ./install.sh</kbd>
         <h2>b *0x8048446</h2>
-        <samp>Your breakpoint was hit 5 times, at change 90, 111, 128, 145, and 162.<br/>
-        I drew red lines in the vtimeline for you to signify this.<br/>
-        Would you like to see the memory at those times? Just click.<br/>
-        Or navigate between them with j and k</samp>
+<pre style="max-width:620px">Your breakpoint was hit 5 times, at change 90, 111, 128, 145, and 162.
+I drew red lines in the vtimeline for you to signify this.
+Would you like to see the memory at those times? Just click.
+Or navigate between them with j and k</pre>
         <h2>info registers; x/32wx 0xf6ffee80</h2>
         <img class="img-responsive" src="img/hexdump.png"></img>
         <h4>Instructions are <span class="instruction">red</span>. Data is <span class="data">yellow</span>. And registers are colorful.</h4>
@@ -88,7 +88,7 @@
 
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
   </body>
 </html>
 
