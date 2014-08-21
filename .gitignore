@@ -4,10 +4,7 @@ tests/a.out
 tests/*.o
 *.pyc
 ida/*.o
-ida/qira.plx
-ida/qira.pmc
-ida/qira.plx64
-ida/qira.pmc64
+ida/qira.*
 ida/libwebsockets.a
 tests/idb
 old/qiradb/qiradb
