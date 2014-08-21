@@ -419,6 +419,11 @@ static bool tci_compare64(uint64_t u0, uint64_t u1, TCGCond condition)
     return result;
 }
 
+// if it's not softmmu, assume it's user
+#ifndef CONFIG_SOFTMMU
+#define QEMU_USER
+#endif
+
 #define QIRA_TRACKING
 
 #ifdef QIRA_TRACKING
@@ -426,7 +431,10 @@ static bool tci_compare64(uint64_t u0, uint64_t u1, TCGCond condition)
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/file.h>
+
+#ifdef QEMU_USER
 #include "qemu.h"
+#endif
 
 #define QIRA_DEBUG(...) {}
 //#define QIRA_DEBUG qemu_debug
@@ -487,6 +495,7 @@ uint32_t GLOBAL_start_clnum = 1;
 int GLOBAL_parent_id = -1, GLOBAL_id = -1;
 
 int GLOBAL_tracelibraries = 0;
+uint64_t GLOBAL_gatetrace = 0;
 
 #define OPEN_GLOBAL_ASM_FILE { if (unlikely(GLOBAL_asm_file == NULL)) { GLOBAL_asm_file = fopen("/tmp/qira_asm", "a"); } }
 FILE *GLOBAL_asm_file = NULL;
@@ -630,6 +639,8 @@ void track_write(target_ulong base, target_ulong offset, target_ulong data, int 
   //else add_change(offset, data, IS_WRITE | size);
 }
 
+#ifdef QEMU_USER
+
 void track_kernel_read(void *host_addr, target_ulong guest_addr, long len) {
   if (unlikely(GLOBAL_QIRA_did_init == 0)) return;
 
@@ -650,6 +661,8 @@ void track_kernel_write(void *host_addr, target_ulong guest_addr, long len) {
   //for (; i < len; i+=4) add_change(guest_addr+i, ((unsigned int*)host_addr)[i], IS_MEM | IS_WRITE | 32);
   for (; i < len; i+=1) add_change(guest_addr+i, ((unsigned char*)host_addr)[i], IS_MEM | IS_WRITE | 8);
 }
+
+#endif
 
 // careful, this does it twice, MMIO?
 #define R(x,y,z) (track_load(x,(uint64_t)y,z),y)
@@ -739,6 +752,7 @@ int run_QIRA_log_from_fd(CPUArchState *env, int qira_log_fd, uint32_t to_change)
     if (pchange.changelist_number >= to_change) break;
     QIRA_DEBUG("running old change %lX %d\n", pchange.address, pchange.changelist_number);
 
+#ifdef QEMU_USER
 #ifdef R_EAX
     if (flags & IS_SYSCALL) {
       // replay all the syscalls?
@@ -752,12 +766,14 @@ int run_QIRA_log_from_fd(CPUArchState *env, int qira_log_fd, uint32_t to_change)
     }
 #endif
 
+    // wrong for system, we need this
     if (flags & IS_WRITE) {
       void *base;
       if (flags & IS_MEM) { base = g2h(pchange.address); }
       else { base = ((void *)env) + pchange.address; }
       memcpy(base, &pchange.data, (flags&SIZE_MASK) >> 3);
     }
+#endif
     ret++;
   }
   return ret;
@@ -814,15 +830,22 @@ void run_QIRA_log(CPUArchState *env, int this_id, int to_change) {
   printf("+++ REPLAY %d DONE to %d with entry count %d\n", this_id, to_change, count);
 }
 
-bool is_filtered_address(target_ulong pc);
-bool is_filtered_address(target_ulong pc) {
+bool is_filtered_address(target_ulong pc, bool ignore_gatetrace);
+bool is_filtered_address(target_ulong pc, bool ignore_gatetrace) {
   // to remove the warning
   uint64_t bpc = (uint64_t)pc;
+
+  // do this check before the tracelibraries one
+  if (unlikely(GLOBAL_gatetrace) && !ignore_gatetrace) {
+    if (GLOBAL_gatetrace == bpc) GLOBAL_gatetrace = 0;
+    else return true;
+  }
+
   // TODO(geohot): FIX THIS!, filter anything that isn't the user binary and not dynamic
   if (unlikely(GLOBAL_tracelibraries)) {
     return false;
   } else {
-    return ((bpc > 0x40000000 && bpc < 0xf6800000) || bpc >= 0x100000000);
+    return ((bpc > 0x80000000 && bpc < 0xf6800000) || bpc >= 0x100000000);
   }
 }
 
@@ -830,7 +853,7 @@ void real_target_disas(FILE *out, CPUArchState *env, target_ulong code, target_u
 void target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong size, int flags) {
   OPEN_GLOBAL_ASM_FILE
 
-  if (is_filtered_address(code)) return;
+  if (is_filtered_address(code, true)) return;
 
   flock(fileno(GLOBAL_asm_file), LOCK_EX);
   real_target_disas(GLOBAL_asm_file, env, code, size, flags);
@@ -845,7 +868,9 @@ uint32_t GLOBAL_last_fork_change = -1;
 target_long last_pc = 0;
 
 void write_out_base(CPUArchState *env, int id);
+
 void write_out_base(CPUArchState *env, int id) {
+#ifdef QEMU_USER
   CPUState *cpu = ENV_GET_CPU(env);
   TaskState *ts = (TaskState *)cpu->opaque;
 
@@ -904,6 +929,7 @@ void write_out_base(CPUArchState *env, int id) {
   fprintf(f, TARGET_ABI_FMT_lx "-" TARGET_ABI_FMT_lx " %"PRIx64" %s\n", ss, se, (uint64_t)0, envfn);
 
   fclose(f);
+#endif
 }
 
 /* Interpret pseudo code in tb. */
@@ -954,7 +980,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
       GLOBAL_last_was_syscall = 0;
     }
 
-    if (is_filtered_address(tb->pc)) {
+    if (is_filtered_address(tb->pc, false)) {
       GLOBAL_logstate->is_filtered = 1;
     } else {
       if (GLOBAL_logstate->is_filtered == 1) {

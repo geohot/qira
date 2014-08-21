@@ -2,11 +2,7 @@
 #include <structmember.h>
 #include "Trace.h"
 
-#if __cplusplus == 201103L
-#define FE(x,y) for (auto y = x.begin(); y != x.end(); ++y)
-#else
-#define FE(x,y) for (typeof(x.begin()) y = x.begin(); y != x.end(); ++y)
-#endif
+#define FE(z,x,y) for (z y = x.begin(); y != x.end(); ++y)
 
 extern "C" {
 
@@ -56,16 +52,16 @@ static PyObject *did_update(PyTrace *self) {
 static PyObject *fetch_clnums_by_address_and_type(PyTrace *self, PyObject *args) { 
   Address address;
   char type;
-  Clnum start_clnum;
+  Clnum start_clnum, end_clnum;
   unsigned int limit;
-  if (!PyArg_ParseTuple(args, "LcII", &address, &type, &start_clnum, &limit)) { return NULL; }
+  if (!PyArg_ParseTuple(args, "KcIII", &address, &type, &start_clnum, &end_clnum, &limit)) { return NULL; }
   if (self->t == NULL) { return NULL; }
   
-  vector<Clnum> ret = self->t->FetchClnumsByAddressAndType(address, type, start_clnum, limit);
+  vector<Clnum> ret = self->t->FetchClnumsByAddressAndType(address, type, start_clnum, end_clnum, limit);
  
   PyObject *pyret = PyList_New(ret.size());
   int i = 0;
-  FE(ret, it) {
+  FE(vector<Clnum>::iterator, ret, it) {
     PyList_SetItem(pyret, i++, Py_BuildValue("I", *it));
   }
   return pyret;
@@ -81,11 +77,11 @@ static PyObject *fetch_changes_by_clnum(PyTrace *self, PyObject *args) {
 
   PyObject *pyret = PyList_New(ret.size());
   int i = 0;
-  FE(ret, it) {
+  FE(vector<struct change>::iterator, ret, it) {
     // copied (address, data, clnum, flags) from qira_log.py, but type instead of flags
     PyObject *iit = PyDict_New();
-    PyDict_SetItem(iit, Py_BuildValue("s", "address"), Py_BuildValue("L", it->address));
-    PyDict_SetItem(iit, Py_BuildValue("s", "data"), Py_BuildValue("L", it->data));
+    PyDict_SetItem(iit, Py_BuildValue("s", "address"), Py_BuildValue("K", it->address));
+    PyDict_SetItem(iit, Py_BuildValue("s", "data"), Py_BuildValue("K", it->data));
     PyDict_SetItem(iit, Py_BuildValue("s", "clnum"), Py_BuildValue("I", it->clnum));
     PyDict_SetItem(iit, Py_BuildValue("s", "type"), Py_BuildValue("c", Trace::get_type_from_flags(it->flags)));
     PyDict_SetItem(iit, Py_BuildValue("s", "size"), Py_BuildValue("I", it->flags & SIZE_MASK));
@@ -98,14 +94,14 @@ static PyObject *fetch_memory(PyTrace *self, PyObject *args) {
   Clnum clnum;
   Address address;
   int len;
-  if (!PyArg_ParseTuple(args, "ILi", &clnum, &address, &len)) { return NULL; }
+  if (!PyArg_ParseTuple(args, "IKi", &clnum, &address, &len)) { return NULL; }
   if (self->t == NULL) { return NULL; }
 
   vector<MemoryWithValid> ret = self->t->FetchMemory(clnum, address, len);
 
   PyObject *pyret = PyList_New(ret.size());
   int i = 0;
-  FE(ret, it) {
+  FE(vector<MemoryWithValid>::iterator, ret, it) {
     PyList_SetItem(pyret, i++, Py_BuildValue("I", *it));
   }
 
@@ -121,23 +117,27 @@ static PyObject *fetch_registers(PyTrace *self, PyObject *args) {
 
   PyObject *pyret = PyList_New(ret.size());
   int i = 0;
-  FE(ret, it) {
-    PyList_SetItem(pyret, i++, Py_BuildValue("L", *it));
+  FE(vector<uint64_t>::iterator, ret, it) {
+    PyList_SetItem(pyret, i++, Py_BuildValue("K", *it));
   }
   return pyret;
 }
 
 static PyObject *get_pmaps(PyTrace *self, PyObject *args) {
   if (self->t == NULL) { return NULL; }
-  set<Address> ip = self->t->GetInstructionPages();
-  set<Address> dp = self->t->GetDataPages();
+  map<Address, char> p = self->t->GetPages();
   PyObject *iit = PyDict_New();
-  // eww these strings are long
-  FE(dp, it) {
-    PyDict_SetItem(iit, Py_BuildValue("L", *it), Py_BuildValue("s", "memory"));
-  }
-  FE(ip, it) {
-    PyDict_SetItem(iit, Py_BuildValue("L", *it), Py_BuildValue("s", "instruction"));
+  // no comma allowed in the template
+  typedef map<Address, char>::iterator p_iter;
+  FE(p_iter, p, it) {
+    // eww these strings are long
+    if (it->second & PAGE_INSTRUCTION) {
+      PyDict_SetItem(iit, Py_BuildValue("K", it->first), Py_BuildValue("s", "instruction"));
+    } else if (it->second & PAGE_WRITE) {
+      PyDict_SetItem(iit, Py_BuildValue("K", it->first), Py_BuildValue("s", "memory"));
+    } else if (it->second & PAGE_READ) {
+      PyDict_SetItem(iit, Py_BuildValue("K", it->first), Py_BuildValue("s", "romemory"));
+    }
   }
   return iit;
 }

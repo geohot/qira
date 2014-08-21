@@ -1,6 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
+import qira_config
 import qira_program
 import time
+import math
 
 def ghex(a):
   if a == None:
@@ -16,7 +18,7 @@ def draw_multigraph(blocks):
   trace = []
   cls = []
   for i in range(len(blocks)):
-    h = ghex(blocks[i]['start']) + "-" + ghex(blocks[i]['end'])
+    h = ghex(blocks[i]['start']) + "-" + ghex(blocks[i]['end']) + "\n" + blocks[i]['dis'].replace("\n", "\\l") + "\\l"
     if h not in arr:
       arr.append(h)
     trace.append(arr.index(h))
@@ -42,6 +44,8 @@ def draw_multigraph(blocks):
   print "trace size",len(trace)
   print "realblock count",len(arr)
 
+  # coalesce loops
+  """
   print "counting edges"
   for i in range(0, len(trace)-1):
     #e = pydot.Edge(nodes[trace[i]], nodes[trace[i+1]], label=str(cls[i+1]), headport="n", tailport="s")
@@ -64,12 +68,18 @@ def draw_multigraph(blocks):
     else:
       e = pydot.Edge(te[0], te[1], headport="n", tailport="s")
     graph.add_edge(e)
+  """
 
-  print "drawing png"
+  print "adding edges"
+  for i in range(0, len(trace)-1):
+    e = pydot.Edge(nodes[trace[i]], nodes[trace[i+1]], label=str(cls[i+1]), headport="n", tailport="s")
+    graph.add_edge(e)
+
+  print "drawing png @ /tmp/graph.png"
   graph.write_png('/tmp/graph.png')
   
 
-def get_blocks(flow):
+def get_blocks(flow, static=True):
   # look at addresses
   # if an address can accept control from two addresses, it starts a basic block
   # if an address can give control to two addresses, it ends a basic block
@@ -85,12 +95,16 @@ def get_blocks(flow):
 
   basic_block_starts = set()
 
-  for (address, length, clnum) in flow:
+  dins = {}
+
+  for (address, length, clnum, ins) in flow:
+    dins[address] = ins
     if next_instruction != None and next_instruction != address:
       # anytime we don't run the next instruction in sequence
       # this is a basic block starts
       # print next_instruction, address, data
-      basic_block_starts.add(address)
+      if static:
+        basic_block_starts.add(address)
       #print " ** BLOCK START ** "
 
     #print clnum, hex(address), length
@@ -122,15 +136,22 @@ def get_blocks(flow):
   cchange = None
   last = None
 
+  def disasm(b, e):
+    ret = []
+    for i in range(b,e+1):
+      if i in dins:
+        ret.append(dins[i])
+    return '\n'.join(ret)
+
   for (address, length, clnum, ins) in flow:
     if cchange == None:
       cchange = (clnum, address)
     if address in basic_block_starts:
-      blocks.append({'clstart': cchange[0], 'clend': last[0], 'start': cchange[1], 'end': last[1]})
+      blocks.append({'clstart': cchange[0], 'clend': last[0], 'start': cchange[1], 'end': last[1], 'dis': disasm(cchange[1], last[1])})
       cchange = (clnum, address)
     last = (clnum, address)
 
-  blocks.append({'clstart': cchange[0], 'clend': last[0], 'start': cchange[1], 'end': last[1]})
+  blocks.append({'clstart': cchange[0], 'clend': last[0], 'start': cchange[1], 'end': last[1], 'dis': disasm(cchange[1], last[1])})
   return blocks
 
 def do_function_analysis(flow):
@@ -244,37 +265,77 @@ def get_depth_map(fxns, maxclnum):
   return dmap
 
 def get_instruction_flow(trace, program, minclnum, maxclnum):
+  start = time.time()
   ret = []
   for i in range(minclnum, maxclnum):
     r = trace.db.fetch_changes_by_clnum(i, 1)
     if len(r) != 1:
       continue
     ins = ""
-    if r[0]['address'] in program.instructions:
+    if program != None and r[0]['data'] > 0:
+      while r[0]['address'] not in program.instructions:
+        #print "sleeping ", hex(r[0]['address'])
+        time.sleep(0.1)
       ins = program.instructions[r[0]['address']]
     ret.append((r[0]['address'], r[0]['data'], r[0]['clnum'], ins))
-      
+    if (time.time() - start) > 0.01:
+      time.sleep(0.01)
+      start = time.time()
   return ret
 
-def get_hacked_depth_map(flow):
+def get_hacked_depth_map(flow, program):
+  start = time.time()
   return_stack = []
   ret = [0]
   for (address, length, clnum, ins) in flow:
     if address in return_stack:
       return_stack = return_stack[0:return_stack.index(address)]
-    if ins[0:5] == "call " or ins[0:6] == "callq ":
-      return_stack.append(address+length)
-    #print return_stack
+    # ugh, so gross
     ret.append(len(return_stack))
+    for test in program.tregs[4]:
+      if ins[0:len(test)] == test:
+        return_stack.append(address+length)
+        break
+    if (time.time() - start) > 0.01:
+      time.sleep(0.01)
+      start = time.time()
+  ret.append(len(return_stack))  # missing last instruction
   return ret
-      
+
+def get_vtimeline_picture(trace, minclnum, maxclnum):
+  if trace.maxd == 0:
+    return None
+
+  r = maxclnum-minclnum
+  sampling = int(math.ceil(r/50000.0))
+
+  from PIL import Image   # sudo pip install pillow
+  import base64
+  import StringIO
+  im_y = int(maxclnum/sampling)
+  im = Image.new( 'RGB', (1, im_y), "black")
+  px = im.load()
+
+  for i in range(0, r, sampling):
+    # could average the sampled
+    c = int((trace.dmap[i]*128.0)/trace.maxd)
+    if i/sampling < im_y:
+      px[0, i/sampling] = (0,c,c)
+
+  buf = StringIO.StringIO()
+  im.save(buf, format='PNG')
+
+  dat = "data:image/png;base64,"+base64.b64encode(buf.getvalue())
+  return dat
 
 def analyze(trace, program):
   minclnum = trace.db.get_minclnum()
   maxclnum = trace.db.get_maxclnum()
+  """
   if maxclnum > 10000:
     # don't analyze if the program is bigger than this
     return None
+  """
   
   flow = get_instruction_flow(trace, program, minclnum, maxclnum)
 
@@ -287,45 +348,67 @@ def analyze(trace, program):
 
   #dmap = get_depth_map(fxns, maxclnum)
   dmap = get_hacked_depth_map(flow)
-  maxd = max(dmap)
-
-  if maxd == 0:
-    return None
-
-  #print dmap
-  #print maxclnum, maxd
-
-  from PIL import Image   # sudo pip install pillow
-  import base64
-  import StringIO
-  im = Image.new( 'RGB', (1, maxclnum), "black")
-  px = im.load()
-
-  for i in range(maxclnum-minclnum):
-    c = int((dmap[i]*128.0)/maxd)
-    #px[0, i] = (int((dmap[i]*255.0)/maxd), 0, 0)
-    #px[0, i] = (c,c,c)
-    px[0, i] = (0,c,c)
-
-  #im = im.resize((50, 1000), Image.ANTIALIAS)
-  buf = StringIO.StringIO()
-  im.save(buf, format='PNG')
-
-  dat = "data:image/png;base64,"+base64.b64encode(buf.getvalue())
-  return dat
   
   #loops = do_loop_analysis(blocks)
   #print loops
 
+def slice(trace, inclnum):
+  def is_store(r):
+    return r['type'] == "W" or r['type'] == "S"
+  def is_load(r):
+    return r['type'] == "R" or r['type'] == "L"
+  def get_stores(clnum):
+    return set(map(lambda x: x['address'], filter(is_store, trace.db.fetch_changes_by_clnum(clnum, 100))))
+  def get_loads(clnum):
+    return set(map(lambda x: x['address'], filter(is_load, trace.db.fetch_changes_by_clnum(clnum, 100))))
+
+  clnum = inclnum
+  st = get_loads(clnum)
+  cls = [clnum]
+
+  # so only things before this can affect it
+  while clnum > max(0, inclnum-100):
+    st.discard(0x10)  # never follow the stack, X86 HAXX
+    if len(trace.db.fetch_changes_by_clnum(clnum, 100)) > 20:
+      break
+    overwrite = st.intersection(get_stores(clnum))
+    if len(overwrite) > 0:
+      st = st.difference(overwrite)
+      st = st.union(get_loads(clnum))
+      cls.append(clnum)
+      #print clnum, overwrite, st
+    
+    """
+    r = trace.db.fetch_changes_by_clnum(clnum, 100)
+    for e in r:
+      print e
+    """
+
+    clnum -= 1
+
+  cls = set(cls)
+  cls.discard(inclnum)
+  return list(cls)
+
 if __name__ == "__main__":
   # can run standalone for testing
-  t = qira_program.Trace("/tmp/qira_logs/0", 0, 4, 9, False)
-  while not t.db.did_update():
+  program = qira_program.Program("/tmp/qira_binary", [])
+  trace = program.add_trace("/tmp/qira_logs/0", 0)
+  while not trace.db.did_update():
     time.sleep(0.1)
   print "loaded"
-  fake_program = qira_program.Program("/tmp/qira_binary", [])
-  fake_program.qira_asm_file = open("/tmp/qira_asm", "r")
-  qira_program.Program.read_asm_file(fake_program)
-  analyze(t, fake_program)
+  program.qira_asm_file = open("/tmp/qira_asm", "r")
+  qira_program.Program.read_asm_file(program)
+
+  # *** analysis time ***
+
+  flow = get_instruction_flow(trace, program, trace.db.get_minclnum(), trace.db.get_maxclnum())
+  blocks = get_blocks(flow, True)
+  
+  print slice(trace, 124)
+
+  #print analyze(t, program)
+  #print blocks
+  #draw_multigraph(blocks)
 
 

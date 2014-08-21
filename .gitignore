@@ -17,4 +17,13 @@ distrib/
 libs/
 qiradb/build
 cda/clang
+cda/include
+cda/clang-latest
+qemu
+tests/system
+pin/pin-*
+pin/obj-*
+pin.log
+*~
+cda/codesearch-*
 

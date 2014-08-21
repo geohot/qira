@@ -1,3 +1,4 @@
+#!/usr/bin/env python2.7
 import struct
 
 IS_VALID = 0x80000000
@@ -54,4 +55,10 @@ def write_log(fn, dat):
   f = open(fn, "wb")
   f.write(''.join(ss))
   f.close()
+
+if __name__ == "__main__":
+  import sys
+  # standalone this can dump a log
+  for (address, data, clnum, flags) in read_log(open(sys.argv[1])):
+    print "%4d: %X -> %X  %X" % (clnum, address, data, flags)
 

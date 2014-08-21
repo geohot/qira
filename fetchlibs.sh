@@ -48,6 +48,7 @@ LIBS="libc-bin libstdc++6"
 fetcharch armhf precise
 fetcharch armel precise
 fetcharch powerpc precise
+fetcharch arm64 saucy
 
 # mini debootstrap 
 

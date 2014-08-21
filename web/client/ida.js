@@ -11,14 +11,14 @@ function do_ida_socket(callme) {
       //p(msg.data);
       var dat = msg.data.split(" ");
       if (dat[0] == "setiaddr") {
-        var iaddr = parseInt(dat[1])
+        var addr = hex(parseInt(dat[1]));
+        Session.set("iaddr", addr);
         Session.set("dirtyiaddr", true);
-        Session.set("iaddr", iaddr);
       }
       if (dat[0] == "setdaddr") {
-        var daddr = parseInt(dat[1])
-        if (get_data_type(daddr) != "datainstruction") {
-          update_dview(daddr);
+        var addr = hex(parseInt(dat[1]));
+        if (get_data_type(addr) != "datainstruction") {
+          update_dview(addr);
         }
       }
     };
@@ -27,10 +27,12 @@ function do_ida_socket(callme) {
   }
 }
 
-Deps.autorun(function() {
+Deps.autorun(function() { DA("send setaddress to ida");
   var iaddr = Session.get('iaddr');
   do_ida_socket(function() {
-    ws.send('setaddress '+iaddr);
+    cmd = 'setaddress '+fhex(iaddr)
+    //p(cmd);
+    ws.send(cmd);
   });
 });
 

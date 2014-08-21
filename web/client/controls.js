@@ -1,50 +1,57 @@
 stream = io.connect(STREAM_URL);
 
-stream.on('setiaddr', function(iaddr) {
-  Session.set("dirtyiaddr", true);
-  Session.set('iaddr', iaddr);
+
+function on_setiaddr(iaddr) { DS("setiaddr");
+  update_iaddr(iaddr);
+} stream.on('setiaddr', on_setiaddr);
+
+function on_setclnum(forknum, clnum) { DS("setclnum");
+  Session.set('forknum', forknum);
+  Session.set('clnum', clnum);
+  push_history("remote setclnum");
+} stream.on('setclnum', on_setclnum);
+
+Deps.autorun(function() { DA("set backend know iaddr changed");
+  var iaddr = Session.get('iaddr');
+  stream.emit('navigateiaddr', iaddr);
 });
 
-Template.controls.clnum = function() {
-  return Session.get("clnum");
-};
-
-Template.controls.forknum = function() {
-  return Session.get("forknum");
-};
-
-Template.controls.iaddr = function() {
-  return hex(Session.get("iaddr"));
-};
-
-Template.controls.daddr = function() {
-  return hex(Session.get("daddr"));
-};
-
-Template.controls.events = {
-  'change #control_clnum': function(e) {
+Deps.autorun(function() { DA("update controls");
+  $("#control_clnum").val(Session.get("clnum"));
+  $("#control_forknum").val(Session.get("forknum"));
+  $("#control_iaddr").val(Session.get("iaddr"));
+  $("#control_daddr").val(Session.get("daddr"));
+});
+  
+$(document).ready(function() {
+  $('#control_clnum').on('change', function(e) {
     Session.set("clnum", parseInt(e.target.value));
-  },
-  'change #control_forknum': function(e) {
+  });
+  $('#control_forknum').on('change', function(e) {
     Session.set("forknum", parseInt(e.target.value));
-  },
-  'change #control_iaddr': function(e) {
-    Session.set("iaddr", fhex(e.target.value));
-  },
-  'change #control_daddr': function(e) {
-    update_dview(fhex(e.target.value));
-  },
-  'click #control_fork': function(e) {
-    var clnum = Session.get("clnum");
-    var forknum = Session.get("forknum");
-    var pending = Session.get('pending');
-    stream.emit('forkat', forknum, clnum, pending);
-  }
-};
+  });
+  $('#control_iaddr').on('change', function(e) {
+    if (e.target.value == "") {
+      Session.set("iaddr", undefined);
+    } else {
+      Session.set("iaddr", e.target.value);
+      Session.set("dirtyiaddr", true);
+    }
+  });
+  $('#control_daddr').on('change', function(e) {
+    if (e.target.value == "") {
+      Session.set("daddr", undefined);
+      Session.set("dview", undefined);
+    } else {
+      update_dview(e.target.value);
+    }
+  });
+});
 
 // keyboard shortcuts
 window.onkeydown = function(e) {
   //p(e.keyCode);
+  //p(e);
   if (e.keyCode == 37) {
     Session.set("forknum", Session.get("forknum")-1);
   } else if (e.keyCode == 39) {
@@ -53,26 +60,88 @@ window.onkeydown = function(e) {
     Session.set("clnum", Session.get("clnum")-1);
   } else if (e.keyCode == 40) {
     Session.set("clnum", Session.get("clnum")+1);
+  } else if (e.keyCode == 77) {  // m -- end of function
+    stream.emit('navigatefunction', Session.get("forknum"), Session.get("clnum"), false);
+  } else if (e.keyCode == 188) {  // , -- start of function
+    stream.emit('navigatefunction', Session.get("forknum"), Session.get("clnum"), true);
   } else if (e.keyCode == 90) {  // z
     zoom_out_max();
+  } else if (e.keyCode == 74) {  // vim down, j
+    go_to_flag(true, false);
+  } else if (e.keyCode == 75) {  // vim up, k
+    go_to_flag(false, false);
+  } else if (e.keyCode == 85) {  // vim down, row up, data, u
+    go_to_flag(true, true);
+  } else if (e.keyCode == 73) {  // vim up, row up, data, i
+    go_to_flag(false, true);
   } else if (e.keyCode == 27) {  // esc
     history.back();
+  } else if (e.keyCode == 67 && e.shiftKey == true) {
+    // shift-C = clear all forks
+    delete_all_forks();
   }
 };
 
+
+
 $(document).ready(function() {
-  $('body').on('click', '.hdatamemory', function(e) {
-    update_dview(fhex(e.target.innerHTML));
+  // control the highlighting of things
+  $('body').on('click', '.clnum', function(e) {
+    Session.set('clnum', parseInt(e.target.textContent));
+    push_history("click clnum");
   });
-  $('body').on('click', '.hdatainstruction', function(e) {
-    update_dview(fhex(e.target.innerHTML));
+  $('body').on('click', '.iaddr', function(e) {
+    Session.set('iaddr', e.target.textContent);
+    push_history("click iaddr");
   });
-  $('body').on('contextmenu', '.hdatainstruction', function(e) {
-    Session.set("iaddr", fhex(e.target.innerHTML));
+  $('body').on('click', '.data', function(e) {
+    var daddr = e.target.getAttribute('id').split("_")[1];
+    Session.set('daddr', daddr);
+    push_history("click data");
+  });
+
+
+  // registers and other places
+  $('body').on('click', '.dataromemory', function(e) {
+    update_dview(e.target.textContent);
+  });
+  $('body').on('click', '.datamemory', function(e) {
+    update_dview(e.target.textContent);
+  });
+  $('body').on('click', '.datainstruction', function(e) {
+    update_dview(e.target.textContent);
+  });
+
+  $('body').on('contextmenu', '.datainstruction', function(e) {
+    update_iaddr(e.target.textContent);
     return false;
   });
-});
 
-// don't pull the window
-//window.onmousewheel = function() { return false; }
+  // hexdump
+  $('body').on('dblclick', '.hexdumpdatamemory', function(e) {
+    update_dview(e.target.textContent);
+  });
+  $('body').on('dblclick', '.hexdumpdataromemory', function(e) {
+    update_dview(e.target.textContent);
+  });
+  $('body').on('dblclick', '.hexdumpdatainstruction', function(e) {
+    update_dview(e.target.textContent);
+  });
+  $('body').on('contextmenu', '.hexdumpdatainstruction', function(e) {
+    update_iaddr(e.target.textContent);
+    return false;
+  });
+  $('body').on('mousedown', '.hexdumpdataromemory', function(e) { return false; });
+  $('body').on('mousedown', '.hexdumpdatamemory', function(e) { return false; });
+  $('body').on('mousedown', '.hexdumpdatainstruction', function(e) { return false; });
+
+  // vtimeline flags
+  $('body').on('click', '.flag', function(e) {
+    var forknum = parseInt(e.target.parentNode.id.substr(9));
+    var clnum = parseInt(e.target.textContent);
+    Session.set("forknum", forknum);
+    Session.set("clnum", clnum);
+    push_history("click flag");
+  });
+});
 

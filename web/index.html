@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="/qira.css">
+
+<!--<script type="text/javascript" src="/package.js"></script>-->
+<script type="text/javascript" src="/client/compatibility/jquery-2.1.1.min.js"></script>
+<script type="text/javascript" src="/client/compatibility/fakemeteor.js"></script>
+<script type="text/javascript" src="/client/compatibility/base.js"></script>
+<script type="text/javascript" src="/client/compatibility/socket.io.min.js"></script>
+<script type="text/javascript" src="/client/controls.js"></script>
+<script type="text/javascript" src="/client/ida.js"></script>
+<script type="text/javascript" src="/client/idump.js"></script>
+<script type="text/javascript" src="/client/regmem.js"></script>
+<script type="text/javascript" src="/client/vtimeline.js"></script>
+<script type="text/javascript" src="/client/strace.js"></script>
+<script type="text/javascript" src="/client/haddrline.js"></script>
+
+<title>qira</title>
+</head>
+<body>
+<div id="vtimelinebox">
+</div>
+<div id="onlypanel">
+
+<div id="haddrline"></div>
+
+<div id="controls">
+<input spellcheck="false" id="control_clnum" class="control" />
+<input spellcheck="false" id="control_forknum" class="control" />
+<input spellcheck="false" id="control_iaddr" class="control" />
+<input spellcheck="false" id="control_daddr" class="control" />
+</div>
+
+<div class="panelthing" id="idump"></div>
+<div class="panelthing" id="regviewer"></div>
+<div class="panelthing" id="datachanges"></div>
+<div class="panelthing" id="hexeditor">
+<div id="hexdump"></div>
+</div>
+
+<div class="panelthing" id="strace"></div>
+
+</div>
+</body>
+</html>

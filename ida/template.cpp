@@ -2,6 +2,7 @@
 #include <idp.hpp>
 #include <loader.hpp>
 #include <bytes.hpp>
+#include <dbg.hpp>
 
 //#define DEBUG
 
@@ -15,13 +16,25 @@ static int callback_http(struct libwebsocket_context* context,
   return 0;
 }
 
+ea_t qira_address = BADADDR;
+
+static void set_qira_address(ea_t la) {
+  if (qira_address != BADADDR) { del_bpt(qira_address); }
+  qira_address = la;
+  add_bpt(qira_address);
+  disable_bpt(qira_address);
+}
+
 static void thread_safe_jump_to(ea_t a) {
   struct uireq_jumpto_t: public ui_request_t {
     uireq_jumpto_t(ea_t a) {
       la = a;
     }
     virtual bool idaapi run() {
-      jumpto(la);
+      if (qira_address != la) {
+        set_qira_address(la);
+        jumpto(la, -1, 0);  // don't UIJMP_ACTIVATE to not steal focus
+      }
       return false;
     }
     ea_t la;
@@ -47,7 +60,7 @@ static int callback_qira(struct libwebsocket_context* context,
         msg("QIRARX:%s\n", (char *)in);
       #endif
       if (memcmp(in, "setaddress ", sizeof("setaddress ")-1) == 0) {
-        ea_t addr = atoi((char*)in+sizeof("setaddress ")-1);
+        ea_t addr = strtoul((char*)in+sizeof("setaddress ")-1, NULL, 10);
         thread_safe_jump_to(addr);
       }
       break;
@@ -75,6 +88,7 @@ static void ws_send(char *str) {
 // ***************** IDAPLUGIN *******************
 
 static void update_address(const char *type, ea_t addr) {
+
   //msg("addr 0x%x\n", addr);
   char tmp[100];
   #ifdef __EA64__
@@ -92,7 +106,11 @@ static int idaapi hook(void *user_data, int event_id, va_list va) {
     addr = get_screen_ea();
     if (old_addr != addr) {
       if (isCode(getFlags(addr))) {
-        update_address("iaddr", addr);
+        // don't update the address if it's already the qira address
+        if (addr != qira_address) {
+          set_qira_address(addr);
+          update_address("iaddr", addr);
+        }
       } else {
         update_address("daddr", addr);
       }

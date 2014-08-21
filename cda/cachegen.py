@@ -1,19 +1,24 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python2.7
 import os
 import sys
+import cda_config
 
 basedir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(basedir+"/clang/llvm/tools/clang/bindings/python")
+#sys.path.append(basedir+"/clang/llvm/tools/clang/bindings/python")
 import clang.cindex as ci
-ci.Config.set_library_file(basedir+"/clang/build/Release+Asserts/lib/libclang.so")
+ci.Config.set_library_file(cda_config.LIBCLANG_PATH)
 
 import pickle
 from clang.cindex import CursorKind
+
+import json
+from hashlib import sha1
 
 # debug
 DEBUG = 0
 
 # cache generated
+file_cache = {}
 object_cache = {}
 xref_cache = {}
 
@@ -93,7 +98,8 @@ def parse_node(node, d, filename, care):
 
 def parse_file(filename, args=[]):
   # traversal attack
-  tu = index.parse(filename, args=args)
+  exargs = ["-I", cda_config.CLANG_INCLUDES]
+  tu = index.parse(filename, args=exargs+args)
 
   # bad shit happened
   bad = False
@@ -114,4 +120,15 @@ def parse_file(filename, args=[]):
   rdat = open(filename).read()
 
   return (care, rdat)
+
+def parse_files(files, args=[]):
+  # for unbuilt clang
+  for fn in files:
+    print "CDA: caching",fn
+    try:
+      file_cache[fn] = parse_file(fn, args)
+    except Exception as e:
+      print "CDA: error on",fn,":",e
+  dat = (object_cache, file_cache, xref_cache)
+  return dat
 

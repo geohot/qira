@@ -1,34 +1,47 @@
 stream = io.connect(STREAM_URL);
 
 // *** the analysis overlay ***
-
-Deps.autorun(function() {
-  var maxclnum = Session.get("max_clnum");
-  for (i in maxclnum) {
-    stream.emit('doanalysis', parseInt(i))
-  }
-});
-
 var overlays = {};
 
-stream.on('setpicture', function(msg) {
+function update_picture(forknum) {
+  var vt = $('#vtimeline'+forknum);
+  if (vt.length == 0) return;
+  vt.css('background-image', "");
+  if (overlays[forknum] === undefined) return;
+  var cview = Session.get("cview");
+  if (cview === undefined) return;
+  var maxclnum = Session.get("max_clnum");
+  if (maxclnum === undefined) return;
+
+  var max = maxclnum[forknum];
+
+  var loading_scale = ((overlays[forknum][1]-overlays[forknum][0])*1.0)/(max[1]-max[0]);
+
+  vt.css('background-image', "url('"+overlays[forknum][2]+"')");
+  // so it looks like size is applied before position, hence we divide position by cscale
+  var cscale = get_cscale();
+  vt.css('background-size', "100% " + (max[1] / cscale) * loading_scale + "px")
+  vt.css('background-position-y', -1*((Math.max(max[0],cview[0])-max[0])/cscale) + "px");
+  vt.css('background-repeat', "no-repeat");
+}
+
+function on_setpicture(msg) { DS("setpicture");
   //p(msg);
   forknum = msg['forknum'];
-  overlays[forknum] = msg['data'];
-  var vt = $('#vtimeline'+forknum);
-  vt.css('background-image', "url('"+overlays[forknum]+"')");
-});
+  overlays[forknum] = [msg['minclnum'], msg['maxclnum'], msg['data']];
+  update_picture(forknum);
+} stream.on('setpicture', on_setpicture);
 
 // *** functions for dealing with the zoom function ***
 
-Meteor.startup(function() {
+$(document).ready(function() {
   $("#vtimelinebox")[0].addEventListener("mousewheel", function(e) {
     var max = abs_maxclnum(); if (max === undefined) return;
     var cview = Session.get("cview"); if (cview === undefined) return;
     var cscale = get_cscale(); if (cscale === undefined) return;
     var move = Math.round(cscale * 50.0); // 50 pixels
     // clamping
-    if (e.wheelDelta < 0) {
+    if (e.wheelDelta > 0) {
       if (cview[0] - move < 0) move = cview[0];
       Session.set("cview", [cview[0] - move, cview[1] - move]);
     } else {
@@ -54,7 +67,6 @@ function register_drag_zoom() {
     return clret;
   }
   function get_forknum(e) {
-    if (e.target.id == "trash") return -1;
     var fn = e.target.id.split("vtimeline")[1];
     if (fn == "box") return -1;
     return parseInt(fn);
@@ -70,30 +82,36 @@ function register_drag_zoom() {
     downforknum = get_forknum(e);
     return false;
   });
-  $("#vtimelinebox").mouseup(function(e) {
-    p("mouseup");
-    if (e.button != 0) return;
-    if (e.target.id == "trash" && downforknum != -1) {
-      stream.emit("deletefork", downforknum);
+  $("#vtimelinebox").contextmenu(function(e) {
+    // right click to delete forks
+    forknum = get_forknum(e);
+    if (forknum != -1) {
+      stream.emit("deletefork", forknum);
       redraw_flags();
-      return;
     }
-
+    return false;
+  });
+  $("#vtimelinebox").mouseup(function(e) {
+    //p("mouseup");
+    if (e.button != 0) return;
     var up = get_clnum(e);
     if (up === undefined) return;
     var forknum = get_forknum(e);
     if (down != -1) {
       // should check absolute length of drag, not clnums
-      p("drag "+down+"-"+up);
+      //p("drag "+down+"-"+up);
       if (down == up) {
         if (forknum != -1) {
           Session.set("clnum", down);
           Session.set("forknum", forknum);
+          push_history("click vtimeline");
         }
       } else if (down < up) {
         Session.set("cview", [down, up]);
+        push_history("zoom cview");
       } else if (down > up) {
         Session.set("cview", [up, down]);
+        push_history("zoom cview");
       }
     }
     return false;
@@ -141,25 +159,16 @@ function redraw_vtimelines(scale) {
   for (forknum in maxclnum) {
     var vt = $('#vtimeline'+forknum);
     var max = maxclnum[forknum];
-
-    if (overlays[forknum] !== undefined) vt.css('background-image', "url('"+overlays[forknum]+"')");
-    var cscale = get_cscale();
-
     if (max[0] < cview[0] && cview[0] < max[1]) { add_flag("zoom", forknum, cview[0]); }
     if (max[0] < cview[1] && cview[1] < max[1]) { add_flag("zoom", forknum, cview[1]); }
 
-    // so it looks like size is applied before position, hence we divide position by cscale
-    //vt.css('background-size', "100% " + ((max[1]-max[0]) / cscale) + "px")
-    //vt.css('background-position-y', -1*(cview[0]/cscale) + "px");
-    vt.css('background-size', "100% " + (max[1] / cscale) + "px")
-    vt.css('background-position-y', -1*((Math.max(max[0],cview[0])-max[0])/cscale) + "px");
-    vt.css('background-repeat', "no-repeat");
     if (vt.length == 0) {
       $("#vtimelinebox").append($('<div class="vtimeline" id="vtimeline'+forknum+'"></div>'))
       vt = $('#vtimeline'+forknum);
     }
-
+    update_picture(forknum);
     var range = Math.min(max[1], cview[1]) - Math.max(max[0], cview[0]);
+    range = Math.max(0, range);
     var topp = 0;
     if (maxclnum[forknum][0] > cview[0]) {
       topp = Math.ceil((maxclnum[forknum][0] - cview[0])/scale);
@@ -171,6 +180,13 @@ function redraw_vtimelines(scale) {
   }
 }
 
+delete_all_forks = function() {
+  for (forknum in Session.get('max_clnum')) {
+    stream.emit("deletefork", parseInt(forknum));
+  }
+  redraw_flags();
+};
+
 function redraw_flags() {
   var cview = Session.get("cview");
   if (cview === undefined) return undefined;
@@ -178,7 +194,7 @@ function redraw_flags() {
   if (maxclnum === undefined) return;
   var cscale = get_cscale();
   if (cscale === undefined) return;
-  $(".flag").remove();
+  //$(".flag").remove();
   redraw_vtimelines(cscale);
   var colors = {
     "bounds": "green",
@@ -186,34 +202,47 @@ function redraw_flags() {
     "ciaddr": "#AA0000", // keep it alphabetical
     "daddrr": "#888800",
     "daddrw": "yellow",
+    "slice": "#000088",
     "zoom": "gray"
   };
+  var flags_out = {};
+  //var flag_count = 0;
   for (arr in flags) {
+    if (flags[arr].length == 0) continue;
     var classes = "flag";
     var forknum = parseInt(arr.split(",")[0]);
+    if (maxclnum[forknum] === undefined) continue;
     var clnum = parseInt(arr.split(",")[1]);
     if (clnum < cview[0] || clnum > cview[1]) continue;
+
+    var flagpos = ((clnum-Math.max(maxclnum[forknum][0], cview[0]))/cscale);
+
     sty = "";
-    if (flags[arr].length == 0) continue;
-    else if (flags[arr].length == 1) {
+    if (flags[arr].length == 1) {
       var col = colors[flags[arr][0]];
       sty = "background-color:"+col+"; color:"+col;
     }
     else {
+      var haschange = false;
       sty = "background: linear-gradient(to right"
       var cols = flags[arr].sort()
       for (var i = 0; i < cols.length; i++) {
+        if (cols[i]) haschange = true;
         sty += ","+colors[cols[i]];
       }
       sty += ")";
+      // always put the current change in front
+      if (haschange) sty += ";z-index:2";
     }
     
-    if (maxclnum[forknum] === undefined) continue;
+    if (flags_out[forknum] === undefined) flags_out[forknum] = "";
 
-    var flag = $('<div id="flag'+clnum+'" class="flag" style="'+sty+'">'+clnum+'</div>');
-    flag[0].style.marginTop = ((clnum-Math.max(maxclnum[forknum][0], cview[0]))/cscale) + "px";
-    flag.click(function(cln) { Session.set("forknum", cln[0]); Session.set("clnum", cln[1]); }.bind(undefined, [forknum, clnum]));
-    $('#vtimeline'+forknum).append(flag);
+    flags_out[forknum] += '<div id="flag'+clnum+'" class="flag" style="'+sty+'; margin-top: '+flagpos+"px"+'">'+clnum+'</div>'
+    //flag_count += 1;
+  }
+  //p("drew "+flag_count+" flags");
+  for (forknum in flags_out) {
+    $('#vtimeline'+forknum).html(flags_out[forknum]);
   }
 }
 
@@ -229,23 +258,50 @@ function remove_flags(type, forknum) {
     if (forknum !== undefined && forknum != tforknum) continue;
     var index = flags[arr].indexOf(type);
     while (index != -1) {
-      flags[arr].splice(index, 1)
+      flags[arr].splice(index, 1);
       index = flags[arr].indexOf(type);
     }
     if (flags[arr].length == 0) delete flags[arr];
   }
 }
 
-Deps.autorun(function() {
-  // false here forces update on max_clnum update
-  zoom_out_max(false);
-});
+// these are public functions, no var
+go_to_flag = function (next, data) {
+  var gclnum = Session.get("clnum");
+  var gforknum = Session.get("forknum");
+  //var idx = flags.indexOf((forknum, clnum));
+  var cls = [gclnum];
+  for (arr in flags) {
+    var forknum = parseInt(arr.split(",")[0]);
+    var clnum = parseInt(arr.split(",")[1]);
+    if (clnum == gclnum) continue;
+    if (data) {
+      if (flags[arr].indexOf("daddrr") != -1 ||
+          flags[arr].indexOf("daddrw") != -1) {
+        if (forknum == gforknum) cls.push(clnum);
+      }
+    } else {
+      if (flags[arr].indexOf("ciaddr") != -1) {
+        if (forknum == gforknum) cls.push(clnum);
+      }
+    }
+  }
+  cls.sort(function(a, b){return a-b});
+  var idx = cls.indexOf(gclnum);
+  if (idx == -1) return;
+  if (next) {
+    if (idx+1 < cls.length) {
+      Session.set("clnum", cls[idx+1])
+    }
+  } else {
+    if (idx-1 >= 0) {
+      Session.set("clnum", cls[idx-1])
+    }
+  }
+  push_history("go to flag");
+};
 
-Deps.autorun(function() {
-  /*var cview = Session.get("cview");
-  if (cview === undefined) return undefined;
-  add_flag("bounds", 0, cview[0]);
-  add_flag("bounds", 0, cview[1]);*/
+Deps.autorun(function() { DA("updating bounds flags");
   var maxclnum = Session.get("max_clnum");
   if (maxclnum === undefined) return;
   remove_flags("bounds");
@@ -257,7 +313,7 @@ Deps.autorun(function() {
   redraw_flags();
 });
 
-Deps.autorun(function() {
+Deps.autorun(function() { DA("adding current change flag");
   var forknum = Session.get("forknum");
   var clnum = Session.get("clnum");
   remove_flags("change");
@@ -265,22 +321,26 @@ Deps.autorun(function() {
   redraw_flags();
 });
 
-Deps.autorun(function() {
-  //var forknum = Session.get("forknum");
+Deps.autorun(function() { DA("emit getchanges for iaddr change");
+  var maxclnum = Session.get('max_clnum');
+  var cview = Session.get('cview');
   var iaddr = Session.get('iaddr');
-  var maxclnum = Session.get('max_clnum');
-  stream.emit('getchanges', -1, iaddr, 'I')
+  var clnum = Session.get('clnum');
+  var cscale = get_cscale();
+  stream.emit('getchanges', -1, iaddr, 'I', cview, cscale, clnum)
 });
 
-Deps.autorun(function() {
-  //var forknum = Session.get("forknum");
+Deps.autorun(function() { DA("emit getchanges for daddr change");
+  var maxclnum = Session.get('max_clnum');
+  var cview = Session.get('cview');
   var daddr = Session.get('daddr');
-  var maxclnum = Session.get('max_clnum');
-  stream.emit('getchanges', -1, daddr, 'L')
-  stream.emit('getchanges', -1, daddr, 'S')
+  var clnum = Session.get('clnum');
+  var cscale = get_cscale();
+  stream.emit('getchanges', -1, daddr, 'L', cview, cscale, clnum)
+  stream.emit('getchanges', -1, daddr, 'S', cview, cscale, clnum)
 });
 
-stream.on('changes', function(msg) {
+function on_changes(msg) { DS("changes");
   var types = {'I': 'ciaddr', 'L': 'daddrr', 'S': 'daddrw'};
   var forknum = Session.get("forknum");
   var clnums = msg['clnums'][forknum];
@@ -314,5 +374,5 @@ stream.on('changes', function(msg) {
     }
   }
   redraw_flags();
-});
+} stream.on('changes', on_changes);
 

@@ -3,12 +3,14 @@
 rm -rf distrib/
 mkdir -p distrib/qira
 
+QEMU_SOURCE=1
+QEMU_BINARIES=1
 VERSION=$(cat VERSION)
 echo "packaging version $VERSION"
 
 # VERSION is required to build the python thing
 echo "copying docs"
-cp VERSION README distrib/qira/
+cp -av VERSION README distrib/qira/
 
 # requires objdump
 # writable /tmp
@@ -26,16 +28,16 @@ cp VERSION README distrib/qira/
 # the advantage of this over the bundle is it ships mongo
 echo "copying webapp"
 cp -R web distrib/qira/
-rm -rf distrib/qira/web/.meteor/local
-rm -f distrib/qira/web/qira.html   # this doesn't work to change, so don't allow the user to
+#rm -rf distrib/qira/web/.meteor/local
+#rm -f distrib/qira/web/qira.html   # this doesn't work to change, so don't allow the user to
 #mrt bundle ../bin/qira_web.tar.gz
-cp -R webstatic distrib/qira/
+#cp -R webstatic distrib/qira/
 
 # sudo apt-get install python-pip
 # sudo pip install pymongo
 echo "copying middleware"
 mkdir -p distrib/qira/middleware
-cp middleware/*.py distrib/qira/middleware/
+cp -av middleware/*.py distrib/qira/middleware/
 
 # built for ida 6.6
 # perhaps build for older IDA as well, ie 6.1
@@ -43,20 +45,41 @@ cp middleware/*.py distrib/qira/middleware/
 # fairly standard deps + libcrypto, libssl, libz and libida
 mkdir -p distrib/qira/ida/bin
 echo "copying ida plugin"
-cp ida/bin/* distrib/qira/ida/bin/
+cp -av ida/bin/* distrib/qira/ida/bin/
 
-# fairly standard deps + librt, libglib, libpcre
-echo "copying qemu"
-mkdir -p distrib/qira/qemu
-for arch in "i386" "arm" "x86_64" "ppc"; do
-  cp "qemu/qira-$arch" "distrib/qira/qemu/qira-$arch"
-  strip "distrib/qira/qemu/qira-$arch"
-  #upx -9 "distrib/qira/qemu/qira-$arch"
-done
+echo "copying qemu source"
+if [ $QEMU_SOURCE ]; then
+  #echo "copying qemu_mods for building qemu from source"
+  cp -Rav qemu_mods distrib/qira/
+  cp -av qemu_build.sh distrib/qira/
+fi
+
+if [ $QEMU_BINARIES ]; then
+  # fairly standard deps + librt, libglib, libpcre
+  echo "copying qemu"
+  mkdir -p distrib/qira/qemu
+  for arch in "i386" "arm" "x86_64" "ppc" "aarch64"; do
+    cp -v "qemu/qira-$arch" "distrib/qira/qemu/qira-$arch"
+    strip "distrib/qira/qemu/qira-$arch"
+    #upx -9 "distrib/qira/qemu/qira-$arch"
+  done
+fi
 
 echo "copying qiradb"
 mkdir -p distrib/qira/qiradb
-cp -R qiradb/* distrib/qira/qiradb/
+cp -Rav qiradb/* distrib/qira/qiradb/
+
+echo "copying pin"
+mkdir -p distrib/qira/pin
+cp -av pin_build.sh distrib/qira/
+cp -av pin/makefile pin/qirapin.cpp distrib/qira/pin/
+
+echo "copying cda"
+mkdir -p distrib/qira/cda distrib/qira/cda/clang
+cp -av cda/*.py distrib/qira/cda/
+cp -av cda/clang/*.py distrib/qira/cda/clang/
+cp -Rav cda/static distrib/qira/cda/
+cp -av cda/codesearch_build.sh distrib/qira/cda/
 
 # package up the python, hopefully this includes pymongo driver
 # hmm, it doesn't, user will need to install
@@ -76,8 +99,7 @@ cp -R qiradb/* distrib/qira/qiradb/
 # then you run qira-i386 <binary>, we need to hack in the -singlestep arg
 
 echo "copying binaries"
-cp -av install.sh qira distrib/qira/
-cp -av fetchlibs.sh qira distrib/qira/
+cp -av install.sh qira fetchlibs.sh distrib/qira/
 
 echo "making archive"
 cd distrib/

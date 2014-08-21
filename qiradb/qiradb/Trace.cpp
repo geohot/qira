@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <fcntl.h>
+
+#ifndef _WIN32
 #include <sys/mman.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#endif
 
 #include "Trace.h"
 
@@ -15,7 +18,9 @@ void *thread_entry(void *trace_class) {
   Trace *t = (Trace *)trace_class;  // best c++ casting
 
   // lower priority thread for lock
+#ifndef _WIN32
   setpriority(PRIO_PROCESS, 0, getpriority(PRIO_PROCESS, 0)+1);
+#endif
   while (t->is_running_) {   // running?
     t->process();
     usleep(10 * 1000);
@@ -38,10 +43,14 @@ Trace::Trace(unsigned int trace_index) {
 // the destructor isn't thread safe wrt to the accessor functions
 Trace::~Trace() {
   is_running_ = false;
-  pthread_join(thread, NULL);
+  THREAD_JOIN(thread);
   // mutex lock isn't required now that the thread stopped
+#ifdef _WIN32
+  CloseHandle(fd_);
+#else
   munmap((void*)backing_, backing_size_);
   close(fd_);
+#endif
   //printf("dead\n");
 }
 
@@ -77,11 +86,42 @@ inline MemoryWithValid Trace::get_byte(Clnum clnum, Address a) {
 
 bool Trace::remap_backing(uint64_t new_size) {
   if (backing_size_ == new_size) return true;
-  pthread_mutex_lock(&backing_mutex_);
+
+#ifdef _WIN32
+  while (1) {
+    DWORD fs = GetFileSize(fd_, NULL);
+    if (fs < new_size) {
+      printf("WARNING: requested %llx bytes, but only %llx are in the file...waiting\n", new_size, fs);
+      usleep(100 * 1000);
+    } else {
+      break;
+    }
+  }
+  MUTEX_LOCK(backing_mutex_);
+  HANDLE fileMapping = CreateFileMapping(fd_, NULL, PAGE_READONLY, 0, 0, NULL);
+  backing_ = (const struct change *)MapViewOfFileEx(fileMapping, FILE_MAP_READ, 0, 0, new_size, NULL);
+  // LEAKS!!!
+  MUTEX_UNLOCK(backing_mutex_);
+#else
+  while (1) {
+    off_t fs = lseek(fd_, 0, SEEK_END);
+    if (fs < new_size) {
+      printf("WARNING: requested %llx bytes, but only %llx are in the file...waiting\n", new_size, fs);
+      usleep(100 * 1000);
+    } else {
+      break;
+    }
+  }
+  MUTEX_LOCK(backing_mutex_);
   munmap((void*)backing_, backing_size_);
   backing_size_ = new_size;
   backing_ = (const struct change *)mmap(NULL, backing_size_, PROT_READ, MAP_SHARED, fd_, 0);
-  pthread_mutex_unlock(&backing_mutex_);
+  MUTEX_UNLOCK(backing_mutex_);
+#endif
+
+  if (backing_ == NULL) {
+    printf("ERROR: remap_backing is about to return NULL\n");
+  }
   return (backing_ != NULL);
 }
 
@@ -89,23 +129,28 @@ bool Trace::ConnectToFileAndStart(char *filename, int register_size, int registe
   is_big_endian_ = is_big_endian;
   register_size_ = register_size;
   register_count_ = register_count;
-  pthread_rwlock_init(&db_lock_, NULL);
-  pthread_mutex_init(&backing_mutex_, NULL);
+  RWLOCK_INIT(db_lock_);
+  MUTEX_INIT(backing_mutex_);
 
   registers_.resize(register_count_);
 
+#ifdef _WIN32
+  fd_ = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+#else
   fd_ = open(filename, O_RDONLY);
   if (fd_ <= 0) return false;
+#endif
 
   if (!remap_backing(sizeof(struct change))) return false;
 
-  return pthread_create(&thread, NULL, thread_entry, (void *)this) == 0;
+  THREAD_CREATE(thread, thread_entry, this);
+  return true;
 }
 
 void Trace::process() {
-  pthread_mutex_lock(&backing_mutex_);
+  MUTEX_LOCK(backing_mutex_);
   EntryNumber entry_count = *((EntryNumber*)backing_);  // don't let this change under me
-  pthread_mutex_unlock(&backing_mutex_);
+  MUTEX_UNLOCK(backing_mutex_);
 
   if (entries_done_ >= entry_count) return;       // handle the > case better
 
@@ -114,8 +159,10 @@ void Trace::process() {
   printf("on %u going from %u to %u...", trace_index_, entries_done_, entry_count);
   fflush(stdout);
 
+#ifndef _WIN32
   struct timeval tv_start, tv_end;
   gettimeofday(&tv_start, NULL);
+#endif
 
   // clamping
   if ((entries_done_ + 1000000) < entry_count) {
@@ -127,7 +174,7 @@ void Trace::process() {
     const struct change *c = &backing_[entries_done_];
     char type = get_type_from_flags(c->flags);
 
-    pthread_rwlock_wrlock(&db_lock_);
+    RWLOCK_WRLOCK(db_lock_);
     // clnum_to_entry_number_, instruction_pages_
     if (type == 'I') {
       if (clnum_to_entry_number_.size() < c->clnum) {
@@ -135,7 +182,7 @@ void Trace::process() {
         clnum_to_entry_number_.resize(c->clnum);
       }
       clnum_to_entry_number_.push_back(entries_done_);
-      instruction_pages_.insert(c->address & PAGE_MASK);
+      pages_[c->address & PAGE_MASK] |= PAGE_INSTRUCTION;
     }
 
     // addresstype_to_clnums_
@@ -151,8 +198,11 @@ void Trace::process() {
 
     // memory_, data_pages_
     if (type == 'L' || type == 'S') {
-      data_pages_.insert(c->address & PAGE_MASK);
+      if (type == 'L') {
+        pages_[c->address & PAGE_MASK] |= PAGE_READ;
+      }
       if (type == 'S') {
+        pages_[c->address & PAGE_MASK] |= PAGE_WRITE;
         int byte_count = (c->flags&SIZE_MASK)/8;
         uint64_t data = c->data;
         if (is_big_endian_) {
@@ -169,7 +219,7 @@ void Trace::process() {
         }
       }
     }
-    pthread_rwlock_unlock(&db_lock_);
+    RWLOCK_WRUNLOCK(db_lock_);
 
     // max_clnum_
     if (max_clnum_ < c->clnum && c->clnum != INVALID_CLNUM) {
@@ -183,87 +233,85 @@ void Trace::process() {
     entries_done_++;
   }
 
+#ifndef _WIN32
   gettimeofday(&tv_end, NULL);
   double t = (tv_end.tv_usec-tv_start.tv_usec)/1000.0 +
              (tv_end.tv_sec-tv_start.tv_sec)*1000.0;
   printf("done %f ms\n", t);
+#else
+  printf("done\n");
+#endif
 
   // set this at the end
   did_update_ = true;
 }
 
-vector<Clnum> Trace::FetchClnumsByAddressAndType(Address address, char type, Clnum start_clnum, unsigned int limit) {
-  pthread_rwlock_rdlock(&db_lock_);
+vector<Clnum> Trace::FetchClnumsByAddressAndType(Address address, char type,
+      Clnum start_clnum, Clnum end_clnum, unsigned int limit) {
+  RWLOCK_RDLOCK(db_lock_);
   vector<Clnum> ret;
   pair<Address, char> p = MP(address, type);
   unordered_map<pair<Address, char>, set<Clnum> >::iterator it = addresstype_to_clnums_.find(p);
   if (it != addresstype_to_clnums_.end()) {
     for (set<Clnum>::iterator it2 = it->second.lower_bound(start_clnum);
-         it2 != it->second.end(); ++it2) {
+         it2 != it->second.end() && *it2 < end_clnum; ++it2) {
       ret.push_back(*it2);
       if (ret.size() == limit) break;
     }
   }
-  pthread_rwlock_unlock(&db_lock_);
+  RWLOCK_UNLOCK(db_lock_);
   return ret;
 }
 
 vector<struct change> Trace::FetchChangesByClnum(Clnum clnum, unsigned int limit) {
-  pthread_rwlock_rdlock(&db_lock_);
+  RWLOCK_RDLOCK(db_lock_);
   vector<struct change> ret;
   EntryNumber en = 0;
   if (clnum < clnum_to_entry_number_.size()) {
     en = clnum_to_entry_number_[clnum];
   }
-  pthread_rwlock_unlock(&db_lock_);
+  RWLOCK_UNLOCK(db_lock_);
 
   if (en != 0) {
-    pthread_mutex_lock(&backing_mutex_);
+    MUTEX_LOCK(backing_mutex_);
     const struct change* c = &backing_[en];
-    for (unsigned int i = 0; i < limit; i++) {
+    for (unsigned int i = 0; limit == 0 || i < limit; i++) {
       if (en+i >= entries_done_) break;  // don't run off the end
       if (c->clnum != clnum) break; // on next change already
       ret.push_back(*c);  // copy?
       ++c;
     }
-    pthread_mutex_unlock(&backing_mutex_);
+    MUTEX_UNLOCK(backing_mutex_);
   }
   return ret;
 }
 
 vector<MemoryWithValid> Trace::FetchMemory(Clnum clnum, Address address, int len) {
-  pthread_rwlock_rdlock(&db_lock_);
+  RWLOCK_RDLOCK(db_lock_);
   vector<MemoryWithValid> ret; 
   for (Address i = address; i < address+len; i++) {
     ret.push_back(get_byte(clnum, i));
   }
-  pthread_rwlock_unlock(&db_lock_);
+  RWLOCK_UNLOCK(db_lock_);
   return ret;
 }
 
 vector<uint64_t> Trace::FetchRegisters(Clnum clnum) {
-  pthread_rwlock_rdlock(&db_lock_);
+  RWLOCK_RDLOCK(db_lock_);
   vector<uint64_t> ret;
   for (int i = 0; i < register_count_; i++) {
     RegisterCell::iterator it = registers_[i].upper_bound(clnum);
     if (it == registers_[i].begin()) ret.push_back(0);
     else { --it; ret.push_back(it->second); }
   }
-  pthread_rwlock_unlock(&db_lock_);
+  RWLOCK_UNLOCK(db_lock_);
   return ret;
 }
 
-set<Address> Trace::GetInstructionPages() {
-  pthread_rwlock_rdlock(&db_lock_);
-  set<Address> ret = instruction_pages_;
-  pthread_rwlock_unlock(&db_lock_);
-  return ret;
-}
-
-set<Address> Trace::GetDataPages() {
-  pthread_rwlock_rdlock(&db_lock_);
-  set<Address> ret = data_pages_;
-  pthread_rwlock_unlock(&db_lock_);
+map<Address, char> Trace::GetPages() {
+  RWLOCK_RDLOCK(db_lock_);
+  map<Address, char> ret = pages_;
+  RWLOCK_UNLOCK(db_lock_);
   return ret;
 }
 

@@ -12,9 +12,63 @@ body {
   height: 100%;
 }
 
+/* haddrline */
+
+.pchunks {
+  margin-left: 10px;
+  margin-right: 10px;
+  display: inline-block;
+}
+
+.pchunk {
+  height: 40px;
+  width: 15px;
+  display: inline-block;
+  background-color: #444444;
+}
+
+.pchunkinstruction {
+  background-color: #550000 !important;
+}
+
+.pchunkmemory {
+  background-color: #444422 !important;
+}
+
 .highlight {
   background-color: #FF7777 !important;
 }
+
+.autohighlight {
+  background-color: #FF7777 !important;
+}
+
+.halfhighlight {
+  background: rgba(255, 119, 119, 0.3);
+}
+
+#haddrline {
+  height: 40px; 
+  border-bottom: 1px solid black;
+  border-left: 1px solid black;
+  border-right: 1px solid black;
+  background-color: #282828;
+  overflow: hidden;
+  width: 624px;
+  white-space: nowrap;
+}
+
+.hflag {
+  width: 2px;
+  height: 40px;
+  font-family: monospace;
+  color: gray;
+  position: relative;
+  display: inline-block;
+}
+
+
+/* controls */
 
 .control {
   font-family: monospace;
@@ -22,17 +76,17 @@ body {
   width: 165px;
   border: 1px solid black;
   padding: 2px;
-  margin: 5px;
-}
-
-#control_clnum {
-  width: 100px;
-  margin-right: 0px;
+  margin: 3px;
 }
 
 #control_fork {
   margin-left: 0px;
   width: 50px;
+}
+
+#control_changeeditor {
+  margin-left: 0px;
+  width: 30px;
   margin-right: 0px;
 }
 
@@ -43,11 +97,22 @@ body {
   padding-right: 5px;
 }
 
+#control_clnum {
+  width: 115px;
+  color: blue;
+}
+
 #control_forknum {
-  margin-left: 0px;
-  margin-right: 0px;
-  width: 30px;
+  width: 120px;
   color: #555555;
+}
+
+#control_iaddr {
+  color: #CC0000;
+}
+
+#control_daddr {
+  color: #888800;
 }
 
 /* vertical timeline and flags */
@@ -110,8 +175,9 @@ body {
 /* instruction dump */
 
 #idump {
-  height: 180px;
-  padding: 10px;
+  height: 270px;
+  padding: 5px;
+  overflow: hidden;
 }
 
 .name {
@@ -125,7 +191,7 @@ body {
 
 #changeeditor {
   float: right;
-  height: 180px;
+  height: 270px;
   width: 200px;
   padding: 10px;
   display: none;
@@ -139,6 +205,12 @@ body {
 
 /* regviewer and datachanges */
 
+.register {
+  text-align: left !important;
+  min-width: 42px !important;
+  display: inline-block;
+}
+
 #regviewer {
   /*height: 120px;*/
   background-color: #DDDDDD;
@@ -150,7 +222,7 @@ body {
 #datachanges {
   font-family: monospace;
   padding: 2px;
-  min-height: 20px;
+  min-height: 15px;
   width: 620px;
 }
 
@@ -176,7 +248,9 @@ body {
 
 .data {
   text-align: right;
-  /*padding-left: 2px;*/
+  min-width: 18px;
+  padding-top: 0px;
+  padding-bottom: 0px;
 }
 
 .datachange {
@@ -191,11 +265,19 @@ body {
   color: #888800;
 }
 
-.hdatainstruction {
+.dataromemory {
+  color: #888800;
+}
+
+.hexdumpdatainstruction {
   color: #CC0000;
 }
 
-.hdatamemory {
+.hexdumpdatamemory {
+  color: #888800;
+}
+
+.hexdumpdataromemory {
   color: #888800;
 }
 
@@ -203,6 +285,13 @@ body {
   display: inline-block;
   width: 200px;
   font-family: monospace;
+}
+
+.rflag {
+  width: 3px;
+  height: 15px;
+  position: absolute;
+  opacity: 0.8;
 }
 
 .regread {
@@ -221,10 +310,21 @@ body {
 #strace {
   font-family: monospace;
   height: 150px;
-  overflow-x: hidden;
-  overflow-y: scroll;
-  padding: 10px;
+  overflow: hidden;
+  padding: 5px;
   white-space: nowrap;
-  width: 604px;
+  width: 614px;
+}
+
+html {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  height: 100%;
+  width: 100%;
+  overflow: auto;
 }
 

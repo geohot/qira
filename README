@@ -1,11 +1,77 @@
-QIRA is an IDA plugin to reverse using QEMU
+QIRA is a competitor to strace and gdb
 
 == Installation ==
 
-If this is a release version, ./install.sh handles everything
-./fetchlibs.sh will fetch the libraries for armhf
+./install.sh should handle everything for both release and trunk
+./fetchlibs.sh will fetch the libraries for armhf, armel, and ppc
 
-For a checkout of trunk, try ./develinstall.sh
-You really just need ./install.sh and ./qemu_build.sh
 
+== UI ==
+
+At the top, you have 4 boxes, called the controls.
+  Blue = change number, Grey = fork number
+  Red = instruction address(iaddr), Yellow = data address(daddr)
+
+On the left you have the vtimeline, this is the full trace of the program.
+  The top is the start of the program, the bottom is the end/current state.
+  More green = deeper into a function.
+  The currently selected change is blue, red is every passthrough of the current iaddr
+  Bright yellow is a write to the daddr, dark yellow is a read from the daddr.
+  This color scheme is followed everywhere
+
+Below the controls, you have the idump, showing instructions near the current change
+Under that is the regviewer, datachanges, hexeditor, and strace, all self explanatory.
+
+
+== Mouse Actions ==
+
+Click on vtimeline to navigate around
+Right click forks to delete them
+
+Click on data(or doubleclick if highlightable) to follow in data
+Right click on instruction address to follow in instruction
+
+
+== Keyboard Shortcuts in web/client/controls.js ==
+
+j -- next invocation of instruction
+k -- prev invocation of instruction
+
+u -- next toucher of data
+i -- prev toucher of data
+
+m -- go to return from current function
+, -- go to start of current function
+
+z -- zoom out max on vtimeline
+
+l -- set iaddr to instruction at current clnum
+
+left  -- -1 fork
+right -- +1 fork
+up    -- -1 clnum
+down  -- +1 clnum
+
+esc -- back
+
+shift-c -- clear all forks
+
+
+== Installation on Windows (experimental) ==
+
+Install git
+Install python 2.7.8
+Install pip
+
+Run install.bat
+
+
+== Using CDA ==
+
+Pass either --cda or --cda-only to QIRA, or just call "cda binary"
+
+The binary must have DWARF data, and the source files must exist on the system
+
+Without cda-only, you have to go to localhost:3002/cda
+Everything should be intuitive, except press '/' to regex search
 

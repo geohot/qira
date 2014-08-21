@@ -226,6 +226,7 @@ void real_target_disas(FILE *out, CPUArchState *env, target_ulong code,
         s.info.mach = bfd_mach_i386_i386;
     }
     print_insn = print_insn_i386;
+    s.info.disassembler_options = (char *)"intel";
 #elif defined(TARGET_ARM)
     if (flags & 4) {
         /* We might not be compiled with the A64 disassembler

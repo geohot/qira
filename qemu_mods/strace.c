@@ -11,6 +11,13 @@
 #include <sched.h>
 #include "qemu.h"
 
+#undef TARGET_ABI_FMT_lx
+#ifdef TARGET_ABI32
+#define TARGET_ABI_FMT_lx "%x"
+#else
+#define TARGET_ABI_FMT_lx "%llx"
+#endif
+
 extern FILE *GLOBAL_strace_file;
 #define gemu_log(x...) { fprintf(GLOBAL_strace_file, x); fflush(GLOBAL_strace_file); }
 
