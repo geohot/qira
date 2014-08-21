@@ -9,35 +9,42 @@ Deps.autorun(function() { DA("pmaps changed, updating haddrline");
   for (k in pmaps) {
     // ignore the memory that's only read from
     if (pmaps[k] == "romemory") continue;
-    addrs.push(fhex(k));
+    //addrs.push(fhex(k));
+    addrs.push(k);
   }
-  addrs = addrs.sort(function(a, b){return a-b});
-
+  addrs = addrs.sort(bn_cmp);
   //p(addrs);
+
   // fill in the holes up to 16 pages
   var pchunks = [];
   for (var i = 0; i < addrs.length;) {
     var pchunk = [];
     var caddr = addrs[i];
 
+    // push the first one
     pchunk.push(caddr);
     i++;
-    while ((addrs[i]-caddr) < PAGE_SIZE*8) {
-      for (var j = caddr+PAGE_SIZE; j <= addrs[i]; j += PAGE_SIZE) {
+    // addrs[i] is the next addr
+    while (i < addrs.length && bn_cmp(bn_add(caddr, PAGE_SIZE*8), addrs[i]) > 0) {
+      // fill in holes
+      for (var j = bn_add(caddr, PAGE_SIZE); bn_cmp(j, addrs[i]) < 0; j = bn_add(j, PAGE_SIZE)) {
         pchunk.push(j);
       }
       caddr = addrs[i];
+      // push non holes
+      pchunk.push(caddr);
       i++;
     }
     pchunks.push(pchunk);
   }
+
   //p(pchunks);
   $('#haddrline').empty();
   for (var i = 0; i < pchunks.length; i++) {
     var pcs = $('<div class="pchunks"></div>')
     for (var j = 0; j < pchunks[i].length; j++) {
       var addr = pchunks[i][j];
-      pcs.append($('<div class="pchunk pchunk'+pmaps[hex(addr)]+'" id="pchunk_'+hex(addr)+'"></div>'));
+      pcs.append($('<div class="pchunk pchunk'+pmaps[addr]+'" id="pchunk_'+addr+'"></div>'));
     }
     $('#haddrline').append(pcs);
   }
@@ -58,7 +65,7 @@ draw_hflag = function(addr, name, color, alwaysontop) {
     hflag.css("background-color", color);
     // pchunk.width = 15
     // hflag.width = 1
-    var off = ((((fhex(addr)%PAGE_SIZE)*1.0)/PAGE_SIZE) * 15) - (1/2.0);
+    var off = (((bn_mod(addr, 3)*1.0)/PAGE_SIZE) * 15) - (1/2.0);
     hflag.css("left", off+"px");
     t.append(hflag);
   }

@@ -51,38 +51,28 @@ function on_memory(msg) { DS("memory");
     html += "<td></td>";
 
     // check if it's an address
-    var v = 0;
+    var v = "0x";
 
     if (msg['is_big_endian']) {
       for (var j = 0; j < PTRSIZE; j++) {
-        v *= 0x100;
-        var t = msg['dat'][i+j];
-        if (t !== undefined) v += t;
+        v += hex2(msg['dat'][i+j]);
       }
     } else {
       for (var j = PTRSIZE-1; j >= 0; j--) {
-        v *= 0x100;
-        var t = msg['dat'][i+j];
-        if (t !== undefined) v += t;
+        v += hex2(msg['dat'][i+j]);
       }
     }
+    v = bn_canonicalize(v)
     var a = get_data_type(v);
     if (a !== "") {
-      var me = v.toString(16);
-      me = "0x"+me;
       var exclass = "data_"+bn_add(addr, i);
       var minwidth = 84;
       if (PTRSIZE == 8) minwidth = 172;
-      html += '<td colspan="'+PTRSIZE+'" style="min-width:'+minwidth+'px" class="data hexdump'+a+' '+exclass+'" id="'+exclass+'">'+me+"</td>";
+      html += '<td colspan="'+PTRSIZE+'" style="min-width:'+minwidth+'px" class="data hexdump'+a+' '+exclass+'" id="'+exclass+'">'+v+"</td>";
     } else {
       for (var j = 0; j < PTRSIZE; j++) {
         var ii = msg['dat'][i+j];
-        if (ii === undefined) {
-          var me = "__";
-        } else {
-          var me = ii.toString(16);
-          if (me.length == 1) me = "0" + me;
-        }
+        var me = hex2(ii);
         var exclass = "data_"+bn_add(addr, i+j);
         html += '<td class="data '+exclass+'" id="'+exclass+'">'+me+"</td>";
       }

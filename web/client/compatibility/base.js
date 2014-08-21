@@ -83,7 +83,7 @@ function highlight_addresses(a) {
 }
 
 function get_data_type(v) {
-  if (typeof v == "number") v = hex(v);
+  if (typeof v == "number") throw "numbers no longer supported here";
   // haxx
   var pmaps = Session.get('pmaps');
   var a = pmaps[bn_round(v, 3)];
