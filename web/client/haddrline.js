@@ -9,7 +9,6 @@ Deps.autorun(function() { DA("pmaps changed, updating haddrline");
   for (k in pmaps) {
     // ignore the memory that's only read from
     if (pmaps[k] == "romemory") continue;
-    //addrs.push(fhex(k));
     addrs.push(k);
   }
   addrs = addrs.sort(bn_cmp);
@@ -93,10 +92,10 @@ $(document).ready(function() {
     for (i in tt) {
       var t = tt[i];
       if (t.hasClass("pchunk")) {
-        var addr = fhex(t.attr('id').split("_")[1]);
+        var addr = t.attr('id').split("_")[1];
         var relX = ((e.pageX - t.offset().left)*1.0)/(t.width());
-        addr += Math.floor(relX*PAGE_SIZE);
-        return addr
+        var addr_offset = Math.floor(relX*PAGE_SIZE);
+        return bn_add(addr, addr_offset);
       }
     }
     return undefined;
@@ -105,7 +104,7 @@ $(document).ready(function() {
   ee.addEventListener("click", function(e) {
     var addr = get_addr(e);
     if (addr !== undefined) {
-      update_dview(hex(addr));
+      update_dview(addr);
     }
     return false;
   });
@@ -113,7 +112,7 @@ $(document).ready(function() {
     var addr = get_addr(e);
     if (addr !== undefined) {
       Session.set("dirtyiaddr", true);
-      Session.set('iaddr', hex(addr));
+      Session.set('iaddr', addr);
     }
     e.preventDefault();
     return false;

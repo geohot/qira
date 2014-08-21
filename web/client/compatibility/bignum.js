@@ -1,5 +1,5 @@
 function fhex(a) {
-  p("DANGER, fhex is a bad function");
+  throw ("DANGER, fhex is a bad function");
   return parseInt(a, 16);
 }
 
