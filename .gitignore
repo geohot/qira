@@ -26,4 +26,5 @@ pin/obj-*
 pin.log
 *~
 cda/codesearch-*
+*.DS_Store
 
