@@ -73,6 +73,8 @@ echo "copying pin"
 mkdir -p distrib/qira/pin
 cp -av pin_build.sh distrib/qira/
 cp -av pin/makefile pin/qirapin.cpp distrib/qira/pin/
+mkdir -p distrib/qira/pin/strace
+cp -av pin/strace/*.h distrib/qira/pin/strace/
 
 echo "copying cda"
 mkdir -p distrib/qira/cda distrib/qira/cda/clang
