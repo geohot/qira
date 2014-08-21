@@ -60,7 +60,7 @@ static int callback_qira(struct libwebsocket_context* context,
         msg("QIRARX:%s\n", (char *)in);
       #endif
       if (memcmp(in, "setaddress ", sizeof("setaddress ")-1) == 0) {
-        ea_t addr = strtoul((char*)in+sizeof("setaddress ")-1, NULL, 10);
+        ea_t addr = strtoul((char*)in+sizeof("setaddress ")-1, NULL, 0);
         thread_safe_jump_to(addr);
       }
       break;
@@ -88,13 +88,11 @@ static void ws_send(char *str) {
 // ***************** IDAPLUGIN *******************
 
 static void update_address(const char *type, ea_t addr) {
-
-  //msg("addr 0x%x\n", addr);
   char tmp[100];
   #ifdef __EA64__
-    qsnprintf(tmp, 100-1, "set%s %llu", type, addr);
+    qsnprintf(tmp, 100-1, "set%s 0x%llx", type, addr);
   #else
-    qsnprintf(tmp, 100-1, "set%s %u", type, addr);
+    qsnprintf(tmp, 100-1, "set%s 0x%x", type, addr);
   #endif
   ws_send(tmp);
 }
@@ -193,7 +191,6 @@ void idaapi IDAP_run(int arg) {
   msg("installing book\n");
   return;
 }
-
 
 char IDAP_comment[] 	= "This is my test plug-in";
 char IDAP_help[] 		= "My plugin";

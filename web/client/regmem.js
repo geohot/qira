@@ -32,9 +32,9 @@ function redraw_reg_flags() {
 $(document).ready(function() {
   $("#hexdump")[0].addEventListener("mousewheel", function(e) {
     if (e.wheelDelta < 0) {
-      Session.set('dview', string_add(Session.get('dview'), 0x10));
+      Session.set('dview', bn_add(Session.get('dview'), 0x10));
     } else if (e.wheelDelta > 0) {
-      Session.set('dview', string_add(Session.get('dview'), -0x10));
+      Session.set('dview', bn_add(Session.get('dview'), -0x10));
     }
   });
 });

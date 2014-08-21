@@ -25,10 +25,10 @@ Deps.autorun(function() { DA("update controls");
   
 $(document).ready(function() {
   $('#control_clnum').on('change', function(e) {
-    Session.set("clnum", parseInt(e.target.value));
+    Session.set("clnum", fdec(e.target.value));
   });
   $('#control_forknum').on('change', function(e) {
-    Session.set("forknum", parseInt(e.target.value));
+    Session.set("forknum", fdec(e.target.value));
   });
   $('#control_iaddr').on('change', function(e) {
     if (e.target.value == "") {
@@ -87,7 +87,7 @@ window.onkeydown = function(e) {
 $(document).ready(function() {
   // control the highlighting of things
   $('body').on('click', '.clnum', function(e) {
-    Session.set('clnum', parseInt(e.target.textContent));
+    Session.set('clnum', fdec(e.target.textContent));
     push_history("click clnum");
   });
   $('body').on('click', '.iaddr', function(e) {
@@ -137,8 +137,8 @@ $(document).ready(function() {
 
   // vtimeline flags
   $('body').on('click', '.flag', function(e) {
-    var forknum = parseInt(e.target.parentNode.id.substr(9));
-    var clnum = parseInt(e.target.textContent);
+    var forknum = fdec(e.target.parentNode.id.substr(9));
+    var clnum = fdec(e.target.textContent);
     Session.set("forknum", forknum);
     Session.set("clnum", clnum);
     push_history("click flag");

@@ -45,7 +45,7 @@ Deps.autorun(function() { DA("pmaps changed, updating haddrline");
 
 draw_hflag = function(addr, name, color, alwaysontop) {
   $("#hflag_"+name).remove();
-  var t = $("#pchunk_"+string_round(addr, 3));
+  var t = $("#pchunk_"+bn_round(addr, 3));
   if (t.length == 1) {
     //p("drawing hflag");
     var hflag = $('<div class="hflag" id="hflag_'+name+'"></div>');

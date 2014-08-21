@@ -57,51 +57,6 @@ Deps.autorun(function() { DA("history");
 
 // ** end history ***
 
-function fhex(a) {
-  return parseInt(a, 16);
-}
-
-function hex(a) {
-  if (a == undefined) {
-    return "";
-  } else {
-    if (a < 0) a += 0x100000000;
-    return "0x"+a.toString(16);
-  }
-}
-
-
-// s is a hex number
-// num is the number of digits to round off
-function string_round(s, num) {
-  if ((s.length-2) <= num) {
-    ret = "0x0";
-  } else {
-    var ret = s.substring(0, s.length-num);
-    for (var i = 0; i < num; i++) {
-      ret += "0";
-    }
-  }
-  return ret;
-}
-
-function string_add(s, num) {
-  // still wrong for big numbers
-  return hex(fhex(s)+num);
-}
-
-function get_data_type(v) {
-  if (typeof v == "number") v = hex(v);
-  //if (typeof v == "string") v = parseInt(v, 16);
-  //var a = pmaps[v - v%0x1000];
-
-  // haxx
-  var pmaps = Session.get('pmaps');
-  var a = pmaps[string_round(v, 3)];
-  if (a === undefined) return "";
-  else return "data"+a;
-}
-
 var escapeHTML = (function () {
   'use strict';
   var chr = { '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' };
@@ -127,9 +82,18 @@ function highlight_addresses(a) {
   return d;
 }
 
+function get_data_type(v) {
+  if (typeof v == "number") v = hex(v);
+  // haxx
+  var pmaps = Session.get('pmaps');
+  var a = pmaps[bn_round(v, 3)];
+  if (a === undefined) return "";
+  else return "data"+a;
+}
+
 function update_dview(addr) {
   Session.set('daddr', addr);
-  Session.set('dview', string_add(string_round(addr, 1), -0x20));
+  Session.set('dview', bn_add(bn_round(addr, 1), -0x20));
   push_history("update dview");
 }
 

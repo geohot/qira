@@ -69,7 +69,7 @@ function register_drag_zoom() {
   function get_forknum(e) {
     var fn = e.target.id.split("vtimeline")[1];
     if (fn == "box") return -1;
-    return parseInt(fn);
+    return fdec(fn);
   }
   var down = -1;
   var downforknum = -1;
@@ -182,7 +182,7 @@ function redraw_vtimelines(scale) {
 
 delete_all_forks = function() {
   for (forknum in Session.get('max_clnum')) {
-    stream.emit("deletefork", parseInt(forknum));
+    stream.emit("deletefork", fdec(forknum));
   }
   redraw_flags();
 };
@@ -210,9 +210,9 @@ function redraw_flags() {
   for (arr in flags) {
     if (flags[arr].length == 0) continue;
     var classes = "flag";
-    var forknum = parseInt(arr.split(",")[0]);
+    var forknum = fdec(arr.split(",")[0]);
     if (maxclnum[forknum] === undefined) continue;
-    var clnum = parseInt(arr.split(",")[1]);
+    var clnum = fdec(arr.split(",")[1]);
     if (clnum < cview[0] || clnum > cview[1]) continue;
 
     var flagpos = ((clnum-Math.max(maxclnum[forknum][0], cview[0]))/cscale);
@@ -254,7 +254,7 @@ function add_flag(type, forknum, clnum) {
 
 function remove_flags(type, forknum) {
   for (arr in flags) {
-    var tforknum = parseInt(arr.split(",")[0]);
+    var tforknum = fdec(arr.split(",")[0]);
     if (forknum !== undefined && forknum != tforknum) continue;
     var index = flags[arr].indexOf(type);
     while (index != -1) {
@@ -272,8 +272,8 @@ go_to_flag = function (next, data) {
   //var idx = flags.indexOf((forknum, clnum));
   var cls = [gclnum];
   for (arr in flags) {
-    var forknum = parseInt(arr.split(",")[0]);
-    var clnum = parseInt(arr.split(",")[1]);
+    var forknum = fdec(arr.split(",")[0]);
+    var clnum = fdec(arr.split(",")[1]);
     if (clnum == gclnum) continue;
     if (data) {
       if (flags[arr].indexOf("daddrr") != -1 ||
@@ -306,7 +306,7 @@ Deps.autorun(function() { DA("updating bounds flags");
   if (maxclnum === undefined) return;
   remove_flags("bounds");
   for (forknum in maxclnum) {
-    forknum = parseInt(forknum);
+    forknum = fdec(forknum);
     add_flag("bounds", forknum, maxclnum[forknum][0]);
     add_flag("bounds", forknum, maxclnum[forknum][1]);
   }
