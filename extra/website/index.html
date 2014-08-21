@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
+<style>
+.instruction {
+  color: #CC0000;
+}
+.data {
+  color: #888800;
+}
+.dataread {
+  color: #666644;
+}
+.datawrite {
+  color: #CCCC22;
+}
+.change {
+  color: blue;
+}
+</style>
+
+    <title>qira</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+  </head>
+
+  <body>
+    <div class="navbar navbar-default navbar-static-top" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="#">Home</a></li>
+            <li><a href="https://code.google.com/p/qira/">Source</a></li>
+          </ul>
+          <!--
+          <ul class="nav navbar-nav navbar-right">
+            <li><a href="#install">Get QIRA</a></li>
+          </ul>-->
+        </div><!--/.nav-collapse -->
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="jumbotron">
+        <h1>qira ./a.out</h1>
+        <br/>
+        <img class="img-responsive" src="img/first_splash.png"></img>
+        <h2>Install it now.</h2>
+        <p>Linux required, 64-bit Ubuntu recommended</p>
+        <kbd>cd ~/ && wget -q0- http://qira.me/dl | unxz | tar x && cd qira && ./install.sh</kbd>
+        <h2>b *0x8048446</h2>
+        <samp>Your breakpoint was hit 5 times, at change 90, 111, 128, 145, and 162.<br/>
+        I drew red lines in the vtimeline for you to signify this.<br/>
+        Would you like to see the memory at those times? Just click.<br/>
+        Or navigate between them with j and k</samp>
+        <h2>info registers; x/32wx 0xf6ffee80</h2>
+        <img class="img-responsive" src="img/hexdump.png"></img>
+        <h4>Instructions are <span class="instruction">red</span>. Data is <span class="data">yellow</span>. And registers are colorful.</h4>
+        <h2>cat /proc/self/maps</h2>
+        <img class="img-responsive" src="img/haddrbar.png"></img>
+        <h2>watch *($esp+0x1c)</h2>
+        <table><tr><td>
+        <img class="img-responsive pull-left" src="img/watch.png"></img></td>
+        <td><h4 style="margin: 10px">
+        Reads are <span class="dataread">dark yellow</span>.<br/><br/>
+        Writes are <span class="datawrite">bright yellow</span>.<br/><br/>
+        The selected change is <span class="change">blue</span>.</h4>
+        </td></tr></table>
+        </dl>
+        <h2>qira -s ./a.out</h2>
+        <kbd># or if you like long commands</kbd><br/>
+        <kbd>socat tcp-l:4000,reuseaddr,fork exec:"qira ./a.out"</kbd>
+      </div>
+    </div>
+
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+  </body>
+</html>
+
