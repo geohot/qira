@@ -3,8 +3,9 @@
 # if you don't have ubuntu you are on your own here
 if [ $(which apt-get) ]; then
   echo "fetching qemu build-deps, enter your password"
+  sudo apt-get update
   sudo apt-get --no-install-recommends -y build-dep qemu
-  sudo apt-get install wget flex bison libtool automake autoconf autotools-dev
+  sudo apt-get install wget flex bison libtool automake autoconf autotools-dev pkg-config libglib2.0-dev
 else
   echo "WARNING: you don't have apt-get, you are required to fetch the build deps of QEMU on your own"
 fi
