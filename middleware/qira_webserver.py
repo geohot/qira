@@ -321,7 +321,8 @@ def getregisters(forknum, clnum):
   REGS = program.tregs[0]
   REGSIZE = program.tregs[1]
 
-  cls = trace.db.fetch_changes_by_clnum(clnum+1, LIMIT)
+  # 50 is a sane limit here, we don't really need to mark lib calls correctly
+  cls = trace.db.fetch_changes_by_clnum(clnum+1, 50)
   regs = trace.db.fetch_registers(clnum)
 
   for i in range(0, len(REGS)):
