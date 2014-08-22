@@ -212,7 +212,10 @@ class Program:
       if len(d) == 0:
         continue
       # hacks
-      addr = int(d.split(" ")[0].strip(":"), 16)
+      try:
+        addr = int(d.split(" ")[0].strip(":"), 16)
+      except:
+        continue
       #print repr(d)
       if self.fb == 0x28:   # ARM
         inst = d[d.rfind("  ")+2:]
