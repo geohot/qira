@@ -505,7 +505,10 @@ class Trace:
         # move this loop outside the address loop, so slow
         for (ss, se) in self.base_memory:
           if ss <= ri and ri < se:
-            dat[i] = ord(self.base_memory[(ss,se)][ri-ss])
+            try:
+              dat[i] = ord(self.base_memory[(ss,se)][ri-ss])
+            except:
+              pass
     return dat
 
   def load_base_memory(self):
