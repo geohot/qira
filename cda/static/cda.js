@@ -1,6 +1,8 @@
 // connect to the QIRA stream
 stream = io.connect("http://localhost:3002/cda");
 
+var current_line = "";
+
 function go_to_filename_line(filename, line) {
   //p('setline');
   var b64xref = location.hash.split(",")[1];
@@ -13,6 +15,7 @@ function go_to_filename_line(filename, line) {
 }
 
 stream.on('setline', function(filename, line) {
+  current_line = filename+"#"+line;
   go_to_filename_line(filename, line);
 });
 
@@ -57,7 +60,11 @@ function refresh() {
     if (highlighted.length > 0) {
       highlighted.addClass("line_highlighted");
       $('#program').scrollTo(highlighted, {offset: -150})
-      stream.emit('navigateline', sfile, parseInt(ln))
+      var new_line = file+"#"+parseInt(ln);
+      if (current_line != new_line) {
+        stream.emit('navigateline', sfile, parseInt(ln))
+        current_line = new_line;
+      }
       sline = parseInt(ln);
     }
   }
