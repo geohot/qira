@@ -287,12 +287,12 @@ class Program:
 
   def research(self, re):
     try:
-      csearch = qira.config.CODESEARCHDIR + "/csearch"
+      csearch = qira_config.CODESEARCHDIR + "/csearch"
       out = subprocess.Popen([csearch, "-n", "--", re], stdout=subprocess.PIPE, env={"CSEARCHINDEX": self.cindexname})
       dat = out.communicate()
       return dat[0].split("\n")[:-1]
-    except:
-      print "ERROR: csearch not found"
+    except Exception, e:
+      print "ERROR: csearch issue",e
       return []
 
   def getdwarf(self):
