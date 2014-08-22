@@ -24,4 +24,7 @@ pin.log
 cda/codesearch-*
 *.DS_Store
 /libs/
+tests/bap/out.*
+tests/bap/*.log
+
 
