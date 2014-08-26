@@ -7,6 +7,12 @@
 
 #include "pin.H"
 
+#ifdef TARGET_WINDOWS
+namespace WINDOWS {
+#include <Windows.h>
+}
+#endif
+
 #ifndef TARGET_WINDOWS
 #define InterlockedIncrement(x) __sync_add_and_fetch((x), 1)
 #endif
@@ -17,11 +23,8 @@
 #endif
 
 #ifdef TARGET_WINDOWS
-extern "C" {
-extern bool CreateDirectoryA(const char *x, void *y); // Fix with real windows headers
-}
 #define fpurge(x) ((void)(x)) // Windows doesn't fork.
-#define mkdir(x, y) CreateDirectoryA((x), NULL)
+#define mkdir(x, y) WINDOWS::CreateDirectoryA((x), NULL)
 #else
 #include <sys/stat.h>
 #endif
@@ -82,26 +85,23 @@ KNOB<BOOL> KnobMakeStandaloneTrace(KNOB_MODE_WRITEONCE, "pintool", "standalone",
 #endif
 
 #ifdef TARGET_WINDOWS
-namespace WINDOWS {
-#include <Windows.h>
-}
 #define TRACEFILE_TYPE WINDOWS::HANDLE
-#define OPEN_TRACEFILE(fn) WINDOWS::CreateFile(fn, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE, \
+#define OPEN_TRACEFILE(fn) WINDOWS::CreateFile((fn), GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE, \
 	NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL)
-#define CLOSE_TRACEFILE(x) WINDOWS::CloseHandle(x)
-#define MMAP_TRACEFILE(x, size) { \
-	if (change == NULL) WINDOWS::UnmapViewOfFile(change); \
-	WINDOWS::LARGE_INTEGER lisaved; \
-	WINDOWS::LARGE_INTEGER lizero; lizero.QuadPart = 0; \
-	WINDOWS::LARGE_INTEGER lisize; lisize.QuadPart = size; \
-	WINDOWS::SetFilePointerEx(x, lizero, &lisaved, FILE_CURRENT); \
-	WINDOWS::SetFilePointerEx(x, lisize, NULL, FILE_BEGIN); \
-	WINDOWS::SetEndOfFile(x); \
-	WINDOWS::SetFilePointerEx(x, lisaved, NULL, FILE_BEGIN); \
-	WINDOWS::HANDLE fileMapping = WINDOWS::CreateFileMapping(x, NULL, PAGE_READWRITE, 0, 0, NULL); \
-	change = (struct change *)WINDOWS::MapViewOfFileEx(fileMapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, size, NULL); \
-	change_length = size; \
-	logstate = (struct logstate*)change; \
+#define CLOSE_TRACEFILE(x) WINDOWS::CloseHandle((x))
+static inline void MMAP_TRACEFILE(WINDOWS::HANDLE handle, size_t size) {
+	if (change == NULL) WINDOWS::UnmapViewOfFile(change);
+	WINDOWS::LARGE_INTEGER lisaved;
+	WINDOWS::LARGE_INTEGER lizero; lizero.QuadPart = 0;
+	WINDOWS::LARGE_INTEGER lisize; lisize.QuadPart = size;
+	WINDOWS::SetFilePointerEx(handle, lizero, &lisaved, FILE_CURRENT);
+	WINDOWS::SetFilePointerEx(handle, lisize, NULL, FILE_BEGIN);
+	WINDOWS::SetEndOfFile(handle);
+	WINDOWS::SetFilePointerEx(handle, lisaved, NULL, FILE_BEGIN);
+	WINDOWS::HANDLE fileMapping = WINDOWS::CreateFileMapping(handle, NULL, PAGE_READWRITE, 0, 0, NULL);
+	change = (struct change *)WINDOWS::MapViewOfFileEx(fileMapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, size, NULL);
+	change_length = size;
+	logstate = (struct logstate*)change;
 }
 #else
 #include <unistd.h>
@@ -109,14 +109,14 @@ namespace WINDOWS {
 #include <fcntl.h>
 #include <sys/mman.h>
 #define TRACEFILE_TYPE int
-#define OPEN_TRACEFILE(fn) open(fn, O_RDWR|O_CREAT, 0644)
-#define CLOSE_TRACEFILE(x) close(x)
-#define MMAP_TRACEFILE(x, size) { \
-	if (change == NULL) munmap(change, change_length); \
-	ftruncate(x, size); \
-	change = (struct change*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, x, 0); \
-	change_length = size; \
-	logstate = (struct logstate*)change; \
+#define OPEN_TRACEFILE(fn) open((fn), O_RDWR|O_CREAT, 0644)
+#define CLOSE_TRACEFILE(x) close((x))
+static inline void MMAP_TRACEFILE(int x, size_t size) {
+	if (change == NULL) munmap(change, change_length);
+	ftruncate(x, size);
+	change = (struct change*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, x, 0);
+	change_length = size;
+	logstate = (struct logstate*)change;
 }
 #endif
 
