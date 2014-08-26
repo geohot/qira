@@ -9,7 +9,24 @@
 
 #ifdef TARGET_WINDOWS
 namespace WINDOWS {
-#include <Windows.h>
+	#include <Windows.h>
+	
+	void LastErrorExit(char *funcName) {
+		LPVOID lpMsgBuf;
+		LPVOID lpDisplayBuf;
+		DWORD dw = GetLastError();
+		FormatMessage(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER |
+			FORMAT_MESSAGE_FROM_SYSTEM |
+			FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL, dw,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			(LPTSTR)&lpMsgBuf, 0, NULL
+		);
+		printf("%s failed with error %d (%s)\n", funcName, dw, lpMsgBuf);
+		LocalFree(lpMsgBuf);
+		ExitProcess(dw); 
+	}
 }
 #endif
 
@@ -54,16 +71,16 @@ static struct logstate {
 	uint32_t first_changelist_number;
 	uint32_t parent_id;
 	uint32_t this_pid;
-} *logstate;
+} *logstate = NULL;
 
 static struct change {
 	uint64_t address;
 	uint64_t data;
 	uint32_t changelist_number;
 	uint32_t flags;
-} *change;
+} *change = NULL;
 
-size_t change_length;
+size_t change_length = 0;
 
 KNOB<string> KnobOutputDir(KNOB_MODE_WRITEONCE, "pintool", "o",
 	#ifdef TARGET_WINDOWS
@@ -88,8 +105,8 @@ KNOB<BOOL> KnobMakeStandaloneTrace(KNOB_MODE_WRITEONCE, "pintool", "standalone",
 
 #ifdef TARGET_WINDOWS
 #define TRACEFILE_TYPE WINDOWS::HANDLE
-#define OPEN_TRACEFILE(fn) WINDOWS::CreateFile((fn), GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE, \
-	NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL)
+#define OPEN_TRACEFILE(fn) WINDOWS::CreateFile((fn), GENERIC_READ|GENERIC_WRITE, \
+	FILE_SHARE_READ|FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL)
 #define CLOSE_TRACEFILE(x) WINDOWS::CloseHandle((x))
 static inline void MMAP_TRACEFILE(WINDOWS::HANDLE handle, size_t size) {
 	if (change != NULL) WINDOWS::UnmapViewOfFile(change);
@@ -100,8 +117,11 @@ static inline void MMAP_TRACEFILE(WINDOWS::HANDLE handle, size_t size) {
 	WINDOWS::SetFilePointerEx(handle, lisize, NULL, FILE_BEGIN);
 	WINDOWS::SetEndOfFile(handle);
 	WINDOWS::SetFilePointerEx(handle, lisaved, NULL, FILE_BEGIN);
+	//WINDOWS::SetFileValidData(handle, size);
 	WINDOWS::HANDLE fileMapping = WINDOWS::CreateFileMapping(handle, NULL, PAGE_READWRITE, 0, 0, NULL);
+	if(!fileMapping) WINDOWS::LastErrorExit("CreateFileMapping");
 	change = (struct change *)WINDOWS::MapViewOfFileEx(fileMapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, size, NULL);
+	if(!change) WINDOWS::LastErrorExit("MapViewOfFileEx");
 	change_length = size;
 	logstate = (struct logstate*)change;
 }
