@@ -81,7 +81,9 @@ KNOB<BOOL> KnobMakeStandaloneTrace(KNOB_MODE_WRITEONCE, "pintool", "standalone",
 	#else
 	"0",
 	#endif
-"produce trace files suitable for moving to other systems.");
+	"produce trace files suitable for moving to other systems.");
+#else
+	BOOL KnobMakeStandaloneTrace = false;
 #endif
 
 #ifdef TARGET_WINDOWS
@@ -472,7 +474,7 @@ VOID ImageLoad(IMG img, VOID *v) {
 		for(UINT32 i = 0; i < numRegions; i++) {
 			ADDRINT low = IMG_RegionLowAddress(img, i);
 			ADDRINT high = IMG_RegionHighAddress(img, i)+1;
-			fprintf(base_file, "%p-%p %x %s\n", (void*)low, (void*)high, (void*)(low - imglow), imgname.c_str());
+			fprintf(base_file, "%p-%p %zx %s\n", (void*)low, (void*)high, (size_t)(low - imglow), imgname.c_str());
 		}
 	}
 	fflush(base_file);
@@ -481,9 +483,6 @@ VOID ImageLoad(IMG img, VOID *v) {
 		// Dump image file here.
 		FILE *f = fopen((*image_folder+urlencode(imgname)).c_str(), "wb");
 		ASSERT(f, "Couldn't open image file destination.");
-		for(unsigned i = 0; i < IMG_SizeMapped(img); i += 4096) {
-			volatile int x = *(int*)(IMG_StartAddress(img)+i);
-		}
 		fwrite((void*)IMG_StartAddress(img), 1, IMG_SizeMapped(img), f);
 		fclose(f);
 	}
