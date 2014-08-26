@@ -54,10 +54,10 @@ static struct logstate {
 } *logstate;
 
 static struct change {
-  uint64_t address;
-  uint64_t data;
-  uint32_t changelist_number;
-  uint32_t flags;
+	uint64_t address;
+	uint64_t data;
+	uint32_t changelist_number;
+	uint32_t flags;
 } *change;
 
 size_t change_length;
@@ -90,18 +90,18 @@ namespace WINDOWS {
 	NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL)
 #define CLOSE_TRACEFILE(x) WINDOWS::CloseHandle(x)
 #define MMAP_TRACEFILE(x, size) { \
-  if (change == NULL) WINDOWS::UnmapViewOfFile(change); \
-  WINDOWS::LARGE_INTEGER lisaved; \
-  WINDOWS::LARGE_INTEGER lizero; lizero.QuadPart = 0; \
-  WINDOWS::LARGE_INTEGER lisize; lisize.QuadPart = size; \
-  WINDOWS::SetFilePointerEx(x, lizero, &lisaved, FILE_CURRENT); \
-  WINDOWS::SetFilePointerEx(x, lisize, NULL, FILE_BEGIN); \
-  WINDOWS::SetEndOfFile(x); \
-  WINDOWS::SetFilePointerEx(x, lisaved, NULL, FILE_BEGIN); \
-  WINDOWS::HANDLE fileMapping = WINDOWS::CreateFileMapping(x, NULL, PAGE_READWRITE, 0, 0, NULL); \
-  change = (struct change *)WINDOWS::MapViewOfFileEx(fileMapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, size, NULL); \
-  change_length = size; \
-  logstate = (struct logstate*)change; \
+	if (change == NULL) WINDOWS::UnmapViewOfFile(change); \
+	WINDOWS::LARGE_INTEGER lisaved; \
+	WINDOWS::LARGE_INTEGER lizero; lizero.QuadPart = 0; \
+	WINDOWS::LARGE_INTEGER lisize; lisize.QuadPart = size; \
+	WINDOWS::SetFilePointerEx(x, lizero, &lisaved, FILE_CURRENT); \
+	WINDOWS::SetFilePointerEx(x, lisize, NULL, FILE_BEGIN); \
+	WINDOWS::SetEndOfFile(x); \
+	WINDOWS::SetFilePointerEx(x, lisaved, NULL, FILE_BEGIN); \
+	WINDOWS::HANDLE fileMapping = WINDOWS::CreateFileMapping(x, NULL, PAGE_READWRITE, 0, 0, NULL); \
+	change = (struct change *)WINDOWS::MapViewOfFileEx(fileMapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, size, NULL); \
+	change_length = size; \
+	logstate = (struct logstate*)change; \
 }
 #else
 #include <unistd.h>
@@ -112,11 +112,11 @@ namespace WINDOWS {
 #define OPEN_TRACEFILE(fn) open(fn, O_RDWR|O_CREAT, 0644)
 #define CLOSE_TRACEFILE(x) close(x)
 #define MMAP_TRACEFILE(x, size) { \
-  if (change == NULL) munmap(change, change_length); \
-  ftruncate(x, size); \
-  change = (struct change*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, x, 0); \
-  change_length = size; \
-  logstate = (struct logstate*)change; \
+	if (change == NULL) munmap(change, change_length); \
+	ftruncate(x, size); \
+	change = (struct change*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, x, 0); \
+	change_length = size; \
+	logstate = (struct logstate*)change; \
 }
 #endif
 
@@ -133,9 +133,9 @@ void new_trace_files() {
 	mkdir(KnobOutputDir.Value().c_str(), 0755);
 	
 	if(trace_file) CLOSE_TRACEFILE(trace_file);
-  trace_file = OPEN_TRACEFILE(pathbase);
+	trace_file = OPEN_TRACEFILE(pathbase);
 	ASSERT(trace_file, "Failed to open trace output.");
-  MMAP_TRACEFILE(trace_file, sizeof(struct logstate));
+	MMAP_TRACEFILE(trace_file, sizeof(struct logstate));
 	
 	if(strace_file) fpurge(strace_file), fclose(strace_file);
 	sprintf(path, "%s_strace", pathbase);
@@ -155,10 +155,10 @@ void new_trace_files() {
 }
 
 static void add_change(uint64_t addr, uint64_t data, uint32_t flags) {
-  int cn = logstate->change_count;
-  if (change_length < cn * sizeof(struct change)) {
-    MMAP_TRACEFILE(trace_file, change_length*2);
-  }
+	int cn = logstate->change_count;
+	if (change_length < cn * sizeof(struct change)) {
+		MMAP_TRACEFILE(trace_file, change_length*2);
+	}
 	change[cn].address = addr;
 	change[cn].data = data;
 	change[cn].changelist_number = logstate->changelist_number;
@@ -215,14 +215,14 @@ ADDRINT RecordMemWrite1(ADDRINT addr, ADDRINT oldval) {
 }
 ADDRINT RecordMemWrite2(ADDRINT addr, UINT32 size) {
 	UINT64 value[16];
-  if (size > sizeof(value)) {
-    // dangerous address access!
-    add_big_change(addr, value, IS_MEM|IS_WRITE, size);
-  } else {
-    ASSERT(size <= sizeof(value), "wow");
-    PIN_SafeCopy(value, (const VOID *)addr, size); // Can assume it worked.
-    add_big_change(addr, value, IS_MEM|IS_WRITE, size);
-  }
+	if (size > sizeof(value)) {
+		// dangerous address access!
+		add_big_change(addr, value, IS_MEM|IS_WRITE, size);
+	} else {
+		ASSERT(size <= sizeof(value), "wow");
+		PIN_SafeCopy(value, (const VOID *)addr, size); // Can assume it worked.
+		add_big_change(addr, value, IS_MEM|IS_WRITE, size);
+	}
 	return 0;
 }
 
@@ -374,11 +374,6 @@ VOID Instruction(INS ins, VOID *v) {
 ////////////////////////////////////////////////////////////////
 // strace instrumentation functions
 ////////////////////////////////////////////////////////////////
-inline VOID SysBefore(ADDRINT ip, ADDRINT num,
-	ADDRINT arg0, ADDRINT arg1, ADDRINT arg2,
-	ADDRINT arg3, ADDRINT arg4, ADDRINT arg5)
-{
-}
 
 int sys_nr;
 ADDRINT arg1;
@@ -425,15 +420,15 @@ VOID SyscallEntry(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOI
 }
 
 VOID SyscallExit(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOID *v) {
-  long syscall_return = PIN_GetSyscallReturn(ctxt, std);
+	long syscall_return = PIN_GetSyscallReturn(ctxt, std);
 	fprintf(strace_file,") = %p\n", (void*)syscall_return);
 	fflush(strace_file);
-  #ifdef TARGET_LINUX
-    // geohot doesn't approve of this hack, even though he wrote it
-    if (sys_nr == SYS_READ) {
-      RecordMemWrite2(arg1, syscall_return);
-    }
-  #endif
+#ifdef TARGET_LINUX
+	// geohot doesn't approve of this hack, even though he wrote it
+	if (sys_nr == SYS_READ) {
+		RecordMemWrite2(arg1, syscall_return);
+	}
+#endif
 }
 
 ////////////////////////////////////////////////////////////////
@@ -536,7 +531,7 @@ int main(int argc, char *argv[]) {
 	logstate->is_filtered = 0;
 	logstate->first_changelist_number = 0;
 	logstate->parent_id = -1;
-  logstate->this_pid = PIN_GetPid();
+	logstate->this_pid = PIN_GetPid();
 
 	PIN_AddFiniFunction(Fini, 0);
 
