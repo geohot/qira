@@ -92,7 +92,7 @@ KNOB<BOOL> KnobMakeStandaloneTrace(KNOB_MODE_WRITEONCE, "pintool", "standalone",
 	NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL)
 #define CLOSE_TRACEFILE(x) WINDOWS::CloseHandle((x))
 static inline void MMAP_TRACEFILE(WINDOWS::HANDLE handle, size_t size) {
-	if (change == NULL) WINDOWS::UnmapViewOfFile(change);
+	if (change != NULL) WINDOWS::UnmapViewOfFile(change);
 	WINDOWS::LARGE_INTEGER lisaved;
 	WINDOWS::LARGE_INTEGER lizero; lizero.QuadPart = 0;
 	WINDOWS::LARGE_INTEGER lisize; lisize.QuadPart = size;
@@ -114,7 +114,7 @@ static inline void MMAP_TRACEFILE(WINDOWS::HANDLE handle, size_t size) {
 #define OPEN_TRACEFILE(fn) open((fn), O_RDWR|O_CREAT, 0644)
 #define CLOSE_TRACEFILE(x) close((x))
 static inline void MMAP_TRACEFILE(int x, size_t size) {
-	if (change == NULL) munmap(change, change_length);
+	if (change != NULL) munmap(change, change_length);
 	ftruncate(x, size);
 	change = (struct change*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, x, 0);
 	change_length = size;
@@ -158,7 +158,7 @@ void new_trace_files() {
 
 static void add_change(uint64_t addr, uint64_t data, uint32_t flags) {
 	int cn = logstate->change_count;
-	if (change_length < cn * sizeof(struct change)) {
+	if (change_length < (cn+1) * sizeof(struct change)) {
 		MMAP_TRACEFILE(trace_file, change_length*2);
 	}
 	change[cn].address = addr;
