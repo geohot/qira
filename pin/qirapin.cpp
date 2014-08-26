@@ -82,16 +82,24 @@ KNOB<BOOL> KnobMakeStandaloneTrace(KNOB_MODE_WRITEONCE, "pintool", "standalone",
 #endif
 
 #ifdef TARGET_WINDOWS
+namespace WINDOWS {
 #include <Windows.h>
-#define TRACEFILE_TYPE HANDLE
-#define OPEN_TRACEFILE(fn) CreateFile(filename, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE, \
-  NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL)
-#define CLOSE_TRACEFILE(x) CloseHandle(x)
+}
+#define TRACEFILE_TYPE WINDOWS::HANDLE
+#define OPEN_TRACEFILE(fn) WINDOWS::CreateFile(fn, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE, \
+	NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL)
+#define CLOSE_TRACEFILE(x) WINDOWS::CloseHandle(x)
 #define MMAP_TRACEFILE(x, size) { \
-  if (change == NULL) UnmapViewOfFile(change); \
-  ftruncate(x, size); \
-  HANDLE fileMapping = CreateFileMapping(fd_, NULL, PAGE_READWRITE, 0, 0, NULL); \
-  change = (struct change *)MapViewOfFileEx(fileMapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, size, NULL); \
+  if (change == NULL) WINDOWS::UnmapViewOfFile(change); \
+  WINDOWS::LARGE_INTEGER lisaved; \
+  WINDOWS::LARGE_INTEGER lizero; lizero.QuadPart = 0; \
+  WINDOWS::LARGE_INTEGER lisize; lisize.QuadPart = size; \
+  WINDOWS::SetFilePointerEx(x, lizero, &lisaved, FILE_CURRENT); \
+  WINDOWS::SetFilePointerEx(x, lisize, NULL, FILE_BEGIN); \
+  WINDOWS::SetEndOfFile(x); \
+  WINDOWS::SetFilePointerEx(x, lisaved, NULL, FILE_BEGIN); \
+  WINDOWS::HANDLE fileMapping = WINDOWS::CreateFileMapping(x, NULL, PAGE_READWRITE, 0, 0, NULL); \
+  change = (struct change *)WINDOWS::MapViewOfFileEx(fileMapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, size, NULL); \
   change_length = size; \
   logstate = (struct logstate*)change; \
 }
