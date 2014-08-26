@@ -440,7 +440,7 @@ VOID SyscallExit(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOID
 string urlencode(const string &s) {
 	std::ostringstream stream;
 	stream << std::setbase(16) << std::setfill('0');
-	for(int i = 0; i < s.length(); i++) {
+	for(size_t i = 0; i < s.length(); i++) {
 		char c = s[i];
 		if(('0' <= c && c <= '9') ||
 		   ('A' <= c && c <= 'Z') ||
