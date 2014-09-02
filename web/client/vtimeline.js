@@ -194,7 +194,7 @@ function redraw_flags() {
   if (maxclnum === undefined) return;
   var cscale = get_cscale();
   if (cscale === undefined) return;
-  //$(".flag").remove();
+  $(".flag").remove();   // required if a vtimeline is off screen and not redrawn
   redraw_vtimelines(cscale);
   var colors = {
     "bounds": "green",

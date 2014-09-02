@@ -65,7 +65,7 @@ td {
   white-space: nowrap;
 }
 
-hflag {
+.hflag {
   width: 2px;
   height: 40px;
   font-family: monospace;
