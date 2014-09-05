@@ -5,10 +5,10 @@ stream = io.connect(STREAM_URL);
 Deps.autorun(function() { DA("update static view");
   var iaddr = Session.get('iaddr');
   if (iaddr === undefined) return;
-  stream.emit('getaddressrange', bn_add(iaddr, -0x20), 0x80);
+  stream.emit('gettags', bn_add(iaddr, -0x20), 0x80);
 });
 
-function on_addressrange(addrs) { DS("addressrange"); 
+function on_tags(addrs) { DS("tags"); 
   //p(addrs);
   var idump = "";
   for (var i=0;i<addrs.length;i++) {
@@ -20,5 +20,5 @@ function on_addressrange(addrs) { DS("addressrange");
   }
   $("#static").html(idump);
   rehighlight();
-} stream.on('addressrange', on_addressrange);
+} stream.on('tags', on_tags);
 

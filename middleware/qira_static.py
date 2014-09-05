@@ -5,16 +5,17 @@ from flask.ext.socketio import SocketIO, emit
 
 # should namespace be changed to static?
 
-@socketio.on('getaddressrange', namespace='/qira')
+@socketio.on('gettags', namespace='/qira')
 @socket_method
-def getaddressrange(start, length):
+def gettags(start, length):
   start = fhex(start)
   ret = []
   for i in range(start, start+length):
-    if 'instruction' in program.tags[i]:
-      ret.append({"address": ghex(i),
-        "instruction": program.tags[i]['instruction']})
-  emit('addressrange', ret)
+    if len(program.tags[i]) != 0:
+      # a bit of a hack, this is so javascript can display it
+      program.tags[i]['address'] = ghex(i)
+      ret.append(program.tags[i])
+  emit('tags', ret)
 
 def init_static(lprogram):
   global program
