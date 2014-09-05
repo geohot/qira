@@ -172,6 +172,15 @@ body {
   background-color: #DDDDDD;
 }
 
+/* ok, UI must be rethought */
+
+#static {
+  height: 270px;
+  padding: 5px;
+  overflow: hidden;
+  width: 614px;
+}
+
 /* instruction dump */
 
 #idump {

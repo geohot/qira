@@ -13,7 +13,6 @@ $(document).ready(function() {
 
 function on_instructions(msg) { DS("instructions");
   var clnum = Session.get("clnum");
-  var iaddr = Session.get("iaddr");
   var idump = "";
   for (var i = 0; i<msg.length;i++) {
     var ins = msg[i];

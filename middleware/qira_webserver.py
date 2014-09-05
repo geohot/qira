@@ -386,11 +386,15 @@ def serve(path):
   else:
     return Response(dat, mimetype="text/html")
 
+# must go at the bottom
+import qira_static
+
 def run_server(largs, lprogram):
   global args
   global program
   args = largs
   program = lprogram
+  qira_static.init_static(program)
   if qira_config.WITH_CDA:
     import cacheserver
     app.register_blueprint(cacheserver.app)
@@ -398,4 +402,5 @@ def run_server(largs, lprogram):
   print "****** starting WEB SERVER on %s:%d" % (qira_config.WEB_HOST, qira_config.WEB_PORT)
   threading.Thread(target=mwpoller).start()
   socketio.run(app, host=qira_config.WEB_HOST, port=qira_config.WEB_PORT)
+
 
