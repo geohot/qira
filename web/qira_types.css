@@ -177,14 +177,17 @@
 
 #hexeditor {
   /*max-height: 8em;*/
-  max-height: 25%;
-  overflow-y: auto;
+  /*max-height: 25%;
+  overflow-y: auto;*/
 }
 
 /*#hexdump {
     height: 20%;
     overflow-y: auto;
 }*/
+#hexdump {
+  height: 100%;
+}
 
 .hexdumpdatainstruction {
   color: #CC0000;

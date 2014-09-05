@@ -1,8 +1,8 @@
 html, body {
-    height: 100%;
-    margin: 0;
-    overflow: auto;
-    padding: 0;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
 }
 
 /* universal things */
