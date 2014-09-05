@@ -60,7 +60,7 @@ body {
 /* everything in the right panel */
 
 #onlypanel {
-  max-width: 80%;
+  width: calc(100% - 110px);
   height: 100%;
   /*background-color: #AAAAAA;*/
   /*border: 1px solid black;*/
@@ -106,5 +106,16 @@ body {
 
 #container0 {
   height: 100%;
+}
+
+#vtimelinebox {
+  padding-top: 4px;
+  height: 100%;
+  width: 110px;
+  /*background-color: #AAAAAA;*/
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
