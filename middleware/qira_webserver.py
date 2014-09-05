@@ -276,9 +276,9 @@ def getinstructions(forknum, clnum, clstart, clend):
     else:
       rret = rret[0]
 
-    if rret['address'] in program.instructions:
+    if 'instruction' in program.tags[rret['address']]:
       # fetch the instruction from the qemu dump
-      rret['instruction'] = program.instructions[rret['address']]
+      rret['instruction'] = program.tags[rret['address']]['instruction']
     else:
       # otherwise use the memory
       rawins = trace.fetch_memory(i, rret['address'], rret['data'])

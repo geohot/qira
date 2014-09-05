@@ -7,6 +7,7 @@ import sys
 import subprocess
 import threading
 import time
+import collections
 from hashlib import sha1
 sys.path.append(qira_config.BASEDIR+"/cda")
 
@@ -118,8 +119,13 @@ class Program:
     if qira_config.TRACE_LIBRARIES:
       self.defaultargs.append("-tracelibraries")
 
+    # this is the key value store for static information about the address
+    # it replaces self.instructions with self.kv[addr]['instruction']
+    # tags is a term from eda-3
+    self.tags = collections.defaultdict(dict)
+    # it should also replace dwarves
+
     # pmaps is global, but updated by the traces
-    self.instructions = {}
     (self.dwarves, self.rdwarves) = ({}, {})
     progdat = open(self.program, "rb").read(0x800)
 
@@ -223,7 +229,7 @@ class Program:
         inst = d[d.rfind("     ")+5:]
       else:
         inst = d[d.find(":")+3:]
-      self.instructions[addr] = inst
+      self.tags[addr]['instruction'] = inst
       cnt += 1
       #print addr, inst
     #sys.stdout.write("%d..." % cnt); sys.stdout.flush()

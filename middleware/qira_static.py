@@ -11,9 +11,9 @@ def getaddressrange(start, length):
   start = fhex(start)
   ret = []
   for i in range(start, start+length):
-    if i in program.instructions:
+    if 'instruction' in program.tags[i]:
       ret.append({"address": ghex(i),
-        "instruction": program.instructions[i]})
+        "instruction": program.tags[i]['instruction']})
   emit('addressrange', ret)
 
 def init_static(lprogram):

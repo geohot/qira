@@ -273,10 +273,10 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
       continue
     ins = ""
     if program != None and r[0]['data'] > 0:
-      while r[0]['address'] not in program.instructions:
+      while 'instruction' not in program.tags[r[0]['address']]:
         #print "sleeping ", hex(r[0]['address'])
         time.sleep(0.1)
-      ins = program.instructions[r[0]['address']]
+      ins = program.tags[r[0]['address']]['instruction']
     ret.append((r[0]['address'], r[0]['data'], r[0]['clnum'], ins))
     if (time.time() - start) > 0.01:
       time.sleep(0.01)
