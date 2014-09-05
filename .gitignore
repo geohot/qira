@@ -26,5 +26,6 @@ cda/codesearch-*
 /libs/
 tests/bap/out.*
 tests/bap/*.log
+bap/
 
 

@@ -60,7 +60,7 @@ body {
 /* everything in the right panel */
 
 #onlypanel {
-  width: calc(100% - 110px);
+  width: 650px;
   height: 100%;
   /*background-color: #AAAAAA;*/
   /*border: 1px solid black;*/
@@ -77,13 +77,19 @@ body {
 
 /* instruction dump */
 
-#idump {
-  /*height: 270px;
+#static {
+  height: 270px;
   padding: 5px;
+  overflow-y: hidden;
+  overflow-x: auto;
+}
+
+#idump {
+  height: 270px;
+  /*padding: 5px;
   overflow: hidden;
   width: 614px;*/
   
-  height: 35%;
   padding: 5px;
   overflow-y: hidden;
   overflow-x: auto;
