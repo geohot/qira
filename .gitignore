@@ -1,5 +1,6 @@
 web/.meteor/local
 .*.swp
+.*.swo
 tests/a.out
 tests/*.o
 *.pyc
@@ -12,7 +13,6 @@ db/
 qemu/qemu-2*
 distrib/
 qiradb/build
-cda/clang
 cda/include
 cda/clang-latest
 qemu

@@ -1,5 +1,5 @@
 #!/bin/bash -e
-sudo pip install html
+#sudo pip install html
 
 mkdir -p clang-latest
 cd clang-latest
