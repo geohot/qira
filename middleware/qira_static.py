@@ -17,6 +17,16 @@ def gettags(start, length):
       ret.append(program.tags[i])
   emit('tags', ret)
 
+# used to set names and comments and stuff
+@socketio.on('settags', namespace='/qira')
+@socket_method
+def settags(tags):
+  for addr in tags:
+    naddr = fhex(addr)
+    for i in tags[addr]:
+      program.tags[naddr][i] = tags[addr][i]
+      print hex(naddr), program.tags[naddr][i]
+
 def init_static(lprogram):
   global program
   program = lprogram
