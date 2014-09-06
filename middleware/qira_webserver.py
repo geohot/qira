@@ -286,6 +286,8 @@ def getinstructions(forknum, clnum, clstart, clend):
         raw = ''.join(map(lambda x: chr(x[1]), sorted(rawins.items())))
         rret['instruction'] = program.disasm(raw, rret['address'])
 
+    if 'name' in program.tags[rret['address']]:
+      rret['name'] = program.tags[rret['address']]['name']
     if rret['address'] in program.dwarves:
       rret['comment'] = program.dwarves[rret['address']][2]
     if i in slce:
