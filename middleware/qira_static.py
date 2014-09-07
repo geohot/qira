@@ -14,6 +14,9 @@ from flask.ext.socketio import SocketIO, emit
 # xrefs -- things that point to this
 # code -- 'foo.c:38', from DWARF or hexrays
 # semantics -- basic block start, is call, is ret, read regs, write regs
+# funclength -- this is the start of a function with length
+# scope -- first address in function
+# flags -- copied from ida
 
 # handle functions outside this
 #   function stack frames
@@ -30,6 +33,16 @@ def gettags(start, length):
       program.tags[i]['address'] = ghex(i)
       ret.append(program.tags[i])
   emit('tags', ret)
+
+@socketio.on('getfunc', namespace='/qira')
+@socket_method
+def getfunc(haddr):
+  addr = fhex(haddr)
+  if 'scope' not in program.tags[addr]:
+    return
+  start = program.tags[addr]['scope']
+  length = program.tags[fhex(start)]['funclength']
+  gettags(start, length)
 
 # used to set names and comments and stuff
 @socketio.on('settags', namespace='/qira')

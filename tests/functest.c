@@ -8,7 +8,11 @@ int b() {
 
 int main() {
   int i = a() + b();
-  printf("%d\n", i);
+  if (i > 0) {
+    printf("%d\n", i);
+  } else {
+    printf("TEH FUCK\n");
+  }
   return 0;
 }
 

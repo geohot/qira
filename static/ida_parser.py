@@ -134,8 +134,6 @@ print newfile
 
 while not done:
   idle_fxn()
-  #time.sleep(0.05)
-
 
 # ******************** USER TIME ********************
 
@@ -151,15 +149,32 @@ tags = collections.defaultdict(dict)
 for i in range(0, ida.get_nlist_size()):
   ea = ida.get_nlist_ea(i)
   name = cast(ida.get_nlist_name(i), c_char_p).value.strip()
-  print ea, name
-  addr = ghex(ea)
-  tags[addr]['name'] = name
+  print hex(ea), name
+  tags[ghex(ea)]['name'] = name
+
+for i in range(0, ida.get_func_qty()):
+  print i
+  fxn = cast(ida.getn_func(i), POINTER(c_long))
+  tags[ghex(fxn[0])]['funclength'] = fxn[1]-fxn[0]
+
+  print hex(fxn[0]), hex(fxn[1]), fxn[2], fxn[3]
+
+  # get the flags for each address in the function
+  for i in range(fxn[0], fxn[1]):
+    flags = ida.get_flags_ex(i, 0)
+    #print hex(flags)
+    # is code
+    if flags&0x600 == 0x600:
+      tags[ghex(i)]['scope'] = ghex(fxn[0])
+      tags[ghex(i)]['flags'] = flags
+
 
 # upload the tags
 
 import json
 tags = dict(tags)
-open("/tmp/qida/tags", "wb").write(json.dumps(tags))
+print tags
+open("/tmp/qida/tags", "wb").write(json.dumps({"tags": tags}))
 
 """
 from socketIO_client import SocketIO, BaseNamespace
@@ -174,5 +189,7 @@ qira.emit("settags", dict(tags))
 # ******************** USER DONE ********************
 
 ida.term_database()
+
+exit(0)
 
 

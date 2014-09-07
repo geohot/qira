@@ -79,9 +79,7 @@ body {
 /* instruction dump */
 
 #static {
-  height: 270px;
   padding: 5px;
-  overflow-y: hidden;
   overflow-x: auto;
 }
 
