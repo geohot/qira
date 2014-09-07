@@ -10,9 +10,14 @@ import time
 IDAPATH = "/home/vagrant/idademo66/"
 FILE = "/home/vagrant/qira/tests/idb/a.out"
 BADADDR = 0xFFFFFFFF
+NEF_FIRST = 0x80
+done = False
 
-string_buffers = [create_string_buffer(""), create_string_buffer(FILE)]
-argv = (c_char_p*3)(*map(addressof, string_buffers)+[0])
+#argc = 2
+#string_buffers = [create_string_buffer(""), create_string_buffer(FILE)]
+#argv = (c_char_p*3)(*map(addressof, string_buffers)+[0])
+argc = 1
+argv = None
 idle_fxn = None
 
 idp_notify = ['init', 'term', 'newprc', 'newasm', 'newfile', 'oldfile', 'newbinary', 'endbinary', 'newseg', 'assemble', 'obsolete_makemicro', 'outlabel', 'rename', 'may_show_sreg', 'closebase', 'load_idasgn', 'coagulate', 'auto_empty', 'auto_queue_empty', 'func_bounds', 'may_be_func', 'is_sane_insn', 'is_jump_func', 'gen_regvar_def', 'setsgr', 'set_compiler', 'is_basic_block_end', 'reglink', 'get_vxd_name', 'custom_ana', 'custom_out', 'custom_emu', 'custom_outop', 'custom_mnem', 'undefine', 'make_code', 'make_data', 'moving_segm', 'move_segm', 'is_call_insn', 'is_ret_insn', 'get_stkvar_scale_factor', 'create_flat_group', 'kernel_config_loaded', 'might_change_sp', 'is_alloca_probe', 'out_3byte', 'get_reg_name', 'savebase', 'gen_asm_or_lst', 'out_src_file_lnnum', 'get_autocmt', 'is_insn_table_jump', 'auto_empty_finally', 'loader_finished', 'loader_elf_machine', 'is_indirect_jump', 'verify_noreturn', 'verify_sp', 'renamed', 'add_func', 'del_func', 'set_func_start', 'set_func_end', 'treat_hindering_item', 'str2reg', 'create_switch_xrefs', 'calc_switch_cases', 'determined_main', 'preprocess_chart', 'get_bg_color', 'validate_flirt_func', 'get_operand_string', 'add_cref', 'add_dref', 'del_cref', 'del_dref', 'coagulate_dref', 'register_custom_fixup', 'custom_refinfo', 'set_proc_options', 'adjust_libfunc_ea', 'extlang_changed', 'last_cb_before_debugger']
@@ -25,10 +30,13 @@ libc = cdll.LoadLibrary("libc.so.6")
 
 CALLUI = CFUNCTYPE(c_int, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)
 def uicallback(a,b,c,d,e,f,g,h,i):
-  libc.memset(b, 0, 4)
+  global done
+  b_ptr = cast(b, POINTER(c_long))
+  b_ptr[0] = 0
+
   global idle_fxn
   if c == 17: # ui_banner
-    libc.memset(b, 1, 1)
+    b_ptr[0] = 1
     return 0
   elif c == 28: # ui_clearbreak
     return 0
@@ -56,17 +64,24 @@ def uicallback(a,b,c,d,e,f,g,h,i):
   elif c == 50:
     if d == None:
       d = 0
+    if d == 527:
+      # WTF USELESS?
+      return 0
+    if d == 53: # auto_empty_finally
+      done = True
+      return 0
     if d < len(idp_notify):
-      print "idp_notify",idp_notify[d]
+      print "idp_notify",d,idp_notify[d]
     else:
-      print "idp_notify",d
+      return 0
+      #print "idp_notify",d
 
     #st = struct.unpack("I", cast(e, c_char_p).value[0:4])[0]
     #print cast(st, c_char_p).value.strip()
     #ret = ida.invoke_callbacks(0, d, e)
     #print "RETURN 0"
     # ugh hacks
-    libc.memset(b, 0, 4)
+    b_ptr[0] = 0
     """
     if d == 2 or d == 3:
       print "returning 1"
@@ -83,12 +98,23 @@ def uicallback(a,b,c,d,e,f,g,h,i):
   print "callback", ui_msgs[c], c,d,e,f,g,h,i
 
   if c == 43:
-    print "load_file:",cast(d, c_char_p).value.strip()
-    libc.memset(b, 0, 4)
-    libc.memset(b, 1, 1)
+    print "load_file:",cast(d, c_char_p).value.strip(), hex(e), hex(f)
+    b_ptr[0] = 1
+    lst = ida.build_loaders_list(e)
+    print "loaders_list", hex(lst)
+    ret = ida.load_nonbinary_file(FILE, e, ".", NEF_FIRST, lst)
+    print ret
+    #ida.init_loader_options(e, lst)
   if c == 18:
     print "got set idle",d
     idle_fxn = CFUNCTYPE(c_int)(d)
+  if c == 25:
+    print "ask_file:",cast(e, c_char_p).value.strip(),cast(f, c_char_p).value.strip()
+    global buf   # OMG GC
+    buf = create_string_buffer(FILE)
+    b_ptr[0] = addressof(buf)
+    #b_ptr[0] = 0xAABBCCDD
+
     
   return 0
 
@@ -97,34 +123,20 @@ fxn = CALLUI(uicallback)
 rsc = "\xB9"+struct.pack("I", cast(fxn, c_void_p).value)+"\xFF\xD1\x59\x83\xC4\x04\xFF\xE1"
 sc = create_string_buffer(rsc)
 print "mprotect", libc.mprotect(addressof(sc) & 0xFFFFF000, 0x1000, 7)
-print "init_kernel", ida.init_kernel(sc, 2, argv)
+print "init_kernel", ida.init_kernel(sc, argc, argv)
 #print "init_kernel", ida.init_kernel(CALLUI(uicallback), 0, None)
 newfile = c_int(0)
 
-print "init_database", ida.init_database(2, argv, pointer(newfile))
+print "init_database", ida.init_database(argc, argv, pointer(newfile))
 #print "init_database", ida.init_database(1, None, pointer(newfile))
 print newfile
 
-print "bedtime"
-while 1:
+while not done:
   idle_fxn()
-  time.sleep(0.1)
+  #time.sleep(0.05)
 
-"""
 tmp = create_string_buffer(100)
 print ida.get_name(BADADDR, 0x8048431, tmp, 100)
 print tmp.value
-"""
 
-"""
-linput = ida.open_linput(FILE, False)
-print "loaded file",hex(linput)
-
-NEF_FIRST = 0x80
-ret = ida.load_nonbinary_file(FILE, linput, ".", NEF_FIRST, None)
-print "load_nonbinary_file", ret
-
-print "save_database_ex", ida.save_database_ex("/tmp/test.idb", 0, None, None)
-
-"""
 
