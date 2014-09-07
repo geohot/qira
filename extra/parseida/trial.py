@@ -139,4 +139,6 @@ tmp = create_string_buffer(100)
 print ida.get_name(BADADDR, 0x8048431, tmp, 100)
 print tmp.value
 
+ida.term_database()
+
 
