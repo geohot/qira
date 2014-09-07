@@ -235,6 +235,7 @@
   overflow-x: auto;
   padding: 5px;
   white-space: nowrap;
-  height: 17%;
+  height: 150px;
+  /*height: 17%;*/
 }
 
