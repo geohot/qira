@@ -274,8 +274,17 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
     ins = ""
     if program != None and r[0]['data'] > 0:
       while 'instruction' not in program.tags[r[0]['address']]:
-        #print "sleeping ", hex(r[0]['address'])
-        time.sleep(0.1)
+        if qira_config.USE_PIN:
+          # do the disassembly for pin mode
+          rawins = trace.fetch_memory(r[0]['clnum'], r[0]['address'], r[0]['data'])
+          if len(rawins) == r[0]['data']:
+            raw = ''.join(map(lambda x: chr(x[1]), sorted(rawins.items())))
+            program.tags[r[0]['address']]['instruction'] = program.disasm(raw, r[0]['address'])
+            break
+        else:
+          #print "sleeping ", hex(r[0]['address'])
+          time.sleep(0.1)
+
       ins = program.tags[r[0]['address']]['instruction']
     ret.append((r[0]['address'], r[0]['data'], r[0]['clnum'], ins))
     if (time.time() - start) > 0.01:

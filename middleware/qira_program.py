@@ -41,8 +41,8 @@ AARCH64REGS[0][8+31] = "sp"
 AARCH64REGS[0].append("pc")
 
 ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 4, False, "arm", ["bl\t", "blx\t"])
-X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, False, "i386", ["call "])
-X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15", 'RIP'], 8, False, "x86-64", ["call ", "callq "])
+X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, False, "i386", ["call ", "call\t"])
+X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15", 'RIP'], 8, False, "x86-64", ["call ", "callq ", "call\t"])
 
 def get_cachename(cachedir, cachename):
   try:
@@ -299,7 +299,7 @@ class Program:
       eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
     #print "***",' '.join(eargs)
     os.execvp(eargs[0], eargs)
-
+  
   def disasm(self, raw, address):
     try:
       if self.tregs[3] == "i386":
