@@ -194,7 +194,7 @@ class Program:
 
     # OS X binaires
     elif progdat[0:4] in ("\xCF\xFA\xED\xFE", "\xCE\xFA\xED\xFE"):
-      print "**** osx binary detected, you'd better be running on osx with the --pin argument"
+      print "**** osx binary detected"
       if progdat[0:4] == "\xCF\xFA\xED\xFE":
         self.tregs = X64REGS
         self.pintool = pin_dir + "obj-intel64/qirapin.dylib"

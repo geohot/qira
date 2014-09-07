@@ -58,7 +58,11 @@ if __name__ == '__main__':
   qira_config.WEB_PORT = args.web_port
   qira_config.SOCAT_PORT = args.socat_port
   qira_config.FORK_PORT = args.socat_port + 1
-  qira_config.USE_PIN = args.pin
+  if sys.platform == "darwin":
+    print "*** running on darwin, defaulting to --pin"
+    qira_config.USE_PIN = True
+  else:
+    qira_config.USE_PIN = args.pin
   if args.tracelibraries:
     qira_config.TRACE_LIBRARIES = True
   if args.dwarf:
