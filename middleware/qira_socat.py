@@ -17,12 +17,12 @@ def start_bindserver(program, port, parent_id, start_cl, loop = False):
   if port not in bound_ports:
     myss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     myss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    myss.bind(("127.0.0.1", port))
+    myss.bind((qira_config.SOCAT_HOST, port))
     myss.listen(5)
     bound_ports[port] = myss
   else:
     myss = bound_ports[port]
-    
+
   if os.fork() != 0:
     return
   # bindserver runs in a fork
@@ -46,9 +46,9 @@ def start_bindserver(program, port, parent_id, start_cl, loop = False):
       fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL, 0) & ~os.O_NONBLOCK)
     except:
       pass
-    os.dup2(fd, 0) 
-    os.dup2(fd, 1) 
-    os.dup2(fd, 2) 
+    os.dup2(fd, 0)
+    os.dup2(fd, 1)
+    os.dup2(fd, 2)
     for i in range(3, fd+1):
       try:
         os.close(i)

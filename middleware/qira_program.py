@@ -11,7 +11,7 @@ import collections
 from hashlib import sha1
 sys.path.append(qira_config.BASEDIR+"/cda")
 
-try:  
+try:
   from capstone import *
 except:
   pass
@@ -274,7 +274,7 @@ class Program:
     # delete the logs
     shutil.rmtree(qira_config.TRACE_FILE_BASE)
     os.mkdir(qira_config.TRACE_FILE_BASE)
-  
+
   def get_maxclnum(self):
     ret = {}
     for t in self.traces:
@@ -314,7 +314,7 @@ class Program:
       eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
     #print "***",' '.join(eargs)
     os.execvp(eargs[0], eargs)
-  
+
   def disasm(self, raw, address):
     try:
       if self.tregs[3] == "i386":
@@ -430,7 +430,7 @@ class Program:
         except:
           print "ERROR: cindex not found"
         exit(0)
-          
+
       # no need to wait
 
     # cda

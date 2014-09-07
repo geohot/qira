@@ -182,7 +182,7 @@ def analysis(forknum):
   data = qira_analysis.get_vtimeline_picture(trace)
   if data != None:
     emit('setpicture', {"forknum":forknum, "data":data})
-  
+
 @socketio.on('connect', namespace='/qira')
 @socket_method
 def connect():
@@ -334,7 +334,7 @@ def getregisters(forknum, clnum):
     if REGS[i] == None:
       continue
     rret = {"name": REGS[i], "address": i*REGSIZE, "value": ghex(regs[i]), "size": REGSIZE, "regactions": ""}
-      
+
     act = set()
     for c in cls:
       if c['address'] == i*REGSIZE:
@@ -366,7 +366,7 @@ def do_search(b64search):
   return '<br/>'.join(ret)
 
 # ***** generic webserver stuff *****
-  
+
 @app.route('/', defaults={'path': 'index.html'})
 @app.route('/<path:path>')
 def serve(path):
