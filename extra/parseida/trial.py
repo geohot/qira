@@ -1,4 +1,8 @@
 #!/home/vagrant/idademo66/python
+
+# copied python into ida demo folder
+# also symlinked libida.so to /usr/lib/libida.so for early loads to work
+
 import os
 import struct
 from ctypes import *
@@ -12,16 +16,36 @@ ui_msgs = ['ui_null = 0', 'ui_range', 'ui_list', 'ui_idcstart', 'ui_idcstop', 'u
 ida = cdll.LoadLibrary(IDAPATH+"libida.so")
 libc = cdll.LoadLibrary("libc.so.6")
 
-CALLUI = CFUNCTYPE(c_int, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)
-def uicallback(a,b,c,d,e,f):
+CALLUI = CFUNCTYPE(c_int, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)
+def uicallback(a,b,c,d,e,f,g,h,i):
   #print "callback",a,b,c,d,e,f
-  print "callback", ui_msgs[c], c,d,e,f
+  print "callback", ui_msgs[c], c,d,e,f,g,h,i
+  #return 0
   if c == 23:
-    print cast(d, c_char_p).value.strip()
-    #print cast(e, c_char_p).value
+    st = cast(d, c_char_p).value.strip()
+    print st
+    """
+    if "%s" in st and f != None:
+      print cast(f, c_char_p).value.strip()
+    """
     #print cast(f, c_char_p).value
   if c == 21:
-    print cast(e, c_char_p).value.strip()
+    print "MBOX:",cast(e, c_char_p).value.strip()
+  if c == 50 and d == None:
+    #st = struct.unpack("I", cast(e, c_char_p).value[0:4])[0]
+    #print cast(st, c_char_p).value.strip()
+    #ret = ida.invoke_callbacks(0, d, e)
+    print "RETURN 0"
+    # ugh hacks
+    libc.memset(b, 0, 4)
+    #print cast(b, POINTER(c_int)).contents
+    #print cast(b, POINTER(c_int)).contents
+    return 1
+  if c == 43:
+    print "load_file:",cast(d, c_char_p).value.strip()
+    libc.memset(b, 0, 4)
+    libc.memset(b, 1, 1)
+    
   return 0
 
 fxn = CALLUI(uicallback)
