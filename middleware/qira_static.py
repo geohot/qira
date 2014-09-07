@@ -5,6 +5,20 @@ from flask.ext.socketio import SocketIO, emit
 
 # should namespace be changed to static?
 
+# type -- ["int", "float", "string", "pointer"] 
+# len -- bytes that go with this one
+# name -- name of this address
+# comment -- comment on this address
+# instruction -- string of this instruction
+# flow -- see eda-3 docs
+# xrefs -- things that point to this
+# code -- 'foo.c:38', from DWARF or hexrays
+# semantics -- basic block start, is call, is ret, read regs, write regs
+
+# handle functions outside this
+#   function stack frames
+#   decompilation
+
 @socketio.on('gettags', namespace='/qira')
 @socket_method
 def gettags(start, length):

@@ -129,6 +129,18 @@ class Program:
     self.tags = collections.defaultdict(dict)
     # it should also replace dwarves
 
+    # call out to ida
+    os.system(qira_config.BASEDIR+"/static/ida_parser.py /tmp/qira_binary > /tmp/qida_log")
+    import json
+    ttags = json.load(open("/tmp/qida/tags"))
+
+    # grr, copied from settags
+    for addr in ttags:
+      naddr = fhex(addr)
+      for i in ttags[addr]:
+        self.tags[naddr][i] = ttags[addr][i]
+        print hex(naddr), self.tags[naddr][i]
+
     # pmaps is global, but updated by the traces
     (self.dwarves, self.rdwarves) = ({}, {})
     progdat = open(self.program, "rb").read(0x800)

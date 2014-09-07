@@ -2,15 +2,15 @@
 
 stream = io.connect(STREAM_URL);
 
-/*Deps.autorun(function() { DA("update static view");
+Deps.autorun(function() { DA("update static view");
   var iaddr = Session.get('iaddr');
   if (iaddr === undefined) return;
   stream.emit('gettags', bn_add(iaddr, -0x20), 0x80);
-});*/
-
-$(function() {
-  $("#staticpanel").css("display", "none");
 });
+
+/*$(function() {
+  $("#staticpanel").css("display", "none");
+});*/
 
 function on_tags(addrs) { DS("tags"); 
   //p(addrs);

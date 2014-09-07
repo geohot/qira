@@ -287,9 +287,11 @@ def getinstructions(forknum, clnum, clstart, clend):
         rret['instruction'] = program.disasm(raw, rret['address'])
 
     if 'name' in program.tags[rret['address']]:
-      print "setting name"
+      #print "setting name"
       rret['name'] = program.tags[rret['address']]['name']
-    if rret['address'] in program.dwarves:
+    if 'comment' in program.tags[rret['address']]:
+      rret['comment'] = program.tags[rret['address']]['comment']
+    elif rret['address'] in program.dwarves:
       rret['comment'] = program.dwarves[rret['address']][2]
     if i in slce:
       rret['slice'] = True
