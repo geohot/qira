@@ -25,7 +25,7 @@ if __name__ == '__main__':
   parser.add_argument("--dwarf", help="parse program dwarf data", action="store_true")
   parser.add_argument("--cda", help="use CDA to view source, requires ./cda_build.sh", action="store_true")
   parser.add_argument("--pin", help="use pin as the backend, requires ./pin_build.sh", action="store_true")
-  parser.add_argument("--web-host", metavar="HOST", help="listen address for web interface. 127.0.0.1 by default", default=qira_config.WEB_HOST)
+  parser.add_argument("--host", metavar="HOST", help="listen address for web interface and socat. 127.0.0.1 by default", default=qira_config.HOST)
   parser.add_argument("--web-port", metavar="PORT", help="listen port for web interface. 3002 by default", type=int, default=qira_config.WEB_PORT)
   parser.add_argument("--socat-port", metavar="PORT", help="listen port for socat. 4000 by default", type=int, default=qira_config.SOCAT_PORT)
 
@@ -44,7 +44,7 @@ if __name__ == '__main__':
   if args.socat_port < 1 or args.socat_port > 65535:
     raise Exception("--socat-port must be a valid port number (1-65535)")
   try:
-    args.web_host = ipaddr.IPAddress(args.web_host).exploded
+    args.host = ipaddr.IPAddress(args.host).exploded
   except ValueError:
     raise Exception("--web-host must be a valid IPv4/IPv6 address")
 
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     args.cda = True
     qira_config.CALLED_AS_CDA = True
 
-  qira_config.WEB_HOST = args.web_host
+  qira_config.HOST = args.host
   qira_config.WEB_PORT = args.web_port
   qira_config.SOCAT_PORT = args.socat_port
   qira_config.FORK_PORT = args.socat_port + 1

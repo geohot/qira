@@ -404,8 +404,8 @@ def run_server(largs, lprogram):
     import cacheserver
     app.register_blueprint(cacheserver.app)
     cacheserver.set_cache(program.cda)
-  print "****** starting WEB SERVER on %s:%d" % (qira_config.WEB_HOST, qira_config.WEB_PORT)
+  print "****** starting WEB SERVER on %s:%d" % (qira_config.HOST, qira_config.WEB_PORT)
   threading.Thread(target=mwpoller).start()
-  socketio.run(app, host=qira_config.WEB_HOST, port=qira_config.WEB_PORT)
+  socketio.run(app, host=qira_config.HOST, port=qira_config.WEB_PORT)
 
 
