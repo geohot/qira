@@ -133,16 +133,16 @@ class Program:
     ret = os.system(qira_config.BASEDIR+"/static/ida_parser.py /tmp/qira_binary > /tmp/qida_log")
     if ret != 0:
       print "*** IDA PARSER FAILED"
-      exit(0)
-    import json
-    ttags = json.load(open("/tmp/qida/tags"))
+    else:
+      import json
+      ttags = json.load(open("/tmp/qida/tags"))
 
-    # grr, copied from settags
-    for addr in ttags['tags']:
-      naddr = fhex(addr)
-      for i in ttags['tags'][addr]:
-        self.tags[naddr][i] = ttags['tags'][addr][i]
-        #print hex(naddr), self.tags[naddr][i]
+      # grr, copied from settags
+      for addr in ttags['tags']:
+        naddr = fhex(addr)
+        for i in ttags['tags'][addr]:
+          self.tags[naddr][i] = ttags['tags'][addr][i]
+          #print hex(naddr), self.tags[naddr][i]
 
     # pmaps is global, but updated by the traces
     (self.dwarves, self.rdwarves) = ({}, {})

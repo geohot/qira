@@ -115,8 +115,6 @@ def uicallback(a,b,c,d,e,f,g,h,i):
     buf = create_string_buffer(FILE)
     b_ptr[0] = addressof(buf)
     #b_ptr[0] = 0xAABBCCDD
-
-    
   return 0
 
 fxn = CALLUI(uicallback)
@@ -164,7 +162,7 @@ for i in range(0, ida.get_func_qty()):
     flags = ida.get_flags_ex(i, 0)
     #print hex(flags)
     # is code
-    if flags&0x600 == 0x600:
+    if (flags&0x600) == 0x600:
       tags[ghex(i)]['scope'] = ghex(fxn[0])
       tags[ghex(i)]['flags'] = flags
 
