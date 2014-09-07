@@ -19,5 +19,7 @@ all: $(QIRAPINTOOL)
 
 runls: all
 	mkdir -p /tmp/qira_logs
-	$(PIN_ROOT)/pin -t $(QIRAPINTOOL) -- ls -l
+	cp -f /bin/ls /tmp/ls
+	codesign -fs- /tmp/ls
+	$(PIN_ROOT)/pin -t $(QIRAPINTOOL) -- /tmp/ls -l
 

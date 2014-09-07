@@ -4,6 +4,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <string.h>
 
 #include "pin.H"
 
@@ -46,7 +47,7 @@ namespace WINDOWS {
 #include <sys/stat.h>
 #endif
 
-#ifdef TARGET_LINUX
+#if defined(TARGET_LINUX)
   #include "strace/syscalls.h"
   #if defined(TARGET_IA32E)
     #define SYS_READ 0
@@ -55,6 +56,8 @@ namespace WINDOWS {
     #define SYS_READ 3
     #include "strace/syscallents_32.h"
   #endif
+#elif defined(TARGET_MAC)
+#include "strace/osx_syscalls.h"
 #endif
 
 #define IS_VALID    0x80000000
@@ -91,7 +94,9 @@ KNOB<string> KnobOutputDir(KNOB_MODE_WRITEONCE, "pintool", "o",
 	"specify output directory"
 );
 
-#ifndef TARGET_MAC // TODO: IMG_StartAddress is broken on OS X; returns an area of all zero bytes.
+#ifdef TARGET_MAC
+	BOOL KnobMakeStandaloneTrace = false; // TODO: IMG_StartAddress is broken on OS X; returns an area of all zero bytes.
+#else
 KNOB<BOOL> KnobMakeStandaloneTrace(KNOB_MODE_WRITEONCE, "pintool", "standalone",
 	#ifdef TARGET_WINDOWS
 	"1", // Enable by default on windows, since qira doesn't work there yet
@@ -99,8 +104,6 @@ KNOB<BOOL> KnobMakeStandaloneTrace(KNOB_MODE_WRITEONCE, "pintool", "standalone",
 	"0",
 	#endif
 	"produce trace files suitable for moving to other systems.");
-#else
-	BOOL KnobMakeStandaloneTrace = false;
 #endif
 
 #ifdef TARGET_WINDOWS
@@ -401,8 +404,11 @@ int sys_nr;
 ADDRINT arg1;
 
 VOID SyscallEntry(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOID *v) {
-  #ifdef TARGET_LINUX
+  #if defined(TARGET_LINUX) || defined(TARGET_MAC)
     sys_nr = (int)PIN_GetSyscallNumber(ctxt, std);
+    #ifdef TARGET_MAC
+      sys_nr &= 0xFFFFFF;
+    #endif
     arg1 = PIN_GetSyscallArgument(ctxt, std, 1);
     if (sys_nr < MAX_SYSCALL_NUM) {
       fprintf(strace_file, "%u %u %s(", logstate->changelist_number, logstate->this_pid, syscalls[sys_nr].name);
@@ -416,10 +422,13 @@ VOID SyscallEntry(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOI
         }
         void *arg = (void *)PIN_GetSyscallArgument(ctxt, std, i);
         switch (syscalls[sys_nr].args[i]) {
-          case ARG_STR:
-            // risky
-            fprintf(strace_file, "%p=\"%s\"", arg, (char *)arg);
+          case ARG_STR: {
+            char buffer[104];
+            memcpy(&buffer[100], "...", 4);
+            PIN_SafeCopy(buffer, arg, 100);
+            fprintf(strace_file, "%p=\"%s\"", arg, (char *)buffer);
             break;
+          }
           case ARG_INT:
             fprintf(strace_file, "%lu", (long)arg);
             break;
@@ -429,16 +438,21 @@ VOID SyscallEntry(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOI
             break;
         }
       }
+
+      fflush(strace_file);
+      return;
+    } else {
+      // Fall thru to no-syscall-knowledge code
     }
-  #else
-    fprintf(strace_file, "%u %u %ld(%p, %p, %p, %p, %p, %p",
-      logstate->changelist_number, logstate->this_pid,
-      (long)PIN_GetSyscallNumber(ctxt, std),
-      (void*)PIN_GetSyscallArgument(ctxt, std, 0), (void*)PIN_GetSyscallArgument(ctxt, std, 1), (void*)PIN_GetSyscallArgument(ctxt, std, 2),
-      (void*)PIN_GetSyscallArgument(ctxt, std, 3), (void*)PIN_GetSyscallArgument(ctxt, std, 4), (void*)PIN_GetSyscallArgument(ctxt, std, 5)
-    );
-    fflush(strace_file);
   #endif
+
+  fprintf(strace_file, "%u %u %ld(%p, %p, %p, %p, %p, %p",
+    logstate->changelist_number, logstate->this_pid,
+    (long)PIN_GetSyscallNumber(ctxt, std),
+    (void*)PIN_GetSyscallArgument(ctxt, std, 0), (void*)PIN_GetSyscallArgument(ctxt, std, 1), (void*)PIN_GetSyscallArgument(ctxt, std, 2),
+    (void*)PIN_GetSyscallArgument(ctxt, std, 3), (void*)PIN_GetSyscallArgument(ctxt, std, 4), (void*)PIN_GetSyscallArgument(ctxt, std, 5)
+  );
+  fflush(strace_file);
 }
 
 VOID SyscallExit(THREADID threadIndex, CONTEXT *ctxt, SYSCALL_STANDARD std, VOID *v) {
