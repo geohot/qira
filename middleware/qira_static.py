@@ -1,11 +1,11 @@
 from qira_base import *
 import qira_config
-from qira_webserver import socket_method, socketio 
+from qira_webserver import socket_method, socketio
 from flask.ext.socketio import SocketIO, emit
 
 # should namespace be changed to static?
 
-# type -- ["int", "float", "string", "pointer"] 
+# type -- ["int", "float", "string", "pointer"]
 # len -- bytes that go with this one
 # name -- name of this address
 # comment -- comment on this address

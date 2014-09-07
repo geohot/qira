@@ -77,7 +77,7 @@ def draw_multigraph(blocks):
 
   print "drawing png @ /tmp/graph.png"
   graph.write_png('/tmp/graph.png')
-  
+
 
 def get_blocks(flow, static=True):
   # look at addresses
@@ -221,7 +221,7 @@ def do_loop_analysis(blocks):
             loopcnt += 1
           #print "loop",bb[i:i+j],"@",i,"with count",loopcnt
           # document the loop
-          loop = {"clstart":blocks[ab[i]]['clstart'], 
+          loop = {"clstart":blocks[ab[i]]['clstart'],
                   "clendone":blocks[ab[i+j-1]]['clend'],
                   "clend":blocks[ab[i+j*loopcnt]]['clend'],
                   "blockstart":ab[i],
@@ -345,7 +345,7 @@ def analyze(trace, program):
     # don't analyze if the program is bigger than this
     return None
   """
-  
+
   flow = get_instruction_flow(trace, program, minclnum, maxclnum)
 
   #blocks = get_blocks(flow)
@@ -357,7 +357,7 @@ def analyze(trace, program):
 
   #dmap = get_depth_map(fxns, maxclnum)
   dmap = get_hacked_depth_map(flow)
-  
+
   #loops = do_loop_analysis(blocks)
   #print loops
 
@@ -386,7 +386,7 @@ def slice(trace, inclnum):
       st = st.union(get_loads(clnum))
       cls.append(clnum)
       #print clnum, overwrite, st
-    
+
     """
     r = trace.db.fetch_changes_by_clnum(clnum, 100)
     for e in r:
@@ -413,7 +413,7 @@ if __name__ == "__main__":
 
   flow = get_instruction_flow(trace, program, trace.db.get_minclnum(), trace.db.get_maxclnum())
   blocks = get_blocks(flow, True)
-  
+
   print slice(trace, 124)
 
   #print analyze(t, program)
