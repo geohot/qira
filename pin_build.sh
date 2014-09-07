@@ -23,6 +23,7 @@ elif [[ "$unamestr" == 'Darwin' ]]; then
     ln -s pin-2.14-67254-clang.5.1-mac pin-latest
   fi
   
+  # install capstone from dmg @ http://www.capstone-engine.org/download.html
 fi
 
 
