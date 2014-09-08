@@ -101,6 +101,7 @@
 
 .name {
   color: purple;
+  background-color: #aaaaaa;
 }
 .comment {
   color: purple;
@@ -153,8 +154,8 @@
 
 .data {
   text-align: right;
-  /*min-width: 18px;*/
-  min-width: 1.5em;
+  min-width: 18px;
+  /*min-width: 1.5em;*/
   padding-top: 0px;
   padding-bottom: 0px;
 }
@@ -231,9 +232,32 @@
 #strace {
   font-family: monospace;
   overflow-y: hidden;
-  overflow-x: auto;
+  overflow-x: hidden;
   padding: 5px;
   white-space: nowrap;
-  height: 17%;
+  height: 150px;
+  /*height: 17%;*/
+}
+
+/* static */
+
+.basicblock {
+  background-color: #f8d5b1;
+  padding: 2px;
+  border: 1px solid black;
+  position: absolute;
+}
+
+#gbox {
+  position: relative;
+  margin: 10px;
+}
+
+.hexnumber {
+  color: green;
+}
+
+.op {
+  /*color: #3E0854;*/
 }
 

@@ -41,8 +41,8 @@ AARCH64REGS[0][8+31] = "sp"
 AARCH64REGS[0].append("pc")
 
 ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 4, False, "arm", ["bl\t", "blx\t"])
-X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, False, "i386", ["call "])
-X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15", 'RIP'], 8, False, "x86-64", ["call ", "callq "])
+X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, False, "i386", ["call ", "call\t"])
+X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15", 'RIP'], 8, False, "x86-64", ["call ", "callq ", "call\t"])
 
 def get_cachename(cachedir, cachename):
   try:
@@ -119,17 +119,82 @@ class Program:
     if qira_config.TRACE_LIBRARIES:
       self.defaultargs.append("-tracelibraries")
 
+    qemu_dir = os.path.dirname(os.path.realpath(__file__))+"/../qemu/"
+    pin_dir = os.path.dirname(os.path.realpath(__file__))+"/../pin/"
+    self.pinbinary = pin_dir+"pin-latest/pin"
+
     # this is the key value store for static information about the address
     # it replaces self.instructions with self.kv[addr]['instruction']
     # tags is a term from eda-3
     self.tags = collections.defaultdict(dict)
     # it should also replace dwarves
 
+    # call out to ida
+    print "*** running the ida parser"
+    ret = os.system(qira_config.BASEDIR+"/static/ida_parser.py /tmp/qira_binary > /tmp/qida_log")
+    if ret != 0:
+      print "*** IDA PARSER FAILED"
+    else:
+      import json
+      ttags = json.load(open("/tmp/qida/tags"))
+      print "*** ida returned %d tags" % (len(ttags['tags']))
+
+      # grr, copied from settags
+      for addr in ttags['tags']:
+        naddr = fhex(addr)
+        for i in ttags['tags'][addr]:
+          self.tags[naddr][i] = ttags['tags'][addr][i]
+          #print hex(naddr), self.tags[naddr][i]
+
     # pmaps is global, but updated by the traces
     (self.dwarves, self.rdwarves) = ({}, {})
     progdat = open(self.program, "rb").read(0x800)
 
-    if progdat[0:2] == "MZ":
+    # Linux binaries
+    if progdat[0:4] == "\x7FELF":
+      # get file type
+      self.fb = struct.unpack("H", progdat[0x12:0x14])[0]   # e_machine
+
+      def use_lib(arch):
+        maybe_path = qemu_dir+"/../libs/"+arch+"/"
+        if 'QEMU_LD_PREFIX' not in os.environ and os.path.exists(maybe_path):
+          os.environ['QEMU_LD_PREFIX'] = os.path.realpath(maybe_path)
+          print "**** set QEMU_LD_PREFIX to",os.environ['QEMU_LD_PREFIX']
+
+      if self.fb == 0x28:
+        if '/lib/ld-linux.so.3' in progdat:
+          use_lib('armel')
+        elif '/lib/ld-linux-armhf.so.3' in progdat:
+          use_lib('armhf')
+        self.tregs = ARMREGS
+        self.qirabinary = qemu_dir + "qira-arm"
+      elif self.fb == 0xb7:
+        use_lib('arm64')
+        self.tregs = AARCH64REGS
+        self.qirabinary = qemu_dir + "qira-aarch64"
+      elif self.fb == 0x3e:
+        self.tregs = X64REGS
+        self.qirabinary = qemu_dir + "qira-x86_64"
+        self.pintool = pin_dir + "obj-intel64/qirapin.so"
+      elif self.fb == 0x03:
+        self.tregs = X86REGS
+        self.qirabinary = qemu_dir + "qira-i386"
+        self.pintool = pin_dir + "obj-ia32/qirapin.so"
+      elif self.fb == 0x1400:   # big endian...
+        use_lib('powerpc')
+        self.tregs = PPCREGS
+        self.qirabinary = qemu_dir + "qira-ppc"
+      else:
+        raise Exception("binary type "+hex(self.fb)+" not supported")
+
+      self.qirabinary = os.path.realpath(self.qirabinary)
+      print "**** using",self.qirabinary,"for",hex(self.fb)
+
+      self.getdwarf()
+      self.runnable = True
+
+    # Windows binaires
+    elif progdat[0:2] == "MZ":
       print "**** windows binary detected, only running the server"
       pe = struct.unpack("I", progdat[0x3c:0x40])[0]
       wh = struct.unpack("H", progdat[pe+4:pe+6])[0]
@@ -143,51 +208,24 @@ class Program:
         self.fb = 0x3e
       else:
         raise Exception("windows binary with machine "+hex(wh)+" not supported")
-      return
 
-    # get file type
-    self.fb = struct.unpack("H", progdat[0x12:0x14])[0]   # e_machine
-    qemu_dir = os.path.dirname(os.path.realpath(__file__))+"/../qemu/"
-    pin_dir = os.path.dirname(os.path.realpath(__file__))+"/../pin/"
-    self.pinbinary = pin_dir+"pin-latest/pin"
+    # OS X binaires
+    elif progdat[0:4] in ("\xCF\xFA\xED\xFE", "\xCE\xFA\xED\xFE"):
+      print "**** osx binary detected"
+      if progdat[0:4] == "\xCF\xFA\xED\xFE":
+        self.tregs = X64REGS
+        self.pintool = pin_dir + "obj-intel64/qirapin.dylib"
+      elif progdat[0:4] == "\xCE\xFA\xED\xFE":
+        self.tregs = X86REGS
+        self.pintool = pin_dir + "obj-ia32/qirapin.dylib"
+      else:
+        raise Exception("osx binary not supported")
 
-    def use_lib(arch):
-      maybe_path = qemu_dir+"/../libs/"+arch+"/"
-      if 'QEMU_LD_PREFIX' not in os.environ and os.path.exists(maybe_path):
-        os.environ['QEMU_LD_PREFIX'] = os.path.realpath(maybe_path)
-        print "**** set QEMU_LD_PREFIX to",os.environ['QEMU_LD_PREFIX']
+      self.getdwarf()
+      self.runnable = True
 
-    if self.fb == 0x28:
-      if '/lib/ld-linux.so.3' in progdat:
-        use_lib('armel')
-      elif '/lib/ld-linux-armhf.so.3' in progdat:
-        use_lib('armhf')
-      self.tregs = ARMREGS
-      self.qirabinary = qemu_dir + "qira-arm"
-    elif self.fb == 0xb7:
-      use_lib('arm64')
-      self.tregs = AARCH64REGS
-      self.qirabinary = qemu_dir + "qira-aarch64"
-    elif self.fb == 0x3e:
-      self.tregs = X64REGS
-      self.qirabinary = qemu_dir + "qira-x86_64"
-      self.pintool = pin_dir + "obj-intel64/qirapin.so"
-    elif self.fb == 0x03:
-      self.tregs = X86REGS
-      self.qirabinary = qemu_dir + "qira-i386"
-      self.pintool = pin_dir + "obj-ia32/qirapin.so"
-    elif self.fb == 0x1400:   # big endian...
-      use_lib('powerpc')
-      self.tregs = PPCREGS
-      self.qirabinary = qemu_dir + "qira-ppc"
     else:
-      raise Exception("binary type "+hex(self.fb)+" not supported")
-
-    self.qirabinary = os.path.realpath(self.qirabinary)
-    print "**** using",self.qirabinary,"for",hex(self.fb)
-
-    self.getdwarf()
-    self.runnable = True
+        raise Exception("unknown binary type")
 
   def clear(self):
     # probably always good to do except in development of middleware
@@ -285,7 +323,7 @@ class Program:
       eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
     #print "***",' '.join(eargs)
     os.execvp(eargs[0], eargs)
-
+  
   def disasm(self, raw, address):
     try:
       if self.tregs[3] == "i386":

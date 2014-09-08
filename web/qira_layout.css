@@ -20,7 +20,8 @@ body {
 }
 
 #container2 {
-    max-height: 15%;
+ /* wtf?? */
+ /* max-height: 15%;*/
 }
 
 /* controls */
@@ -60,7 +61,7 @@ body {
 /* everything in the right panel */
 
 #onlypanel {
-  width: 650px;
+  width: 620px;
   height: 100%;
   /*background-color: #AAAAAA;*/
   /*border: 1px solid black;*/
@@ -78,9 +79,7 @@ body {
 /* instruction dump */
 
 #static {
-  height: 270px;
   padding: 5px;
-  overflow-y: hidden;
   overflow-x: auto;
 }
 

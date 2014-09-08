@@ -17,7 +17,7 @@ def start_bindserver(program, port, parent_id, start_cl, loop = False):
   if port not in bound_ports:
     myss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     myss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    myss.bind(("127.0.0.1", port))
+    myss.bind((qira_config.HOST, port))
     myss.listen(5)
     bound_ports[port] = myss
   else:

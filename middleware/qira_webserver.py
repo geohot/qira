@@ -65,6 +65,7 @@ def push_trace_update(i):
 def push_updates(full = True):
   socketio.emit('pmaps', program.get_pmaps(), namespace='/qira')
   socketio.emit('maxclnum', program.get_maxclnum(), namespace='/qira')
+  socketio.emit('arch', program.tregs, namespace='/qira')
   if not full:
     return
   for i in program.traces:
@@ -288,7 +289,12 @@ def getinstructions(forknum, clnum, clstart, clend):
         raw = ''.join(map(lambda x: chr(x[1]), sorted(rawins.items())))
         rret['instruction'] = program.disasm(raw, rret['address'])
 
-    if rret['address'] in program.dwarves:
+    if 'name' in program.tags[rret['address']]:
+      #print "setting name"
+      rret['name'] = program.tags[rret['address']]['name']
+    if 'comment' in program.tags[rret['address']]:
+      rret['comment'] = program.tags[rret['address']]['comment']
+    elif rret['address'] in program.dwarves:
       rret['comment'] = program.dwarves[rret['address']][2]
     if i in slce:
       rret['slice'] = True
@@ -401,8 +407,7 @@ def run_server(largs, lprogram):
     import cacheserver
     app.register_blueprint(cacheserver.app)
     cacheserver.set_cache(program.cda)
-  print "****** starting WEB SERVER on %s:%d" % (qira_config.WEB_HOST, qira_config.WEB_PORT)
+  print "****** starting WEB SERVER on %s:%d" % (qira_config.HOST, qira_config.WEB_PORT)
   threading.Thread(target=mwpoller).start()
-  socketio.run(app, host=qira_config.WEB_HOST, port=qira_config.WEB_PORT)
-
+  socketio.run(app, host=qira_config.HOST, port=qira_config.WEB_PORT, log=open("/dev/null", "w"))
 
