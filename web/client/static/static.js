@@ -21,6 +21,7 @@ function on_tags(addrs) { DS("tags");
   var idump = "";
   var in_basic_block = false;
   var last_basic_block = false;
+  var last_block_has_flow = false;
   var cnt = 0;
 
   function pushBlock() {
@@ -38,7 +39,11 @@ function on_tags(addrs) { DS("tags");
     if (in_basic_block == false) {
       // accepts control from previous instruction
       if (ins.flags & 0x10000 && last_basic_block != false) {
-        graph.addEdge(last_basic_block, ins.address, "blue");
+        var color = "blue";
+        if (last_block_has_flow) {
+          color = "red";
+        }
+        graph.addEdge(last_basic_block, ins.address, color);
       }
       in_basic_block = ins.address;
     }
@@ -50,6 +55,12 @@ function on_tags(addrs) { DS("tags");
     idump += '</div>';
     if (ins.semantics !== undefined && ins.semantics.indexOf("endbb") != -1) {
       last_basic_block = in_basic_block;
+      //p(ins.flow);
+      last_block_has_flow = false;
+      for (var j = 0; j < ins.flow.length; j++) {
+        graph.addEdge(last_basic_block, ins.flow[j], "green");
+        last_block_has_flow = true;
+      }
       pushBlock();
       in_basic_block = false;
     }
@@ -58,7 +69,7 @@ function on_tags(addrs) { DS("tags");
   if (in_basic_block) pushBlock();
 
   graph.assignLevels();
-  graph.debugPrint();
+  //graph.debugPrint();
   graph.render();
 
   rehighlight();

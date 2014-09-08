@@ -102,13 +102,13 @@ Graph.prototype.render = function() {
   req.open('POST', '/dot', false);
   req.send(send);
 
-  p(send);
+  //p(send);
 
   var i;
   var resp = req.response.split('\n').join("").split(";");
 
   var gdata = resp[0].split('"')[1].split(',');
-  p(gdata);
+  //p(gdata);
 
   gbox.style.width = fnum(gdata[2])+10;
   gbox.style.height = fnum(gdata[3])+10;
@@ -164,7 +164,7 @@ Graph.prototype.render = function() {
       var addr = resp[i].split(' ')[0].split('N')[1].trim();
       var pos = resp[i].slice(resp[i].indexOf('pos=')).split('"')[1].split(',');
 
-      p(addr);
+      //p(addr);
       var r = this.vertices[addr].rendered;
 
       if (r !== undefined) {

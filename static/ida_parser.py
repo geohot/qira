@@ -166,23 +166,29 @@ for i in range(0, ida.get_func_qty()):
     if (flags&0x600) == 0x600:
       tags[ghex(i)]['scope'] = ghex(fxn[0])
       tags[ghex(i)]['flags'] = flags
+      tags[ghex(i)]['flow'] = []
       tags[ghex(i)]['semantics'] = []
       if ida.is_call_insn(i):
-        tags[ghex(i)]['semantics'] += ["call"]
+        tags[ghex(i)]['semantics'].append("call")
       if ida.is_ret_insn(i, 1):
-        tags[ghex(i)]['semantics'] += ["ret"]
-      ida.decode_insn(i)
+        tags[ghex(i)]['semantics'].append("ret")
+      tags[ghex(i)]['len'] = ida.decode_insn(i)
       #print ghex(i), ida.is_basic_block_end(0)
       if ida.is_basic_block_end(0):
-        tags[ghex(i)]['semantics'] += ["endbb"]
-
-
+        tags[ghex(i)]['semantics'].append("endbb")
+      #print ghex(i), tags[ghex(i)]['len']
+      cref = ida.get_first_fcref_from(i)
+      while cref != -1:
+        if cref >= fxn[0] and cref < fxn[1]:
+          tags[ghex(i)]['flow'].append(ghex(cref))
+        #print "   ",ghex(cref)
+        cref = ida.get_next_fcref_from(i, cref)
 
 # upload the tags
 
 import json
 tags = dict(tags)
-print tags
+#print tags
 open("/tmp/qida/tags", "wb").write(json.dumps({"tags": tags}))
 
 """
