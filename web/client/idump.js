@@ -1,5 +1,12 @@
 stream = io.connect(STREAM_URL);
 
+// arch is public data
+arch = undefined;
+function on_arch(msg) { DS("arch");
+  p(msg);
+  arch = msg;
+} stream.on("arch", on_arch);
+
 $(document).ready(function() {
   $("#idump")[0].addEventListener("mousewheel", function(e) {
     //p("idump mousewheel");
@@ -32,7 +39,7 @@ function on_instructions(msg) { DS("instructions");
         // hacks, hexdumpdatainstruction for dblclick handler
         '<span class="hexdumpdatainstruction iaddr iaddr_'+ins.address+'">'+ins.address+'</span> '+
         '<span class="name">'+ins.name+'</span> '+
-        '<div class="instructiondesc">'+highlight_addresses(ins.instruction)+'</div> '+
+        '<div class="instructiondesc">'+highlight_instruction(ins.instruction)+'</div> '+
         '<span class="comment">'+(ins.comment !== undefined ? ins.comment : "")+'</span>'+
       '</div>';
   }

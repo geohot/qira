@@ -65,6 +65,7 @@ def push_trace_update(i):
 def push_updates(full = True):
   socketio.emit('pmaps', program.get_pmaps(), namespace='/qira')
   socketio.emit('maxclnum', program.get_maxclnum(), namespace='/qira')
+  socketio.emit('arch', program.tregs, namespace='/qira')
   if not full:
     return
   for i in program.traces:
