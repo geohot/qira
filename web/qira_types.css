@@ -246,6 +246,10 @@
   margin: 10px;
   padding: 2px;
   border: 1px solid black;
+  position: absolute;
 }
 
+#gbox {
+  position: relative;
+}
 

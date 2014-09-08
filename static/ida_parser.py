@@ -166,10 +166,15 @@ for i in range(0, ida.get_func_qty()):
     if (flags&0x600) == 0x600:
       tags[ghex(i)]['scope'] = ghex(fxn[0])
       tags[ghex(i)]['flags'] = flags
+      tags[ghex(i)]['semantics'] = []
+      if ida.is_call_insn(i):
+        tags[ghex(i)]['semantics'] += ["call"]
+      if ida.is_ret_insn(i, 1):
+        tags[ghex(i)]['semantics'] += ["ret"]
       ida.decode_insn(i)
       #print ghex(i), ida.is_basic_block_end(0)
       if ida.is_basic_block_end(0):
-        tags[ghex(i)]['semantics'] = ["endbb"]
+        tags[ghex(i)]['semantics'] += ["endbb"]
 
 
 

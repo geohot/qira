@@ -1,7 +1,9 @@
 from qira_base import *
 import qira_config
-from qira_webserver import socket_method, socketio 
+from qira_webserver import socket_method, socketio, app
+from flask import request
 from flask.ext.socketio import SocketIO, emit
+import os
 
 # should namespace be changed to static?
 
@@ -53,6 +55,20 @@ def settags(tags):
     for i in tags[addr]:
       program.tags[naddr][i] = tags[addr][i]
       print hex(naddr), program.tags[naddr][i]
+
+# dot as a service
+@app.route('/dot', methods=["POST"])
+@socket_method
+def graph_dot():
+  req = request.data
+  #print "DOT REQUEST", req
+  f = open("/tmp/in.dot", "w")
+  f.write(req)
+  f.close()
+  os.system("dot /tmp/in.dot > /tmp/out.dot")
+  ret = open("/tmp/out.dot").read()
+  #print "DOT RESPONSE", ret
+  return ret
 
 def init_static(lprogram):
   global program

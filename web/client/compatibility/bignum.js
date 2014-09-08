@@ -3,6 +3,10 @@ function fhex(a) {
   return parseInt(a, 16);
 }
 
+function fnum(a) {
+  return parseInt(a, 10);
+}
+
 function hex2(a) {
   if (a == undefined) return "__";
   var ret = a.toString(16);
