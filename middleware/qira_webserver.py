@@ -276,7 +276,9 @@ def getinstructions(forknum, clnum, clstart, clend):
     else:
       rret = rret[0]
 
-    if 'instruction' in program.tags[rret['address']]:
+    #ned: always use program.disasm, leaving old method
+    #in until new method is completely finished
+    if False and 'instruction' in program.tags[rret['address']]:
       # fetch the instruction from the qemu dump
       rret['instruction'] = program.tags[rret['address']]['instruction']
     else:

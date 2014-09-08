@@ -11,7 +11,7 @@ import collections
 from hashlib import sha1
 sys.path.append(qira_config.BASEDIR+"/cda")
 
-try:  
+try:
   from capstone import *
 except:
   pass
@@ -207,6 +207,9 @@ class Program:
     open("/tmp/qira_asm", "a").close()
     self.qira_asm_file = open("/tmp/qira_asm", "r")
 
+  def instr_from_asm(self,inst):
+      self.disasm(inst,0)
+
   def read_asm_file(self):
     if os.name == "nt":
       return
@@ -225,10 +228,14 @@ class Program:
       #print repr(d)
       if self.fb == 0x28:   # ARM
         inst = d[d.rfind("  ")+2:]
+        #address = d.split()[0]
+        inst = self.instr_from_asm(inst)
       elif self.fb == 0xb7:   # aarch64
         inst = d[d.rfind("     ")+5:]
+        inst = self.instr_from_asm(inst)
       else:
         inst = d[d.find(":")+3:]
+        inst = self.instr_from_asm(inst)
       self.tags[addr]['instruction'] = inst
       cnt += 1
       #print addr, inst
@@ -283,14 +290,42 @@ class Program:
     try:
       if self.tregs[3] == "i386":
         md = Cs(CS_ARCH_X86, CS_MODE_32)
+        md.detail = True
       elif self.tregs[3] == "x86-64":
         md = Cs(CS_ARCH_X86, CS_MODE_64)
+        md.detail = True
+      elif self.tregs[3] == "arm":
+        #has CS_MODE_THUMB too
+        md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
+        # to switch between modes:
+        # md.mode = CS_MODE_THUMB
+        # md.mode = CS_MODE_ARM
+        md.detail = True
       else:
         raise Exception('arch not in capstone')
+      #next: store different data based on type of operand
+      #https://github.com/aquynh/capstone/blob/master/bindings/python/test_arm.py
       for i in md.disasm(raw, address):
         # should only be one instruction
+        data = {"mnemonic": i.mnemonic, "op_str": i.op_str}
+        if len(i.regs_read) > 0:
+          data["regs_read"] = []
+          for r in i.regs_read:
+            data["regs_read"].append(i.reg_name(r))
+        if len(i.regs_write) > 0:
+          data["regs_write"] = []
+          for r in i.regs_write:
+            data["regs_write"].append(i.reg_name(r))
+        #groups: is it in arm neon, intel sse, etc
+        #if len(i.groups) > 0:
+        #  data["groups"] = []
+        #  for g in i.groups:
+        #    data["groups"].append(g)
+        #print data
+        #when ready, return data as json rather than static string
         return "%s\t%s" % (i.mnemonic, i.op_str)
     except:
+      #print "disasm failed: {}".format(sys.exc_info()[0])
       pass
     return raw.encode("hex")
 
