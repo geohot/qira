@@ -162,6 +162,7 @@ for i in range(0, ida.get_func_qty()):
     flags = ida.get_flags_ex(i, 0)
     #print hex(flags)
     # is code
+    ida.gen_flow_graph(create_string_buffer("/tmp/qida/fxn_"+ghex(fxn[0])), create_string_buffer("yolo"), fxn, None, None, 0x3000) 
     if (flags&0x600) == 0x600:
       tags[ghex(i)]['scope'] = ghex(fxn[0])
       tags[ghex(i)]['flags'] = flags

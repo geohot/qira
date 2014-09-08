@@ -19,6 +19,7 @@ function on_tags(addrs) { DS("tags");
     var ins = addrs[i];
     idump += '<div class="instruction">';
     idump += '<span class="hexdumpdatainstruction iaddr iaddr_'+ins.address+'">'+ins.address+'</span> '+
+    '<div class="instructiondesc">'+hex(ins.flags)+'</div> '+
     '<div class="instructiondesc">'+ins.instruction+'</div>';
     idump += '</div>';
   }

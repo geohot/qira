@@ -232,7 +232,7 @@
 #strace {
   font-family: monospace;
   overflow-y: hidden;
-  overflow-x: auto;
+  overflow-x: hidden;
   padding: 5px;
   white-space: nowrap;
   height: 150px;

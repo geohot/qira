@@ -130,12 +130,14 @@ class Program:
     # it should also replace dwarves
 
     # call out to ida
+    print "*** running the ida parser"
     ret = os.system(qira_config.BASEDIR+"/static/ida_parser.py /tmp/qira_binary > /tmp/qida_log")
     if ret != 0:
       print "*** IDA PARSER FAILED"
     else:
       import json
       ttags = json.load(open("/tmp/qida/tags"))
+      print "*** ida returned %d tags" % (len(ttags['tags']))
 
       # grr, copied from settags
       for addr in ttags['tags']:
