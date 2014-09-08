@@ -91,13 +91,26 @@ function highlight_addresses(a) {
 function highlight_instruction(a) {
   var ret = highlight_addresses(a);
 
+  // dim colors
+  function fc(a) {
+    var df = 1.4;
+    // heard of loops?
+    var r = a.substr(1,2);
+    var g = a.substr(3,2);
+    var b = a.substr(5,2);
+    r = Math.floor(parseInt(r, 16)/df);
+    g = Math.floor(parseInt(g, 16)/df);
+    b = Math.floor(parseInt(b, 16)/df);
+    return "#"+hex2(r)+hex2(g)+hex2(b);
+  }
+
   // highlight registers
   if (arch !== undefined) {
     for (var i = 0; i < arch[0].length; i++) {
-      var rep = '<span style="color: '+regcolors[i]+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i]+'</span>';
+      var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i]+'</span>';
       ret = ret.replace(arch[0][i], rep);
 
-      var rep = '<span style="color: '+regcolors[i]+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i].toLowerCase()+'</span>';
+      var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i].toLowerCase()+'</span>';
       ret = ret.replace(arch[0][i].toLowerCase(), rep);
     }
   }
