@@ -239,11 +239,10 @@
   /*height: 17%;*/
 }
 
-/* stqatic */
+/* static */
 
 .basicblock {
   background-color: #f8d5b1;
-  margin: 10px;
   padding: 2px;
   border: 1px solid black;
   position: absolute;
@@ -251,5 +250,6 @@
 
 #gbox {
   position: relative;
+  margin: 10px;
 }
 

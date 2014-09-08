@@ -106,22 +106,6 @@ Graph.prototype.render = function() {
 
   var i;
   var resp = req.response.split('\n').join("").split(";");
-  //var resp = [];
-
-  p(resp);
-
-
-  /*for (var i=0; i<respfirst.length; i++) {
-    var str = respfirst[i];
-    while (str.substr(str.length-1) === "\\") {
-      str = str.substr(0, str.length-1);
-      i++;
-      str += respfirst[i];
-    }
-    resp.push(str);
-  }*/
-
-  //p(resp.join("\n"));
 
   var gdata = resp[0].split('"')[1].split(',');
   p(gdata);
@@ -198,57 +182,6 @@ Graph.prototype.render = function() {
   }
 
   return;
-};
-
-
-Graph.prototype.placeBoxes = function() {
-  var datable = document.createElement('table');
-  for (var i = this.levels.length-1; i >= 0; i--) {
-    var tablerow = document.createElement('tr');
-    var tableshit = document.createElement('td');
-    for (var j = 0; j < this.levels[i].length; j++) {
-      tableshit.appendChild(this.vertices[this.levels[i][j]].rendered);
-    }
-    tablerow.appendChild(tableshit);
-    datable.appendChild(tablerow);
-  }
-  this.graphview.dom[0].appendChild(datable);
-};
-
-// returns DOM object containing the vertex
-Graph.prototype.renderVertex = function(addr) {
-  var ret = document.createElement('div');
-  ret.className = 'block gblock';
-
-  var a = document.createElement('div');
-  a.className = 'line';
-  a.innerHTML = displayParsed('\\l{'+addr+'}');
-  ret.appendChild(a);
-
-  for (var i = addr; i < addr+this.vertices[addr]['len'];) {
-    var t = document.createElement('div');
-    t.className = 'line';
-    t.id = i;
-    var tags = db.tags(i);
-    //p(shex(i));
-    //p(tags);
-    t.innerHTML = displayParsed(tags['parsed']);
-    if (tags['comment'] !== undefined) {
-      t.innerHTML += displayComment(tags['comment']);
-    }
-    ret.appendChild(t);
-    i += fnum(tags['len']);
-  }
-  return ret;
-};
-
-Graph.prototype.findEdge = function(from, to) {
-  for (var i = 0; i < this.edges.length; i++) {
-    if (this.edges[i]['from'] == from && this.edges[i]['to'] == to) {
-      return i;
-    }
-  }
-  return -1;
 };
 
 Graph.prototype.reverseEdge = function(edgenum) {
