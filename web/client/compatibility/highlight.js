@@ -102,6 +102,7 @@ function get_address_from_class(t) {
 }
 
 function replace_names() {
+  return;
   var addrs = [];
   $(".addr").each(function() {
     var ret = get_address_from_class(this);

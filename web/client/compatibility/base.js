@@ -26,7 +26,7 @@ function push_history(reason, replace) {
   // any addresses that we navigated to in a reasonable way
   json['clnum'] = Session.get('clnum');
   json['daddr'] = Session.get('daddr');
-  //json['iaddr'] = Session.get('iaddr');
+  json['iaddr'] = Session.get('iaddr');
   
   if (JSON.stringify(history.state) != JSON.stringify(json)) {
     if (replace == true) {
