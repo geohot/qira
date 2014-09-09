@@ -132,7 +132,8 @@ $(document).ready(function() {
     update_dview(get_address_from_class(e.target));
   });
   $('body').on('contextmenu', '.hexdumpdatainstruction', function(e) {
-    update_dview(get_address_from_class(e.target));
+    update_iaddr(get_address_from_class(e.target));
+    //update_dview(get_address_from_class(e.target));
     return false;
   });
   $('body').on('click', '.hexdumpdatainstruction', function(e) {

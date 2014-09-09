@@ -200,6 +200,8 @@
   width: 200px;
   /*width: 20%;*/
   font-family: monospace;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .rflag {
