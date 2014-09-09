@@ -67,7 +67,7 @@ def settags(tags):
     naddr = fhex(addr)
     for i in tags[addr]:
       program.tags[naddr][i] = tags[addr][i]
-      print hex(naddr), program.tags[naddr][i]
+      print hex(naddr), i, program.tags[naddr][i]
 
 # dot as a service
 @app.route('/dot', methods=["POST"])

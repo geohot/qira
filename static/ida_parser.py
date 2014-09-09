@@ -150,20 +150,23 @@ for i in range(0, ida.get_nlist_size()):
   print hex(ea), name
   tags[ghex(ea)]['name'] = name
 
-for i in range(0, ida.get_func_qty()):
+fxn_count = ida.get_func_qty()
+for i in range(0, fxn_count):
   print i
   fxn = cast(ida.getn_func(i), POINTER(c_long))
+  fxn = [fxn[0], fxn[1]]
+
   tags[ghex(fxn[0])]['funclength'] = fxn[1]-fxn[0]
 
-  print hex(fxn[0]), hex(fxn[1]), fxn[2], fxn[3]
+  print hex(fxn[0]), hex(fxn[1])
 
   # get the flags for each address in the function
   for i in range(fxn[0], fxn[1]):
     flags = ida.get_flags_ex(i, 0)
-    #print hex(flags)
     # is code
     #ida.gen_flow_graph(create_string_buffer("/tmp/qida/fxn_"+ghex(fxn[0])), create_string_buffer("yolo"), fxn, None, None, 0x3000) 
     if (flags&0x600) == 0x600:
+      print ghex(i)
       tags[ghex(i)]['scope'] = ghex(fxn[0])
       tags[ghex(i)]['flags'] = flags
       tags[ghex(i)]['flow'] = []
@@ -184,12 +187,15 @@ for i in range(0, ida.get_func_qty()):
         #print "   ",ghex(cref)
         cref = ida.get_next_fcref_from(i, cref)
 
+
 # upload the tags
 
 import json
 tags = dict(tags)
 #print tags
-open("/tmp/qida/tags", "wb").write(json.dumps({"tags": tags}))
+f = open("/tmp/qida/tags", "wb")
+f.write(json.dumps({"tags": tags}))
+f.close()
 
 """
 from socketIO_client import SocketIO, BaseNamespace

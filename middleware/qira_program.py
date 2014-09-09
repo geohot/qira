@@ -132,9 +132,7 @@ class Program:
     # call out to ida
     print "*** running the ida parser"
     ret = os.system(qira_config.BASEDIR+"/static/ida_parser.py /tmp/qira_binary > /tmp/qida_log")
-    if ret != 0:
-      print "*** IDA PARSER FAILED"
-    else:
+    try:
       import json
       ttags = json.load(open("/tmp/qida/tags"))
       print "*** ida returned %d tags" % (len(ttags['tags']))
@@ -145,6 +143,8 @@ class Program:
         for i in ttags['tags'][addr]:
           self.tags[naddr][i] = ttags['tags'][addr][i]
           #print hex(naddr), self.tags[naddr][i]
+    except:
+      print "*** IDA PARSER FAILED"
 
     # pmaps is global, but updated by the traces
     (self.dwarves, self.rdwarves) = ({}, {})
