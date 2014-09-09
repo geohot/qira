@@ -23,10 +23,17 @@ argc = 1
 argv = None
 idle_fxn = None
 
-
 #os.chdir(IDAPATH)
-ida = cdll.LoadLibrary(IDAPATH+"libida.so")
-libc = cdll.LoadLibrary("libc.so.6")
+if sys.platform == 'darwin':
+  ida = cdll.LoadLibrary(IDAPATH+"/libida.dylib")
+  libc = cdll.LoadLibrary("libc.dylib")
+elif sys.platform == 'win32':
+  print 'TODO: windows support'
+  exit(0)
+else:
+  # Linux
+  ida = cdll.LoadLibrary(IDAPATH+"/libida.so")
+  libc = cdll.LoadLibrary("libc.so.6")
 
 CALLUI = CFUNCTYPE(c_int, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)
 def uicallback(a,b,c,d,e,f,g,h,i):
