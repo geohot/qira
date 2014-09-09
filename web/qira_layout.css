@@ -3,6 +3,7 @@ html, body {
   margin: 0;
   overflow: hidden;
   padding: 0;
+  width: 400%; /* hella wide */
 }
 
 /* universal things */

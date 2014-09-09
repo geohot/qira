@@ -119,6 +119,7 @@
 #regviewer {
   /*background-color: #DDDDDD;*/
   padding: 2px;
+  white-space: normal;
   /*border: 1px solid black;*/
   /*width: 620px;*/
   /*max-height: 5%;*/
