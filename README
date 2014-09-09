@@ -1,5 +1,6 @@
 QIRA is a competitor to strace and gdb
-See http://qira.me/
+See http://qira.me/ for high level usage information
+All QIRA code is released under GPLv2
 
 == Installation ==
 

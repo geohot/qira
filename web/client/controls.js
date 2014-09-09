@@ -136,10 +136,10 @@ $(document).ready(function() {
     //update_dview(get_address_from_class(e.target));
     return false;
   });
-  $('body').on('click', '.hexdumpdatainstruction', function(e) {
+  /*$('body').on('click', '.hexdumpdatainstruction', function(e) {
     update_iaddr(get_address_from_class(e.target), false);
     return false;
-  });
+  });*/
   $('body').on('dblclick', '.hexdumpdatainstruction', function(e) {
     update_dview(get_address_from_class(e.target));
     return false;
