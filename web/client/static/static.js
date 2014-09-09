@@ -54,7 +54,8 @@ function on_tags(addrs) { DS("tags");
     idump += '<div class="instruction">';
     idump += '<span class="insaddr datainstruction addr addr_'+ins.address+'">'+ins.address+'</span> '+
     //'<div class="instructiondesc">'+hex(ins.flags)+'</div> '+
-    '<div class="instructiondesc">'+highlight_instruction(ins.instruction)+'</div>';
+    '<div class="instructiondesc">'+highlight_instruction(ins.instruction)+'</div> '+
+    '<span class="comment">'+(ins.comment !== undefined ? "; "+ins.comment : "")+'</span>';
     idump += '</div>';
     if (ins.semantics !== undefined && ins.semantics.indexOf("endbb") != -1) {
       last_basic_block = in_basic_block;

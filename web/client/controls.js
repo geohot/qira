@@ -78,6 +78,49 @@ window.onkeydown = function(e) {
   } else if (e.keyCode == 67 && e.shiftKey == true) {
     // shift-C = clear all forks
     delete_all_forks();
+  } else if (e.keyCode == 78) {
+    if (e.shiftKey) {
+      // shift-n = rename data
+      var addr = Session.get("daddr");
+    } else {
+      // n = rename instruction
+      var addr = Session.get("iaddr");
+    }
+    if (addr == undefined) return;
+    var old = sync_tags_request([addr])[0]['name'];
+    if (old == undefined) old = "";
+    var dat = prompt("Rename address "+addr, old);
+    if (dat == undefined) return;
+    var send = {};
+    send[addr] = {"name": dat};
+    stream.emit("settags", send);
+    Session.set("clnum", Session.get("clnum"));
+  } else if (e.keyCode == 186) {
+    var addr = undefined;
+    if (e.shiftKey) {
+      // shift-; = comment data
+      var addr = Session.get("daddr");
+    } else {
+      // n = comment instruction
+      var addr = Session.get("iaddr");
+    }
+    if (addr == undefined) return;
+    var old = sync_tags_request([addr])[0]['comment'];
+    if (old == undefined) old = "";
+    var dat = prompt("Enter comment on "+addr, old);
+    if (dat == undefined) return;
+    var send = {};
+    send[addr] = {"comment": dat};
+    stream.emit("settags", send);
+    Session.set("clnum", Session.get("clnum"));
+  } else if (e.keyCode == 71) {
+    var dat = prompt("Enter change or address");
+    if (dat == undefined) return;
+    if (dat.substr(0, 2) == "0x") { update_iaddr(dat); }
+    else if (fdec(dat) == dat) { Session.set("clnum", fdec(dat)); }
+    else {
+      // names soon
+    }
   }
 };
 

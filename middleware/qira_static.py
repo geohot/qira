@@ -31,10 +31,10 @@ def gettagsa():
   ret = []
   for i in arr:
     i = fhex(i)
-    if len(program.tags[i]) != 0:
-      # a bit of a hack, this is so javascript can display it
-      program.tags[i]['address'] = ghex(i)
-      ret.append(program.tags[i])
+    # always return them all
+    # a bit of a hack, this is so javascript can display it
+    program.tags[i]['address'] = ghex(i)
+    ret.append(program.tags[i])
   return json.dumps(ret)
 
 @socketio.on('gettags', namespace='/qira')

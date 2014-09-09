@@ -98,10 +98,7 @@ function replace_names() {
   });
   //stream.emit('gettagsa', addrs);
 
-  var req = new XMLHttpRequest();
-  req.open('POST', '/gettagsa', false);
-  req.send(JSON.stringify(addrs));
-  var tags = JSON.parse(req.response);
+  var tags = sync_tags_request(addrs);
 
   //p(tags);
   for (var i=0;i<tags.length;i++) {

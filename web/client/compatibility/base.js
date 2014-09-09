@@ -125,3 +125,10 @@ function zoom_out_max(dontforce) {
   push_history("zoom out cview");
 }
 
+function sync_tags_request(addrs) {
+  var req = new XMLHttpRequest();
+  req.open('POST', '/gettagsa', false);
+  req.send(JSON.stringify(addrs));
+  return JSON.parse(req.response);
+}
+

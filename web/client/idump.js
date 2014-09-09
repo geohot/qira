@@ -39,7 +39,7 @@ function on_instructions(msg) { DS("instructions");
         '<span class="insaddr datainstruction addr addr_'+ins.address+'">'+ins.address+'</span> '+
         //'<span class="name">'+ins.name+'</span> '+
         '<div class="instructiondesc">'+highlight_instruction(ins.instruction)+'</div> '+
-        '<span class="comment">'+(ins.comment !== undefined ? ins.comment : "")+'</span>'+
+        '<span class="comment">'+(ins.comment !== undefined ? "; "+ins.comment : "")+'</span>'+
       '</div>';
   }
   $('#idump').html(idump);

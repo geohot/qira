@@ -69,6 +69,8 @@ shift-n -- rename data
 ; -- add comment at instruction
 shift-; -- add comment at data
 
+g -- go to change or address (or name soon)
+
 
 == Installation on Windows (experimental) ==
 
