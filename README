@@ -1,5 +1,6 @@
 QIRA is a competitor to strace and gdb
-See http://qira.me/
+See http://qira.me/ for high level usage information
+All QIRA code is released under GPLv2
 
 == Installation ==
 
@@ -62,6 +63,13 @@ down  -- +1 clnum
 esc -- back
 
 shift-c -- clear all forks
+
+n -- rename instruction
+shift-n -- rename data
+; -- add comment at instruction
+shift-; -- add comment at data
+
+g -- go to change or address (or name soon)
 
 
 == Installation on Windows (experimental) ==

@@ -3,7 +3,7 @@ stream = io.connect(STREAM_URL);
 // arch is public data
 arch = undefined;
 function on_arch(msg) { DS("arch");
-  p(msg);
+  //p(msg);
   arch = msg;
 } stream.on("arch", on_arch);
 
@@ -36,15 +36,15 @@ function on_instructions(msg) { DS("instructions");
     idump +=
        '<div class="instruction" style="margin-left: '+(ins.depth*10)+'px">'+
         '<div class="change '+(ins.slice ? "halfhighlight": "")+' clnum clnum_'+ins.clnum+'">'+ins.clnum+'</div> '+
-        // hacks, hexdumpdatainstruction for dblclick handler
-        '<span class="hexdumpdatainstruction iaddr iaddr_'+ins.address+'">'+ins.address+'</span> '+
-        '<span class="name">'+ins.name+'</span> '+
+        '<span class="insaddr datainstruction addr addr_'+ins.address+'">'+ins.address+'</span> '+
+        //'<span class="name">'+ins.name+'</span> '+
         '<div class="instructiondesc">'+highlight_instruction(ins.instruction)+'</div> '+
-        '<span class="comment">'+(ins.comment !== undefined ? ins.comment : "")+'</span>'+
+        '<span class="comment">'+(ins.comment !== undefined ? "; "+ins.comment : "")+'</span>'+
       '</div>';
   }
   $('#idump').html(idump);
   rehighlight();
+  replace_names();
 } stream.on('instructions', on_instructions);
 
 Deps.autorun(function() { DA("emit getinstructions");

@@ -64,10 +64,12 @@ function on_memory(msg) { DS("memory");
     v = bn_canonicalize(v)
     var a = get_data_type(v);
     if (a !== "") {
+      // this has a datatype, and therefore is clickable, so add addr
       var exclass = "data_"+bn_add(addr, i);
+      exclass += " addr addr_"+v;
       var minwidth = 84;
       if (PTRSIZE == 8) minwidth = 172;
-      html += '<td colspan="'+PTRSIZE+'" style="min-width:'+minwidth+'px" class="data hexdump'+a+' '+exclass+'" id="'+exclass+'">'+v+"</td>";
+      html += '<td colspan="'+PTRSIZE+'"><div style="overflow: hidden; width:'+minwidth+'px" class="data hexdump'+a+' '+exclass+'" id="'+exclass+'">'+v+"</div></td>";
     } else {
       for (var j = 0; j < PTRSIZE; j++) {
         var ii = msg['dat'][i+j];
@@ -98,6 +100,7 @@ function on_memory(msg) { DS("memory");
   $("#hexdump")[0].innerHTML = html;
   redraw_reg_flags();
   rehighlight();
+  replace_names();
 } stream.on('memory', on_memory);
 
 
@@ -130,13 +133,18 @@ function on_registers(msg) { DS("registers");
   for (i in msg) {
     var r = msg[i];
     draw_hflag(r.value, r.name, regcolors[r.num]);
+    var exclass = get_data_type(r.value);
+    if (exclass !== "") {
+      exclass += " addr addr_"+r.value;
+    }
     regviewer += '<div class="reg '+r.regactions+'">'+
         '<div class="register data data_'+hex(r.address)+'" id="data_'+hex(r.address)+'" style="color:'+regcolors[r.num]+'">'+r.name+': </div>'+
-        '<span class="'+get_data_type(r.value)+'">'+r.value+'</span>'+
+        '<span class="'+exclass+'">'+r.value+'</span>'+
       '</div>';
   }
   $('#regviewer').html(regviewer);
   rehighlight();
+  replace_names();
 } stream.on('registers', on_registers);
 
 // *** datachanges ***

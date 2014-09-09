@@ -1,4 +1,4 @@
-regcolors = ['#59AE3F', '#723160', '#2A80A2', '#9E66BD', '#BC8D6B', '#3F3EAC', '#BC48B8', '#6B7C76', '#5FAC7F', '#A69B71', '#874535', '#AD49BF', '#73356F', '#55A4AC', '#988590', '#505C62', '#404088', '#56726B', '#BAAC62', '#454066', '#BCAEAA', '#4E7F6A', '#3960B5', '#295231', '#3B37A5', '#6A9191', '#976394', '#7F957D', '#B7AFBD', '#BD4A70', '#A35169', '#2F2D95', '#8879A8', '#8D3A8E', '#636E7C', '#82688D', '#9FA893', '#2A6885', '#812C87', '#568E71', '#6FA0B2', '#7B7928', '#57BD86', '#6BBC9A', '#807FB3', '#922AAD', '#AB5D98', '#9C943A', '#796880', '#294870', '#528054', '#4ABBA2', '#87437B', '#AA4E73', '#2893AC', '#5AA383', '#A5714D', '#648186', '#68BA37', '#466A89', '#5CB871', '#3D8267', '#28B930', '#5E6C6F', '#5C6772', '#389E58', '#34B69B', '#3CA46A', '#4F4691', '#4D48A1', '#836CB1', '#2B6948', '#4F42BB', '#549B68', '#69B563', '#B39F5C', '#A37841', '#7858B4', '#577244', '#2B7DAD'];
+regcolors = ['#60AE3F', '#723160', '#2A80A2', '#9E66BD', '#BC8D6B', '#3F3EAC', '#BC48B8', '#6B7C76', '#5FAC7F', '#A69B71', '#874535', '#AD49BF', '#73356F', '#55A4AC', '#988590', '#505C62', '#404088', '#56726B', '#BAAC62', '#454066', '#BCAEAA', '#4E7F6A', '#3960B5', '#295231', '#3B37A5', '#6A9191', '#976394', '#7F957D', '#B7AFBD', '#BD4A70', '#A35169', '#2F2D95', '#8879A8', '#8D3A8E', '#636E7C', '#82688D', '#9FA893', '#2A6885', '#812C87', '#568E71', '#6FA0B2', '#7B7928', '#57BD86', '#6BBC9A', '#807FB3', '#922AAD', '#AB5D98', '#9C943A', '#796880', '#294870', '#528054', '#4ABBA2', '#87437B', '#AA4E73', '#2893AC', '#5AA383', '#A5714D', '#648186', '#68BA37', '#466A89', '#5CB871', '#3D8267', '#28B930', '#5E6C6F', '#5C6772', '#389E58', '#34B69B', '#3CA46A', '#4F4691', '#4D48A1', '#836CB1', '#2B6948', '#4F42BB', '#549B68', '#69B563', '#B39F5C', '#A37841', '#7858B4', '#577244', '#2B7DAD'];
 
 function p(a) { console.log(a); }
 //function DA(a) { p("DA: "+a); }
@@ -26,7 +26,7 @@ function push_history(reason, replace) {
   // any addresses that we navigated to in a reasonable way
   json['clnum'] = Session.get('clnum');
   json['daddr'] = Session.get('daddr');
-  //json['iaddr'] = Session.get('iaddr');
+  json['iaddr'] = Session.get('iaddr');
   
   if (JSON.stringify(history.state) != JSON.stringify(json)) {
     if (replace == true) {
@@ -59,72 +59,6 @@ Deps.autorun(function() { DA("history");
 
 // ** end history ***
 
-var escapeHTML = (function () {
-  'use strict';
-  var chr = { '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' };
-  return function (text) {
-    return text.replace(/[\"&<>]/g, function (a) { return chr[a]; });
-  };
-}());
-
-function highlight_addresses(a) {
-  // no XSS :)
-  var d = escapeHTML(a);
-  var re = /0x[0123456789abcdef]+/g;
-  var m = d.match(re);
-  if (m !== null) {
-    // make matches unique?
-    m = m.filter(function (v,i,a) { return a.indexOf(v) == i });
-    m.map(function(a) { 
-      var cl = get_data_type(a);
-      if (cl == "") {
-        d = d.replace(a, "<span class='hexnumber'>"+a+"</span>");
-      } else {
-        d = d.replace(a, "<span class='"+cl+"'>"+a+"</span>");
-      }
-    });
-  }
-  // does this work outside templates?
-  return d;
-}
-
-function highlight_instruction(a) {
-  var ret = highlight_addresses(a);
-
-  // dim colors
-  function fc(a) {
-    var df = 1.4;
-    // heard of loops?
-    var r = a.substr(1,2);
-    var g = a.substr(3,2);
-    var b = a.substr(5,2);
-    r = Math.floor(parseInt(r, 16)/df);
-    g = Math.floor(parseInt(g, 16)/df);
-    b = Math.floor(parseInt(b, 16)/df);
-    return "#"+hex2(r)+hex2(g)+hex2(b);
-  }
-
-  // highlight registers
-  if (arch !== undefined) {
-    for (var i = 0; i < arch[0].length; i++) {
-      var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i]+'</span>';
-      ret = ret.replace(arch[0][i], rep);
-
-      var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i].toLowerCase()+'</span>';
-      ret = ret.replace(arch[0][i].toLowerCase(), rep);
-    }
-  }
-
-  // highlight opcode
-  var i = 0;
-  for (i = 0; i < ret.length; i++) {
-    if (ret[i] == ' ' || ret[i] == '\t') {
-      break;
-    }
-  }
-  return '<span class="op">' + ret.substr(0, i) + '</span>' + ret.substr(i)
-}
-
 function get_data_type(v) {
   if (typeof v == "number") throw "numbers no longer supported here";
   // haxx
@@ -140,9 +74,12 @@ function update_dview(addr) {
   push_history("update dview");
 }
 
-function update_iaddr(addr) {
+function update_iaddr(addr, dirty) {
+  if (dirty === undefined) dirty = true;
   Session.set("iaddr", addr);
-  Session.set("dirtyiaddr", true);
+  if (dirty) {
+    Session.set("dirtyiaddr", true);
+  }
   push_history("update iaddr");
 }
 
@@ -156,21 +93,6 @@ function abs_maxclnum() {
   }
   return ret;
 }
-
-function rehighlight() {
-  var clnum = Session.get("clnum");
-  var iaddr = Session.get("iaddr");
-  var daddr = Session.get("daddr");
-  $(".autohighlight").removeClass("autohighlight");
-  $(".clnum_"+clnum).addClass("autohighlight");
-  $(".iaddr_"+iaddr).addClass("autohighlight");
-  $(".daddr_"+daddr).addClass("autohighlight");
-  $(".data_"+daddr).addClass("autohighlight");
-}
-
-Deps.autorun(function() { DA("rehighlight");
-  rehighlight();
-});
 
 
 function update_maxclnum(clnum) {
@@ -201,5 +123,12 @@ function zoom_out_max(dontforce) {
   if (dontforce === true)  Session.setDefault("cview", [0, max]);
   else Session.set("cview", [0, max]);
   push_history("zoom out cview");
+}
+
+function sync_tags_request(addrs) {
+  var req = new XMLHttpRequest();
+  req.open('POST', '/gettagsa', false);
+  req.send(JSON.stringify(addrs));
+  return JSON.parse(req.response);
 }
 

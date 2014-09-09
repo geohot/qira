@@ -4,6 +4,7 @@ from qira_webserver import socket_method, socketio, app
 from flask import request
 from flask.ext.socketio import SocketIO, emit
 import os
+import json
 
 # should namespace be changed to static?
 
@@ -23,6 +24,18 @@ import os
 # handle functions outside this
 #   function stack frames
 #   decompilation
+
+@app.route('/gettagsa', methods=["POST"])
+def gettagsa():
+  arr = json.loads(request.data)
+  ret = []
+  for i in arr:
+    i = fhex(i)
+    # always return them all
+    # a bit of a hack, this is so javascript can display it
+    program.tags[i]['address'] = ghex(i)
+    ret.append(program.tags[i])
+  return json.dumps(ret)
 
 @socketio.on('gettags', namespace='/qira')
 @socket_method
@@ -54,11 +67,10 @@ def settags(tags):
     naddr = fhex(addr)
     for i in tags[addr]:
       program.tags[naddr][i] = tags[addr][i]
-      print hex(naddr), program.tags[naddr][i]
+      print hex(naddr), i, program.tags[naddr][i]
 
 # dot as a service
 @app.route('/dot', methods=["POST"])
-@socket_method
 def graph_dot():
   req = request.data
   #print "DOT REQUEST", req

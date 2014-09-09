@@ -1,0 +1,22 @@
+.name {
+  /*color: purple !important;*/
+  /*background-color: #cccccc;*/
+}
+
+.autohighlight {
+  background-color: #FF7777 !important;
+}
+
+.autohighlighti {
+  background-color: #FFAA77;
+}
+
+.insaddr {
+  min-width: 7em;
+  display: inline-block;
+}
+
+.comment {
+  color: blue;
+}
+

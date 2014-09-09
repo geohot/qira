@@ -25,10 +25,6 @@
   background-color: #FF7777 !important;
 }
 
-.autohighlight {
-  background-color: #FF7777 !important;
-}
-
 .halfhighlight {
   background: rgba(255, 119, 119, 0.3);
 }
@@ -99,14 +95,6 @@
   color: gray;
 }
 
-.name {
-  color: purple;
-  background-color: #aaaaaa;
-}
-.comment {
-  color: purple;
-}
-
 /* regviewer and datachanges */
 
 .register {
@@ -119,6 +107,7 @@
 #regviewer {
   /*background-color: #DDDDDD;*/
   padding: 2px;
+  white-space: normal;
   /*border: 1px solid black;*/
   /*width: 620px;*/
   /*max-height: 5%;*/
@@ -207,6 +196,8 @@
   width: 200px;
   /*width: 20%;*/
   font-family: monospace;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .rflag {
