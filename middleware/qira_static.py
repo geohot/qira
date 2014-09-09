@@ -24,6 +24,18 @@ import os
 #   function stack frames
 #   decompilation
 
+@socketio.on('gettagsa', namespace='/qira')
+@socket_method
+def gettagsa(arr):
+  ret = []
+  for i in arr:
+    i = fhex(i)
+    if len(program.tags[i]) != 0:
+      # a bit of a hack, this is so javascript can display it
+      program.tags[i]['address'] = ghex(i)
+      ret.append(program.tags[i])
+  emit('tagsa', ret)
+
 @socketio.on('gettags', namespace='/qira')
 @socket_method
 def gettags(start, length):

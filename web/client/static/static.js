@@ -76,5 +76,6 @@ function on_tags(addrs) { DS("tags");
   graph.render();
 
   rehighlight();
+  replace_names();
 } stream.on('tags', on_tags);
 

@@ -100,7 +100,7 @@
 }
 
 .name {
-  color: purple;
+  color: purple !important;
   background-color: #aaaaaa;
 }
 .comment {
