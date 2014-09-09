@@ -4,7 +4,7 @@ import marshal
 import struct
 import socket
 import sys, exceptions, errno, traceback
-from types import CodeType
+from types import NoneType, CodeType
 from os import urandom
 from hashlib import sha1
 
@@ -120,7 +120,7 @@ class Connection(object):
 
   # Note: must send after packing, or objects will be left with +1 retain count in self.vended
   def pack(self, val):
-    if type(val) in (bool, int, long, float, complex, str, unicode, StopIteration, Ellipsis):
+    if type(val) in (bool, int, long, float, complex, str, unicode, NoneType, StopIteration, Ellipsis):
       return val
     elif type(val) == tuple:
       return tuple(self.pack(i) for i in val)
