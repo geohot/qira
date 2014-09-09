@@ -359,7 +359,7 @@ class Program:
         #  data["groups"] = []
         #  for g in i.groups:
         #    data["groups"].append(g)
-        #print data
+        print data
         #when ready, return data as json rather than static string
         return "%s\t%s" % (i.mnemonic, i.op_str)
     except:
