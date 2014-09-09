@@ -1,4 +1,6 @@
-IDAPATH = "/home/vagrant/idademo66/"
+from os import environ
+
+IDAPATH = environ.get("IDAPATH", "/home/vagrant/idademo66")
 
 BADADDR = 0xFFFFFFFF
 NEF_FIRST = 0x80
