@@ -83,7 +83,26 @@ Deps.autorun(function() { DA("rehighlight");
 
 stream = io.connect(STREAM_URL);
 
-function on_tagsa(tags) { DS("tagsa"); 
+function get_address_from_class(t) {
+  var l = t.className.split(" ").filter(function(x) { return x.substr(0,5) == "addr_"; });
+  if (l.length != 1) return undefined;
+  return l[0].split("_")[1].split(" ")[0];
+}
+
+// sync for no blink!
+function replace_names() {
+  var addrs = [];
+  $(".addr").each(function() {
+    var ret = get_address_from_class(this);
+    if (ret !== undefined) addrs.push(ret);
+  });
+  //stream.emit('gettagsa', addrs);
+
+  var req = new XMLHttpRequest();
+  req.open('POST', '/gettagsa', false);
+  req.send(JSON.stringify(addrs));
+  var tags = JSON.parse(req.response);
+
   //p(tags);
   for (var i=0;i<tags.length;i++) {
     $(".addr_"+tags[i]['address']).each(function() {
@@ -93,21 +112,5 @@ function on_tagsa(tags) { DS("tagsa");
       }
     });
   }
-} stream.on('tagsa', on_tagsa);
-
-function get_address_from_class(t) {
-  var l = t.className.split(" ").filter(function(x) { return x.substr(0,5) == "addr_"; });
-  if (l.length != 1) return undefined;
-  return l[0].split("_")[1];
-}
-
-function replace_names() {
-  return;
-  var addrs = [];
-  $(".addr").each(function() {
-    var ret = get_address_from_class(this);
-    if (ret !== undefined) addrs.push(ret);
-  });
-  stream.emit('gettagsa', addrs);
 }
 

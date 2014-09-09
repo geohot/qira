@@ -95,7 +95,7 @@ $(document).ready(function() {
     push_history("click iaddr");
   });*/
   $('body').on('click', '.data', function(e) {
-    var daddr = e.target.getAttribute('id').split("_")[1];
+    var daddr = e.target.getAttribute('id').split("_")[1].split(" ")[0];
     Session.set('daddr', daddr);
     push_history("click data");
   });
@@ -109,16 +109,19 @@ $(document).ready(function() {
     update_dview(get_address_from_class(e.target));
   });
   $('body').on('click', '.datainstruction', function(e) {
+    /*var d = get_address_from_class(e.target)
+    p(d);
+    update_dview(d);*/
     update_iaddr(get_address_from_class(e.target), false);
   });
 
   $('body').on('dblclick', '.datainstruction', function(e) {
     update_iaddr(get_address_from_class(e.target));
-    return false;
   });
 
   $('body').on('contextmenu', '.datainstruction', function(e) {
     update_dview(get_address_from_class(e.target));
+    return false;
   });
 
   // hexdump
@@ -130,18 +133,20 @@ $(document).ready(function() {
   });
   $('body').on('contextmenu', '.hexdumpdatainstruction', function(e) {
     update_dview(get_address_from_class(e.target));
+    return false;
   });
   $('body').on('click', '.hexdumpdatainstruction', function(e) {
     update_iaddr(get_address_from_class(e.target), false);
     return false;
   });
   $('body').on('dblclick', '.hexdumpdatainstruction', function(e) {
-    update_iaddr(get_address_from_class(e.target));
+    update_dview(get_address_from_class(e.target));
     return false;
   });
   $('body').on('mousedown', '.hexdumpdataromemory', function(e) { return false; });
   $('body').on('mousedown', '.hexdumpdatamemory', function(e) { return false; });
   $('body').on('mousedown', '.hexdumpdatainstruction', function(e) { return false; });
+  $('body').on('mousedown', '.datainstruction', function(e) { return false; });
 
   // vtimeline flags
   $('body').on('click', '.flag', function(e) {
