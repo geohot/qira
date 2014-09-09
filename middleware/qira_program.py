@@ -326,26 +326,30 @@ class Program:
   
   def disasm(self, raw, address):
     try:
-      if self.tregs[3] == "i386":
+      arch = self.tregs[3]
+      if arch == "i386":
         md = Cs(CS_ARCH_X86, CS_MODE_32)
-        md.detail = True
-      elif self.tregs[3] == "x86-64":
+      elif arch == "x86-64":
         md = Cs(CS_ARCH_X86, CS_MODE_64)
-        md.detail = True
-      elif self.tregs[3] == "arm":
-        #has CS_MODE_THUMB too
+      elif arch == "arm":
         md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
         # to switch between modes:
         # md.mode = CS_MODE_THUMB
         # md.mode = CS_MODE_ARM
-        md.detail = True
+      elif arch == "aarch64":
+        md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
+      elif arch == "ppc":
+        md = Cs(CS_ARCH_PPC, CS_MODE_32)
+        #if 64 bit: md.mode = CS_MODE_64
       else:
         raise Exception('arch not in capstone')
       #next: store different data based on type of operand
       #https://github.com/aquynh/capstone/blob/master/bindings/python/test_arm.py
+      md.detail = True
       for i in md.disasm(raw, address):
         # should only be one instruction
-        data = {"mnemonic": i.mnemonic, "op_str": i.op_str}
+        # may not need to track iset here
+        data = {"mnemonic": i.mnemonic, "op_str": i.op_str, "iset": arch}
         if len(i.regs_read) > 0:
           data["regs_read"] = []
           for r in i.regs_read:
