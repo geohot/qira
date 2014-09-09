@@ -84,15 +84,16 @@ window.onkeydown = function(e) {
 
 
 $(document).ready(function() {
+
   // control the highlighting of things
   $('body').on('click', '.clnum', function(e) {
     Session.set('clnum', fdec(e.target.textContent));
     push_history("click clnum");
   });
-  $('body').on('click', '.iaddr', function(e) {
+  /*$('body').on('click', '.iaddr', function(e) {
     Session.set('iaddr', e.target.textContent);
     push_history("click iaddr");
-  });
+  });*/
   $('body').on('click', '.data', function(e) {
     var daddr = e.target.getAttribute('id').split("_")[1];
     Session.set('daddr', daddr);
@@ -102,32 +103,40 @@ $(document).ready(function() {
 
   // registers and other places
   $('body').on('click', '.dataromemory', function(e) {
-    update_dview(e.target.textContent);
+    update_dview(get_address_from_class(e.target));
   });
   $('body').on('click', '.datamemory', function(e) {
-    update_dview(e.target.textContent);
+    update_dview(get_address_from_class(e.target));
   });
   $('body').on('click', '.datainstruction', function(e) {
-    update_dview(e.target.textContent);
+    update_iaddr(get_address_from_class(e.target), false);
+  });
+
+  $('body').on('dblclick', '.datainstruction', function(e) {
+    update_iaddr(get_address_from_class(e.target));
+    return false;
   });
 
   $('body').on('contextmenu', '.datainstruction', function(e) {
-    update_iaddr(e.target.textContent);
-    return false;
+    update_dview(get_address_from_class(e.target));
   });
 
   // hexdump
   $('body').on('dblclick', '.hexdumpdatamemory', function(e) {
-    update_dview(e.target.textContent);
+    update_dview(get_address_from_class(e.target));
   });
   $('body').on('dblclick', '.hexdumpdataromemory', function(e) {
-    update_dview(e.target.textContent);
-  });
-  $('body').on('dblclick', '.hexdumpdatainstruction', function(e) {
-    update_dview(e.target.textContent);
+    update_dview(get_address_from_class(e.target));
   });
   $('body').on('contextmenu', '.hexdumpdatainstruction', function(e) {
-    update_iaddr(e.target.textContent);
+    update_dview(get_address_from_class(e.target));
+  });
+  $('body').on('click', '.hexdumpdatainstruction', function(e) {
+    update_iaddr(get_address_from_class(e.target), false);
+    return false;
+  });
+  $('body').on('dblclick', '.hexdumpdatainstruction', function(e) {
+    update_iaddr(get_address_from_class(e.target));
     return false;
   });
   $('body').on('mousedown', '.hexdumpdataromemory', function(e) { return false; });

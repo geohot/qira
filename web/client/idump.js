@@ -37,7 +37,7 @@ function on_instructions(msg) { DS("instructions");
        '<div class="instruction" style="margin-left: '+(ins.depth*10)+'px">'+
         '<div class="change '+(ins.slice ? "halfhighlight": "")+' clnum clnum_'+ins.clnum+'">'+ins.clnum+'</div> '+
         // hacks, hexdumpdatainstruction for dblclick handler
-        '<span class="hexdumpdatainstruction iaddr iaddr_'+ins.address+'">'+ins.address+'</span> '+
+        '<span class="hexdumpdatainstruction addr addr_'+ins.address+'">'+ins.address+'</span> '+
         //'<span class="name">'+ins.name+'</span> '+
         '<div class="instructiondesc">'+highlight_instruction(ins.instruction)+'</div> '+
         '<span class="comment">'+(ins.comment !== undefined ? ins.comment : "")+'</span>'+

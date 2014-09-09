@@ -74,9 +74,12 @@ function update_dview(addr) {
   push_history("update dview");
 }
 
-function update_iaddr(addr) {
+function update_iaddr(addr, dirty) {
+  if (dirty === undefined) dirty = true;
   Session.set("iaddr", addr);
-  Session.set("dirtyiaddr", true);
+  if (dirty) {
+    Session.set("dirtyiaddr", true);
+  }
   push_history("update iaddr");
 }
 
@@ -90,21 +93,6 @@ function abs_maxclnum() {
   }
   return ret;
 }
-
-function rehighlight() {
-  var clnum = Session.get("clnum");
-  var iaddr = Session.get("iaddr");
-  var daddr = Session.get("daddr");
-  $(".autohighlight").removeClass("autohighlight");
-  $(".clnum_"+clnum).addClass("autohighlight");
-  $(".iaddr_"+iaddr).addClass("autohighlight");
-  $(".daddr_"+daddr).addClass("autohighlight");
-  $(".data_"+daddr).addClass("autohighlight");
-}
-
-Deps.autorun(function() { DA("rehighlight");
-  rehighlight();
-});
 
 
 function update_maxclnum(clnum) {

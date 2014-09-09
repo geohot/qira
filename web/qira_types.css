@@ -25,10 +25,6 @@
   background-color: #FF7777 !important;
 }
 
-.autohighlight {
-  background-color: #FF7777 !important;
-}
-
 .halfhighlight {
   background: rgba(255, 119, 119, 0.3);
 }
@@ -99,10 +95,6 @@
   color: gray;
 }
 
-.name {
-  color: purple !important;
-  background-color: #aaaaaa;
-}
 .comment {
   color: purple;
 }

@@ -52,7 +52,7 @@ function on_tags(addrs) { DS("tags");
     }
     cnt += 1;
     idump += '<div class="instruction">';
-    idump += '<span class="hexdumpdatainstruction iaddr iaddr_'+ins.address+'">'+ins.address+'</span> '+
+    idump += '<span class="hexdumpdatainstruction addr addr_'+ins.address+'">'+ins.address+'</span> '+
     //'<div class="instructiondesc">'+hex(ins.flags)+'</div> '+
     '<div class="instructiondesc">'+highlight_instruction(ins.instruction)+'</div>';
     idump += '</div>';

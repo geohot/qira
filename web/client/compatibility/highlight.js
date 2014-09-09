@@ -19,9 +19,7 @@ function highlight_addresses(a) {
       if (cl == "") {
         d = d.replace(a, "<span class='hexnumber'>"+a+"</span>");
       } else {
-        if (cl == "datainstruction") {
-          cl += " iaddr iaddr_"+a;
-        }
+        cl += " addr addr_"+a;
         d = d.replace(a, "<span class='"+cl+"'>"+a+"</span>");
       }
     });
@@ -67,12 +65,28 @@ function highlight_instruction(a) {
   return '<span class="op">' + ret.substr(0, i) + '</span>' + ret.substr(i)
 }
 
+function rehighlight() {
+  var clnum = Session.get("clnum");
+  var iaddr = Session.get("iaddr");
+  var daddr = Session.get("daddr");
+  $(".autohighlight").removeClass("autohighlight");
+  $(".autohighlighti").removeClass("autohighlighti");
+  $(".clnum_"+clnum).addClass("autohighlight");
+  $(".addr_"+iaddr).addClass("autohighlighti");
+  $(".daddr_"+daddr).addClass("autohighlight");
+  $(".data_"+daddr).addClass("autohighlight");
+}
+
+Deps.autorun(function() { DA("rehighlight");
+  rehighlight();
+});
+
 stream = io.connect(STREAM_URL);
 
 function on_tagsa(tags) { DS("tagsa"); 
   //p(tags);
   for (var i=0;i<tags.length;i++) {
-    $(".iaddr_"+tags[i]['address']).each(function() {
+    $(".addr_"+tags[i]['address']).each(function() {
       if (tags[i]['name'] !== undefined) {
         $(this).addClass("name");
         $(this).html(tags[i]['name']);
@@ -81,12 +95,17 @@ function on_tagsa(tags) { DS("tagsa");
   }
 } stream.on('tagsa', on_tagsa);
 
+function get_address_from_class(t) {
+  var l = t.className.split(" ").filter(function(x) { return x.substr(0,5) == "addr_"; });
+  if (l.length != 1) return undefined;
+  return l[0].split("_")[1];
+}
+
 function replace_names() {
   var addrs = [];
-  $(".iaddr").each(function() {
-    var l = this.className.split(" ").filter(function(x) { return x.substr(0,6) == "iaddr_"; });
-    if (l.length != 1) return;
-    addrs.push(l[0].split("_")[1]);
+  $(".addr").each(function() {
+    var ret = get_address_from_class(this);
+    if (ret !== undefined) addrs.push(ret);
   });
   stream.emit('gettagsa', addrs);
 }
