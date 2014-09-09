@@ -1,138 +1,126 @@
 #!/usr/bin/env python
-# This isn't perfect. For example, do not run help(proxy).
-
+# remoteobj v0.2, twice the functionality with half the jank!
 import marshal
 import struct
 import socket
-import exceptions
-import sys
+import sys, exceptions, errno, traceback
 from types import CodeType
-import SocketServer
-
-# The server is open for code exec, and the client is likely exploitable,
-# so be super secure in both directions.
-secret = "lol, python"
-
-from hashlib import sha1
 from os import urandom
-
-def ClientHandshake(sock):
-  sock.sendall('yo')
-  chal = urandom(20)
-  sock.sendall(chal)
-  if sock.recv(20) != sha1(secret+chal).digest(): return False
-  sock.sendall(sha1(secret+sock.recv(20)).digest())
-  return True
-
-def ServerHandshake(sock):
-  if sock.recv(2) != 'yo': return False
-  sock.sendall(sha1(secret+sock.recv(20)).digest())
-  chal = urandom(20)
-  sock.sendall(chal)
-  if sock.recv(20) != sha1(secret+chal).digest(): return False
-  return True
-
-def sendmsg(sock, obj):
-  x = marshal.dumps(obj)
-  sock.sendall(struct.pack('<I', len(x)))
-  sock.sendall(x)
-
-import errno
-def recvmsg(sock):
-  x = sock.recv(4)
-  if len(x) < 4:
-    raise socket.error(errno.EPIPE, 'The socket was closed mid-message.')
-  y = struct.unpack('<I', x)[0]
-  z = sock.recv(y)
-  if len(z) < y:
-    raise socket.error(errno.EPIPE, 'The socket was closed mid-message.')
-  return marshal.loads(z)
+from hashlib import sha1
 
 class Proxy(object):
-  __slots__ = ('_proxymsgsend',)
-  def __init__(self, conn, proxyid):
-    def pack(val):
-      if type(val) in (bool, int, long, float, complex, str, unicode):
-        return val
-      elif type(val) == tuple:
-        return tuple(pack(i) for i in val)
-      elif type(val) == list:
-        return [pack(i) for i in val]
-      elif type(val) == set:
-        return {pack(i) for i in val}
-      elif type(val) == frozenset:
-        return frozenset(pack(i) for i in val)
-      elif type(val) == dict:
-        return {pack(k):pack(v) for k,v in val.iteritems()}
-      elif type(val) == Proxy:
-        return (StopIteration, Ellipsis, val._id)
-      elif type(val) == CodeType:
-        raise Exception('no')
-      else:
-        raise Exception("Can't send object "+repr(val)+" to the remote server.")
-    
-    def unpack(val):
-      if type(val) == tuple and len(val) == 3 and val[:2] == (StopIteration, Ellipsis):
-        return Proxy(conn, val)
-      elif type(val) == tuple:
-        return tuple(unpack(i) for i in val)
-      elif type(val) == list:
-        return [unpack(i) for i in val]
-      elif type(val) == set:
-        return {unpack(i) for i in val}
-      elif type(val) == frozenset:
-        return frozenset(unpack(i) for i in val)
-      elif type(val) == dict:
-        return {unpack(k):unpack(v) for k,v in val.iteritems()}
-      elif type(val) == CodeType:
-        raise Exception('no')
-      else:
-        return val
-    
-    def msgsend(method, *args):
-      sendmsg(conn, (method, proxyid)+pack(tuple(args)))
-      x = recvmsg(conn)
-      if x[0] == 'ok':
-        return unpack(x[1])
-      elif x[0] == 'exn':
-        exntype = exceptions.__dict__.get(x[1])
-        if exntype and issubclass(exntype, BaseException):
-          raise exntype, exntype(*unpack(x[2])), None
-        else:
-          raise Exception, Exception(str(x[1])+repr(unpack(x[2]))), None
-      else:
-        assert False, "Bad response " + repr(x)
-    
-    object.__setattr__(self, '_proxymsgsend', msgsend)
-    
+  def __init__(self, conn, val):
+    object.__setattr__(self, '_proxyconn', conn)
+    object.__setattr__(self, '_proxyval', val)
   def __getattribute__(self, attr):
-    return object.__getattribute__(self, '_proxymsgsend')('get', attr)
+    return object.__getattribute__(self, '_proxyconn').request('get', self, attr)
   def __getattr__(self, attr):
-    return object.__getattribute__(self, '_proxymsgsend')('get', attr)
+    return object.__getattribute__(self, '_proxyconn').request('get', self, attr)
   def __setattr__(self, attr, val):
-    object.__getattribute__(self, '_proxymsgsend')('set', attr, val)
+    object.__getattribute__(self, '_proxyconn').request('set', self, attr, val)
   def __delattr__(sel, attr):
-    object.__getattribute__(self, '_proxymsgsend')('get', '__delattr__')(attr)
+    object.__getattribute__(self, '_proxyconn').request('get', self, '__delattr__')(attr)
   def __call__(self, *args, **kwargs):
-    return object.__getattribute__(self, '_proxymsgsend')('call', args, kwargs)
+    return object.__getattribute__(self, '_proxyconn').request('call', self, args, kwargs)
   def __del__(self):
-    object.__getattribute__(self, '_proxymsgsend')('del')
+    if not marshal or not struct or not socket: return # Reduce spurious messages when quitting python
+    try: object.__getattribute__(self, '_proxyconn').request('del', self)
+    except socket.error: pass # No need for additional complaints about a dead connection
   def __hash__(self): # __hash__ is weird
-    return object.__getattribute__(self, '_proxymsgsend')('hash')
-  # Special methods don't always go through __getattribute__
+    return object.__getattribute__(self, '_proxyconn').request('hash', self)
+  
+  # Special methods don't always go through __getattribute__, so redirect them all there.
   for special in ('__repr__', '__str__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__', '__ge__', '__cmp__', '__rcmp__', '__nonzero__', '__unicode__', '__len__', '__getitem__', '__setitem__', '__delitem__', '__iter__', '__reversed__', '__contains__', '__getslice__', '__setslice__', '__delslice__', '__add__', '__sub__', '__mul__', '__floordiv__', '__mod__', '__divmod__', '__pow__', '__lshift__', '__rshift__', '__and__', '__xor__', '__or__', '__div__', '__truediv__', '__radd__', '__rsub__', '__rmul__', '__rdiv__', '__rtruediv__', '__rfloordiv__', '__rmod__', '__rdivmod__', '__rpow__', '__rlshift__', '__rrshift__', '__rand__', '__rxor__', '__ror__', '__iadd__', '__isub__', '__imul__', '__idiv__', '__itruediv__', '__ifloordiv__', '__imod__', '__ipow__', '__ilshift__', '__irshift__', '__iand__', '__ixor__', '__ior__', '__neg__', '__pos__', '__abs__', '__invert__', '__complex__', '__int__', '__long__', '__float__', '__oct__', '__hex__', '__index__', '__coerce__', '__enter__', '__exit__'):
-    exec 'def {special}(self, *args, **kwargs):\n\treturn getattr(self, "{special}")(*args, **kwargs)'.format(special=special)
+    exec 'def {special}(self, *args, **kwargs):\n\treturn getattr(self, "{special}")(*args, **kwargs)'.format(special=special) in None, None
 
-def ConnectProxy((host, port)):
-  sock = socket.create_connection((host, port))
-  assert ClientHandshake(sock)
-  x = recvmsg(sock)
-  assert x[:2] == (StopIteration, Ellipsis)
-  return Proxy(sock, x)
+class Connection(object):
+  def __init__(self, sock, secret, endpoint = urandom(8).encode('hex')):
+    self.sock = sock
+    self.secret = secret
+    self.endpoint = endpoint
 
-class Server(SocketServer.BaseRequestHandler):
+  def runServer(self, obj):
+    if self.sock.recv(2) != 'yo': return
+    self.sock.sendall(sha1(self.secret+self.sock.recv(20)).digest())
+    chal = urandom(20)
+    self.sock.sendall(chal)
+    if self.sock.recv(20) != sha1(self.secret+chal).digest(): return
+    try:
+      self.vended = {}
+      self.sendmsg(self.pack(obj))
+      while self.vended:
+        self.handle(self.recvmsg())
+    except socket.error as e:
+      if e.errno in (errno.EPIPE, errno.ECONNRESET): pass # Client disconnect is a non-error.
+      else: raise
+    finally:
+      del self.vended
+
+  def connectProxy(self):
+    self.vended = {}
+    self.sock.sendall('yo')
+    chal = urandom(20)
+    self.sock.sendall(chal)
+    if self.sock.recv(20) != sha1(self.secret+chal).digest(): return
+    self.sock.sendall(sha1(self.secret+self.sock.recv(20)).digest())
+    return self.unpack(self.recvmsg())
+
+  def handle(self, msg):
+    #print msg
+    try:
+      if msg[0] == 'get':
+        _, obj, attr = msg
+        reply = ('ok', self.pack(getattr(self.unpack(obj), attr)))
+      elif msg[0] == 'set':
+        _, obj, attr, val = msg
+        setattr(self.unpack(obj), attr, self.unpack(val))
+        reply = ('ok', None)
+      elif msg[0] == 'call':
+        _, obj, args, kwargs = msg
+        reply =  ('ok', self.pack(self.unpack(obj)(*self.unpack(args), **self.unpack(kwargs))))
+      elif msg[0] == 'del':
+        try:
+          _, obj = msg
+          k = id(self.unpack(obj))
+          self.vended[k][1] -= 1
+          if self.vended[k][1] == 0:
+            del self.vended[k]
+        except:
+          print "Exception while deleting", msg[1]
+          traceback.print_exc()
+        reply = ('ok', None)
+      elif msg[0] == 'hash':
+        _, obj = msg
+        reply = ('ok', self.pack(hash(self.unpack(obj))))
+      else:
+        assert False, "Bad message " + repr(x) # Note that this gets caught
+    except:
+      typ, val, tb = sys.exc_info()
+      reply = ('exn', typ.__name__, self.pack(val.args), traceback.format_exception(typ, val, tb))
+    
+    self.sendmsg(reply)
+
+  def request(self, method, proxy, *args):
+    self.sendmsg((method, object.__getattribute__(proxy, '_proxyval'))+tuple(self.pack(i) for i in args))
+    while True:
+      x = self.recvmsg()
+      if x[0] == 'ok':
+        return self.unpack(x[1])
+      elif x[0] == 'exn':
+        exntyp = exceptions.__dict__.get(x[1])
+        args = self.unpack(x[2])
+        trace = x[3]
+        if exntyp and issubclass(exntyp, BaseException):
+          e = exntyp(*(args + ('Remote '+''.join(trace),)))
+          raise e
+        else:
+          raise Exception(str(x[1])+repr(args)+'\nRemote '+''.join(trace))
+      else:
+        self.handle(x)
+
+  # Note: must send after packing, or objects will be left with +1 retain count in self.vended
   def pack(self, val):
-    if type(val) in (bool, int, long, float, complex, str, unicode):
+    if type(val) in (bool, int, long, float, complex, str, unicode, StopIteration, Ellipsis):
       return val
     elif type(val) == tuple:
       return tuple(self.pack(i) for i in val)
@@ -144,18 +132,23 @@ class Server(SocketServer.BaseRequestHandler):
       return frozenset(self.pack(i) for i in val)
     elif type(val) == dict:
       return {self.pack(k):self.pack(v) for k,v in val.iteritems()}
-    # elif type(val) == CodeType: Actually, send code objects via proxy.
-    #   raise Exception('no')
+    elif type(val) == Proxy:
+      return object.__getattribute__(val, '_proxyval')
+    #elif type(val) == CodeType:
+    # Just send code self.vended via proxy
     else:
-      self.objects.setdefault(id(val), [val, 0])[1] += 1
-      return (StopIteration, Ellipsis, id(val))
+      self.vended.setdefault(id(val), [val, 0])[1] += 1
+      return (StopIteration, Ellipsis, self.endpoint, id(val))
 
   def unpack(self, val):
-    if type(val) == tuple and len(val) == 3 and val[:2] == (StopIteration, Ellipsis):
-      try:
-        return self.objects[val[2]][0]
-      except KeyError:
-        raise Exception("Whoops, server can't find reference to object "+repr(val[2]))
+    if type(val) == tuple and len(val) == 4 and val[:2] == (StopIteration, Ellipsis):
+      if val[2] == self.endpoint:
+        try:
+          return self.vended[val[3]][0]
+        except KeyError:
+          raise Exception("Whoops, "+self.endpoint+" can't find reference to object "+repr(val[3]))
+      else:
+        return Proxy(self, val)
     elif type(val) == tuple:
       return tuple(self.unpack(i) for i in val)
     elif type(val) == list:
@@ -167,71 +160,49 @@ class Server(SocketServer.BaseRequestHandler):
     elif type(val) == dict:
       return {self.unpack(k):self.unpack(v) for k,v in val.iteritems()}
     elif type(val) == CodeType:
-      raise Exception('no')
+      raise Exception('code types get proxied')
     else:
       return val
 
-  def handle_msg(self, msg):
-    try:
-      if msg[0] == 'get':
-        _, obj, attr = msg
-        return ('ok', self.pack(getattr(self.unpack(obj), attr)))
-      elif msg[0] == 'set':
-        _, obj, attr, val = msg
-        setattr(self.unpack(obj), attr, self.unpack(val))
-        return ('ok', None)
-      elif msg[0] == 'call':
-        _, obj, args, kwargs = msg
-        return ('ok', self.pack(self.unpack(obj)(*self.unpack(args), **self.unpack(kwargs))))
-      elif msg[0] == 'del':
-        _, (_, _, objid) = msg
-        try:
-          t = self.objects[objid]
-          t[1] -= 1
-          if t[1] == 0:
-            #print 'deleting', objid, repr(self.objects[objid]), ' ', len(self.objects), 'items left'
-            del self.objects[objid]
-        except:
-          print "Huh, couldn't find a", objid, "to delete."
-        return ('ok', None)
-      elif msg[0] == 'hash':
-        _, obj = msg
-        return ('ok', self.pack(hash(self.unpack(obj))))
-      else:
-        assert False, "Bad message " + repr(x)
-    except BaseException, e:
-      return ('exn', type(e).__name__, self.pack(e.args))
+  def sendmsg(self, msg):
+    x = marshal.dumps(msg)
+    self.sock.sendall(struct.pack('<I', len(x)))
+    self.sock.sendall(x)
 
-  def handle(self):
-    try:
-      if not ServerHandshake(self.request): return
-      self.objects = {id(self.server.object):[self.server.object, 1]}
-      sendmsg(self.request, (StopIteration, Ellipsis, id(self.server.object)))
-      while self.objects:
-        sendmsg(self.request, self.handle_msg(recvmsg(self.request)))
-    finally:
-      del self.objects
+  def recvmsg(self):
+    x = self.sock.recv(4)
+    if len(x) == 4:
+      y = struct.unpack('<I', x)[0]
+      z = self.sock.recv(y)
+      if len(z) == y:
+        return marshal.loads(z)
+    raise socket.error(errno.ECONNRESET, 'The socket was closed while receiving a message.')
 
-def CreateServer((host, port), obj):
-  SocketServer.TCPServer.allow_reuse_address = True # pls
-  server = SocketServer.TCPServer((host, port), Server)
-  server.object = obj
-  return server
+__all__ = [Connection,]
 
-__all__ = [ConnectProxy, CreateServer]
-
-# For demo purposes. A good example is proxy.__builtins__.__import__('ctypes').memset(0,0,1)
+# For demo purposes.
 if __name__ == "__main__":
   from sys import argv
   if len(argv) <= 3:
-    print "Usage:", argv[0], "server <address> <port>"
-    print "       python -i", argv[0], "client <address> <port>"
+    print "Usage:", argv[0], "server <address> <port> [<password>]"
+    print "       python -i", argv[0], "client <address> <port> [<password>]"
     print "In the client python shell, the server's module is available as 'proxy'"
+    print "A good demo is `proxy.__builtins__.__import__('ctypes').memset(0,0,1)`"
     exit(64)
-  elif argv[1] == 'server':
-    CreateServer((argv[2], int(argv[3])), sys.modules[__name__]).serve_forever()
+  
+  hostport = (argv[2], int(argv[3]))
+  password = argv[4] if len(argv) > 4 else 'lol, python'
+  if argv[1] == 'server':
+    import SocketServer
+    class Server(SocketServer.BaseRequestHandler):
+      def handle(self):
+        print 'Accepting client', self.client_address
+        Connection(self.request, password).runServer(sys.modules[__name__])
+        print 'Finished with client', self.client_address
+    SocketServer.TCPServer.allow_reuse_address = True
+    SocketServer.TCPServer(hostport, Server).serve_forever()
     exit(1)
-  elif len(argv) > 3 and argv[1] == 'client':
-    proxy = ConnectProxy((argv[2], int(argv[3])))
+  elif argv[1] == 'client':
+    proxy = Connection(socket.create_connection(hostport), password).connectProxy()
   else:
     exit(64)

@@ -1,35 +1,35 @@
 # TODO: Switch to an stdio based method instead of needing to TCP server.
 import remoteobj
+import socket
 
 if __name__ == "__main__":
   # Server
-  import ctypes, sys
   try:
-    remoteobj.CreateServer((sys.argv[1], int(sys.argv[2])), ctypes).handle_request()
+    from sys import argv
+    remoteobj.Connection(socket.create_connection((argv[1], int(argv[2]))), argv[3]).runServer(__import__('ctypes'))
   except:
-    print 'The remotectypes32 process is angry and quitting.'
+    print 'The remotectypes32 process is angrily exiting.'
     raise
 else:
   # Client
   import sys, os, time, subprocess, random
   port = random.randint(10000, 65535)
-
+  secret = os.urandom(20).encode('hex')
+  
+  sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  sock.bind(('127.0.0.1', port))
+  sock.listen(1)
+  
+  args = (__file__, '127.0.0.1', str(port), secret)
   if 'PYTHON32' in os.environ:
-    p = subprocess.Popen((os.environ['PYTHON32'], __file__, '127.0.0.1', str(port)))
+    p = subprocess.Popen((os.environ['PYTHON32'],)+args)
   elif sys.platform == 'darwin':
-    p = subprocess.Popen(('/usr/bin/arch', '-i386', '/System/Library/Frameworks/Python.framework/Versions/Current/bin/python2.7', __file__, '127.0.0.1', str(port)))
+    p = subprocess.Popen(('/usr/bin/arch', '-i386', '/System/Library/Frameworks/Python.framework/Versions/Current/bin/python2.7')+args)
   else:
-    raise Exception('Set PYTHON32 in env to an i386 python.')
+    raise Exception('Set env variable PYTHON32 to an i386 python.')
 
-  for i in range(4):
-    try:
-      time.sleep(i/2.0+0.5)
-      ctypes = remoteobj.ConnectProxy(('127.0.0.1', port))
-      break
-    except socket.error:
-      x,y,z = sys.exc_info()
-  else:
-    raise x,y,z
+  conn, addr = sock.accept()
+  ctypes = remoteobj.Connection(conn, secret).connectProxy()
 
   # Make `from remotectypes32 import *` work as expected
   __all__ = []
