@@ -129,22 +129,23 @@ class Program:
     self.tags = collections.defaultdict(dict)
     # it should also replace dwarves
 
-    # call out to ida
-    print "*** running the ida parser"
-    ret = os.system(qira_config.BASEDIR+"/static/ida_parser.py /tmp/qira_binary > /tmp/qida_log")
-    try:
-      import json
-      ttags = json.load(open("/tmp/qida/tags"))
-      print "*** ida returned %d tags" % (len(ttags['tags']))
+    if qira_config.WITH_STATIC:
+      # call out to ida
+      print "*** running the ida parser"
+      ret = os.system(qira_config.BASEDIR+"/static/ida_parser.py /tmp/qira_binary > /tmp/qida_log")
+      try:
+        import json
+        ttags = json.load(open("/tmp/qida/tags"))
+        print "*** ida returned %d tags" % (len(ttags['tags']))
 
-      # grr, copied from settags
-      for addr in ttags['tags']:
-        naddr = fhex(addr)
-        for i in ttags['tags'][addr]:
-          self.tags[naddr][i] = ttags['tags'][addr][i]
-          #print hex(naddr), self.tags[naddr][i]
-    except:
-      print "*** IDA PARSER FAILED"
+        # grr, copied from settags
+        for addr in ttags['tags']:
+          naddr = fhex(addr)
+          for i in ttags['tags'][addr]:
+            self.tags[naddr][i] = ttags['tags'][addr][i]
+            #print hex(naddr), self.tags[naddr][i]
+      except:
+        print "*** IDA PARSER FAILED"
 
     # pmaps is global, but updated by the traces
     (self.dwarves, self.rdwarves) = ({}, {})

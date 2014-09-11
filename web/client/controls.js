@@ -47,11 +47,34 @@ $(document).ready(function() {
   });
 });
 
+$(document).ready(function() {
+  $('body').on('mousewheel', '.flat', function(e) {
+    if (e.originalEvent.wheelDelta < 0) {
+      Session.set('iaddr', bn_add(Session.get('iaddr'), 1));
+    } else if (e.originalEvent.wheelDelta > 0) {
+      Session.set('iaddr', bn_add(Session.get('iaddr'), -1));
+    }
+  });
+  $("#idump")[0].addEventListener("mousewheel", function(e) {
+    //p("idump mousewheel");
+    if (e.wheelDelta < 0) {
+      Session.set('clnum', Session.get('clnum')+1);
+    } else if (e.wheelDelta > 0) {
+      Session.set('clnum', Session.get('clnum')-1);
+    }
+  });
+});
+
+Session.setDefault("flat", false);
+
 // keyboard shortcuts
 window.onkeydown = function(e) {
   //p(e.keyCode);
   //p(e);
-  if (e.keyCode == 37) {
+  if (e.keyCode == 32) {
+    // space bar
+    Session.set("flat", !Session.get("flat"));
+  } else if (e.keyCode == 37) {
     Session.set("forknum", Session.get("forknum")-1);
   } else if (e.keyCode == 39) {
     Session.set("forknum", Session.get("forknum")+1);
@@ -94,7 +117,8 @@ window.onkeydown = function(e) {
     var send = {};
     send[addr] = {"name": dat};
     stream.emit("settags", send);
-    Session.set("clnum", Session.get("clnum"));
+
+    replace_names();
   } else if (e.keyCode == 186) {
     var addr = undefined;
     if (e.shiftKey) {
@@ -112,14 +136,16 @@ window.onkeydown = function(e) {
     var send = {};
     send[addr] = {"comment": dat};
     stream.emit("settags", send);
-    Session.set("clnum", Session.get("clnum"));
+
+    // do this explictly?
+    $(".comment_"+addr).html("; "+dat);
   } else if (e.keyCode == 71) {
     var dat = prompt("Enter change or address");
     if (dat == undefined) return;
     if (dat.substr(0, 2) == "0x") { update_iaddr(dat); }
     else if (fdec(dat) == dat) { Session.set("clnum", fdec(dat)); }
     else {
-      // names soon
+      stream.emit("gotoname", dat);
     }
   }
 };
@@ -138,7 +164,9 @@ $(document).ready(function() {
     push_history("click iaddr");
   });*/
   $('body').on('click', '.data', function(e) {
-    var daddr = e.target.getAttribute('id').split("_")[1].split(" ")[0];
+    //var daddr = e.target.getAttribute('id').split("_")[1].split(" ")[0];
+    var daddr = get_address_from_class(e.target, "data");
+
     Session.set('daddr', daddr);
     push_history("click data");
   });

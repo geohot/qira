@@ -20,7 +20,7 @@ function redraw_reg_flags() {
       if (t.length == 1 && !t.hasClass("register")) {
         var rr = $('<div class="rflag"></div>');
         rr.css("background-color", regcolors[th.num]);
-        var pos = t.children().length*3;  // rflag width
+        var pos = (t.children().length-1)*3;  // rflag width
         rr.css("margin-left", pos+"px");
         t.prepend(rr);
       }
@@ -66,10 +66,10 @@ function on_memory(msg) { DS("memory");
     if (a !== "") {
       // this has a datatype, and therefore is clickable, so add addr
       var exclass = "data_"+bn_add(addr, i);
-      exclass += " addr addr_"+v;
+      var exclassmore = exclass + " addr addr_"+v;
       var minwidth = 84;
       if (PTRSIZE == 8) minwidth = 172;
-      html += '<td colspan="'+PTRSIZE+'"><div style="overflow: hidden; width:'+minwidth+'px" class="data hexdump'+a+' '+exclass+'" id="'+exclass+'">'+v+"</div></td>";
+      html += '<td colspan="'+PTRSIZE+'"><div style="overflow: hidden; width:'+minwidth+'px" id="'+exclass+'"><div class="data hexdump'+a+' '+exclassmore+'">'+v+"</div></div></td>";
     } else {
       for (var j = 0; j < PTRSIZE; j++) {
         var ii = msg['dat'][i+j];

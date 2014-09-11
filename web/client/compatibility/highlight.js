@@ -7,9 +7,8 @@ var escapeHTML = (function () {
 }());
 
 function highlight_addresses(a) {
-  // no XSS :)
-  var d = escapeHTML(a);
   var re = /0x[0123456789abcdef]+/g;
+  var d = a;
   var m = d.match(re);
   if (m !== null) {
     // make matches unique?
@@ -29,7 +28,8 @@ function highlight_addresses(a) {
 }
 
 function highlight_instruction(a) {
-  var ret = highlight_addresses(a);
+  if (a == undefined) return "undefined";
+  var ret = escapeHTML(a);
 
   // dim colors
   function fc(a) {
@@ -46,13 +46,21 @@ function highlight_instruction(a) {
 
   // highlight registers
   if (arch !== undefined) {
+    var reps = {};
     for (var i = 0; i < arch[0].length; i++) {
       var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i]+'</span>';
-      ret = ret.replace(arch[0][i], rep);
+      reps[arch[0][i]] = rep;
 
       var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i].toLowerCase()+'</span>';
-      ret = ret.replace(arch[0][i].toLowerCase(), rep);
+      reps[arch[0][i].toLowerCase()] = rep;
     }
+    var re = "";
+    for (i in reps) {
+      re += "(" + i + ")|";
+    }
+    re = re.substr(0, re.length-1);
+    p(re);
+    ret = ret.replace(new RegExp(re, "g"), function(a) { return reps[a]; });
   }
 
   // highlight opcode
@@ -62,7 +70,8 @@ function highlight_instruction(a) {
       break;
     }
   }
-  return '<span class="op">' + ret.substr(0, i) + '</span>' + ret.substr(i)
+  ret = '<span class="op">' + ret.substr(0, i) + '</span>' + ret.substr(i)
+  return highlight_addresses(ret);
 }
 
 function rehighlight() {
@@ -83,8 +92,9 @@ Deps.autorun(function() { DA("rehighlight");
 
 stream = io.connect(STREAM_URL);
 
-function get_address_from_class(t) {
-  var l = t.className.split(" ").filter(function(x) { return x.substr(0,5) == "addr_"; });
+function get_address_from_class(t, type) {
+  if (type === undefined) type = "addr";
+  var l = t.className.split(" ").filter(function(x) { return x.substr(0,5) == type+"_"; });
   if (l.length != 1) return undefined;
   return l[0].split("_")[1].split(" ")[0];
 }

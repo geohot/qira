@@ -7,17 +7,6 @@ function on_arch(msg) { DS("arch");
   arch = msg;
 } stream.on("arch", on_arch);
 
-$(document).ready(function() {
-  $("#idump")[0].addEventListener("mousewheel", function(e) {
-    //p("idump mousewheel");
-    if (e.wheelDelta < 0) {
-      Session.set('clnum', Session.get('clnum')+1);
-    } else if (e.wheelDelta > 0) {
-      Session.set('clnum', Session.get('clnum')-1);
-    }
-  });
-});
-
 function on_instructions(msg) { DS("instructions");
   var clnum = Session.get("clnum");
   var idump = "";
@@ -37,9 +26,8 @@ function on_instructions(msg) { DS("instructions");
        '<div class="instruction" style="margin-left: '+(ins.depth*10)+'px">'+
         '<div class="change '+(ins.slice ? "halfhighlight": "")+' clnum clnum_'+ins.clnum+'">'+ins.clnum+'</div> '+
         '<span class="insaddr datainstruction addr addr_'+ins.address+'">'+ins.address+'</span> '+
-        //'<span class="name">'+ins.name+'</span> '+
         '<div class="instructiondesc">'+highlight_instruction(ins.instruction)+'</div> '+
-        '<span class="comment">'+(ins.comment !== undefined ? "; "+ins.comment : "")+'</span>'+
+        '<span class="comment comment_'+ins.address+'">'+(ins.comment !== undefined ? "; "+ins.comment : "")+'</span>'+
       '</div>';
   }
   $('#idump').html(idump);

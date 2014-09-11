@@ -7,12 +7,25 @@ All QIRA code is released under GPLv2
 ./install.sh should handle everything for a base QIRA install
 
 
-== Installation Extras
+== Installation Extras ==
 
 ./fetchlibs.sh will fetch the libraries for armhf, armel, aarch64, and ppc
 ./cda_build.sh will install CDA, allowing cda and --cda to work
 ./pin_build.sh will install the QIRA PIN plugin, allowing --pin to work
 
+== Releases ==
+
+v1.1 -- Support for names and comments. Static stuff added. Register colors.
+v1.0 -- Perf is good! Tons of bugfixes. Quality software. http://qira.me/
+v0.9 -- Function indentation. haddrline added(look familiar?). Register highlighting in hexdump.
+v0.8 -- Intel syntax! Shipping CDA(cda a.out) and experimental PIN backend. Bugfixes. Windows support?
+v0.7 -- DWARF support. Builds QEMU if distributed binaries don't work. Windows IDA plugin.
+v0.6 -- Added changes before webforking. Highlight strace addresses. Default on analysis.
+v0.5 -- Fixed regression in C++ database causing wrong values. Added PowerPC support. Added "A" button.
+v0.4 -- Using 50x faster C++ database. strace support. argv and envp are there.
+v0.3 -- Built in socat, multiple traces, forks(experimental). Somewhat working x86-64 and ARM support
+v0.2 -- Removed dependency on mongodb, much faster. IDA plugin fixes, Mac version.
+v0.1 -- Initial release
 
 == UI ==
 
@@ -70,6 +83,7 @@ shift-n -- rename data
 shift-; -- add comment at data
 
 g -- go to change or address (or name soon)
+c -- analyze code at address
 
 
 == Installation on Windows (experimental) ==

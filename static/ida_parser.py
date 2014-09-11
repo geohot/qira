@@ -157,43 +157,53 @@ for i in range(0, ida.get_nlist_size()):
   print hex(ea), name
   tags[ghex(ea)]['name'] = name
 
+def parse_addr(i):
+  flags = ida.get_flags_ex(i, 0)
+  # is code
+  if (flags&0x600) == 0x600:
+    #print ghex(i)
+    tags[ghex(i)]['flags'] = flags
+    tags[ghex(i)]['flow'] = []
+    tags[ghex(i)]['semantics'] = []
+    if ida.is_call_insn(i):
+      tags[ghex(i)]['semantics'].append("call")
+    if ida.is_ret_insn(i, 1):
+      tags[ghex(i)]['semantics'].append("ret")
+    tags[ghex(i)]['len'] = ida.decode_insn(i)
+    #print ghex(i), ida.is_basic_block_end(0)
+    if ida.is_basic_block_end(0):
+      tags[ghex(i)]['semantics'].append("endbb")
+    #print ghex(i), tags[ghex(i)]['len']
+  return flags
+
+i = 0
+while 1:
+  i = ida.nextaddr(i)
+  if i == -0x1:
+    break
+  parse_addr(i)
+
 fxn_count = ida.get_func_qty()
 for i in range(0, fxn_count):
   print i
   fxn = cast(ida.getn_func(i), POINTER(c_long))
   fxn = [fxn[0], fxn[1]]
-
   tags[ghex(fxn[0])]['funclength'] = fxn[1]-fxn[0]
-
   print hex(fxn[0]), hex(fxn[1])
 
   # get the flags for each address in the function
   for i in range(fxn[0], fxn[1]):
+    # this should be the only thing set here
+    #flags = parse_addr(i)
     flags = ida.get_flags_ex(i, 0)
-    # is code
-    #ida.gen_flow_graph(create_string_buffer("/tmp/qida/fxn_"+ghex(fxn[0])), create_string_buffer("yolo"), fxn, None, None, 0x3000) 
     if (flags&0x600) == 0x600:
-      print ghex(i)
       tags[ghex(i)]['scope'] = ghex(fxn[0])
-      tags[ghex(i)]['flags'] = flags
-      tags[ghex(i)]['flow'] = []
-      tags[ghex(i)]['semantics'] = []
-      if ida.is_call_insn(i):
-        tags[ghex(i)]['semantics'].append("call")
-      if ida.is_ret_insn(i, 1):
-        tags[ghex(i)]['semantics'].append("ret")
-      tags[ghex(i)]['len'] = ida.decode_insn(i)
-      #print ghex(i), ida.is_basic_block_end(0)
-      if ida.is_basic_block_end(0):
-        tags[ghex(i)]['semantics'].append("endbb")
-      #print ghex(i), tags[ghex(i)]['len']
       cref = ida.get_first_fcref_from(i)
       while cref != -1:
         if cref >= fxn[0] and cref < fxn[1]:
           tags[ghex(i)]['flow'].append(ghex(cref))
         #print "   ",ghex(cref)
         cref = ida.get_next_fcref_from(i, cref)
-
 
 # upload the tags
 
