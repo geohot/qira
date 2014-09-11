@@ -164,7 +164,9 @@ $(document).ready(function() {
     push_history("click iaddr");
   });*/
   $('body').on('click', '.data', function(e) {
-    var daddr = e.target.getAttribute('id').split("_")[1].split(" ")[0];
+    //var daddr = e.target.getAttribute('id').split("_")[1].split(" ")[0];
+    var daddr = get_address_from_class(e.target, "data");
+
     Session.set('daddr', daddr);
     push_history("click data");
   });

@@ -84,8 +84,9 @@ Deps.autorun(function() { DA("rehighlight");
 
 stream = io.connect(STREAM_URL);
 
-function get_address_from_class(t) {
-  var l = t.className.split(" ").filter(function(x) { return x.substr(0,5) == "addr_"; });
+function get_address_from_class(t, type) {
+  if (type === undefined) type = "addr";
+  var l = t.className.split(" ").filter(function(x) { return x.substr(0,5) == type+"_"; });
   if (l.length != 1) return undefined;
   return l[0].split("_")[1].split(" ")[0];
 }
