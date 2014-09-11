@@ -6,7 +6,7 @@ Deps.autorun(function() { DA("update static view");
   var iaddr = Session.get('iaddr');
   var flat = Session.get('flat');
   if (iaddr === undefined) return;
-  stream.emit('getstaticview', iaddr, flat, [-8,20]);
+  stream.emit('getstaticview', iaddr, flat, [-15,40]);
 });
 
 /*$(function() {
