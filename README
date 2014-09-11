@@ -15,7 +15,7 @@ All QIRA code is released under GPLv2
 
 == Releases ==
 
-v1.1 -- Support for names and comments. Static stuff added, but not used.
+v1.1 -- Support for names and comments. Static stuff added. Register colors.
 v1.0 -- Perf is good! Tons of bugfixes. Quality software. http://qira.me/
 v0.9 -- Function indentation. haddrline added(look familiar?). Register highlighting in hexdump.
 v0.8 -- Intel syntax! Shipping CDA(cda a.out) and experimental PIN backend. Bugfixes. Windows support?
