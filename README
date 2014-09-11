@@ -70,6 +70,7 @@ shift-n -- rename data
 shift-; -- add comment at data
 
 g -- go to change or address (or name soon)
+c -- analyze code at address
 
 
 == Installation on Windows (experimental) ==

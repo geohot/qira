@@ -7,17 +7,6 @@ function on_arch(msg) { DS("arch");
   arch = msg;
 } stream.on("arch", on_arch);
 
-$(document).ready(function() {
-  $("#idump")[0].addEventListener("mousewheel", function(e) {
-    //p("idump mousewheel");
-    if (e.wheelDelta < 0) {
-      Session.set('clnum', Session.get('clnum')+1);
-    } else if (e.wheelDelta > 0) {
-      Session.set('clnum', Session.get('clnum')-1);
-    }
-  });
-});
-
 function on_instructions(msg) { DS("instructions");
   var clnum = Session.get("clnum");
   var idump = "";

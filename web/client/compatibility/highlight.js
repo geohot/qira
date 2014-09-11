@@ -29,6 +29,7 @@ function highlight_addresses(a) {
 }
 
 function highlight_instruction(a) {
+  if (a == undefined) return "undefined";
   var ret = highlight_addresses(a);
 
   // dim colors

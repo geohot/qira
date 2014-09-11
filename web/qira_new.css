@@ -20,3 +20,9 @@
   color: blue;
 }
 
+.flat {
+  border: 1px solid gray;
+  background-color: #CCCCCC;
+  padding: 10px;
+}
+

@@ -47,11 +47,34 @@ $(document).ready(function() {
   });
 });
 
+$(document).ready(function() {
+  $('body').on('mousewheel', '.flat', function(e) {
+    if (e.originalEvent.wheelDelta < 0) {
+      Session.set('iaddr', bn_add(Session.get('iaddr'), 1));
+    } else if (e.originalEvent.wheelDelta > 0) {
+      Session.set('iaddr', bn_add(Session.get('iaddr'), -1));
+    }
+  });
+  $("#idump")[0].addEventListener("mousewheel", function(e) {
+    //p("idump mousewheel");
+    if (e.wheelDelta < 0) {
+      Session.set('clnum', Session.get('clnum')+1);
+    } else if (e.wheelDelta > 0) {
+      Session.set('clnum', Session.get('clnum')-1);
+    }
+  });
+});
+
+Session.setDefault("flat", false);
+
 // keyboard shortcuts
 window.onkeydown = function(e) {
   //p(e.keyCode);
   //p(e);
-  if (e.keyCode == 37) {
+  if (e.keyCode == 32) {
+    // space bar
+    Session.set("flat", !Session.get("flat"));
+  } else if (e.keyCode == 37) {
     Session.set("forknum", Session.get("forknum")-1);
   } else if (e.keyCode == 39) {
     Session.set("forknum", Session.get("forknum")+1);

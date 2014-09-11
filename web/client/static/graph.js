@@ -79,7 +79,7 @@ Graph.prototype.inLineage = function(addr, qaddr, seen) {
 Graph.prototype.render = function() {
   var send = "digraph graphname {\n";
 
-  $("#gbox").remove();
+  $("#staticpanel").html("");
   gbox = document.createElement('div');
   document.getElementById("staticpanel").appendChild(gbox);
   gbox.id = 'gbox';

@@ -47,17 +47,48 @@ def gettags(start, length):
       # a bit of a hack, this is so javascript can display it
       program.tags[i]['address'] = ghex(i)
       ret.append(program.tags[i])
-  emit('tags', ret)
+  emit('tags', ret, True)
 
-@socketio.on('getfunc', namespace='/qira')
+@socketio.on('getstaticview', namespace='/qira')
 @socket_method
-def getfunc(haddr):
+def getstaticview(haddr, flat, flatrange):
   addr = fhex(haddr)
-  if 'scope' not in program.tags[addr]:
-    return
-  start = program.tags[addr]['scope']
-  length = program.tags[fhex(start)]['funclength']
-  gettags(start, length)
+  if flat or 'scope' not in program.tags[addr]:
+    # not a function, return flat view
+    ret = []
+    # find backward
+    i = addr
+    while len(ret) != abs(flatrange[0]):
+      did_append = False
+      # search up to 256 back
+      for j in range(1, 256):
+        if 'len' in program.tags[i-j] and program.tags[i-j]['len'] == j:
+          i -= j
+          program.tags[i]['address'] = ghex(i)
+          ret.append(program.tags[i])
+          did_append = True
+          break
+      if not did_append:
+        i -= 1
+        program.tags[i]['address'] = ghex(i)
+        ret.append(program.tags[i])
+    ret = ret[::-1]
+    # find forward
+    i = addr
+    while len(ret) != abs(flatrange[0]) + flatrange[1]:
+      program.tags[i]['address'] = ghex(i)
+      ret.append(program.tags[i])
+      #print program.tags[i]
+      if 'len' in program.tags[i]:
+        i += program.tags[i]['len']
+      else:
+        i += 1
+    emit('tags', ret, False)
+  else:
+    # function
+    start = program.tags[addr]['scope']
+    length = program.tags[fhex(start)]['funclength']
+    gettags(start, length)
 
 # used to set names and comments and stuff
 @socketio.on('settags', namespace='/qira')
