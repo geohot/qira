@@ -148,7 +148,7 @@ window.onkeydown = function(e) {
     if (dat.substr(0, 2) == "0x") { update_iaddr(dat); }
     else if (fdec(dat) == dat) { Session.set("clnum", fdec(dat)); }
     else {
-      // names soon
+      stream.emit("gotoname", dat);
     }
   }
 };
