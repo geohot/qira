@@ -350,7 +350,9 @@ class Program:
       for i in md.disasm(raw, address):
         # should only be one instruction
         # may not need to track iset here
-        data = {"mnemonic": i.mnemonic, "op_str": i.op_str, "iset": arch}
+        # the repr field is a fallback representation of the instruction
+        data = {"mnemonic": i.mnemonic, "op_str": i.op_str,
+            "repr": "{}\t{}".format(i.mnemonic,i.op_str)}
         if len(i.regs_read) > 0:
           data["regs_read"] = []
           for r in i.regs_read:
@@ -364,13 +366,12 @@ class Program:
         #  data["groups"] = []
         #  for g in i.groups:
         #    data["groups"].append(g)
-        print data
+        return data
         #when ready, return data as json rather than static string
-        return "%s\t%s" % (i.mnemonic, i.op_str)
     except:
       #print "disasm failed: {}".format(sys.exc_info()[0])
       pass
-    return raw.encode("hex")
+    return {"repr": raw.encode("hex")}
 
   def research(self, re):
     try:
