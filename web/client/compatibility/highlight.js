@@ -7,9 +7,8 @@ var escapeHTML = (function () {
 }());
 
 function highlight_addresses(a) {
-  // no XSS :)
-  var d = escapeHTML(a);
   var re = /0x[0123456789abcdef]+/g;
+  var d = a;
   var m = d.match(re);
   if (m !== null) {
     // make matches unique?
@@ -30,7 +29,7 @@ function highlight_addresses(a) {
 
 function highlight_instruction(a) {
   if (a == undefined) return "undefined";
-  var ret = highlight_addresses(a);
+  var ret = escapeHTML(a);
 
   // dim colors
   function fc(a) {
@@ -47,13 +46,21 @@ function highlight_instruction(a) {
 
   // highlight registers
   if (arch !== undefined) {
+    var reps = {};
     for (var i = 0; i < arch[0].length; i++) {
       var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i]+'</span>';
-      ret = ret.replace(arch[0][i], rep);
+      reps[arch[0][i]] = rep;
 
       var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i].toLowerCase()+'</span>';
-      ret = ret.replace(arch[0][i].toLowerCase(), rep);
+      reps[arch[0][i].toLowerCase()] = rep;
     }
+    var re = "";
+    for (i in reps) {
+      re += "(" + i + ")|";
+    }
+    re = re.substr(0, re.length-1);
+    p(re);
+    ret = ret.replace(new RegExp(re, "g"), function(a) { return reps[a]; });
   }
 
   // highlight opcode
@@ -63,7 +70,8 @@ function highlight_instruction(a) {
       break;
     }
   }
-  return '<span class="op">' + ret.substr(0, i) + '</span>' + ret.substr(i)
+  ret = '<span class="op">' + ret.substr(0, i) + '</span>' + ret.substr(i)
+  return highlight_addresses(ret);
 }
 
 function rehighlight() {
