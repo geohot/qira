@@ -20,7 +20,7 @@ function redraw_reg_flags() {
       if (t.length == 1 && !t.hasClass("register")) {
         var rr = $('<div class="rflag"></div>');
         rr.css("background-color", regcolors[th.num]);
-        var pos = t.children().length*3;  // rflag width
+        var pos = (t.children().length-1)*3;  // rflag width
         rr.css("margin-left", pos+"px");
         t.prepend(rr);
       }
