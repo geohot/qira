@@ -52,6 +52,10 @@ def gettags(start, length):
 @socketio.on('getstaticview', namespace='/qira')
 @socket_method
 def getstaticview(haddr, flat, flatrange):
+  # disable this to disable static
+  if not qira_config.WITH_STATIC:
+    return
+
   addr = fhex(haddr)
   if flat or 'scope' not in program.tags[addr]:
     # not a function, return flat view

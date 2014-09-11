@@ -14,12 +14,13 @@ Deps.autorun(function() { DA("update static view");
 });*/
 
 
+// TODO: this code is replicated in idump.js
 function instruction_html_from_tags(ins) {
   var idump = '<div class="instruction">';
   idump += '<span class="insaddr datainstruction addr addr_'+ins.address+'">'+ins.address+'</span> '+
   //'<div class="instructiondesc">'+hex(ins.flags)+'</div> '+
   '<div class="instructiondesc">'+highlight_instruction(ins.instruction)+'</div> '+
-  '<span class="comment">'+(ins.comment !== undefined ? "; "+ins.comment : "")+'</span>';
+  '<span class="comment comment_'+ins.address+'">'+(ins.comment !== undefined ? "; "+ins.comment : "")+'</span>';
   idump += '</div>';
   return idump;
 }

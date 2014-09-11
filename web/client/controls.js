@@ -117,10 +117,8 @@ window.onkeydown = function(e) {
     var send = {};
     send[addr] = {"name": dat};
     stream.emit("settags", send);
-    
-    // TODO: this isn't redrawing the clnum box
-    //Session.set("clnum", Session.get("clnum"));
-    Session.set("iaddr", Session.get("iaddr"));
+
+    replace_names();
   } else if (e.keyCode == 186) {
     var addr = undefined;
     if (e.shiftKey) {
@@ -139,9 +137,8 @@ window.onkeydown = function(e) {
     send[addr] = {"comment": dat};
     stream.emit("settags", send);
 
-    // TODO: this isn't redrawing the clnum box
-    //Session.set("clnum", Session.get("clnum"));
-    Session.set("iaddr", Session.get("iaddr"));
+    // do this explictly?
+    $(".comment_"+addr).html("; "+dat);
   } else if (e.keyCode == 71) {
     var dat = prompt("Enter change or address");
     if (dat == undefined) return;
