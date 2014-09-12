@@ -49,10 +49,11 @@ $(document).ready(function() {
 
 $(document).ready(function() {
   $('body').on('mousewheel', '.flat', function(e) {
+    var cdr = $(".flat").children();
     if (e.originalEvent.wheelDelta < 0) {
-      Session.set('iaddr', bn_add(Session.get('iaddr'), 1));
+      Session.set('iaddr', get_address_from_class(cdr[16].childNodes[0]));
     } else if (e.originalEvent.wheelDelta > 0) {
-      Session.set('iaddr', bn_add(Session.get('iaddr'), -1));
+      Session.set('iaddr', get_address_from_class(cdr[14].childNodes[0]));
     }
   });
   $("#idump")[0].addEventListener("mousewheel", function(e) {

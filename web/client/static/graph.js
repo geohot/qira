@@ -31,19 +31,31 @@ Graph.prototype.assignLevels = function() {
     }
   }
   // got all sinks on level 0
+  // fix these not to move?
   var onlevel = 0;
   while (this.levels[onlevel].length > 0) {
+    if (onlevel > 100) {
+      p("MAX LEVELS EXCEEDED");
+      break;
+    }
     this.levels.push([]); // add new level
-    var remove = []
+    var remove = [];
     for (var i=0; i<this.levels[onlevel].length; i++) {
       // loop over all in the current level
       var addr = this.levels[onlevel][i];
       var vertex = this.vertices[addr];
+
+      // loop over their parents
       for (var j=0; j< vertex['parents'].length; j++) {
         var paddr = vertex.parents[j];
         var pvertex = this.vertices[paddr];
         if (paddr != addr) {
           if (pvertex['level'] !== undefined) {
+            // if paddr > addr, continue
+            if (bn_cmp(paddr, addr) > 0) {
+              //p(paddr+ " > "+addr+", not replacing");
+              continue;
+            }
             remove.push([paddr,pvertex['level']]);
           }
           pvertex['level'] = onlevel+1;

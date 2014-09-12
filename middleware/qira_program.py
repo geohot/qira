@@ -127,24 +127,6 @@ class Program:
     self.tags = collections.defaultdict(dict)
     # it should also replace dwarves
 
-    if qira_config.WITH_STATIC:
-      # call out to ida
-      print "*** running the ida parser"
-      ret = os.system(qira_config.BASEDIR+"/static/ida_parser.py /tmp/qira_binary > /tmp/qida_log")
-      try:
-        import json
-        ttags = json.load(open("/tmp/qida/tags"))
-        print "*** ida returned %d tags" % (len(ttags['tags']))
-
-        # grr, copied from settags
-        for addr in ttags['tags']:
-          naddr = fhex(addr)
-          for i in ttags['tags'][addr]:
-            self.tags[naddr][i] = ttags['tags'][addr][i]
-            #print hex(naddr), self.tags[naddr][i]
-      except:
-        print "*** IDA PARSER FAILED"
-
     # pmaps is global, but updated by the traces
     (self.dwarves, self.rdwarves) = ({}, {})
     progdat = open(self.program, "rb").read(0x800)
@@ -225,6 +207,41 @@ class Program:
 
     else:
         raise Exception("unknown binary type")
+
+    if qira_config.WITH_STATIC:
+      # call out to ida
+      print "*** running the ida parser"
+      ret = os.system(qira_config.BASEDIR+"/static/ida_parser.py /tmp/qira_binary > /tmp/qida_log")
+      try:
+        import json
+        ttags = json.load(open("/tmp/qida/tags"))
+        print "*** ida returned %d tags" % (len(ttags['tags']))
+
+        # grr, copied from settags
+        for addr in ttags['tags']:
+          naddr = fhex(addr)
+          for i in ttags['tags'][addr]:
+            self.tags[naddr][i] = ttags['tags'][addr][i]
+            #print hex(naddr), self.tags[naddr][i]
+      except:
+        print "*** IDA PARSER FAILED"
+
+      # as a hack, we can assume it's loading at 0x8048000
+      # forget sections for now
+      # we really need to add a static memory repo
+      dat = open(self.program, "rb").read()
+      load_addr = 0x8048000
+      
+      # generate the static data for the instruction
+      for addr in self.tags:
+        if 'flags' in self.tags[addr] and self.tags[addr]['flags']&0x600 == 0x600:
+          # the question here is where do we get the instruction bytes?
+          raw = dat[addr-load_addr:addr-load_addr+self.tags[addr]['len']]
+          # capinstruction, bap
+          self.tags[addr]['capinstruction'] = self.disasm(raw, addr)
+          #print hex(addr), self.tags[addr]['len'], self.tags[addr]['capinstruction']
+          # for now, make it the default
+          self.tags[addr]['instruction'] = self.tags[addr]['capinstruction']
 
   def clear(self):
     # probably always good to do except in development of middleware

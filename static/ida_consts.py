@@ -1,6 +1,16 @@
+import os
 from os import environ
 
-IDAPATH = environ.get("IDAPATH", "/home/vagrant/idademo66")
+
+"""
+REAL_IDAPATH = "/home/vagrant/ida-6.6/"
+if os.path.isdir(REAL_IDAPATH):
+  IDAPATH = environ.get("IDAPATH", REAL_IDAPATH)
+else:
+"""
+if True:
+  DEMO_IDAPATH = "/home/vagrant/idademo66/"
+  IDAPATH = environ.get("IDAPATH", DEMO_IDAPATH)
 
 BADADDR = 0xFFFFFFFF
 NEF_FIRST = 0x80

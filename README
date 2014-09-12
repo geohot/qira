@@ -82,8 +82,8 @@ shift-n -- rename data
 ; -- add comment at instruction
 shift-; -- add comment at data
 
-g -- go to change or address (or name soon)
-c -- analyze code at address
+g -- go to change, address, or name
+c -- analyze code at address, soon
 
 
 == Installation on Windows (experimental) ==
