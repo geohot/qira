@@ -288,15 +288,17 @@ def getinstructions(forknum, clnum, clstart, clend):
 
     #ned: always use program.disasm if possible for smarter
     #representation of instruction
-    try:
-      # use the memory
-      rawins = trace.fetch_memory(i, rret['address'], rret['data'])
-      if len(rawins) == rret['data']:
-        raw = ''.join(map(lambda x: chr(x[1]), sorted(rawins.items())))
-        insdata = program.disasm(raw, rret['address'])
-    except Exception,e:
-      print "something failed, :(",e
-      # fetch the instruction from the qemu dump
+    if qira_config.WITH_CAPSTONE or 'instruction' not in program.tags[rret['address']]:
+      try:
+        # use the memory
+        rawins = trace.fetch_memory(i, rret['address'], rret['data'])
+        if len(rawins) == rret['data']:
+          raw = ''.join(map(lambda x: chr(x[1]), sorted(rawins.items())))
+          insdata = program.disasm(raw, rret['address'])
+      except Exception,e:
+        # fetch the instruction from the qemu dump
+        insdata = {"repr": program.tags[rret['address']]['instruction']}
+    else:
       insdata = {"repr": program.tags[rret['address']]['instruction']}
 
     #if the capstone disas succeeded, besides repr we'll have:
