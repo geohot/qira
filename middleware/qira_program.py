@@ -11,6 +11,9 @@ import collections
 from hashlib import sha1
 sys.path.append(qira_config.BASEDIR+"/cda")
 
+from subprocess import (Popen, PIPE)
+import json
+
 if qira_config.WITH_CAPSTONE:
   from capstone import *
 
@@ -231,8 +234,10 @@ class Program:
       # we really need to add a static memory repo
       dat = open(self.program, "rb").read()
       load_addr = 0x8048000
+
       
       # generate the static data for the instruction
+      print "** running static"
       for addr in self.tags:
         if 'flags' in self.tags[addr] and self.tags[addr]['flags']&0x600 == 0x600:
           # the question here is where do we get the instruction bytes?
@@ -242,6 +247,24 @@ class Program:
           #print hex(addr), self.tags[addr]['len'], self.tags[addr]['capinstruction']
           # for now, make it the default
           self.tags[addr]['instruction'] = self.tags[addr]['capinstruction']['repr']
+          self.tags[addr]['bap'] = self.genbap(raw, addr)
+      print "** static done"
+
+  def genbap(self, raw, addr):
+    toil = qira_config.BASEDIR+"/bap/bap-lifter/toil.native"
+    arch = self.tregs[3]
+    if arch == "i386":
+      arch = "x86"
+    toilProc = Popen([toil, '--arch', arch, '--addr', str(addr),'--format' , 'json', '--dump-asm', '--dump-fallthrough'], stdout=PIPE, stderr=PIPE, stdin=PIPE)
+    toilProc.stdin.write(raw)
+    toilProc.stdin.close()
+    s = toilProc.stdout.read().decode()
+    try:
+      out,pos = json.JSONDecoder().raw_decode(s)
+      return out
+    except:
+      return None
+
 
   def clear(self):
     # probably always good to do except in development of middleware
