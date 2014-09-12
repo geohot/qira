@@ -146,6 +146,12 @@ class Program:
             #print hex(naddr), self.tags[naddr][i]
       except:
         print "*** IDA PARSER FAILED"
+      
+      # generate the static data for the instruction
+      for addr in self.tags:
+        if 'flags' in self.tags[addr] and self.tags[addr]['flags']&0x600 == 0x600:
+          # capinstruction, bap
+          pass
 
     # pmaps is global, but updated by the traces
     (self.dwarves, self.rdwarves) = ({}, {})
