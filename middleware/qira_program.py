@@ -11,10 +11,8 @@ import collections
 from hashlib import sha1
 sys.path.append(qira_config.BASEDIR+"/cda")
 
-try:  
+if qira_config.WITH_CAPSTONE:
   from capstone import *
-except:
-  pass
 
 import struct
 import qiradb
@@ -281,6 +279,7 @@ class Program:
       #print repr(d)
       if self.fb == 0x28:   # ARM
         inst = d[d.rfind("  ")+2:]
+        #address = d.split()[0]
       elif self.fb == 0xb7:   # aarch64
         inst = d[d.rfind("     ")+5:]
       else:
@@ -336,19 +335,51 @@ class Program:
     os.execvp(eargs[0], eargs)
   
   def disasm(self, raw, address):
-    try:
-      if self.tregs[3] == "i386":
-        md = Cs(CS_ARCH_X86, CS_MODE_32)
-      elif self.tregs[3] == "x86-64":
-        md = Cs(CS_ARCH_X86, CS_MODE_64)
-      else:
-        raise Exception('arch not in capstone')
-      for i in md.disasm(raw, address):
+    default = {"repr": raw.encode("hex")}
+    if qira_config.WITH_CAPSTONE:
+      try:
+        arch = self.tregs[3]
+        if arch == "i386":
+          md = Cs(CS_ARCH_X86, CS_MODE_32)
+        elif arch == "x86-64":
+          md = Cs(CS_ARCH_X86, CS_MODE_64)
+        elif arch == "arm":
+          md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
+          # to switch between modes:
+          # md.mode = CS_MODE_THUMB
+          # md.mode = CS_MODE_ARM
+        elif arch == "aarch64":
+          md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
+        elif arch == "ppc":
+          md = Cs(CS_ARCH_PPC, CS_MODE_32)
+          #if 64 bit: md.mode = CS_MODE_64
+        else:
+          raise Exception('arch not in capstone')
+        #next: store different data based on type of operand
+        #https://github.com/aquynh/capstone/blob/master/bindings/python/test_arm.py
+        md.detail = True
+        i = md.disasm(raw, address).next()
         # should only be one instruction
-        return "%s\t%s" % (i.mnemonic, i.op_str)
-    except:
-      pass
-    return raw.encode("hex")
+        # may not need to track iset here
+        # the repr field is a fallback representation of the instruction
+        data = {"mnemonic": i.mnemonic, "op_str": i.op_str,
+            "repr": "{}\t{}".format(i.mnemonic,i.op_str)}
+        if len(i.regs_read) > 0:
+          data["regs_read"] = [i.reg_name(r) for r in i.regs_read]
+        if len(i.regs_write) > 0:
+          data["regs_write"] = [i.reg_name(r) for r in i.regs_write]
+        #groups: is it in arm neon, intel sse, etc
+        #if len(i.groups) > 0:
+        #  data["groups"] = []
+        #  for g in i.groups:
+        #    data["groups"].append(g)
+        return data
+        #when ready, return data as json rather than static string
+      except:
+        return default
+        #print "capstone disasm failed: {}".format(sys.exc_info()[0])
+    else:
+      return default
 
   def research(self, re):
     try:

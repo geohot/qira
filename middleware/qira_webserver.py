@@ -286,16 +286,27 @@ def getinstructions(forknum, clnum, clstart, clend):
     else:
       rret = rret[0]
 
-    if 'instruction' in program.tags[rret['address']]:
-      # fetch the instruction from the qemu dump
-      rret['instruction'] = program.tags[rret['address']]['instruction']
+    #ned: always use program.disasm if possible for smarter
+    #representation of instruction
+    if qira_config.WITH_CAPSTONE or 'instruction' not in program.tags[rret['address']]:
+      try:
+        # use the memory
+        rawins = trace.fetch_memory(i, rret['address'], rret['data'])
+        if len(rawins) == rret['data']:
+          raw = ''.join(map(lambda x: chr(x[1]), sorted(rawins.items())))
+          insdata = program.disasm(raw, rret['address'])
+      except Exception,e:
+        # fetch the instruction from the qemu dump
+        insdata = {"repr": program.tags[rret['address']]['instruction']}
     else:
-      # otherwise use the memory
-      rawins = trace.fetch_memory(i, rret['address'], rret['data'])
-      if len(rawins) == rret['data']:
-        raw = ''.join(map(lambda x: chr(x[1]), sorted(rawins.items())))
-        rret['instruction'] = program.disasm(raw, rret['address'])
+      insdata = {"repr": program.tags[rret['address']]['instruction']}
 
+    #if the capstone disas succeeded, besides repr we'll have:
+    #mnemonic, op_str, regs_read, regs_write if applicable
+    #we can use these on the frontend somehow - pass as JSON?
+    #some other arch specific stuff may also be available if desired
+    rret['instruction'] = insdata['repr']
+    
     if 'name' in program.tags[rret['address']]:
       #print "setting name"
       rret['name'] = program.tags[rret['address']]['name']
