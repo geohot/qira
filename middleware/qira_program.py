@@ -241,7 +241,7 @@ class Program:
           self.tags[addr]['capinstruction'] = self.disasm(raw, addr)
           #print hex(addr), self.tags[addr]['len'], self.tags[addr]['capinstruction']
           # for now, make it the default
-          self.tags[addr]['instruction'] = self.tags[addr]['capinstruction']
+          self.tags[addr]['instruction'] = self.tags[addr]['capinstruction']['repr']
 
   def clear(self):
     # probably always good to do except in development of middleware
