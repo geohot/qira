@@ -1,7 +1,8 @@
-#!/home/vagrant/idademo66/python
+#!/home/vagrant/build/Python-2.7.8/python
 
-# copied python into ida demo folder
-# also symlinked libida.so to /usr/lib/libida.so for early loads to work
+# removed the deps
+# you just need to point this to a valid 32-bit python
+# and have a correct IDAPATH in ida_consts.py
 
 import sys
 import os
@@ -22,6 +23,11 @@ done = False
 argc = 1
 argv = None
 idle_fxn = None
+
+# fixes the help issue
+os.environ['PATH'] += ":"+IDAPATH
+os.environ['LD_LIBRARY_PATH'] = IDAPATH
+os.environ['IDADIR'] = IDAPATH
 
 #os.chdir(IDAPATH)
 if sys.platform == 'darwin':
