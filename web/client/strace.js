@@ -19,7 +19,7 @@ function redraw_strace() {
     var st = msg[i];
     strace += '<div class="syscall">'+
         '<div class="change clnum clnum_'+st.clnum+'">'+st.clnum+'</div>'+
-        highlight_addresses(escapeHTML(st.sc))+
+        highlight_addresses(st.sc)+
       '</div>';
   }
   $('#strace').html(strace);

@@ -7,28 +7,12 @@ var escapeHTML = (function () {
 }());
 
 function highlight_addresses(a) {
-  var re = /0x[0123456789abcdef]+/g;
-  var d = a;
-  var m = d.match(re);
-  if (m !== null) {
-    // make matches unique?
-    m = m.filter(function (v,i,a) { return a.indexOf(v) == i });
-    m.map(function(a) { 
-      var cl = get_data_type(a);
-      if (cl == "") {
-        d = d.replace(a, "<span class='hexnumber'>"+a+"</span>");
-      } else {
-        cl += " addr addr_"+a;
-        d = d.replace(a, "<span class='"+cl+"'>"+a+"</span>");
-      }
-    });
-  }
-  // does this work outside templates?
-  return d;
+  return highlight_instruction(a, false);
 }
 
-function highlight_instruction(a) {
+function highlight_instruction(a, instruction) {
   if (a == undefined) return "undefined";
+  if (instruction === undefined) instruction = true;
   var ret = escapeHTML(a);
 
   // dim colors
@@ -44,34 +28,49 @@ function highlight_instruction(a) {
     return "#"+hex2(r)+hex2(g)+hex2(b);
   }
 
-  // highlight registers
+  // highlight registers and addresses
   if (arch !== undefined) {
+    var re = "(0x[0123456789abcdef]+)";
     var reps = {};
-    for (var i = 0; i < arch[0].length; i++) {
-      var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i]+'</span>';
-      reps[arch[0][i]] = rep;
+    if (instruction) {
+      for (var i = 0; i < arch[0].length; i++) {
+        var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i]+'</span>';
+        reps[arch[0][i]] = rep;
 
-      var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i].toLowerCase()+'</span>';
-      reps[arch[0][i].toLowerCase()] = rep;
+        var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i].toLowerCase()+'</span>';
+        reps[arch[0][i].toLowerCase()] = rep;
+      }
+      for (i in reps) {
+        re += "|(" + i + ")";
+      }
     }
-    var re = "";
-    for (i in reps) {
-      re += "(" + i + ")|";
+    function dorep(a) {
+      if (a.substr(0, 2) == "0x") {
+        var cl = get_data_type(a);
+        if (cl == "") {
+          return "<span class='hexnumber'>"+a+"</span>";
+        } else {
+          cl += " addr addr_"+a;
+          return "<span class='"+cl+"'>"+a+"</span>";
+        }
+      } else {
+        return reps[a];
+      }
     }
-    re = re.substr(0, re.length-1);
-    p(re);
-    ret = ret.replace(new RegExp(re, "g"), function(a) { return reps[a]; });
+    ret = ret.replace(new RegExp(re, "g"), dorep);
   }
 
   // highlight opcode
-  var i = 0;
-  for (i = 0; i < ret.length; i++) {
-    if (ret[i] == ' ' || ret[i] == '\t') {
-      break;
+  if (instruction) {
+    var i = 0;
+    for (i = 0; i < ret.length; i++) {
+      if (ret[i] == ' ' || ret[i] == '\t') {
+        break;
+      }
     }
+    ret = '<span class="op">' + ret.substr(0, i) + '</span>' + ret.substr(i)
   }
-  ret = '<span class="op">' + ret.substr(0, i) + '</span>' + ret.substr(i)
-  return highlight_addresses(ret);
+  return ret;
 }
 
 function rehighlight() {
