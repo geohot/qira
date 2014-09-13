@@ -6,27 +6,33 @@ if __name__ == "__main__":
   # Server
   try:
     from sys import argv
-    remoteobj.Connection(socket.create_connection((argv[1], int(argv[2]))), argv[3]).runServer(__import__('ctypes'))
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect(argv[1])
+    remoteobj.Connection(sock, argv[2]).runServer(__import__('ctypes'))
   except:
     print 'The remotectypes32 process is angrily exiting.'
     raise
 else:
   # Client
-  import sys, os, time, subprocess, random
-  port = random.randint(10000, 65535)
+  import sys, os, time, subprocess, atexit
   secret = os.urandom(20).encode('hex')
-  
-  sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  sock.bind(('127.0.0.1', port))
+  sockpath = '/tmp/remotectypes32.sock'+os.urandom(4).encode('hex')
+
+  atexit.register(os.remove, sockpath)
+
+  sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+  sock.bind(sockpath)
   sock.listen(1)
-  
-  args = (__file__, '127.0.0.1', str(port), secret)
+
+
   if 'PYTHON32' in os.environ:
-    p = subprocess.Popen((os.environ['PYTHON32'],)+args)
+    python32 = (os.environ['PYTHON32'],)
   elif sys.platform == 'darwin':
-    p = subprocess.Popen(('/usr/bin/arch', '-i386', '/System/Library/Frameworks/Python.framework/Versions/Current/bin/python2.7')+args)
+    python32 = ('/usr/bin/arch', '-i386', '/System/Library/Frameworks/Python.framework/Versions/Current/bin/python2.7')
   else:
     raise Exception('Set env variable PYTHON32 to an i386 python.')
+
+  p = subprocess.Popen(python32+(__file__, sockpath, secret))
 
   conn, addr = sock.accept()
   ctypes = remoteobj.Connection(conn, secret).connectProxy()
