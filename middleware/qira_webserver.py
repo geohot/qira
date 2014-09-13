@@ -295,6 +295,8 @@ def getinstructions(forknum, clnum, clstart, clend):
         if len(rawins) == rret['data']:
           raw = ''.join(map(lambda x: chr(x[1]), sorted(rawins.items())))
           insdata = program.disasm(raw, rret['address'])
+        else:
+          raise Exception("lack of swag")
       except Exception,e:
         # fetch the instruction from the qemu dump
         insdata = {"repr": program.tags[rret['address']]['instruction']}
