@@ -7,7 +7,10 @@
 import sys
 import os
 import struct
-from remotectypes32 import *
+if sys.maxsize == 0x7fffffffffffffff:
+  from remotectypes32 import *
+else:
+  from ctypes import *
 from ida_consts import *
 import time
 
