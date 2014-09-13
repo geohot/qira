@@ -1,4 +1,4 @@
-#!/home/vagrant/build/Python-2.7.8/python
+#!./python32/Python-2.7.8/python
 
 # removed the deps
 # you just need to point this to a valid 32-bit python
