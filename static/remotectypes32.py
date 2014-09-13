@@ -1,4 +1,3 @@
-# TODO: Switch to an stdio based method instead of needing to TCP server.
 import remoteobj
 import socket
 
