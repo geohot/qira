@@ -13,7 +13,7 @@ if __name__ == "__main__":
     raise
 else:
   # Client
-  import sys, os, time, subprocess, atexit
+  import sys, os, subprocess, atexit
   secret = os.urandom(20).encode('hex')
   sockpath = '/tmp/remotectypes32.sock'+os.urandom(4).encode('hex')
 
@@ -34,8 +34,9 @@ else:
 
   p = subprocess.Popen(python32+(__file__, sockpath, secret))
   def killsub(p):
+    from time import sleep
     for i in (0.1, 0.5, 1.0):
-      time.sleep(i)
+      sleep(i)
       if p.poll() is not None: break
     else:
       p.kill()

@@ -125,21 +125,21 @@ class Connection(object):
       typ, val, tb = sys.exc_info()
       self.sendmsg(('exn', typ.__name__, self.pack(val.args), traceback.format_exception(typ, val, tb)))
 
-  def handle_get(obj, attr):
+  def handle_get(self, obj, attr):
     x = getattr(self.unpack(obj), attr)
     try:
       # become lazy is a perf hack that may lead to incorrect behavior in some cases.
-      becomelazy = type(x) not in (bool, int, long, float, complex, str, unicode, tuple, list, set, frozenset, dict) and val is not None
+      becomelazy = type(x) not in (bool, int, long, float, complex, str, unicode, tuple, list, set, frozenset, dict) and x is not None
     except:
       becomelazy = False
-    return self.pack((x, becomelazy))
-  def handle_set(obj, attr, val):
+    return self.pack(x), becomelazy
+  def handle_set(self, obj, attr, val):
     setattr(self.unpack(obj), attr, self.unpack(val))
-  def handle_call(obj, args, kwargs):
+  def handle_call(self, obj, args, kwargs):
     return self.pack(self.unpack(obj)(*self.unpack(args), **self.unpack(kwargs)))
-  def handle_callattr(obj, attr, args, kwargs):
+  def handle_callattr(self, obj, attr, args, kwargs):
     return self.pack(getattr(self.unpack(obj), attr)(*self.unpack(args), **self.unpack(kwargs)))
-  def handle_gc(objs):
+  def handle_gc(self, objs):
     for obj in objs:
       try:
         k = id(self.unpack(obj))
@@ -149,7 +149,7 @@ class Connection(object):
       except:
         print >> sys.stderr, "Exception while releasing", obj
         traceback.print_exc(sys.stderr)
-  def handle_hash(obj):
+  def handle_hash(self, obj):
     return self.pack(hash(self.unpack(obj)))
 
   def get(self, proxy, attr):
