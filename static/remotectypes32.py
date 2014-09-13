@@ -23,13 +23,15 @@ else:
   sock.bind(sockpath)
   sock.listen(1)
 
-
-  if 'PYTHON32' in os.environ:
-    python32 = (os.environ['PYTHON32'],)
-  elif sys.platform == 'darwin':
-    python32 = ('/usr/bin/arch', '-i386', '/System/Library/Frameworks/Python.framework/Versions/Current/bin/python2.7')
+  for path in (os.environ.get('PYTHON32'), './python32/Python/python', '../python32/Python/python'):
+    if path and os.path.isfile(path):
+      python32 = (path,)
+      break
   else:
-    raise Exception('Set env variable PYTHON32 to an i386 python.')
+    if sys.platform == 'darwin':
+      python32 = ('/usr/bin/arch', '-i386', '/System/Library/Frameworks/Python.framework/Versions/Current/bin/python2.7')
+    else:
+      raise Exception('Set env variable PYTHON32 to an i386 python.')
 
   p = subprocess.Popen(python32+(__file__, sockpath, secret))
 
