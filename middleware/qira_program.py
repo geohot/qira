@@ -14,9 +14,6 @@ sys.path.append(qira_config.BASEDIR+"/cda")
 from subprocess import (Popen, PIPE)
 import json
 
-if qira_config.WITH_CAPSTONE:
-  from capstone import *
-
 import struct
 import qiradb
 
@@ -362,6 +359,7 @@ class Program:
     default = {"repr": raw.encode("hex")}
     if qira_config.WITH_CAPSTONE:
       try:
+        from capstone import *
         arch = self.tregs[3]
         if arch == "i386":
           md = Cs(CS_ARCH_X86, CS_MODE_32)
@@ -399,9 +397,9 @@ class Program:
         #    data["groups"].append(g)
         return data
         #when ready, return data as json rather than static string
-      except:
+      except Exception, e:
+        print "capstone disasm failed: {}".format(sys.exc_info()[0]), e
         return default
-        #print "capstone disasm failed: {}".format(sys.exc_info()[0])
     else:
       return default
 
