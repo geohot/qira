@@ -112,41 +112,42 @@ class Connection(object):
   def handle(self, msg):
     if DEBUG: print >> sys.stderr, self.endpoint, self.unpack(msg, True)
     try:
-      if msg[0] == 'get':
-        _, obj, attr = msg
-        reply = ('ok', self.pack(getattr(self.unpack(obj), attr)))
-      elif msg[0] == 'set':
-        _, obj, attr, val = msg
-        setattr(self.unpack(obj), attr, self.unpack(val))
-        reply = ('ok', None)
-      elif msg[0] == 'call':
-        _, obj, args, kwargs = msg
-        reply =  ('ok', self.pack(self.unpack(obj)(*self.unpack(args), **self.unpack(kwargs))))
-      elif msg[0] == 'callattr':
-        _, obj, attr, args, kwargs = msg
-        reply =  ('ok', self.pack(getattr(self.unpack(obj), attr)(*self.unpack(args), **self.unpack(kwargs))))
-      elif msg[0] == 'gc':
-        _, objs = msg
-        for obj in objs:
-          try:
-            k = id(self.unpack(obj))
-            self.vended[k][1] -= 1
-            if self.vended[k][1] == 0:
-              del self.vended[k]
-          except:
-            print >> sys.stderr, "Exception while releasing", obj
-            traceback.print_exc(sys.stderr)
-        reply = ('ok', None)
-      elif msg[0] == 'hash':
-        _, obj = msg
-        reply = ('ok', self.pack(hash(self.unpack(obj))))
-      else:
-        assert False, "Bad message " + repr(x) # Note that this gets caught
+      ret = {
+        'get' : self.handle_get,
+        'set' : self.handle_set,
+        'call' : self.handle_call,
+        'callattr' : self.handle_callattr,
+        'gc' : self.handle_gc,
+        'hash' : self.handle_hash,
+        'disco' : self.handle_disco,
+      }[msg[0]](*msg[1:])
+      self.sendmsg(('ok', ret))
     except:
       typ, val, tb = sys.exc_info()
-      reply = ('exn', typ.__name__, self.pack(val.args), traceback.format_exception(typ, val, tb))
-    
-    self.sendmsg(reply)
+      self.sendmsg(('exn', typ.__name__, self.pack(val.args), traceback.format_exception(typ, val, tb)))
+
+  def handle_get(obj, attr):
+    return self.pack(getattr(self.unpack(obj), attr))
+  def handle_set(obj, attr, val):
+    setattr(self.unpack(obj), attr, self.unpack(val))
+  def handle_call(obj, args, kwargs):
+    return self.pack(self.unpack(obj)(*self.unpack(args), **self.unpack(kwargs)))
+  def handle_callattr(obj, attr, args, kwargs):
+    return self.pack(getattr(self.unpack(obj), attr)(*self.unpack(args), **self.unpack(kwargs)))
+  def handle_gc(objs):
+    for obj in objs:
+      try:
+        k = id(self.unpack(obj))
+        self.vended[k][1] -= 1
+        if self.vended[k][1] == 0:
+          del self.vended[k]
+      except:
+        print >> sys.stderr, "Exception while releasing", obj
+        traceback.print_exc(sys.stderr)
+  def handle_hash(obj):
+    return self.pack(hash(self.unpack(obj)))
+  def handle_disco():
+    self.vended = None
 
   def get(self, proxy, attr):
     return self.request(('get', object.__getattribute__(proxy, '_proxyinfo').packed(), attr))
@@ -158,6 +159,10 @@ class Connection(object):
     return self.request(('callattr', object.__getattribute__(proxy, '_proxyinfo').packed(), attr, self.pack(args), self.pack(kwargs)))
   def hash(self, proxy):
     return self.request(('hash', object.__getattribute__(proxy, '_proxyinfo').packed()))
+  def disco(self):
+    self.garbage = []
+    self.request(('disco',))
+    self.sock.close()
 
   def request(self, msg):
     self.sendmsg(msg)
