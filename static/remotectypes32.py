@@ -35,7 +35,7 @@ else:
   p = subprocess.Popen(python32+(__file__, sockpath, secret))
 
   sock, addr = sock.accept()
-  conn = remoteobj.Connection(conn, secret)
+  conn = remoteobj.Connection(sock, secret)
   ctypes = conn.connectProxy()
 
   def finishup():

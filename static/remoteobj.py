@@ -52,28 +52,24 @@ class ProxyInfo(object):
   @classmethod
   def fromPacked(self, obj):
     return self(obj[2], obj[3], obj[4], obj[5])
-  shared_lazyattrs = {}
 
-  def __init__(self, endpoint, remoteid, attrpath = '', lazyattrs = '', dbgnote = ''):
+  def __init__(self, endpoint, remoteid, attrpath = '', lazyattrs = (), dbgnote = ''):
     self.endpoint = endpoint
     self.remoteid = remoteid
     self.attrpath = attrpath
-    self.lazyattrs = lazyattrs
+    self.lazyattrs = list(lazyattrs)
     self.dbgnote = dbgnote
 
   def __repr__(self):
-    return 'ProxyInfo'+repr((self.endpoint, self.remoteid)) + ('' if not self.dbgnote else ' <'+self.dbgnote+'>')
+    return 'ProxyInfo'+repr((self.endpoint, hex(self.remoteid))) + ('' if not self.dbgnote else ' <'+self.dbgnote+'>')
 
   def packed(self):
-    return (StopIteration, Ellipsis, self.endpoint, self.remoteid, self.attrpath, self.lazyattrs)
+    return (StopIteration, Ellipsis, self.endpoint, self.remoteid, self.attrpath, tuple(self.lazyattrs))
 
   def getattr(self, attr):
     if not self.lazyattrs: return None
     path = self.attrpath+'.'+attr if self.attrpath else attr
-    lz = self.lazyattrs
-    if type(lz) == str:
-      lz = type(self).shared_lazyattrs[lz]
-    if path not in lz: return None
+    if path not in self.lazyattrs: return None
     return type(self)(self.endpoint, self.remoteid, attrpath = path, lazyattrs = self.lazyattrs)
 
 class Connection(object):
@@ -127,7 +123,13 @@ class Connection(object):
       self.sendmsg(('exn', typ.__name__, self.pack(val.args), traceback.format_exception(typ, val, tb)))
 
   def handle_get(obj, attr):
-    return self.pack(getattr(self.unpack(obj), attr))
+    x = getattr(self.unpack(obj), attr)
+    try:
+      # become lazy is a perf hack that may lead to incorrect behavior in some cases.
+      becomelazy = type(x) not in (bool, int, long, float, complex, str, unicode, tuple, list, set, frozenset, dict) and val is not None
+    except:
+      becomelazy = False
+    return self.pack((x, becomelazy))
   def handle_set(obj, attr, val):
     setattr(self.unpack(obj), attr, self.unpack(val))
   def handle_call(obj, args, kwargs):
@@ -150,7 +152,11 @@ class Connection(object):
     self.vended = None
 
   def get(self, proxy, attr):
-    return self.request(('get', object.__getattribute__(proxy, '_proxyinfo').packed(), attr))
+    info = object.__getattribute__(proxy, '_proxyinfo')
+    x, becomelazy = self.request(('get', info.packed(), attr))
+    if becomelazy:
+      info.lazyattrs.append(attr)
+    return x
   def set(self, proxy, attr, val):
     self.request(('set', object.__getattribute__(proxy, '_proxyinfo').packed(), attr, self.pack(val)))
   def call(self, proxy, args, kwargs):
