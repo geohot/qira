@@ -33,7 +33,8 @@ function highlight_instruction(a, instruction) {
     var re = "(0x[0123456789abcdef]+)";
     var reps = {};
     if (instruction) {
-      for (var i = 0; i < arch[0].length; i++) {
+      for (var i = arch[0].length-1; i >= 0; i--) {
+        if (arch[0][i] == null) continue;  // aarch64
         var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i]+'</span>';
         reps[arch[0][i]] = rep;
 
