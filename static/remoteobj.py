@@ -79,6 +79,10 @@ class Connection(object):
     self.endpoint = endpoint
     self.garbage = []
 
+  def __del__(self):
+    try: self.sock.close()
+    except: pass
+
   def runServer(self, obj):
     if self.sock.recv(2) != 'yo': return
     self.sock.sendall(sha1(self.secret+self.sock.recv(20)).digest())
@@ -115,7 +119,6 @@ class Connection(object):
         'callattr' : self.handle_callattr,
         'gc' : self.handle_gc,
         'hash' : self.handle_hash,
-        'disco' : self.handle_disco,
       }[msg[0]](*msg[1:])
       self.sendmsg(('ok', ret))
     except:
@@ -148,8 +151,6 @@ class Connection(object):
         traceback.print_exc(sys.stderr)
   def handle_hash(obj):
     return self.pack(hash(self.unpack(obj)))
-  def handle_disco():
-    self.vended = None
 
   def get(self, proxy, attr):
     info = object.__getattribute__(proxy, '_proxyinfo')
@@ -167,7 +168,6 @@ class Connection(object):
     return self.request(('hash', object.__getattribute__(proxy, '_proxyinfo').packed()))
   def disco(self):
     self.garbage = []
-    self.request(('disco',))
     self.sock.close()
 
   def request(self, msg):

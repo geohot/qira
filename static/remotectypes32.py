@@ -33,19 +33,18 @@ else:
       raise Exception('Set env variable PYTHON32 to an i386 python.')
 
   p = subprocess.Popen(python32+(__file__, sockpath, secret))
-
-  sock, addr = sock.accept()
-  conn = remoteobj.Connection(sock, secret)
-  ctypes = conn.connectProxy()
-
-  def finishup():
-    conn.disco()
+  def killsub(p):
     for i in (0.1, 0.5, 1.0):
       time.sleep(i)
       if p.poll() is not None: break
     else:
       p.kill()
-  atexit.register(finishup)
+  atexit.register(killsub, p)
+
+  sock, addr = sock.accept()
+  conn = remoteobj.Connection(sock, secret)
+  ctypes = conn.connectProxy()
+
 
   # Make `from remotectypes32 import *` work as expected
   __all__ = []
