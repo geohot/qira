@@ -432,7 +432,7 @@ class Program:
             ncount += 1
       if isinstance(section, SymbolTableSection):
         for nsym, symbol in enumerate(section.iter_symbols()):
-          if symbol['st_value'] != 0 and symbol.name != "":
+          if symbol['st_value'] != 0 and symbol.name != "" and symbol['st_info']['type'] == "STT_FUNC":
             #print symbol['st_value'], symbol.name
             self.tags[symbol['st_value']]['name'] = symbol.name
             ncount += 1

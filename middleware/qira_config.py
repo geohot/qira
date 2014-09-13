@@ -21,6 +21,6 @@ CALLED_AS_CDA = False
 
 # turn this off for now on releases
 WITH_STATIC = False
-WITH_CAPSTONE = True
+WITH_CAPSTONE = False
 
 
