@@ -15,6 +15,20 @@ Deps.autorun(function() { DA("set backend know iaddr changed");
   stream.emit('navigateiaddr', iaddr);
 });
 
+Deps.autorun(function() { DA("select first fork if current fork isn't valid");
+  var maxclnum = Session.get("max_clnum");
+  if (maxclnum === undefined) return;
+  var forknum = Session.get('forknum', true)
+  if (maxclnum[forknum] === undefined) {
+    // i don't know javascript
+    for (i in maxclnum) {
+      Session.set('forknum', fdec(i));
+      Session.set('clnum', maxclnum[i][1]);
+      break;
+    }
+  }
+});
+
 Deps.autorun(function() { DA("update controls");
   $("#control_clnum").val(Session.get("clnum"));
   $("#control_forknum").val(Session.get("forknum"));
@@ -48,6 +62,13 @@ $(document).ready(function() {
 });
 
 $(document).ready(function() {
+  $('body').on('mousewheel', '#outergbox', function(e) {
+    //p(e.originalEvent);
+    var wdx = e.originalEvent.wheelDeltaX;
+    var wdy = e.originalEvent.wheelDeltaY;
+    $("#gbox").css("margin-left", fdec($("#gbox").css("margin-left")) + wdx);
+    $("#gbox").css("margin-top", fdec($("#gbox").css("margin-top")) + wdy);
+  });
   $('body').on('mousewheel', '.flat', function(e) {
     var cdr = $(".flat").children();
     if (e.originalEvent.wheelDelta < 0) {
@@ -75,10 +96,20 @@ window.onkeydown = function(e) {
   if (e.keyCode == 32) {
     // space bar
     Session.set("flat", !Session.get("flat"));
-  } else if (e.keyCode == 37) {
-    Session.set("forknum", Session.get("forknum")-1);
-  } else if (e.keyCode == 39) {
-    Session.set("forknum", Session.get("forknum")+1);
+  } else if (e.keyCode == 37 || e.keyCode == 39) {
+    var fn = Session.get("forknum");
+    var maxclnum = Session.get("max_clnum");
+    var arr = Object.keys(maxclnum).map(fdec);
+    var idx = arr.indexOf(fn);
+    if (e.keyCode == 37) {
+      if (idx > 0) {
+        Session.set("forknum", arr[idx-1]);
+      }
+    } else {
+      if (idx < (arr.length-1)) {
+        Session.set("forknum", arr[idx+1]);
+      }
+    }
   } else if (e.keyCode == 38) {
     Session.set("clnum", Session.get("clnum")-1);
   } else if (e.keyCode == 40) {

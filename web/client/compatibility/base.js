@@ -132,3 +132,14 @@ function sync_tags_request(addrs) {
   return JSON.parse(req.response);
 }
 
+function async_tags_request(addrs, cb) {
+  var req = new XMLHttpRequest();
+  req.open('POST', '/gettagsa', true);
+  req.onreadystatechange = function() {
+    if (req.readyState == 4 && req.status == 200) {
+      cb(JSON.parse(req.response));
+    }
+  }
+  req.send(JSON.stringify(addrs));
+}
+

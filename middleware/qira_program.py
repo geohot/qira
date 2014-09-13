@@ -14,9 +14,6 @@ sys.path.append(qira_config.BASEDIR+"/cda")
 from subprocess import (Popen, PIPE)
 import json
 
-if qira_config.WITH_CAPSTONE:
-  from capstone import *
-
 import struct
 import qiradb
 
@@ -174,6 +171,7 @@ class Program:
       self.qirabinary = os.path.realpath(self.qirabinary)
       print "**** using",self.qirabinary,"for",hex(self.fb)
 
+      self.getnames()
       self.getdwarf()
       self.runnable = True
 
@@ -205,7 +203,7 @@ class Program:
       else:
         raise Exception("osx binary not supported")
 
-      self.getdwarf()
+      #self.getdwarf()
       self.runnable = True
 
     else:
@@ -214,7 +212,7 @@ class Program:
     if qira_config.WITH_STATIC:
       # call out to ida
       print "*** running the ida parser"
-      ret = os.system(qira_config.BASEDIR+"/static/ida_parser.py /tmp/qira_binary > /tmp/qida_log")
+      ret = os.system(qira_config.BASEDIR+"/static/python32/Python/python "+qira_config.BASEDIR+"/static/ida_parser.py /tmp/qira_binary > /tmp/qida_log")
       try:
         import json
         ttags = json.load(open("/tmp/qida/tags"))
@@ -247,7 +245,9 @@ class Program:
           #print hex(addr), self.tags[addr]['len'], self.tags[addr]['capinstruction']
           # for now, make it the default
           self.tags[addr]['instruction'] = self.tags[addr]['capinstruction']['repr']
-          self.tags[addr]['bap'] = self.genbap(raw, addr)
+
+          # BAP IS BALLS SLOW
+          #self.tags[addr]['bap'] = self.genbap(raw, addr)
       print "** static done"
 
   def genbap(self, raw, addr):
@@ -361,6 +361,7 @@ class Program:
     default = {"repr": raw.encode("hex")}
     if qira_config.WITH_CAPSTONE:
       try:
+        from capstone import *
         arch = self.tregs[3]
         if arch == "i386":
           md = Cs(CS_ARCH_X86, CS_MODE_32)
@@ -398,9 +399,9 @@ class Program:
         #    data["groups"].append(g)
         return data
         #when ready, return data as json rather than static string
-      except:
+      except Exception, e:
+        #print "capstone disasm failed: {}".format(sys.exc_info()[0]), e
         return default
-        #print "capstone disasm failed: {}".format(sys.exc_info()[0])
     else:
       return default
 
@@ -413,6 +414,29 @@ class Program:
     except Exception, e:
       print "ERROR: csearch issue",e
       return []
+
+  def getnames(self):
+    from elftools.elf.elffile import ELFFile
+    from elftools.elf.sections import SymbolTableSection
+    from elftools.elf.relocation import RelocationSection
+    elf = ELFFile(open(self.program))
+    ncount = 0
+    for section in elf.iter_sections():
+      if isinstance(section, RelocationSection):
+        symtable = elf.get_section(section['sh_link'])
+        for rel in section.iter_relocations():
+          symbol = symtable.get_symbol(rel['r_info_sym'])
+          #print rel, symbol.name
+          if rel['r_offset'] != 0 and symbol.name != "":
+            self.tags[rel['r_offset']]['name'] = "__"+symbol.name
+            ncount += 1
+      if isinstance(section, SymbolTableSection):
+        for nsym, symbol in enumerate(section.iter_symbols()):
+          if symbol['st_value'] != 0 and symbol.name != "" and symbol['st_info']['type'] == "STT_FUNC":
+            #print symbol['st_value'], symbol.name
+            self.tags[symbol['st_value']]['name'] = symbol.name
+            ncount += 1
+    print "** found %d names" % ncount
 
   def getdwarf(self):
     if not qira_config.WITH_DWARF:

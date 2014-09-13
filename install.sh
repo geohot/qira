@@ -9,7 +9,17 @@ if [[ "$unamestr" == 'Linux' ]]; then
   # build for building qiradb and stuff for flask like gevent
   if [ $(which apt-get) ]; then
     echo "installing apt packages"
-    sudo apt-get install build-essential python-dev python-pip debootstrap libjpeg-dev zlib1g-dev unzip
+    sudo apt-get install build-essential python-dev python-pip debootstrap libjpeg-dev zlib1g-dev unzip wget
+    if [ ! -f /usr/lib/libcapstone.so ]; then
+      # now we need capstone so the user can see assembly
+      if [[ $(uname -m) == 'i386' ]]; then
+        wget -O /tmp/cs.deb http://www.capstone-engine.org/download/2.1.2/capstone-2.1.2_i386.deb
+      else
+        wget -O /tmp/cs.deb http://www.capstone-engine.org/download/2.1.2/capstone-2.1.2_amd64.deb
+      fi
+      sudo dpkg -i /tmp/cs.deb
+      rm /tmp/cs.deb
+    fi
   elif [ $(which pacman) ]; then
     echo "installing pip"
     sudo pacman -S base-devel python2-pip

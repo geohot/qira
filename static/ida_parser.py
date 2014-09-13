@@ -1,4 +1,4 @@
-#!/home/vagrant/build/Python-2.7.8/python
+#!./python32/Python/python
 
 # removed the deps
 # you just need to point this to a valid 32-bit python
@@ -7,9 +7,18 @@
 import sys
 import os
 import struct
-from ctypes import *
 from ida_consts import *
 import time
+
+# fixes the help issue
+os.environ['PATH'] += ":"+IDAPATH
+os.environ['LD_LIBRARY_PATH'] = IDAPATH
+os.environ['IDADIR'] = IDAPATH
+
+if sys.maxsize == 0x7fffffffffffffff:
+  from remotectypes32 import *
+else:
+  from ctypes import *
 
 FILE = "/tmp/qida/ida_binary"
 os.system("rm -rf /tmp/qida; mkdir -p /tmp/qida")
@@ -23,11 +32,6 @@ done = False
 argc = 1
 argv = None
 idle_fxn = None
-
-# fixes the help issue
-os.environ['PATH'] += ":"+IDAPATH
-os.environ['LD_LIBRARY_PATH'] = IDAPATH
-os.environ['IDADIR'] = IDAPATH
 
 #os.chdir(IDAPATH)
 if sys.platform == 'darwin':

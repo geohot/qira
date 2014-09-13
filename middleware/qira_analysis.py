@@ -279,7 +279,8 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
           rawins = trace.fetch_memory(r[0]['clnum'], r[0]['address'], r[0]['data'])
           if len(rawins) == r[0]['data']:
             raw = ''.join(map(lambda x: chr(x[1]), sorted(rawins.items())))
-            program.tags[r[0]['address']]['instruction'] = program.disasm(raw, r[0]['address'])
+            program.tags[r[0]['address']]['capinstruction'] = program.disasm(raw, r[0]['address'])
+            program.tags[r[0]['address']]['instruction'] = program.tags[r[0]['address']]['capinstruction']['repr']
             break
         else:
           #print "sleeping ", hex(r[0]['address'])

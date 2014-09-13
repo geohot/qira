@@ -56,6 +56,15 @@ if __name__ == '__main__':
     args.cda = True
     qira_config.CALLED_AS_CDA = True
 
+  if sys.platform == "darwin":
+    print "*** running on darwin, defaulting to --pin"
+    qira_config.USE_PIN = True
+  else:
+    qira_config.USE_PIN = args.pin
+
+  if qira_config.USE_PIN:
+    qira_config.WITH_CAPSTONE = True
+
   qira_config.HOST = args.host
   qira_config.WEB_PORT = args.web_port
   qira_config.SOCAT_PORT = args.socat_port
@@ -66,11 +75,6 @@ if __name__ == '__main__':
     except:
       print "*** warning: WITH_CAPSTONE enabled but capstone not installed."
       qira_config.WITH_CAPSTONE = False
-  if sys.platform == "darwin":
-    print "*** running on darwin, defaulting to --pin"
-    qira_config.USE_PIN = True
-  else:
-    qira_config.USE_PIN = args.pin
   if args.tracelibraries:
     qira_config.TRACE_LIBRARIES = True
   if args.dwarf:

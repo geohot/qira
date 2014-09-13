@@ -295,6 +295,8 @@ def getinstructions(forknum, clnum, clstart, clend):
         if len(rawins) == rret['data']:
           raw = ''.join(map(lambda x: chr(x[1]), sorted(rawins.items())))
           insdata = program.disasm(raw, rret['address'])
+        else:
+          raise Exception("lack of swag")
       except Exception,e:
         # fetch the instruction from the qemu dump
         insdata = {"repr": program.tags[rret['address']]['instruction']}
@@ -321,7 +323,7 @@ def getinstructions(forknum, clnum, clstart, clend):
     # for numberless javascript
     rret['address'] = ghex(rret['address'])
     try:
-      rret['depth'] = trace.dmap[i]
+      rret['depth'] = trace.dmap[i - trace.minclnum]
     except:
       rret['depth'] = 0
     ret.append(rret)

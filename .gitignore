@@ -27,5 +27,6 @@ cda/codesearch-*
 tests/bap/out.*
 tests/bap/*.log
 bap/
-
+static/python32
+testvm/.vagrant
 
