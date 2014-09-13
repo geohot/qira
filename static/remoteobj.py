@@ -57,7 +57,7 @@ class ProxyInfo(object):
     self.endpoint = endpoint
     self.remoteid = remoteid
     self.attrpath = attrpath
-    self.lazyattrs = list(lazyattrs)
+    self.lazyattrs = set(lazyattrs)
     self.dbgnote = dbgnote
 
   def __repr__(self):
@@ -156,7 +156,7 @@ class Connection(object):
     info = object.__getattribute__(proxy, '_proxyinfo')
     x, becomelazy = self.request(('get', info.packed(), attr))
     if becomelazy:
-      info.lazyattrs.append(attr)
+      info.lazyattrs.add(attr)
     return x
   def set(self, proxy, attr, val):
     self.request(('set', object.__getattribute__(proxy, '_proxyinfo').packed(), attr, self.pack(val)))
