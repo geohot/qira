@@ -323,7 +323,7 @@ def getinstructions(forknum, clnum, clstart, clend):
     # for numberless javascript
     rret['address'] = ghex(rret['address'])
     try:
-      rret['depth'] = trace.dmap[i]
+      rret['depth'] = trace.dmap[i - trace.minclnum]
     except:
       rret['depth'] = 0
     ret.append(rret)
