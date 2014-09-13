@@ -14,7 +14,6 @@ import time
 os.environ['PATH'] += ":"+IDAPATH
 os.environ['LD_LIBRARY_PATH'] = IDAPATH
 os.environ['IDADIR'] = IDAPATH
-os.environ['PYTHON32'] = "./python32/Python/python"
 
 if sys.maxsize == 0x7fffffffffffffff:
   from remotectypes32 import *
