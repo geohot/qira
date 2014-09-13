@@ -7,7 +7,7 @@
 import sys
 import os
 import struct
-from ctypes import *
+from remotectypes32 import *
 from ida_consts import *
 import time
 
