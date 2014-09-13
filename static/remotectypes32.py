@@ -17,10 +17,9 @@ else:
   secret = os.urandom(20).encode('hex')
   sockpath = '/tmp/remotectypes32.sock'+os.urandom(4).encode('hex')
 
-  atexit.register(os.remove, sockpath)
-
   sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
   sock.bind(sockpath)
+  atexit.register(os.remove, sockpath)
   sock.listen(1)
 
   for path in (os.environ.get('PYTHON32'), './python32/Python/python', '../python32/Python/python'):
@@ -34,6 +33,13 @@ else:
       raise Exception('Set env variable PYTHON32 to an i386 python.')
 
   p = subprocess.Popen(python32+(__file__, sockpath, secret))
+  def waitkill(p):
+    for i in (0.5, 1.0, 1.0):
+      if p.poll() is not None: break
+      time.sleep(i)
+    else:
+      p.kill()
+  atexit.register(waitkill, p)
 
   conn, addr = sock.accept()
   ctypes = remoteobj.Connection(conn, secret).connectProxy()
