@@ -62,6 +62,13 @@ $(document).ready(function() {
 });
 
 $(document).ready(function() {
+  $('body').on('mousewheel', '#outergbox', function(e) {
+    //p(e.originalEvent);
+    var wdx = e.originalEvent.wheelDeltaX;
+    var wdy = e.originalEvent.wheelDeltaY;
+    $("#gbox").css("margin-left", fdec($("#gbox").css("margin-left")) + wdx);
+    $("#gbox").css("margin-top", fdec($("#gbox").css("margin-top")) + wdy);
+  });
   $('body').on('mousewheel', '.flat', function(e) {
     var cdr = $(".flat").children();
     if (e.originalEvent.wheelDelta < 0) {

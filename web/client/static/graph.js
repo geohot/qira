@@ -91,9 +91,11 @@ Graph.prototype.inLineage = function(addr, qaddr, seen) {
 Graph.prototype.render = function() {
   var send = "digraph graphname {\n";
 
+  var outergbox = $('<div id="outergbox"></div>');
   $("#staticpanel").html("");
   gbox = document.createElement('div');
-  document.getElementById("staticpanel").appendChild(gbox);
+  outergbox[0].appendChild(gbox);
+  document.getElementById("staticpanel").appendChild(outergbox[0]);
   gbox.id = 'gbox';
 
   for (addr in this.vertices) {

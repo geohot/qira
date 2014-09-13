@@ -245,7 +245,9 @@ class Program:
           #print hex(addr), self.tags[addr]['len'], self.tags[addr]['capinstruction']
           # for now, make it the default
           self.tags[addr]['instruction'] = self.tags[addr]['capinstruction']['repr']
-          self.tags[addr]['bap'] = self.genbap(raw, addr)
+
+          # BAP IS BALLS SLOW
+          #self.tags[addr]['bap'] = self.genbap(raw, addr)
       print "** static done"
 
   def genbap(self, raw, addr):
@@ -398,7 +400,7 @@ class Program:
         return data
         #when ready, return data as json rather than static string
       except Exception, e:
-        print "capstone disasm failed: {}".format(sys.exc_info()[0]), e
+        #print "capstone disasm failed: {}".format(sys.exc_info()[0]), e
         return default
     else:
       return default
