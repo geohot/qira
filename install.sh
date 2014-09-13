@@ -12,7 +12,11 @@ if [[ "$unamestr" == 'Linux' ]]; then
     sudo apt-get install build-essential python-dev python-pip debootstrap libjpeg-dev zlib1g-dev unzip wget
     if [ ! -f /usr/lib/libcapstone.so ]; then
       # now we need capstone so the user can see assembly
-      wget -O /tmp/cs.deb http://www.capstone-engine.org/download/2.1.2/capstone-2.1.2_amd64.deb
+      if [ $(uname -m) == 'i386']; then
+        wget -O /tmp/cs.deb http://www.capstone-engine.org/download/2.1.2/capstone-2.1.2_i386.deb
+      else
+        wget -O /tmp/cs.deb http://www.capstone-engine.org/download/2.1.2/capstone-2.1.2_amd64.deb
+      fi
       sudo dpkg -i /tmp/cs.deb
       rm /tmp/cs.deb
     fi

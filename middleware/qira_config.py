@@ -20,7 +20,7 @@ CODESEARCHDIR = BASEDIR+"/cda/codesearch-latest/"
 CALLED_AS_CDA = False
 
 # turn this off for now on releases
-WITH_STATIC = True
+WITH_STATIC = False
 WITH_CAPSTONE = True
 
 

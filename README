@@ -83,7 +83,7 @@ shift-n -- rename data
 shift-; -- add comment at data
 
 g -- go to change, address, or name
-c -- analyze code at address, soon
+c -- coming soon, analyze code at iaddr
 
 
 == Installation on Windows (experimental) ==

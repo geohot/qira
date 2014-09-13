@@ -174,6 +174,7 @@ class Program:
       self.qirabinary = os.path.realpath(self.qirabinary)
       print "**** using",self.qirabinary,"for",hex(self.fb)
 
+      self.getnames()
       self.getdwarf()
       self.runnable = True
 
@@ -205,7 +206,7 @@ class Program:
       else:
         raise Exception("osx binary not supported")
 
-      self.getdwarf()
+      #self.getdwarf()
       self.runnable = True
 
     else:
@@ -214,7 +215,7 @@ class Program:
     if qira_config.WITH_STATIC:
       # call out to ida
       print "*** running the ida parser"
-      ret = os.system(qira_config.BASEDIR+"/static/ida_parser.py /tmp/qira_binary > /tmp/qida_log")
+      ret = os.system(qira_config.BASEDIR+"/static/python32/Python/python "+qira_config.BASEDIR+"/static/ida_parser.py /tmp/qira_binary > /tmp/qida_log")
       try:
         import json
         ttags = json.load(open("/tmp/qida/tags"))
@@ -413,6 +414,29 @@ class Program:
     except Exception, e:
       print "ERROR: csearch issue",e
       return []
+
+  def getnames(self):
+    from elftools.elf.elffile import ELFFile
+    from elftools.elf.sections import SymbolTableSection
+    from elftools.elf.relocation import RelocationSection
+    elf = ELFFile(open(self.program))
+    ncount = 0
+    for section in elf.iter_sections():
+      if isinstance(section, RelocationSection):
+        symtable = elf.get_section(section['sh_link'])
+        for rel in section.iter_relocations():
+          symbol = symtable.get_symbol(rel['r_info_sym'])
+          #print rel, symbol.name
+          if rel['r_offset'] != 0 and symbol.name != "":
+            self.tags[rel['r_offset']]['name'] = symbol.name
+            ncount += 1
+      if isinstance(section, SymbolTableSection):
+        for nsym, symbol in enumerate(section.iter_symbols()):
+          if symbol['st_value'] != 0 and symbol.name != "":
+            #print symbol['st_value'], symbol.name
+            self.tags[symbol['st_value']]['name'] = symbol.name
+            ncount += 1
+    print "** found %d names" % ncount
 
   def getdwarf(self):
     if not qira_config.WITH_DWARF:
