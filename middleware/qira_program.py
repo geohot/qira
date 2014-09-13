@@ -428,7 +428,7 @@ class Program:
           symbol = symtable.get_symbol(rel['r_info_sym'])
           #print rel, symbol.name
           if rel['r_offset'] != 0 and symbol.name != "":
-            self.tags[rel['r_offset']]['name'] = symbol.name
+            self.tags[rel['r_offset']]['name'] = "__"+symbol.name
             ncount += 1
       if isinstance(section, SymbolTableSection):
         for nsym, symbol in enumerate(section.iter_symbols()):

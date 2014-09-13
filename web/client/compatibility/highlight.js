@@ -98,25 +98,35 @@ function get_address_from_class(t, type) {
   return l[0].split("_")[1].split(" ")[0];
 }
 
+var names_cache = {};
+
 // sync for no blink!
 function replace_names() {
+  //return;
   var addrs = [];
   $(".addr").each(function() {
     var ret = get_address_from_class(this);
+    if (names_cache[ret] !== undefined) {
+      $(this).addClass("name");
+      $(this).html(names_cache[ret]);
+    }
     if (ret !== undefined) addrs.push(ret);
   });
   //stream.emit('gettagsa', addrs);
 
-  var tags = sync_tags_request(addrs);
-
-  //p(tags);
-  for (var i=0;i<tags.length;i++) {
-    $(".addr_"+tags[i]['address']).each(function() {
-      if (tags[i]['name'] !== undefined) {
-        $(this).addClass("name");
-        $(this).html(tags[i]['name']);
-      }
-    });
+  function cb(tags) {
+    //p(tags);
+    for (var i=0;i<tags.length;i++) {
+      names_cache[tags[i]['address']] = tags[i]['name'];
+      $(".addr_"+tags[i]['address']).each(function() {
+        if (tags[i]['name'] !== undefined) {
+          $(this).addClass("name");
+          $(this).html(tags[i]['name']);
+        }
+      });
+    }
   }
+
+  async_tags_request(addrs, cb);
 }
 
