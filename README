@@ -2,9 +2,9 @@ QIRA is a competitor to strace and gdb
 See http://qira.me/ for high level usage information
 All QIRA code is released under GPLv2
 
-== Installation ==
+== Installing latest release ==
 
-./install.sh should handle everything for a base QIRA install
+wget -qO- https://github.com/BinaryAnalysisPlatform/qira/raw/master/releases/qira-1.1.tar.xz | unxz | tar x && cd qira && ./install.sh
 
 
 == Installation Extras ==
@@ -12,6 +12,7 @@ All QIRA code is released under GPLv2
 ./fetchlibs.sh will fetch the libraries for armhf, armel, aarch64, and ppc
 ./cda_build.sh will install CDA, allowing cda and --cda to work
 ./pin_build.sh will install the QIRA PIN plugin, allowing --pin to work
+
 
 == Releases ==
 
@@ -26,6 +27,7 @@ v0.4 -- Using 50x faster C++ database. strace support. argv and envp are there.
 v0.3 -- Built in socat, multiple traces, forks(experimental). Somewhat working x86-64 and ARM support
 v0.2 -- Removed dependency on mongodb, much faster. IDA plugin fixes, Mac version.
 v0.1 -- Initial release
+
 
 == UI ==
 
