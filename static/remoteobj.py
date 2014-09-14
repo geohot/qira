@@ -299,7 +299,7 @@ class Connection(object):
         print >> sys.stderr, "Exception while releasing", obj
         traceback.print_exc(sys.stderr)
 
-  def disco(self):
+  def disconnect(self):
     self.garbage = []
     self.sock.close()
 

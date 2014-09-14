@@ -34,18 +34,20 @@ else:
     raise Exception('Set env variable PYTHON32 to an i386 python.')
 
 p = subprocess.Popen(python32+(__file__, sockpath, secret))
-def killsub(p):
-  from time import sleep
-  for i in (0.1, 0.5, 1.0):
-    sleep(i)
-    if p.poll() is not None: break
-  else:
-    p.kill()
-atexit.register(killsub, p)
 
 sock, addr = sock.accept()
 conn = remoteobj.Connection(sock, secret)
 ctypes = conn.connectProxy()
+
+def finishup():
+  if conn: conn.disconnect()
+  from time import sleep
+  for i in (0.1, 0.3, 0.5):
+    if p.poll() is not None: break
+    sleep(i)
+  else:
+    p.kill()
+atexit.register(finishup)
 
 def remote_func(f, client_globals):
   g = conn.deffun(f, client_globals)
