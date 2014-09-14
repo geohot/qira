@@ -3,8 +3,6 @@
 # TODO: This will get wrecked by recursive sets/lists/dicts; need a more picklish method.
 # TODO: Dict/sets/lists should get unpacked to wrappers that are local for read-only access,
 #       but update the remote for write access. Note that __eq__ will be an interesting override.
-# TODO: Dicts that have non-primitive keys should send proxies with pre-declared hashes,
-#       since building the dict on the other side will immedatley request all hashes anyways.
 import marshal
 import struct
 import socket
@@ -19,7 +17,6 @@ class Proxy(object):
   def __init__(self, conn, info, _hash=None, parent=None):
     object.__setattr__(self, '_proxyconn', conn)
     object.__setattr__(self, '_proxyinfo', info)
-    object.__setattr__(self, '_proxyhash', _hash)
     object.__setattr__(self, '_proxyparent', parent)
   def __getattribute__(self, attr):
     t = object.__getattribute__(self, '_proxyinfo').getattr(attr)
@@ -44,11 +41,10 @@ class Proxy(object):
   # hash and repr need to be handled specially, due to hash(type) != type.__hash__()
   # (and the same for repr). Incidentally, we'll cache the hash.
   def __hash__(self):
-    t = object.__getattribute__(self, '_proxyhash')
-    if t is None:
-      t = object.__getattribute__(self, '_proxyconn').hash(self)
-      object.__setattr__(self, '_proxyhash', t)
-    return t
+    info = object.__getattribute__(self, '_proxyinfo')
+    if info.proxyhash is None:
+      info.proxyhash = object.__getattribute__(self, '_proxyconn').hash(self)
+    return info.proxyhash
   def __repr__(self):
     return object.__getattribute__(self, '_proxyconn').repr(self)
 
@@ -59,15 +55,16 @@ class Proxy(object):
 class ProxyInfo(object):
   @classmethod
   def isPacked(self, obj):
-    return type(obj) == tuple and len(obj) == 6 and obj[:2] == (StopIteration, Ellipsis)
+    return type(obj) == tuple and len(obj) == 7 and obj[:2] == (StopIteration, Ellipsis)
   @classmethod
   def fromPacked(self, obj):
-    return self(obj[2], obj[3], obj[4], obj[5])
+    return self(obj[2], obj[3], obj[4] or '', obj[5], obj[6] or ())
 
-  def __init__(self, endpoint, remoteid, attrpath = '', lazyattrs = (), dbgnote = ''):
+  def __init__(self, endpoint, remoteid, attrpath = '', proxyhash = None, lazyattrs = (), dbgnote = ''):
     self.endpoint = endpoint
     self.remoteid = remoteid
     self.attrpath = attrpath
+    self.proxyhash = proxyhash
     self.lazyattrs = set(lazyattrs)
     self.dbgnote = dbgnote
 
@@ -75,7 +72,7 @@ class ProxyInfo(object):
     return 'ProxyInfo'+repr((self.endpoint, hex(self.remoteid))) + ('' if not self.dbgnote else ' <'+self.dbgnote+'>')
 
   def packed(self):
-    return (StopIteration, Ellipsis, self.endpoint, self.remoteid, self.attrpath, tuple(self.lazyattrs))
+    return (StopIteration, Ellipsis, self.endpoint, self.remoteid, self.attrpath or None, self.proxyhash, None) # Don't pack lazyattrs
 
   def getattr(self, attr):
     if attr not in self.lazyattrs: return None
@@ -108,7 +105,7 @@ class Connection(object):
     raise socket.error(errno.ECONNRESET, 'The socket was closed while receiving a message.')
 
   # Note: must send after non-info_only packing, or objects will be left with +1 retain count in self.vended
-  def pack(self, val, info_only = False):
+  def pack(self, val, info_only = False, isDictKey = False):
     if type(val) in (bool, int, long, float, complex, str, unicode) or val is None or val is StopIteration or val is Ellipsis:
       return val
     elif type(val) == tuple:
@@ -120,7 +117,7 @@ class Connection(object):
     elif type(val) == frozenset:
       return frozenset(self.pack(i, info_only) for i in val)
     elif type(val) == dict:
-      return {self.pack(k, info_only):self.pack(v, info_only) for k,v in val.iteritems()}
+      return {self.pack(k, info_only, isDictKey = True):self.pack(v, info_only) for k,v in val.iteritems()}
     elif type(val) == Proxy:
       return object.__getattribute__(val, '_proxyinfo').packed()
     elif type(val) == CodeType:
@@ -128,7 +125,8 @@ class Connection(object):
     else:
       if not info_only:
         self.vended.setdefault(id(val), [val, 0])[1] += 1
-      return ProxyInfo(self.endpoint, id(val)).packed()
+      t = hash(val) if isDictKey else None
+      return ProxyInfo(self.endpoint, id(val), proxyhash=t).packed()
 
   def unpack(self, val, info_only = False):
     if ProxyInfo.isPacked(val):

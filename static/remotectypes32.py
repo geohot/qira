@@ -9,7 +9,7 @@ if __name__ == "__main__":
     sock.connect(argv[1])
     remoteobj.Connection(sock, argv[2]).runServer(__import__('ctypes'))
   except:
-    print 'The remotectypes32 process is angrily exiting.'
+    print 'The remotectypes32 process is angrily exiting.',
     raise
   exit(0)
 
