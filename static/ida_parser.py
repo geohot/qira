@@ -19,6 +19,8 @@ if sys.maxsize == 0x7fffffffffffffff:
   from remotectypes32 import *
 else:
   from ctypes import *
+  def remote_func(f):
+    return f
 
 FILE = "/tmp/qida/ida_binary"
 os.system("rm -rf /tmp/qida; mkdir -p /tmp/qida")
@@ -46,12 +48,16 @@ else:
   libc = cdll.LoadLibrary("libc.so.6")
 
 CALLUI = CFUNCTYPE(c_int, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)
-def uicallback(a,b,c,d,e,f,g,h,i):
+def set_done(b):
   global done
+  done = b
+def set_idle_fxn(f):
+  global idle_fxn
+  idle_fxn = f
+def uicallback(a,b,c,d,e,f,g,h,i):
   b_ptr = cast(b, POINTER(c_long))
   b_ptr[0] = 0
 
-  global idle_fxn
   if c == 17: # ui_banner
     b_ptr[0] = 1
     return 0
@@ -85,7 +91,7 @@ def uicallback(a,b,c,d,e,f,g,h,i):
       # WTF USELESS?
       return 0
     if d == 53: # auto_empty_finally
-      done = True
+      set_done(True)
       return 0
     if d < len(idp_notify):
       #print "idp_notify",d,idp_notify[d]
@@ -125,7 +131,7 @@ def uicallback(a,b,c,d,e,f,g,h,i):
     #ida.init_loader_options(e, lst)
   if c == 18:
     print "got set idle",d
-    idle_fxn = CFUNCTYPE(c_int)(d)
+    set_idle_fxn(CFUNCTYPE(c_int)(d))
   if c == 25:
     print "ask_file:",cast(e, c_char_p).value.strip(),cast(f, c_char_p).value.strip()
     global buf   # OMG GC
@@ -134,7 +140,7 @@ def uicallback(a,b,c,d,e,f,g,h,i):
     #b_ptr[0] = 0xAABBCCDD
   return 0
 
-fxn = CALLUI(uicallback)
+fxn = CALLUI(remote_func(uicallback))
 # how hack is that, KFC
 rsc = "\xB9"+struct.pack("I", cast(fxn, c_void_p).value)+"\xFF\xD1\x59\x83\xC4\x04\xFF\xE1"
 sc = create_string_buffer(rsc)
