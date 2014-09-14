@@ -2,6 +2,11 @@
 # remoteobj v0.3, now with speed hax!
 # Also, I just noticed that this will get wrecked by recursive sets/lists/dicts;
 # v0.4 should .pack everything as tuples or something.
+# More future work:
+#   Dict/sets/lists should get transfered to custom wrappers that are local
+#   for read-only access, but remote for write access. Dicts that have non-primitive
+#   keys should send proxies with pre-set hashes, since building the dict on the other
+#   side would immedatley request that hash anyways.
 import marshal
 import struct
 import socket
@@ -83,111 +88,19 @@ class Connection(object):
     try: self.sock.close()
     except: pass
 
-  def runServer(self, obj):
-    if self.sock.recv(2) != 'yo': return
-    self.sock.sendall(sha1(self.secret+self.sock.recv(20)).digest())
-    chal = urandom(20)
-    self.sock.sendall(chal)
-    if self.sock.recv(20) != sha1(self.secret+chal).digest(): return
-    try:
-      self.vended = {}
-      self.sendmsg(self.pack(obj))
-      while self.vended:
-        self.handle(self.recvmsg())
-    except socket.error as e:
-      if e.errno in (errno.EPIPE, errno.ECONNRESET): pass # Client disconnect is a non-error.
-      else: raise
-    finally:
-      del self.vended
+  def sendmsg(self, msg):
+    x = marshal.dumps(msg).encode('zlib')
+    self.sock.sendall(struct.pack('<I', len(x)))
+    self.sock.sendall(x)
 
-  def connectProxy(self):
-    self.vended = {}
-    self.sock.sendall('yo')
-    chal = urandom(20)
-    self.sock.sendall(chal)
-    if self.sock.recv(20) != sha1(self.secret+chal).digest(): return
-    self.sock.sendall(sha1(self.secret+self.sock.recv(20)).digest())
-    return self.unpack(self.recvmsg())
-
-  def handle(self, msg):
-    if DEBUG: print >> sys.stderr, self.endpoint, self.unpack(msg, True)
-    try:
-      ret = {
-        'get' : self.handle_get,
-        'set' : self.handle_set,
-        'call' : self.handle_call,
-        'callattr' : self.handle_callattr,
-        'gc' : self.handle_gc,
-        'hash' : self.handle_hash,
-      }[msg[0]](*msg[1:])
-      self.sendmsg(('ok', ret))
-    except:
-      typ, val, tb = sys.exc_info()
-      self.sendmsg(('exn', typ.__name__, self.pack(val.args), traceback.format_exception(typ, val, tb)))
-
-  def handle_get(self, obj, attr):
-    x = getattr(self.unpack(obj), attr)
-    try:
-      # become lazy is a perf hack that may lead to incorrect behavior in some cases.
-      becomelazy = type(x) not in (bool, int, long, float, complex, str, unicode, tuple, list, set, frozenset, dict) and x is not None
-    except:
-      becomelazy = False
-    return self.pack(x), becomelazy
-  def handle_set(self, obj, attr, val):
-    setattr(self.unpack(obj), attr, self.unpack(val))
-  def handle_call(self, obj, args, kwargs):
-    return self.pack(self.unpack(obj)(*self.unpack(args), **self.unpack(kwargs)))
-  def handle_callattr(self, obj, attr, args, kwargs):
-    return self.pack(getattr(self.unpack(obj), attr)(*self.unpack(args), **self.unpack(kwargs)))
-  def handle_gc(self, objs):
-    for obj in objs:
-      try:
-        k = id(self.unpack(obj))
-        self.vended[k][1] -= 1
-        if self.vended[k][1] == 0:
-          del self.vended[k]
-      except:
-        print >> sys.stderr, "Exception while releasing", obj
-        traceback.print_exc(sys.stderr)
-  def handle_hash(self, obj):
-    return self.pack(hash(self.unpack(obj)))
-
-  def get(self, proxy, attr):
-    info = object.__getattribute__(proxy, '_proxyinfo')
-    x, becomelazy = self.request(('get', info.packed(), attr))
-    if becomelazy:
-      info.lazyattrs.add(attr)
-    return x
-  def set(self, proxy, attr, val):
-    self.request(('set', object.__getattribute__(proxy, '_proxyinfo').packed(), attr, self.pack(val)))
-  def call(self, proxy, args, kwargs):
-    return self.request(('call', object.__getattribute__(proxy, '_proxyinfo').packed(), self.pack(args), self.pack(kwargs)))
-  def callattr(self, proxy, attr, args, kwargs):
-    return self.request(('callattr', object.__getattribute__(proxy, '_proxyinfo').packed(), attr, self.pack(args), self.pack(kwargs)))
-  def hash(self, proxy):
-    return self.request(('hash', object.__getattribute__(proxy, '_proxyinfo').packed()))
-  def disco(self):
-    self.garbage = []
-    self.sock.close()
-
-  def request(self, msg):
-    self.sendmsg(msg)
-    while True:
-      x = self.recvmsg()
-      if DEBUG: print >> sys.stderr, self.endpoint, self.unpack(x, True)
-      if x[0] == 'ok':
-        return self.unpack(x[1])
-      elif x[0] == 'exn':
-        exntyp = exceptions.__dict__.get(x[1])
-        args = self.unpack(x[2])
-        trace = x[3]
-        if exntyp and issubclass(exntyp, BaseException):
-          if DEBUG: print >> sys.stderr, 'Remote '+''.join(trace)
-          raise exntyp(*args)
-        else:
-          raise Exception(str(x[1])+repr(args)+'\nRemote '+''.join(trace))
-      else:
-        self.handle(x)
+  def recvmsg(self):
+    x = self.sock.recv(4)
+    if len(x) == 4:
+      y = struct.unpack('<I', x)[0]
+      z = self.sock.recv(y)
+      if len(z) == y:
+        return marshal.loads(z.decode('zlib'))
+    raise socket.error(errno.ECONNRESET, 'The socket was closed while receiving a message.')
 
   # Note: must send after non-info_only packing, or objects will be left with +1 retain count in self.vended
   def pack(self, val, info_only = False):
@@ -205,8 +118,12 @@ class Connection(object):
       return {self.pack(k, info_only):self.pack(v, info_only) for k,v in val.iteritems()}
     elif type(val) == Proxy:
       return object.__getattribute__(val, '_proxyinfo').packed()
-    #elif type(val) == CodeType:
-    # Just send code self.vended via proxy
+    elif type(val) == CodeType:
+      return CodeType(val.co_argcount, val.co_nlocals, val.co_stacksize, val.co_flags, val.co_codestring,
+        tuple(self.pack(i) for i in val.co_consts),
+        tuple(self.pack(i) for i in val.co_names),
+        tuple(self.pack(i) for i in val.co_varnames),
+        val.co_filename, val.co_name, val.co_firstlineno, val.co_lnotab, self.pack(val.co_freevars), self.pack(val.co_cellvars))
     else:
       if not info_only:
         self.vended.setdefault(id(val), [val, 0])[1] += 1
@@ -250,19 +167,98 @@ class Connection(object):
     else:
       return val
 
-  def sendmsg(self, msg):
-    x = marshal.dumps(msg).encode('zlib')
-    self.sock.sendall(struct.pack('<I', len(x)))
-    self.sock.sendall(x)
+  def connectProxy(self):
+    self.vended = {}
+    self.sock.sendall('yo')
+    chal = urandom(20)
+    self.sock.sendall(chal)
+    if self.sock.recv(20) != sha1(self.secret+chal).digest(): return
+    self.sock.sendall(sha1(self.secret+self.sock.recv(20)).digest())
+    return self.unpack(self.recvmsg())
 
-  def recvmsg(self):
-    x = self.sock.recv(4)
-    if len(x) == 4:
-      y = struct.unpack('<I', x)[0]
-      z = self.sock.recv(y)
-      if len(z) == y:
-        return marshal.loads(z.decode('zlib'))
-    raise socket.error(errno.ECONNRESET, 'The socket was closed while receiving a message.')
+  def runServer(self, obj):
+    if self.sock.recv(2) != 'yo': return
+    self.sock.sendall(sha1(self.secret+self.sock.recv(20)).digest())
+    chal = urandom(20)
+    self.sock.sendall(chal)
+    if self.sock.recv(20) != sha1(self.secret+chal).digest(): return
+    try:
+      self.vended = {}
+      self.sendmsg(self.pack(obj))
+      while self.vended:
+        self.handle(self.recvmsg())
+    except socket.error as e:
+      if e.errno in (errno.EPIPE, errno.ECONNRESET): pass # Client disconnect is a non-error.
+      else: raise
+    finally:
+      del self.vended
+
+  def request(self, msg):
+    self.sendmsg(msg)
+    while True:
+      x = self.recvmsg()
+      if DEBUG: print >> sys.stderr, self.endpoint, self.unpack(x, True)
+      if x[0] == 'ok':
+        return self.unpack(x[1])
+      elif x[0] == 'exn':
+        exntyp = exceptions.__dict__.get(x[1])
+        args = self.unpack(x[2])
+        trace = x[3]
+        if exntyp and issubclass(exntyp, BaseException):
+          if DEBUG: print >> sys.stderr, 'Remote '+''.join(trace)
+          raise exntyp(*args)
+        else:
+          raise Exception(str(x[1])+repr(args)+'\nRemote '+''.join(trace))
+      else:
+        self.handle(x)
+
+  def handle(self, msg):
+    if DEBUG: print >> sys.stderr, self.endpoint, self.unpack(msg, True)
+    try:
+      ret = {
+        'get' : self.handle_get,
+        'set' : self.handle_set,
+        'call' : self.handle_call,
+        'callattr' : self.handle_callattr,
+        'gc' : self.handle_gc,
+        'hash' : self.handle_hash,
+      }[msg[0]](*msg[1:])
+      self.sendmsg(('ok', ret))
+    except:
+      typ, val, tb = sys.exc_info()
+      self.sendmsg(('exn', typ.__name__, self.pack(val.args), traceback.format_exception(typ, val, tb)))
+
+  def get(self, proxy, attr):
+    info = object.__getattribute__(proxy, '_proxyinfo')
+    x, becomelazy = self.request(('get', info.packed(), attr))
+    if becomelazy:
+      info.lazyattrs.add(attr)
+    return x
+  def handle_get(self, obj, attr):
+    x = getattr(self.unpack(obj), attr)
+
+    # become lazy is a perf hack that may lead to incorrect behavior in some cases.
+    becomelazy = type(x) not in (bool, int, long, float, complex, str, unicode, tuple, list, set, frozenset, dict) and x is not None
+    if becomelazy:
+      try: becomelazy = not isinstance(getattr(x.__class__, attr), property)
+      except: pass
+
+    return self.pack(x), becomelazy
+
+  def set(self, proxy, attr, val):
+    self.request(('set', object.__getattribute__(proxy, '_proxyinfo').packed(), attr, self.pack(val)))
+  def handle_set(self, obj, attr, val):
+    setattr(self.unpack(obj), attr, self.unpack(val))
+
+  def call(self, proxy, args, kwargs):
+    return self.request(('call', object.__getattribute__(proxy, '_proxyinfo').packed(), self.pack(args), self.pack(kwargs)))
+  def handle_call(self, obj, args, kwargs):
+    return self.pack(self.unpack(obj)(*self.unpack(args), **self.unpack(kwargs)))
+
+  def callattr(self, proxy, attr, args, kwargs):
+    return self.request(('callattr', object.__getattribute__(proxy, '_proxyinfo').packed(), attr, self.pack(args), self.pack(kwargs)))
+  def handle_callattr(self, obj, attr, args, kwargs):
+    return self.pack(getattr(self.unpack(obj), attr)(*self.unpack(args), **self.unpack(kwargs)))
 
   def delete(self, proxy):
     self.garbage.append(object.__getattribute__(proxy, '_proxyinfo').packed())
@@ -270,6 +266,27 @@ class Connection(object):
       try: self.request(('gc', tuple(self.garbage)))
       except socket.error: pass # No need for complaints about a dead connection
       self.garbage[:] = []
+  def handle_gc(self, objs):
+    for obj in objs:
+      try:
+        k = id(self.unpack(obj))
+        self.vended[k][1] -= 1
+        if self.vended[k][1] == 0:
+          del self.vended[k]
+      except:
+        print >> sys.stderr, "Exception while releasing", obj
+        traceback.print_exc(sys.stderr)
+
+  def hash(self, proxy):
+    return self.request(('hash', object.__getattribute__(proxy, '_proxyinfo').packed()))
+  def handle_hash(self, obj):
+    return self.pack(hash(self.unpack(obj)))
+
+  def disco(self):
+    self.garbage = []
+    self.sock.close()
+
+
 
 __all__ = [Connection,]
 
