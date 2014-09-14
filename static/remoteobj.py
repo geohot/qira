@@ -229,6 +229,8 @@ class Connection(object):
         'hash' : self.handle_hash,
         'repr' : self.handle_repr,
         'gc' : self.handle_gc,
+        'eval' : self.handle_eval,
+        'exec' : self.handle_exec,
         'deffun' : self.handle_deffun,
       }[msg[0]](*msg[1:])
       self.sendmsg(('ok', ret))
@@ -301,15 +303,40 @@ class Connection(object):
     self.garbage = []
     self.sock.close()
 
-  def deffun(self, func, func_globals = {}, no_remote_globals = False):
-    return self.request(('deffun', self.pack((func.__code__, func_globals, func.__name__, func.__defaults__, func.__closure__)), self.pack(func.__dict__), self.pack(func.__doc__), no_remote_globals))
-  def handle_deffun(self, func, fdict, fdoc, no_remote_globals):
+  def _eval(self, expr, local = None):
+    ret, d = self.request(('eval', self.pack(expr), self.pack(local)))
+    if local is not None:
+      local.clear()
+      local.update(d)
+    return ret
+  def handle_eval(self, expr, local):
+    d = self.unpack(local)
+    ret = eval(self.unpack(expr), globals(), d)
+    return self.pack(ret), (self.pack(d) if d is not None else None)
+
+  def _exec(self, stmt, local = None):
+    d = self.request(('exec', self.pack(stmt), self.pack(local)))
+    if local is not None:
+      local.clear()
+      local.update(d)
+  def handle_exec(self, x, y, z):
+    d = self.unpack(local)
+    exec(self.unpack(expr), globals(), d)
+    return self.pack(d) if d is not None else None
+
+  # Define a function on the remote side. Its __globals__ will be
+  # the local client-side func.__globals__ filtered to the keys in
+  # func_globals, underlaid with the remote server-side globals()
+  # filtered to the keys in remote_globals. None is a special value
+  # for the filters, and disables any filtering.
+  def deffun(self, func, func_globals = (), remote_globals = None):
+    glbls = {k:v for k,v in func.__globals__.iteritems() if k in filter_globals} if filter_globals is not None else func.__globals__
+    return self.request(('deffun', self.pack((func.__code__, glbls, func.__name__, func.__defaults__, func.__closure__)), self.pack(func.__dict__), self.pack(func.__doc__), remote_globals))
+  def handle_deffun(self, func, fdict, fdoc, remote_globals):
     func = self.unpack(func)
-    if not no_remote_globals:
-      t = {}
-      t.update(globals())
-      t.update(func[1])
-      func[1].update(t)
+    glbls = {k:v for k,v in globals().iteritems() if k in remote_globals} if remote_globals is not None else globals()
+    glbls.update(func[1])
+    func[1].update(glbls)
     f = FunctionType(*func)
     f.__dict__ = self.unpack(fdict)
     f.__doc__ = self.unpack(fdoc)

@@ -19,6 +19,8 @@ if sys.maxsize == 0x7fffffffffffffff:
   from remotectypes32 import *
 else:
   from ctypes import *
+  def remote_func(f, x):
+    return f
 
 FILE = "/tmp/qida/ida_binary"
 os.system("rm -rf /tmp/qida; mkdir -p /tmp/qida")
@@ -46,6 +48,7 @@ else:
   libc = cdll.LoadLibrary("libc.so.6")
 
 CALLUI = CFUNCTYPE(c_int, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)
+uicallback_globals = ('done', 'idle_fxn', 'buf') # For remote ctypes, only these globals will be sent back.
 def uicallback(a,b,c,d,e,f,g,h,i):
   global done
   b_ptr = cast(b, POINTER(c_long))
@@ -134,7 +137,7 @@ def uicallback(a,b,c,d,e,f,g,h,i):
     #b_ptr[0] = 0xAABBCCDD
   return 0
 
-fxn = CALLUI(uicallback)
+fxn = CALLUI(remote_func(uicallback, uicallback_globals))
 # how hack is that, KFC
 rsc = "\xB9"+struct.pack("I", cast(fxn, c_void_p).value)+"\xFF\xD1\x59\x83\xC4\x04\xFF\xE1"
 sc = create_string_buffer(rsc)
