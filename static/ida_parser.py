@@ -19,7 +19,7 @@ if sys.maxsize == 0x7fffffffffffffff:
   from remotectypes32 import *
 else:
   from ctypes import *
-  def remote_func(f, x):
+  def remote_func(f):
     return f
 
 FILE = "/tmp/qida/ida_binary"

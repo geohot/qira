@@ -16,14 +16,16 @@ from hashlib import sha1
 DEBUG = False
 
 class Proxy(object):
-  def __init__(self, conn, info):
+  def __init__(self, conn, info, _hash=None, parent=None):
     object.__setattr__(self, '_proxyconn', conn)
     object.__setattr__(self, '_proxyinfo', info)
-    object.__setattr__(self, '_proxyhash', None)
+    object.__setattr__(self, '_proxyhash', _hash)
+    object.__setattr__(self, '_proxyparent', parent)
   def __getattribute__(self, attr):
     t = object.__getattribute__(self, '_proxyinfo').getattr(attr)
     if t:
-      return Proxy(object.__getattribute__(self, '_proxyconn'), t)
+      # We need to retain parent for garbage collection purposes.
+      return Proxy(object.__getattribute__(self, '_proxyconn'), t, parent=self)
     else:
       return object.__getattribute__(self, '_proxyconn').get(self, attr)
   def __getattr__(self, attr):
@@ -35,6 +37,7 @@ class Proxy(object):
   def __call__(self, *args, **kwargs):
     return object.__getattribute__(self, '_proxyconn').call(self, args, kwargs)
   def __del__(self):
+    if object.__getattribute__(self, '_proxyparent') is not None: return
     if not marshal or not struct or not socket: return # Reduce spurious messages when quitting python
     object.__getattribute__(self, '_proxyconn').delete(self)
 
@@ -281,7 +284,9 @@ class Connection(object):
     return self.pack(repr(self.unpack(obj)))
 
   def delete(self, proxy):
-    self.garbage.append(object.__getattribute__(proxy, '_proxyinfo').packed())
+    info = object.__getattribute__(proxy, '_proxyinfo')
+    if info.attrpath != '': return
+    self.garbage.append(info.packed())
     if len(self.garbage) > 100:
       try: self.request(('gc', tuple(self.garbage)))
       except socket.error: pass # No need for complaints about a dead connection
@@ -289,12 +294,16 @@ class Connection(object):
   def handle_gc(self, objs):
     for obj in objs:
       try:
-        k = id(self.unpack(obj))
-        self.vended[k][1] -= 1
-        if self.vended[k][1] == 0:
-          del self.vended[k]
+        info = ProxyInfo.fromPacked(obj)
+        if info.endpoint != self.endpoint: continue
+        assert info.attrpath == ''
+        self.vended[info.remoteid][1] -= 1
+        if self.vended[info.remoteid][1] == 0:
+          del self.vended[info.remoteid]
+        elif self.vended[info.remoteid][1] < 0:
+          print >> sys.stderr, "Too many releases on", self.unpack(obj, True), self.vended[info.remoteid][1]
       except:
-        print >> sys.stderr, "Exception while releasing", obj
+        print >> sys.stderr, "Exception while releasing", self.unpack(obj, True)
         traceback.print_exc(sys.stderr)
 
   def disconnect(self):
@@ -332,7 +341,7 @@ class Connection(object):
     return self.request(('deffun', self.pack((func.__code__, glbls, func.__name__, func.__defaults__, func.__closure__)), self.pack(func.__dict__), self.pack(func.__doc__), remote_globals))
   def handle_deffun(self, func, fdict, fdoc, remote_globals):
     func = self.unpack(func)
-    glbls = {k:v for k,v in globals().iteritems() if k in remote_globals} if remote_globals is not None else globals()
+    glbls = {k:v for k,v in globals().iteritems() if not remote_globals or k in remote_globals}
     glbls.update(func[1])
     func[1].update(glbls)
     f = FunctionType(*func)

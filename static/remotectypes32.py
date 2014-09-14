@@ -51,7 +51,7 @@ atexit.register(finishup)
 
 def remote_func(f):
   g = conn.deffun(f, f.__globals__.keys())
-  conn._exec('for k, v in ctypes.__dict__.iteritems(): g[k] = v', {'ctypes':ctypes, 'g':g})
+  conn._exec('for k, v in ctypes.__dict__.iteritems(): g.__globals__[k] = v', {'ctypes':ctypes, 'g':g})
   return g
 
 __all__ = ['remote_func']
