@@ -51,10 +51,10 @@ atexit.register(finishup)
 
 def remote_func(f, client_globals):
   g = conn.deffun(f, client_globals)
-  conn._exec('(g.setdefault(k, v) for k, v in ctypes.iteritems())', {'ctypes':ctypes, 'g':g})
+  conn._exec('(g.setdefault(k, v) for k, v in ctypes.__dict__.iteritems())', {'ctypes':ctypes, 'g':g})
   return g
 
-__all__ = [remote_func]
+__all__ = ['remote_func']
 
 # Make `from remotectypes32 import *` work as expected
 d = conn._eval("{k:v for k, v in ctypes.__dict__.iteritems() if not (k.startswith('__') and k.endswith('__'))}", {'ctypes':ctypes})

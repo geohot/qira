@@ -317,9 +317,9 @@ class Connection(object):
     if local is not None:
       local.clear()
       local.update(d)
-  def handle_exec(self, x, y, z):
+  def handle_exec(self, stmt, local):
     d = self.unpack(local)
-    exec(self.unpack(expr), globals(), d)
+    exec(self.unpack(stmt), globals(), d)
     return self.pack(d) if d is not None else None
 
   # Define a function on the remote side. Its __globals__ will be
@@ -328,7 +328,7 @@ class Connection(object):
   # filtered to the keys in remote_globals. None is a special value
   # for the filters, and disables any filtering.
   def deffun(self, func, func_globals = (), remote_globals = None):
-    glbls = {k:v for k,v in func.__globals__.iteritems() if k in filter_globals} if filter_globals is not None else func.__globals__
+    glbls = {k:v for k,v in func.__globals__.iteritems() if k in func_globals} if func_globals is not None else func.__globals__
     return self.request(('deffun', self.pack((func.__code__, glbls, func.__name__, func.__defaults__, func.__closure__)), self.pack(func.__dict__), self.pack(func.__doc__), remote_globals))
   def handle_deffun(self, func, fdict, fdoc, remote_globals):
     func = self.unpack(func)
