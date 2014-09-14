@@ -72,9 +72,8 @@ class ProxyInfo(object):
     return (StopIteration, Ellipsis, self.endpoint, self.remoteid, self.attrpath, tuple(self.lazyattrs))
 
   def getattr(self, attr):
-    if not self.lazyattrs: return None
+    if attr not in self.lazyattrs: return None
     path = self.attrpath+'.'+attr if self.attrpath else attr
-    if path not in self.lazyattrs: return None
     return type(self)(self.endpoint, self.remoteid, attrpath = path, lazyattrs = self.lazyattrs)
 
 class Connection(object):
@@ -119,11 +118,7 @@ class Connection(object):
     elif type(val) == Proxy:
       return object.__getattribute__(val, '_proxyinfo').packed()
     elif type(val) == CodeType:
-      return CodeType(val.co_argcount, val.co_nlocals, val.co_stacksize, val.co_flags, val.co_codestring,
-        tuple(self.pack(i) for i in val.co_consts),
-        tuple(self.pack(i) for i in val.co_names),
-        tuple(self.pack(i) for i in val.co_varnames),
-        val.co_filename, val.co_name, val.co_firstlineno, val.co_lnotab, self.pack(val.co_freevars), self.pack(val.co_cellvars))
+      return val
     else:
       if not info_only:
         self.vended.setdefault(id(val), [val, 0])[1] += 1
@@ -163,7 +158,7 @@ class Connection(object):
     elif type(val) == dict:
       return {self.unpack(k, info_only):self.unpack(v, info_only) for k,v in val.iteritems()}
     elif type(val) == CodeType:
-      raise Exception('code types get sent via proxy')
+      return val
     else:
       return val
 
@@ -172,16 +167,22 @@ class Connection(object):
     self.sock.sendall('yo')
     chal = urandom(20)
     self.sock.sendall(chal)
-    if self.sock.recv(20) != sha1(self.secret+chal).digest(): return
+    if self.sock.recv(20) != sha1(self.secret+chal).digest():
+      print >> sys.stderr, "Server failed challenge!"
+      return None
     self.sock.sendall(sha1(self.secret+self.sock.recv(20)).digest())
     return self.unpack(self.recvmsg())
 
   def runServer(self, obj):
-    if self.sock.recv(2) != 'yo': return
+    if self.sock.recv(2) != 'yo':
+      print >> sys.stderr, "Spurious connection!"
+      return
     self.sock.sendall(sha1(self.secret+self.sock.recv(20)).digest())
     chal = urandom(20)
     self.sock.sendall(chal)
-    if self.sock.recv(20) != sha1(self.secret+chal).digest(): return
+    if self.sock.recv(20) != sha1(self.secret+chal).digest():
+      print >> sys.stderr, "Client failed challenge!"
+      return None
     try:
       self.vended = {}
       self.sendmsg(self.pack(obj))
@@ -230,20 +231,22 @@ class Connection(object):
 
   def get(self, proxy, attr):
     info = object.__getattribute__(proxy, '_proxyinfo')
-    x, becomelazy = self.request(('get', info.packed(), attr))
-    if becomelazy:
+    x, addlazy = self.request(('get', info.packed(), attr))
+    if addlazy:
       info.lazyattrs.add(attr)
     return x
   def handle_get(self, obj, attr):
-    x = getattr(self.unpack(obj), attr)
+    obj1 = self.unpack(obj)
+    attr1 = getattr(obj1, attr)
 
-    # become lazy is a perf hack that may lead to incorrect behavior in some cases.
-    becomelazy = type(x) not in (bool, int, long, float, complex, str, unicode, tuple, list, set, frozenset, dict) and x is not None
-    if becomelazy:
-      try: becomelazy = not isinstance(getattr(x.__class__, attr), property)
-      except: pass
+    # Start of the "addlazy" perf hack, which may lead to incorrect behavior in some cases.
+    addlazy = True
+    addlazy = addlazy and type(attr1) not in (bool, int, long, float, complex, str, unicode, tuple, list, set, frozenset, dict)
+    addlazy = addlazy and attr1 is not None
+    try: addlazy = addlazy and not isinstance(getattr(obj1.__class__, attr), property)
+    except: pass
 
-    return self.pack(x), becomelazy
+    return self.pack(attr1), addlazy
 
   def set(self, proxy, attr, val):
     self.request(('set', object.__getattribute__(proxy, '_proxyinfo').packed(), attr, self.pack(val)))
