@@ -11,7 +11,7 @@ import marshal
 import struct
 import socket
 import sys, exceptions, errno, traceback
-from types import CodeType
+from types import CodeType, FunctionType
 from os import urandom
 from hashlib import sha1
 
@@ -39,15 +39,20 @@ class Proxy(object):
   def __del__(self):
     if not marshal or not struct or not socket: return # Reduce spurious messages when quitting python
     object.__getattribute__(self, '_proxyconn').delete(self)
+
+  # hash and repr need to be handled specially, due to hash(type) != type.__hash__()
+  # (and the same for repr). Incidentally, we'll cache the hash.
   def __hash__(self):
     t = object.__getattribute__(self, '_proxyhash')
     if t is None:
       t = object.__getattribute__(self, '_proxyconn').hash(self)
       object.__setattr__(self, '_proxyhash', t)
     return t
-  
+  def __repr__(self):
+    return object.__getattribute__(self, '_proxyconn').repr(self)
+
   # Special methods don't always go through __getattribute__, so redirect them all there.
-  for special in ('__repr__', '__str__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__', '__ge__', '__cmp__', '__rcmp__', '__nonzero__', '__unicode__', '__len__', '__getitem__', '__setitem__', '__delitem__', '__iter__', '__reversed__', '__contains__', '__getslice__', '__setslice__', '__delslice__', '__add__', '__sub__', '__mul__', '__floordiv__', '__mod__', '__divmod__', '__pow__', '__lshift__', '__rshift__', '__and__', '__xor__', '__or__', '__div__', '__truediv__', '__radd__', '__rsub__', '__rmul__', '__rdiv__', '__rtruediv__', '__rfloordiv__', '__rmod__', '__rdivmod__', '__rpow__', '__rlshift__', '__rrshift__', '__rand__', '__rxor__', '__ror__', '__iadd__', '__isub__', '__imul__', '__idiv__', '__itruediv__', '__ifloordiv__', '__imod__', '__ipow__', '__ilshift__', '__irshift__', '__iand__', '__ixor__', '__ior__', '__neg__', '__pos__', '__abs__', '__invert__', '__complex__', '__int__', '__long__', '__float__', '__oct__', '__hex__', '__index__', '__coerce__', '__enter__', '__exit__'):
+  for special in ('__str__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__', '__ge__', '__cmp__', '__rcmp__', '__nonzero__', '__unicode__', '__len__', '__getitem__', '__setitem__', '__delitem__', '__iter__', '__reversed__', '__contains__', '__getslice__', '__setslice__', '__delslice__', '__add__', '__sub__', '__mul__', '__floordiv__', '__mod__', '__divmod__', '__pow__', '__lshift__', '__rshift__', '__and__', '__xor__', '__or__', '__div__', '__truediv__', '__radd__', '__rsub__', '__rmul__', '__rdiv__', '__rtruediv__', '__rfloordiv__', '__rmod__', '__rdivmod__', '__rpow__', '__rlshift__', '__rrshift__', '__rand__', '__rxor__', '__ror__', '__iadd__', '__isub__', '__imul__', '__idiv__', '__itruediv__', '__ifloordiv__', '__imod__', '__ipow__', '__ilshift__', '__irshift__', '__iand__', '__ixor__', '__ior__', '__neg__', '__pos__', '__abs__', '__invert__', '__complex__', '__int__', '__long__', '__float__', '__oct__', '__hex__', '__index__', '__coerce__', '__enter__', '__exit__'):
     exec "def {special}(self, *args, **kwargs):\n\treturn object.__getattribute__(self, '_proxyconn').callattr(self, '{special}', args, kwargs)".format(special=special) in None, None
 
 class ProxyInfo(object):
@@ -221,8 +226,10 @@ class Connection(object):
         'set' : self.handle_set,
         'call' : self.handle_call,
         'callattr' : self.handle_callattr,
-        'gc' : self.handle_gc,
         'hash' : self.handle_hash,
+        'repr' : self.handle_repr,
+        'gc' : self.handle_gc,
+        'deffun' : self.handle_deffun,
       }[msg[0]](*msg[1:])
       self.sendmsg(('ok', ret))
     except:
@@ -263,6 +270,16 @@ class Connection(object):
   def handle_callattr(self, obj, attr, args, kwargs):
     return self.pack(getattr(self.unpack(obj), attr)(*self.unpack(args), **self.unpack(kwargs)))
 
+  def hash(self, proxy):
+    return self.request(('hash', object.__getattribute__(proxy, '_proxyinfo').packed()))
+  def handle_hash(self, obj):
+    return self.pack(hash(self.unpack(obj)))
+
+  def repr(self, proxy):
+    return self.request(('repr', object.__getattribute__(proxy, '_proxyinfo').packed()))
+  def handle_repr(self, obj):
+    return self.pack(repr(self.unpack(obj)))
+
   def delete(self, proxy):
     self.garbage.append(object.__getattribute__(proxy, '_proxyinfo').packed())
     if len(self.garbage) > 100:
@@ -280,14 +297,23 @@ class Connection(object):
         print >> sys.stderr, "Exception while releasing", obj
         traceback.print_exc(sys.stderr)
 
-  def hash(self, proxy):
-    return self.request(('hash', object.__getattribute__(proxy, '_proxyinfo').packed()))
-  def handle_hash(self, obj):
-    return self.pack(hash(self.unpack(obj)))
-
   def disco(self):
     self.garbage = []
     self.sock.close()
+
+  def deffun(self, func, func_globals = {}, no_remote_globals = False):
+    return self.request(('deffun', self.pack((func.__code__, func_globals, func.__name__, func.__defaults__, func.__closure__)), self.pack(func.__dict__), self.pack(func.__doc__), no_remote_globals))
+  def handle_deffun(self, func, fdict, fdoc, no_remote_globals):
+    func = self.unpack(func)
+    if not no_remote_globals:
+      t = {}
+      t.update(globals())
+      t.update(func[1])
+      func[1].update(t)
+    f = FunctionType(*func)
+    f.__dict__ = self.unpack(fdict)
+    f.__doc__ = self.unpack(fdoc)
+    return self.pack(f)
 
 
 
@@ -316,6 +342,8 @@ if __name__ == "__main__":
     SocketServer.TCPServer(hostport, Server).serve_forever()
     exit(1)
   elif argv[1] == 'client':
-    proxy = Connection(socket.create_connection(hostport), password).connectProxy()
+    connection = Connection(socket.create_connection(hostport), password)
+    proxy = connection.connectProxy()
+    print >> sys.stderr, "`proxy` and `connection` are available for you to play with at the interactive prompt."
   else:
     exit(64)
