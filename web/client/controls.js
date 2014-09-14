@@ -62,8 +62,7 @@ $(document).ready(function() {
 });
 
 $(document).ready(function() {
-  $('body').on('mousewheel', '#outergbox', function(e) {
-    //p(e.originalEvent);
+  $('#staticpanel').on('mousewheel', '#outergbox', function(e) {
     var wdx = e.originalEvent.wheelDeltaX;
     var wdy = e.originalEvent.wheelDeltaY;
     $("#gbox").css("margin-left", fdec($("#gbox").css("margin-left")) + wdx);
