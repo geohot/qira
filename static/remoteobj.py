@@ -1,12 +1,10 @@
 #!/usr/bin/env python
-# remoteobj v0.3, now with speed hax!
-# Also, I just noticed that this will get wrecked by recursive sets/lists/dicts;
-# v0.4 should .pack everything as tuples or something.
-# More future work:
-#   Dict/sets/lists should get transfered to custom wrappers that are local
-#   for read-only access, but remote for write access. Dicts that have non-primitive
-#   keys should send proxies with pre-set hashes, since building the dict on the other
-#   side would immedatley request that hash anyways.
+# remoteobj v0.4, best yet!
+# TODO: This will get wrecked by recursive sets/lists/dicts; need a more picklish method.
+# TODO: Dict/sets/lists should get unpacked to wrappers that are local for read-only access,
+#       but update the remote for write access. Note that __eq__ will be an interesting override.
+# TODO: Dicts that have non-primitive keys should send proxies with pre-declared hashes,
+#       since building the dict on the other side will immedatley request all hashes anyways.
 import marshal
 import struct
 import socket
