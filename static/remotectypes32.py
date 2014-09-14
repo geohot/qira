@@ -50,7 +50,7 @@ def finishup():
 atexit.register(finishup)
 
 def remote_func(f):
-  g = conn.deffun(f, f.__globals__.keys())
+  g = conn.deffun(f, set(f.__code__.co_names), ())
   conn._exec('for k, v in ctypes.__dict__.iteritems(): g.__globals__[k] = v', {'ctypes':ctypes, 'g':g})
   return g
 

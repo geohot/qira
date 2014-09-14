@@ -91,7 +91,7 @@ class Connection(object):
     except: pass
 
   def sendmsg(self, msg):
-    x = marshal.dumps(msg).encode('zlib')
+    x = marshal.dumps(msg)
     self.sock.sendall(struct.pack('<I', len(x)))
     self.sock.sendall(x)
 
@@ -101,7 +101,7 @@ class Connection(object):
       y = struct.unpack('<I', x)[0]
       z = self.sock.recv(y)
       if len(z) == y:
-        return marshal.loads(z.decode('zlib'))
+        return marshal.loads(z)
     raise socket.error(errno.ECONNRESET, 'The socket was closed while receiving a message.')
 
   # Note: must send after non-info_only packing, or objects will be left with +1 retain count in self.vended
@@ -262,14 +262,14 @@ class Connection(object):
     setattr(self.unpack(obj), attr, self.unpack(val))
 
   def call(self, proxy, args, kwargs):
-    return self.request(('call', object.__getattribute__(proxy, '_proxyinfo').packed(), self.pack(args), self.pack(kwargs)))
+    return self.request(('call', object.__getattribute__(proxy, '_proxyinfo').packed(), self.pack(args or None), self.pack(kwargs or None)))
   def handle_call(self, obj, args, kwargs):
-    return self.pack(self.unpack(obj)(*self.unpack(args), **self.unpack(kwargs)))
+    return self.pack(self.unpack(obj)(*(self.unpack(args) or ()), **(self.unpack(kwargs) or {})))
 
   def callattr(self, proxy, attr, args, kwargs):
-    return self.request(('callattr', object.__getattribute__(proxy, '_proxyinfo').packed(), attr, self.pack(args), self.pack(kwargs)))
+    return self.request(('callattr', object.__getattribute__(proxy, '_proxyinfo').packed(), attr, self.pack(args or None), self.pack(kwargs or None)))
   def handle_callattr(self, obj, attr, args, kwargs):
-    return self.pack(getattr(self.unpack(obj), attr)(*self.unpack(args), **self.unpack(kwargs)))
+    return self.pack(getattr(self.unpack(obj), attr)(*(self.unpack(args) or ()), **(self.unpack(kwargs) or {})))
 
   def hash(self, proxy):
     return self.request(('hash', object.__getattribute__(proxy, '_proxyinfo').packed()))
@@ -285,7 +285,7 @@ class Connection(object):
     info = object.__getattribute__(proxy, '_proxyinfo')
     if info.attrpath != '': return
     self.garbage.append(info.packed())
-    if len(self.garbage) > 100:
+    if len(self.garbage) > 50:
       try: self.request(('gc', tuple(self.garbage)))
       except socket.error: pass # No need for complaints about a dead connection
       self.garbage[:] = []
@@ -339,7 +339,8 @@ class Connection(object):
     return self.request(('deffun', self.pack((func.__code__, glbls, func.__name__, func.__defaults__, func.__closure__)), self.pack(func.__dict__), self.pack(func.__doc__), remote_globals))
   def handle_deffun(self, func, fdict, fdoc, remote_globals):
     func = self.unpack(func)
-    glbls = {k:v for k,v in globals().iteritems() if not remote_globals or k in remote_globals}
+    g = globals()
+    glbls = {k:g[k] for k in remote_globals if k in g} if remote_globals is not None else g.copy()
     glbls.update(func[1])
     func[1].update(glbls)
     f = FunctionType(*func)
