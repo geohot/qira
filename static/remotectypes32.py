@@ -49,9 +49,9 @@ def finishup():
     p.kill()
 atexit.register(finishup)
 
-def remote_func(f, client_globals):
-  g = conn.deffun(f, client_globals)
-  conn._exec('(g.setdefault(k, v) for k, v in ctypes.__dict__.iteritems())', {'ctypes':ctypes, 'g':g})
+def remote_func(f):
+  g = conn.deffun(f, f.__globals__.keys())
+  conn._exec('for k, v in ctypes.__dict__.iteritems(): g[k] = v', {'ctypes':ctypes, 'g':g})
   return g
 
 __all__ = ['remote_func']
