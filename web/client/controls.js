@@ -62,11 +62,44 @@ $(document).ready(function() {
 });
 
 $(document).ready(function() {
+  var drag_x, drag_y, is_dragging;
+  function startDrag(x, y) {
+    //p("startDrag "+x+" "+y);
+    drag_x = fdec($("#gbox").css("margin-left")) - x;
+    drag_y = fdec($("#gbox").css("margin-top")) - y;
+    is_dragging = true;
+  }
+  function endDrag(x, y, isend) {
+    //p("endDrag "+x+" "+y);
+    if (is_dragging) {
+      $("#gbox").css("margin-left", (drag_x+x));
+      $("#gbox").css("margin-top", (drag_y+y));
+    }
+    if (isend) is_dragging = false;
+  }
   $('#staticpanel').on('mousewheel', '#outergbox', function(e) {
     var wdx = e.originalEvent.wheelDeltaX;
     var wdy = e.originalEvent.wheelDeltaY;
     $("#gbox").css("margin-left", fdec($("#gbox").css("margin-left")) + wdx);
     $("#gbox").css("margin-top", fdec($("#gbox").css("margin-top")) + wdy);
+  });
+  $('#staticpanel').on('mousedown', '#outergbox', function(e) {
+    //p("mousedown");
+    startDrag(e.screenX, e.screenY);
+    return false;
+  });
+  $('#staticpanel').on('mousemove', '#outergbox', function(e) {
+    endDrag(e.screenX, e.screenY, false);
+  });
+  $('#staticpanel').on('mouseup', '#outergbox', function(e) {
+    endDrag(e.screenX, e.screenY, true);
+  });
+  $('#staticpanel').on('mouseout', '#outergbox', function(e) {
+    /*p(e.target);
+    p(e.target.id);*/
+    if (e.target.id === "outergbox") {
+      endDrag(e.screenX, e.screenY, true);
+    }
   });
   $('body').on('mousewheel', '.flat', function(e) {
     var cdr = $(".flat").children();
