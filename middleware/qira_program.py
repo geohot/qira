@@ -11,6 +11,12 @@ import collections
 from hashlib import sha1
 sys.path.append(qira_config.BASEDIR+"/cda")
 
+# it doesn't hurt to always try to import it
+try:
+  from capstone import *
+except:
+  pass
+
 from subprocess import (Popen, PIPE)
 import json
 
@@ -360,7 +366,6 @@ class Program:
     default = {"repr": raw.encode("hex")}
     if qira_config.WITH_CAPSTONE:
       try:
-        from capstone import *
         arch = self.tregs[3]
         if arch == "i386":
           md = Cs(CS_ARCH_X86, CS_MODE_32)

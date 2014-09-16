@@ -85,8 +85,9 @@ shift-n -- rename data
 shift-; -- add comment at data
 
 g -- go to change, address, or name
-c -- coming soon, analyze code at iaddr
 
+c -- analyze code at iaddr
+p -- analyze function at iaddr
 
 == Installation on Windows (experimental) ==
 
@@ -105,4 +106,22 @@ The binary must have DWARF data, and the source files must exist on the system
 
 If you used --cda, you have to go to localhost:3002/cda
 Everything should be intuitive, except press '/' to regex search
+
+
+== Session state ==
+
+clnum -- Selected changelist number
+forknum -- Selected fork number
+iaddr -- Selected instruction address
+daddr -- Selected data address
+
+cview -- Viewed changelists in the vtimeline
+dview -- Viewed window into data in the hexeditor
+
+max_clnum -- Max changelist number for each fork
+
+dirtyiaddr -- Whether we should update the clnum based on the iaddr or not
+
+flat -- if we are in flat view
+
 
