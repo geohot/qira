@@ -97,7 +97,7 @@ $(document).ready(function() {
   $('#staticpanel').on('mouseout', '#outergbox', function(e) {
     /*p(e.target);
     p(e.target.id);*/
-    if (e.target.id === "outergbox") {
+    if (e.target.id === "outergbox" || e.target.id === "gcanvas") {
       endDrag(e.screenX, e.screenY, true);
     }
   });

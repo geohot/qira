@@ -144,6 +144,7 @@ Graph.prototype.render = function() {
   var canvas = document.createElement("canvas");
   canvas.width = fnum(gdata[2])+10;
   canvas.height = fnum(gdata[3])+10;
+  canvas.id = "gcanvas";
   gbox.appendChild(canvas);
   var ctx = canvas.getContext("2d");
 

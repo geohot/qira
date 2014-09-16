@@ -209,7 +209,7 @@ class Program:
     else:
         raise Exception("unknown binary type")
 
-    if qira_config.WITH_STATIC:
+    if qira_config.WITH_STATIC and qira_config.WITH_IDA:
       # call out to ida
       print "*** running the ida parser"
       ret = os.system(qira_config.BASEDIR+"/static/python32/Python/python "+qira_config.BASEDIR+"/static/ida_parser.py /tmp/qira_binary > /tmp/qida_log")
@@ -233,7 +233,6 @@ class Program:
       dat = open(self.program, "rb").read()
       load_addr = 0x8048000
 
-      
       # generate the static data for the instruction
       print "** running static"
       for addr in self.tags:
