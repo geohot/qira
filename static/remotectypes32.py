@@ -23,7 +23,7 @@ sock.bind(sockpath)
 atexit.register(os.remove, sockpath)
 sock.listen(1)
 
-for path in (os.environ.get('PYTHON32'), './python32/Python/python', '../python32/Python/python'):
+for path in (os.environ.get('PYTHON32'), os.path.dirname(os.path.realpath(__file__))+'/python32/Python/python'):
   if path and os.path.isfile(path):
     python32 = (path,)
     break
