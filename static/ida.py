@@ -116,7 +116,7 @@ def run_ida():
     idle_fxn()
 
 def init_with_binary(filename):
-  global ida, libc
+  global ida, libc, FILE
 
   FILE = "/tmp/qida/ida_binary"
   os.system("rm -rf /tmp/qida; mkdir -p /tmp/qida")

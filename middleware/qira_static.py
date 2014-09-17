@@ -5,7 +5,10 @@ from flask import request
 from flask.ext.socketio import SocketIO, emit
 import os
 import json
-from static import ida
+
+if qira_config.WITH_IDA:
+  # this import requires python32
+  from static import ida
 
 # should namespace be changed to static?
 
@@ -29,6 +32,8 @@ from static import ida
 # handle functions outside this
 #   function stack frames
 #   decompilation
+
+# TODO(geohot): add a get names function
 
 @app.route('/gettagsa', methods=["POST"])
 def gettagsa():
@@ -106,6 +111,7 @@ def settags(tags):
   for addr in tags:
     naddr = fhex(addr)
     for i in tags[addr]:
+      # TODO(geohot): update the IDA backend here
       program.tags[naddr][i] = tags[addr][i]
       print hex(naddr), i, program.tags[naddr][i]
 
@@ -125,4 +131,6 @@ def graph_dot():
 def init_static(lprogram):
   global program
   program = lprogram
+  if qira_config.WITH_IDA:
+    ida.init_with_binary(program.program)
 

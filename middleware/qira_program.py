@@ -215,7 +215,8 @@ class Program:
     else:
         raise Exception("unknown binary type")
 
-    if qira_config.WITH_STATIC and qira_config.WITH_IDA:
+    # disabled prestart ida for now
+    if False and qira_config.WITH_STATIC and qira_config.WITH_IDA:
       # call out to ida
       print "*** running the ida parser"
       ret = os.system(qira_config.BASEDIR+"/static/python32/Python/python "+qira_config.BASEDIR+"/static/ida_parser.py /tmp/qira_binary > /tmp/qida_log")
