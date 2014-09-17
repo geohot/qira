@@ -87,9 +87,18 @@ Graph.prototype.inLineage = function(addr, qaddr, seen) {
   return false;
 };
 
+var gPos = {};
+
 // this runs sugiyama...
 Graph.prototype.render = function() {
+  var name = Object.keys(this.vertices).toString();
   var send = "digraph graphname {\n";
+
+  // record the old gbox position
+  var oldgbox = $("#gbox");
+  if (oldgbox.length > 0) {
+    gPos[oldgbox[0].className] = [fdec(oldgbox.css("margin-left")), fdec(oldgbox.css("margin-top"))];
+  }
 
   var outergbox = $('<div id="outergbox"></div>');
   $("#staticpanel").html("");
@@ -97,6 +106,11 @@ Graph.prototype.render = function() {
   outergbox[0].appendChild(gbox);
   document.getElementById("staticpanel").appendChild(outergbox[0]);
   gbox.id = 'gbox';
+  gbox.className = name;
+  if (name in gPos) {
+    $("#gbox").css("margin-left", gPos[name][0]);
+    $("#gbox").css("margin-top", gPos[name][1]);
+  }
 
   for (addr in this.vertices) {
     var r = this.vertices[addr].rendered;
@@ -130,6 +144,7 @@ Graph.prototype.render = function() {
   var canvas = document.createElement("canvas");
   canvas.width = fnum(gdata[2])+10;
   canvas.height = fnum(gdata[3])+10;
+  canvas.id = "gcanvas";
   gbox.appendChild(canvas);
   var ctx = canvas.getContext("2d");
 

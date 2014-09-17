@@ -26,3 +26,9 @@
   padding: 10px;
 }
 
+#outergbox {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+}
+

@@ -9,40 +9,54 @@ if __name__ == "__main__":
     sock.connect(argv[1])
     remoteobj.Connection(sock, argv[2]).runServer(__import__('ctypes'))
   except:
-    print 'The remotectypes32 process is angrily exiting.'
+    print 'The remotectypes32 process is angrily exiting.',
     raise
+  exit(0)
+
+# Client
+import sys, os, subprocess, atexit
+secret = os.urandom(20).encode('hex')
+sockpath = '/tmp/remotectypes32.sock'+os.urandom(4).encode('hex')
+
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+sock.bind(sockpath)
+atexit.register(os.remove, sockpath)
+sock.listen(1)
+
+for path in (os.environ.get('PYTHON32'), os.path.dirname(os.path.realpath(__file__))+'/python32/Python/python'):
+  if path and os.path.isfile(path):
+    python32 = (path,)
+    break
 else:
-  # Client
-  import sys, os, time, subprocess, atexit
-  secret = os.urandom(20).encode('hex')
-  sockpath = '/tmp/remotectypes32.sock'+os.urandom(4).encode('hex')
-
-  atexit.register(os.remove, sockpath)
-
-  sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-  sock.bind(sockpath)
-  sock.listen(1)
-
-  for path in (os.environ.get('PYTHON32'), './python32/Python/python', '../python32/Python/python'):
-    if path and os.path.isfile(path):
-      python32 = (path,)
-      break
+  if sys.platform == 'darwin':
+    python32 = ('/usr/bin/arch', '-i386', '/System/Library/Frameworks/Python.framework/Versions/Current/bin/python2.7')
   else:
-    if sys.platform == 'darwin':
-      python32 = ('/usr/bin/arch', '-i386', '/System/Library/Frameworks/Python.framework/Versions/Current/bin/python2.7')
-    else:
-      raise Exception('Set env variable PYTHON32 to an i386 python.')
+    raise Exception('Set env variable PYTHON32 to an i386 python.')
 
-  p = subprocess.Popen(python32+(__file__, sockpath, secret))
+p = subprocess.Popen(python32+(__file__, sockpath, secret))
 
-  conn, addr = sock.accept()
-  ctypes = remoteobj.Connection(conn, secret).connectProxy()
+sock, addr = sock.accept()
+conn = remoteobj.Connection(sock, secret)
+ctypes = conn.connectProxy()
 
-  # Make `from remotectypes32 import *` work as expected
-  __all__ = []
-  d = ctypes.__dict__
-  for k in d:
-    if k.startswith('__') and k.endswith('__'): continue
-    v = d[k]
-    locals()[k] = v
-    __all__.append(k)
+def finishup():
+  if conn: conn.disconnect()
+  from time import sleep
+  for i in (0.1, 0.3, 0.5):
+    if p.poll() is not None: break
+    sleep(i)
+  else:
+    p.kill()
+atexit.register(finishup)
+
+def remote_func(f):
+  g = conn.deffun(f, set(f.__code__.co_names), ())
+  conn._exec('for k, v in ctypes.__dict__.iteritems(): g.__globals__[k] = v', {'ctypes':ctypes, 'g':g})
+  return g
+
+__all__ = ['remote_func']
+
+# Make `from remotectypes32 import *` work as expected
+d = conn._eval("{k:v for k, v in ctypes.__dict__.iteritems() if not (k.startswith('__') and k.endswith('__'))}", {'ctypes':ctypes})
+locals().update(d)
+__all__.extend(d.iterkeys())

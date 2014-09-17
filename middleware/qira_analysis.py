@@ -287,6 +287,9 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
           time.sleep(0.1)
 
       ins = program.tags[r[0]['address']]['instruction']
+
+      # set the lengths of the instructions
+      program.tags[r[0]['address']]['len'] = r[0]['data']
     ret.append((r[0]['address'], r[0]['data'], r[0]['clnum'], ins))
     if (time.time() - start) > 0.01:
       time.sleep(0.01)

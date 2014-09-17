@@ -5,6 +5,7 @@ from flask import request
 from flask.ext.socketio import SocketIO, emit
 import os
 import json
+from static import ida
 
 # should namespace be changed to static?
 

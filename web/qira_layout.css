@@ -64,12 +64,13 @@ body {
 #onlypanel {
   width: 620px;
   height: 100%;
-  /*background-color: #AAAAAA;*/
   /*border: 1px solid black;*/
   border-left: 1px solid black;
   border-right: 1px solid black;
   padding: 4px;
   box-sizing: border-box;
+  z-index: 1;
+  position: relative;
 }
 
 .panelthing {
@@ -97,7 +98,7 @@ body {
 
 
 .container {
- background-color: #AAAAAA;
+  background-color: #AAAAAA;
 }
 
 .container:after {
@@ -108,10 +109,11 @@ body {
 
 .col {
   float: left;
+  background-color: #AAAAAA;
 }
 
-#container0 {
-  height: 100%;
+body {
+  background-color: #AAAAAA;
 }
 
 #vtimelinebox {
@@ -123,5 +125,7 @@ body {
   overflow-y: hidden;
   white-space: nowrap;
   box-sizing: border-box;
+  z-index: 1;
+  position: relative;
 }
 

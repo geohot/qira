@@ -1,4 +1,4 @@
-import os
+import os,sys
 
 WITH_CDA = False
 WITH_DWARF = False
@@ -14,6 +14,7 @@ else:
   TRACE_FILE_BASE = "/tmp/qira_logs/"
 
 BASEDIR = os.path.realpath(os.path.dirname(os.path.realpath(__file__))+"/../")
+sys.path.append(BASEDIR)
 CODESEARCHDIR = BASEDIR+"/cda/codesearch-latest/"
 #CODESEARCHDIR = "/usr/bin/"
 
@@ -22,4 +23,5 @@ CALLED_AS_CDA = False
 # turn this off for now on releases
 WITH_STATIC = True
 WITH_CAPSTONE = False
+WITH_IDA = False
 
