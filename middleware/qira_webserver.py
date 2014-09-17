@@ -415,14 +415,14 @@ def serve(path):
     return Response(dat, mimetype="text/html")
 
 # must go at the bottom
-import qira_static
-
 def run_server(largs, lprogram):
   global args
   global program
   args = largs
   program = lprogram
-  qira_static.init_static(program)
+  if qira_config.WITH_STATIC:
+    import qira_static
+    qira_static.init_static(program)
   if qira_config.WITH_CDA:
     import cacheserver
     app.register_blueprint(cacheserver.app)
