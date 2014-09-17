@@ -3,10 +3,10 @@
 stream = io.connect(STREAM_URL);
 
 Deps.autorun(function() { DA("update static view");
-  var iaddr = Session.get('iaddr');
+  var iview = Session.get('iview');
   var flat = Session.get('flat');
-  if (iaddr === undefined) return;
-  stream.emit('getstaticview', iaddr, flat, [-15,40]);
+  if (iview === undefined) return;
+  stream.emit('getstaticview', iview, flat, [-15,40]);
 });
 
 /*$(function() {

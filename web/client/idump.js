@@ -15,6 +15,7 @@ function on_instructions(msg) { DS("instructions");
 
     if (ins.clnum === clnum) {
       Session.set('iaddr', ins.address);
+      Session.set('iview', ins.address);
     }
 
     if (ins.name == undefined) {

@@ -22,6 +22,7 @@ function push_history(reason, replace) {
   json['cview'] = Session.get('cview');
   json['dview'] = Session.get('dview');
   json['sview'] = Session.get('sview');
+  json['iview'] = Session.get('iview');
 
   // any addresses that we navigated to in a reasonable way
   json['clnum'] = Session.get('clnum');
@@ -79,6 +80,7 @@ function update_iaddr(addr, dirty) {
   Session.set("iaddr", addr);
   if (dirty) {
     Session.set("dirtyiaddr", true);
+    Session.set("iview", addr);
   }
   push_history("update iaddr");
 }
