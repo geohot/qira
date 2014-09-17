@@ -117,6 +117,7 @@ daddr -- Selected data address
 
 cview -- Viewed changelists in the vtimeline
 dview -- Viewed window into data in the hexeditor
+iview -- Viewed address in the static view
 
 max_clnum -- Max changelist number for each fork
 

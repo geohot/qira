@@ -85,6 +85,8 @@ if __name__ == '__main__':
     qira_config.WITH_DWARF = True
   if args.ida:
     qira_config.WITH_IDA = True
+    qira_config.WITH_STATIC = True
+    qira_config.WITH_CAPSTONE = True
   if args.flush_cache:
     print "*** flushing caches"
     os.system("rm -rfv /tmp/qira*")
