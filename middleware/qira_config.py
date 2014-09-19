@@ -26,4 +26,3 @@ WITH_CAPSTONE = False
 
 WITH_IDA = False
 
-

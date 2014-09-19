@@ -33,6 +33,19 @@ if qira_config.WITH_IDA:
 #   function stack frames
 #   decompilation
 
+
+# *** NEWER STATIC FUNCTIONS USE IDA AS STATIC BACKEND ***
+
+def get_static_bytes(addr, llen, numlist=False):
+  try:
+    ret = elf_dat[addr-load_addr:addr-load_addr+program.tags[addr]['len']]
+    if numlist:
+      return map(ord, list(ret))
+    else:
+      return ret
+  except:
+    return None
+
 # input is a list of addresses, output is a dictionary names if they exist
 @socketio.on('getnames', namespace='/qira')
 @socket_method
@@ -40,9 +53,10 @@ def getnames(addrs):
   ret = {}
   for i in addrs:
     i = fhex(i)
-    if qira_config.WITH_IDA:
+    # this is slow
+    if False and qira_config.WITH_IDA:
       name = ida.get_name(i)
-      print i, name
+      #print i, name
       if name != None:
         ret[ghex(i)] = name
     else:
@@ -53,7 +67,7 @@ def getnames(addrs):
 @socketio.on('gotoname', namespace='/qira')
 @socket_method
 def gotoname(name):
-  if qira_config.WITH_IDA:
+  if False and qira_config.WITH_IDA:
     ea = ida.get_name_ea(name)
     if ea != None:
       emit('setiaddr', ghex(ea))
@@ -79,6 +93,11 @@ def settags(tags):
           ida.set_comment(naddr, tags[addr][i])
       program.tags[naddr][i] = tags[addr][i]
       print hex(naddr), i, program.tags[naddr][i]
+
+@socketio.on('getstaticview', namespace='/qira')
+@socket_method
+def getstaticview(haddr, flat, flatrange):
+  addr = fhex(haddr)
 
 # *** OLDER, LESS SUPPORTED STATIC FUNCTIONS ***
 
@@ -126,24 +145,29 @@ def getstaticview(haddr, flat, flatrange):
         if 'len' in program.tags[i-j] and program.tags[i-j]['len'] == j:
           i -= j
           program.tags[i]['address'] = ghex(i)
+          program.tags[i]['bytes'] = get_static_bytes(i, j, True)
           ret.append(program.tags[i])
           did_append = True
           break
       if not did_append:
         i -= 1
         program.tags[i]['address'] = ghex(i)
+        program.tags[i]['bytes'] = get_static_bytes(i, 1, True)
         ret.append(program.tags[i])
     ret = ret[::-1]
+
     # find forward
     i = addr
     while len(ret) != abs(flatrange[0]) + flatrange[1]:
       program.tags[i]['address'] = ghex(i)
-      ret.append(program.tags[i])
       #print program.tags[i]
       if 'len' in program.tags[i]:
+        program.tags[i]['bytes'] = get_static_bytes(i, program.tags[i]['len'], True)
         i += program.tags[i]['len']
       else:
+        program.tags[i]['bytes'] = get_static_bytes(i, 1, True)
         i += 1
+      ret.append(program.tags[i])
     emit('tags', ret, False)
   else:
     # function
@@ -170,12 +194,22 @@ def init_static(lprogram):
   global program
   program = lprogram
   if qira_config.WITH_IDA:
-    ida.init_with_program(program)
+    ida.init_with_binary(program.program)
+
+    tags = ida.fetch_tags()
+    print "*** ida returned %d tags" % (len(tags))
+
+    # grr, copied from settags, merge into tags
+    for addr in tags:
+      for i in tags[addr]:
+        program.tags[addr][i] = tags[addr][i]
+
 
   # as a hack, we can assume it's loading at 0x8048000
   # forget sections for now
   # we really need to add a static memory repo
-  dat = open(program.program, "rb").read()
+  global elf_dat, load_addr
+  elf_dat = open(program.program, "rb").read()
   load_addr = 0x8048000
 
   # generate the static data for the instruction
@@ -183,7 +217,7 @@ def init_static(lprogram):
   for addr in program.tags:
     if 'flags' in program.tags[addr] and program.tags[addr]['flags']&0x600 == 0x600:
       # the question here is where do we get the instruction bytes?
-      raw = dat[addr-load_addr:addr-load_addr+program.tags[addr]['len']]
+      raw = get_static_bytes(addr, program.tags[addr]['len'])
       # capinstruction, bap
       program.tags[addr]['capinstruction'] = program.disasm(raw, addr)
       #print hex(addr), self.tags[addr]['len'], self.tags[addr]['capinstruction']

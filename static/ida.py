@@ -134,26 +134,25 @@ def fetch_tags():
 
   for i in range(0, ida.get_nlist_size()):
     ea = ida.get_nlist_ea(i)
-    name = cast(ida.get_nlist_name(i), c_char_p).value.strip()
+    name = c_char_p(ida.get_nlist_name(i)).value.strip()
     #print hex(ea), name
-    tags[ghex(ea)]['name'] = name
+    tags[ea]['name'] = name
 
   def parse_addr(i):
     flags = ida.get_flags_ex(i, 0)
     # is code
     if (flags&0x600) == 0x600:
-      #print ghex(i)
-      tags[ghex(i)]['flags'] = flags
-      tags[ghex(i)]['flow'] = []
-      tags[ghex(i)]['semantics'] = []
+      print ghex(i)
+      tags[i]['flags'] = flags
+      tags[i]['flow'] = []
+      tags[i]['semantics'] = []
+      tags[i]['len'] = ida.decode_insn(i)
       if ida.is_call_insn(i):
-        tags[ghex(i)]['semantics'].append("call")
+        tags[i]['semantics'].append("call")
       if ida.is_ret_insn(i, 1):
-        tags[ghex(i)]['semantics'].append("ret")
-      tags[ghex(i)]['len'] = ida.decode_insn(i)
-      #print ghex(i), ida.is_basic_block_end(0)
+        tags[i]['semantics'].append("ret")
       if ida.is_basic_block_end(0):
-        tags[ghex(i)]['semantics'].append("endbb")
+        tags[i]['semantics'].append("endbb")
       #print ghex(i), tags[ghex(i)]['len']
     return flags
 
@@ -169,7 +168,7 @@ def fetch_tags():
     #print i
     fxn = cast(ida.getn_func(i), POINTER(c_long))
     fxn = [fxn[0], fxn[1]]
-    tags[ghex(fxn[0])]['funclength'] = fxn[1]-fxn[0]
+    tags[fxn[0]]['funclength'] = fxn[1]-fxn[0]
     #print hex(fxn[0]), hex(fxn[1])
 
     # get the flags for each address in the function
@@ -178,11 +177,11 @@ def fetch_tags():
       #flags = parse_addr(i)
       flags = ida.get_flags_ex(i, 0)
       if (flags&0x600) == 0x600:
-        tags[ghex(i)]['scope'] = ghex(fxn[0])
+        tags[i]['scope'] = ghex(fxn[0])
         cref = ida.get_first_fcref_from(i)
         while cref != -1:
           if cref >= fxn[0] and cref < fxn[1]:
-            tags[ghex(i)]['flow'].append(ghex(cref))
+            tags[i]['flow'].append(ghex(cref))
           #print "   ",ghex(cref)
           cref = ida.get_next_fcref_from(i, cref)
 
@@ -190,34 +189,34 @@ def fetch_tags():
 
 
 def set_name(ea, name):
-  ida.set_name(ea, name, 0)
+  ida.set_name(ea, create_string_buffer(name), 0)
 
 def set_comment(ea, text):
   # all repeatable
-  ida.set_cmt(ea, text, 1)
+  ida.set_cmt(ea, create_string_buffer(text), 1)
 
 def get_name(ea):
+  # TODO(ryan): why do i have to malloc here?
   tmp = libc.malloc(80)
   #tmp = create_string_buffer(80)
+  ida.get_name.restype=c_char_p
   ret = ida.get_name(BADADDR, ea, tmp, 80)
-  if ret != 0:
-    # TODO(ryan): wtf what's breaking here
-    return "named"
-    #return cast(tmp, c_char_p).value
+  if ret != None:
+    return ret
   return None
 
 def get_name_ea(name):
-  ea = ida.get_name_ea(BADADDR, name)
+  ea = ida.get_name_ea(BADADDR, create_string_buffer(name))
   if ea == BADADDR:
     return None
   return ea
 
-def init_with_program(program):
+def init_with_binary(filename):
   global ida, libc, FILE
 
   FILE = "/tmp/qida/ida_binary"
   os.system("rm -rf /tmp/qida; mkdir -p /tmp/qida")
-  os.system("cp "+program.program+" "+FILE)
+  os.system("cp "+filename+" "+FILE)
 
   if sys.platform == 'darwin':
     ida = cdll.LoadLibrary(IDAPATH+"/libida.dylib")
@@ -239,16 +238,4 @@ def init_with_program(program):
   newfile = c_int(0)
   print "*** ida.init_database", ida.init_database(argc, argv, pointer(newfile))
   run_ida()
-
-  # *** REMOVE UNDER THIS LINE ***
-
-  tags = fetch_tags()
-  print "*** ida returned %d tags" % (len(tags))
-
-  # grr, copied from settags
-  for addr in tags:
-    naddr = fhex(addr)
-    for i in tags[addr]:
-      program.tags[naddr][i] = tags[addr][i]
-      #print hex(naddr), self.tags[naddr][i]
 
