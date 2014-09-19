@@ -40,18 +40,29 @@ def getnames(addrs):
   ret = {}
   for i in addrs:
     i = fhex(i)
-    if 'name' in program.tags[i]:
-      ret[ghex(i)] = program.tags[i]['name']
+    if qira_config.WITH_IDA:
+      name = ida.get_name(i)
+      print i, name
+      if name != None:
+        ret[ghex(i)] = name
+    else:
+      if 'name' in program.tags[i]:
+        ret[ghex(i)] = program.tags[i]['name']
   emit('names', ret, True)
 
 @socketio.on('gotoname', namespace='/qira')
 @socket_method
 def gotoname(name):
-  # TODO: very low quality algorithm
-  for i in program.tags:
-    if 'name' in program.tags[i] and program.tags[i]['name'] == name:
-      emit('setiaddr', ghex(i))
-      break
+  if qira_config.WITH_IDA:
+    ea = ida.get_name_ea(name)
+    if ea != None:
+      emit('setiaddr', ghex(ea))
+  else:
+    # TODO: very low quality algorithm
+    for i in program.tags:
+      if 'name' in program.tags[i] and program.tags[i]['name'] == name:
+        emit('setiaddr', ghex(i))
+        break
 
 # used to set names and comments and stuff
 # ['name', 'comment']
@@ -61,7 +72,11 @@ def settags(tags):
   for addr in tags:
     naddr = fhex(addr)
     for i in tags[addr]:
-      # TODO(geohot): update the IDA backend here
+      if qira_config.WITH_IDA:
+        if i == 'name':
+          ida.set_name(naddr, tags[addr][i])
+        elif i == 'comment':
+          ida.set_comment(naddr, tags[addr][i])
       program.tags[naddr][i] = tags[addr][i]
       print hex(naddr), i, program.tags[naddr][i]
 

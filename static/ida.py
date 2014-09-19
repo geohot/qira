@@ -189,6 +189,29 @@ def fetch_tags():
   return tags
 
 
+def set_name(ea, name):
+  ida.set_name(ea, name, 0)
+
+def set_comment(ea, text):
+  # all repeatable
+  ida.set_cmt(ea, text, 1)
+
+def get_name(ea):
+  tmp = libc.malloc(80)
+  #tmp = create_string_buffer(80)
+  ret = ida.get_name(BADADDR, ea, tmp, 80)
+  if ret != 0:
+    # TODO(ryan): wtf what's breaking here
+    return "named"
+    #return cast(tmp, c_char_p).value
+  return None
+
+def get_name_ea(name):
+  ea = ida.get_name_ea(BADADDR, name)
+  if ea == BADADDR:
+    return None
+  return ea
+
 def init_with_program(program):
   global ida, libc, FILE
 
@@ -216,6 +239,9 @@ def init_with_program(program):
   newfile = c_int(0)
   print "*** ida.init_database", ida.init_database(argc, argv, pointer(newfile))
   run_ida()
+
+  # *** REMOVE UNDER THIS LINE ***
+
   tags = fetch_tags()
   print "*** ida returned %d tags" % (len(tags))
 
