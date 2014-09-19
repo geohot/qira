@@ -95,11 +95,12 @@ $(document).ready(function() {
     endDrag(e.screenX, e.screenY, true);
   });
   $('#staticpanel').on('mouseout', '#outergbox', function(e) {
+    // TODO: FIX THIS!
     /*p(e.target);
     p(e.target.id);*/
-    if (e.target.id === "outergbox" || e.target.id === "gcanvas") {
+    /*if (e.target.id === "outergbox" || e.target.id === "gcanvas") {
       endDrag(e.screenX, e.screenY, true);
-    }
+    }*/
   });
   $('body').on('mousewheel', '.flat', function(e) {
     /*var cdr = $(".flat").children();
