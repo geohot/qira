@@ -37,9 +37,14 @@ fi
 
 if [ ! -d llvm ]; then
   pushd .
-  git clone https://github.com/maurer/llvm.git
+  #wget http://ftp.de.debian.org/debian/pool/main/l/llvm-toolchain-snapshot/llvm-toolchain-snapshot_3.6~svn215195.orig.tar.bz2
+  #tar xvf llvm-toolchain-snapshot_3.6~svn215195.orig.tar.bz2
+  #mv llvm-toolchain-snapshot_3.6~svn215195 llvm
+  #cd llvm
+  git clone https://github.com/llvm-mirror/llvm.git
   cd llvm
-  git checkout c-disasm-mcinst
+  git checkout 0914f63cc3ce62b6872e2760dd325829b52d8396
+  patch -f -p1 < ../../extra/llvmpatch/c-disasm-mcinst
   popd
 fi
 
@@ -47,7 +52,7 @@ if [ ! -d llvm-build ]; then
   pushd .
   mkdir llvm-build
   cd llvm-build
-  ../llvm/configure --enable-optimized
+  ../llvm/configure --enable-optimized --disable-assertions
   make -j $(grep processor < /proc/cpuinfo | wc -l)
 
   # clobber the system llvm
@@ -89,6 +94,15 @@ if [ ! -d holmes ]; then
   make
 
   popd
+fi
+
+if [ ! -d bap-container ]; then
+  git clone https://github.com/BinaryAnalysisPlatform/bap-container.git
+
+  cd bap-container
+  mkdir build && cd build
+  cmake -DCMAKE_CXX_COMPILER=g++-4.8 ..
+  make
 fi
 
 # installed at bap/bap-lifter/toil.native
