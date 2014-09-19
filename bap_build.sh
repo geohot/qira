@@ -4,7 +4,13 @@
 # because I already had tons of stuff on this VM
 # update before release
 
-sudo apt-get install ocaml-interp libpqxx-3.1 libpqxx3-dev glogg python-dev postgresql-server-dev-9.3 g++-4.8 gcc-4.8 ocaml-findlib opam camlp4-extra cmake
+pushd .
+cd /tmp
+wget https://bootstrap.pypa.io/get-pip.py
+sudo python get-pip.py
+popd
+
+sudo apt-get install libgmp-dev m4 ocaml-interp libpqxx-3.1 libpqxx3-dev glogg python-dev postgresql-server-dev-9.3 g++-4.8 gcc-4.8 ocaml-findlib opam camlp4-extra cmake
 opam init
 opam install piqi zarith core_kernel
 
@@ -83,6 +89,7 @@ if [ ! -d bap-lifter ]; then
   popd
 fi
 
+# below this line is broken
 
 if [ ! -d holmes ]; then
   pushd .
