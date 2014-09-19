@@ -372,8 +372,10 @@ class Program:
         elif arch == "x86-64":
           md = Cs(CS_ARCH_X86, CS_MODE_64)
         elif arch == "arm":
-          md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
+          md = Cs(CS_ARCH_ARM, CS_MODE_THUMB)
           # to switch between modes:
+          # new idea: use qemu to figure out which intructions are arm/thumb
+          # pick default choice based on 
           # md.mode = CS_MODE_THUMB
           # md.mode = CS_MODE_ARM
         elif arch == "aarch64":
@@ -554,7 +556,7 @@ class Trace:
 
     # analysis stuff
     self.maxclnum = None
-    self.mixclnum = None
+    self.minclnum = None
     self.flow = None
     self.dmap = None
     self.maxd = 0
