@@ -132,5 +132,28 @@ def init_static(lprogram):
   global program
   program = lprogram
   if qira_config.WITH_IDA:
-    ida.init_with_binary(program.program)
+    ida.init_with_program(program)
+
+  # as a hack, we can assume it's loading at 0x8048000
+  # forget sections for now
+  # we really need to add a static memory repo
+  dat = open(program.program, "rb").read()
+  load_addr = 0x8048000
+
+  # generate the static data for the instruction
+  print "** running static"
+  for addr in program.tags:
+    if 'flags' in program.tags[addr] and program.tags[addr]['flags']&0x600 == 0x600:
+      # the question here is where do we get the instruction bytes?
+      raw = dat[addr-load_addr:addr-load_addr+program.tags[addr]['len']]
+      # capinstruction, bap
+      program.tags[addr]['capinstruction'] = program.disasm(raw, addr)
+      #print hex(addr), self.tags[addr]['len'], self.tags[addr]['capinstruction']
+      # for now, make it the default
+      program.tags[addr]['instruction'] = program.tags[addr]['capinstruction']['repr']
+
+      # BAP IS BALLS SLOW
+      #self.tags[addr]['bap'] = self.genbap(raw, addr)
+  print "** static done"
+
 

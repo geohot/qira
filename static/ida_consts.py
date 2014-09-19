@@ -1,6 +1,5 @@
 import os
 from os import environ
-HOMEDIR = os.path.realpath(os.path.dirname(os.path.realpath(__file__))+"/../../")
 
 """
 REAL_IDAPATH = "/home/vagrant/ida-6.6/"
@@ -8,8 +7,10 @@ if os.path.isdir(REAL_IDAPATH):
   IDAPATH = environ.get("IDAPATH", REAL_IDAPATH)
 else:
 """
+
+# idademo66 is expected in the home directory
 if True:
-  DEMO_IDAPATH = os.path.realpath(HOMEDIR+"/idademo66/")
+  DEMO_IDAPATH = os.path.realpath(os.path.expanduser("~")+"/idademo66/")
   IDAPATH = environ.get("IDAPATH", DEMO_IDAPATH)
 
 BADADDR = 0xFFFFFFFF

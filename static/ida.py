@@ -4,6 +4,18 @@ import struct
 from ida_consts import *
 import time
 
+# ugh, qira_base
+def ghex(a):
+  if a == None:
+    return None
+  return hex(a).strip("L")
+
+def fhex(a):
+  try:
+    return int(a, 16)
+  except:
+    return None
+
 # fixes the help issue
 os.environ['PATH'] += ":"+IDAPATH
 os.environ['LD_LIBRARY_PATH'] = IDAPATH
@@ -114,13 +126,75 @@ def run_ida():
   done = False
   while not done:
     idle_fxn()
+  print "*** run_ida finished"
 
-def init_with_binary(filename):
+def fetch_tags():
+  import collections
+  tags = collections.defaultdict(dict)
+
+  for i in range(0, ida.get_nlist_size()):
+    ea = ida.get_nlist_ea(i)
+    name = cast(ida.get_nlist_name(i), c_char_p).value.strip()
+    #print hex(ea), name
+    tags[ghex(ea)]['name'] = name
+
+  def parse_addr(i):
+    flags = ida.get_flags_ex(i, 0)
+    # is code
+    if (flags&0x600) == 0x600:
+      #print ghex(i)
+      tags[ghex(i)]['flags'] = flags
+      tags[ghex(i)]['flow'] = []
+      tags[ghex(i)]['semantics'] = []
+      if ida.is_call_insn(i):
+        tags[ghex(i)]['semantics'].append("call")
+      if ida.is_ret_insn(i, 1):
+        tags[ghex(i)]['semantics'].append("ret")
+      tags[ghex(i)]['len'] = ida.decode_insn(i)
+      #print ghex(i), ida.is_basic_block_end(0)
+      if ida.is_basic_block_end(0):
+        tags[ghex(i)]['semantics'].append("endbb")
+      #print ghex(i), tags[ghex(i)]['len']
+    return flags
+
+  i = 0
+  while 1:
+    i = ida.nextaddr(i)
+    if i == -0x1:
+      break
+    parse_addr(i)
+
+  fxn_count = ida.get_func_qty()
+  for i in range(0, fxn_count):
+    #print i
+    fxn = cast(ida.getn_func(i), POINTER(c_long))
+    fxn = [fxn[0], fxn[1]]
+    tags[ghex(fxn[0])]['funclength'] = fxn[1]-fxn[0]
+    #print hex(fxn[0]), hex(fxn[1])
+
+    # get the flags for each address in the function
+    for i in range(fxn[0], fxn[1]):
+      # this should be the only thing set here
+      #flags = parse_addr(i)
+      flags = ida.get_flags_ex(i, 0)
+      if (flags&0x600) == 0x600:
+        tags[ghex(i)]['scope'] = ghex(fxn[0])
+        cref = ida.get_first_fcref_from(i)
+        while cref != -1:
+          if cref >= fxn[0] and cref < fxn[1]:
+            tags[ghex(i)]['flow'].append(ghex(cref))
+          #print "   ",ghex(cref)
+          cref = ida.get_next_fcref_from(i, cref)
+
+  return tags
+
+
+def init_with_program(program):
   global ida, libc, FILE
 
   FILE = "/tmp/qida/ida_binary"
   os.system("rm -rf /tmp/qida; mkdir -p /tmp/qida")
-  os.system("cp "+filename+" "+FILE)
+  os.system("cp "+program.program+" "+FILE)
 
   if sys.platform == 'darwin':
     ida = cdll.LoadLibrary(IDAPATH+"/libida.dylib")
@@ -137,11 +211,18 @@ def init_with_binary(filename):
   # how hack is that, KFC
   rsc = "\xB9"+struct.pack("I", cast(fxn, c_void_p).value)+"\xFF\xD1\x59\x83\xC4\x04\xFF\xE1"
   sc = create_string_buffer(rsc)
-  print "mprotect", libc.mprotect(addressof(sc) & 0xFFFFF000, 0x1000, 7)
-  print "init_kernel", ida.init_kernel(sc, argc, argv)
+  libc.mprotect(addressof(sc) & 0xFFFFF000, 0x1000, 7)
+  print "*** ida.init_kernel", ida.init_kernel(sc, argc, argv)
   newfile = c_int(0)
-  print "init_database", ida.init_database(argc, argv, pointer(newfile))
-  print "ida_file",newfile
+  print "*** ida.init_database", ida.init_database(argc, argv, pointer(newfile))
   run_ida()
+  tags = fetch_tags()
+  print "*** ida returned %d tags" % (len(tags))
 
+  # grr, copied from settags
+  for addr in tags:
+    naddr = fhex(addr)
+    for i in tags[addr]:
+      program.tags[naddr][i] = tags[addr][i]
+      #print hex(naddr), self.tags[naddr][i]
 
