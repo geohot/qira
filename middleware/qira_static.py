@@ -33,7 +33,39 @@ if qira_config.WITH_IDA:
 #   function stack frames
 #   decompilation
 
-# TODO(geohot): add a get names function
+# input is a list of addresses, output is a dictionary names if they exist
+@socketio.on('getnames', namespace='/qira')
+@socket_method
+def getnames(addrs):
+  ret = {}
+  for i in addrs:
+    i = fhex(i)
+    if 'name' in program.tags[i]:
+      ret[ghex(i)] = program.tags[i]['name']
+  emit('names', ret, True)
+
+@socketio.on('gotoname', namespace='/qira')
+@socket_method
+def gotoname(name):
+  # TODO: very low quality algorithm
+  for i in program.tags:
+    if 'name' in program.tags[i] and program.tags[i]['name'] == name:
+      emit('setiaddr', ghex(i))
+      break
+
+# used to set names and comments and stuff
+# ['name', 'comment']
+@socketio.on('settags', namespace='/qira')
+@socket_method
+def settags(tags):
+  for addr in tags:
+    naddr = fhex(addr)
+    for i in tags[addr]:
+      # TODO(geohot): update the IDA backend here
+      program.tags[naddr][i] = tags[addr][i]
+      print hex(naddr), i, program.tags[naddr][i]
+
+# *** OLDER, LESS SUPPORTED STATIC FUNCTIONS ***
 
 @app.route('/gettagsa', methods=["POST"])
 def gettagsa():
@@ -104,17 +136,6 @@ def getstaticview(haddr, flat, flatrange):
     length = program.tags[fhex(start)]['funclength']
     gettags(start, length)
 
-# used to set names and comments and stuff
-@socketio.on('settags', namespace='/qira')
-@socket_method
-def settags(tags):
-  for addr in tags:
-    naddr = fhex(addr)
-    for i in tags[addr]:
-      # TODO(geohot): update the IDA backend here
-      program.tags[naddr][i] = tags[addr][i]
-      print hex(naddr), i, program.tags[naddr][i]
-
 # dot as a service
 @app.route('/dot', methods=["POST"])
 def graph_dot():
@@ -127,6 +148,8 @@ def graph_dot():
   ret = open("/tmp/out.dot").read()
   #print "DOT RESPONSE", ret
   return ret
+
+# *** INIT FUNCTIONS ***
 
 def init_static(lprogram):
   global program
@@ -155,5 +178,4 @@ def init_static(lprogram):
       # BAP IS BALLS SLOW
       #self.tags[addr]['bap'] = self.genbap(raw, addr)
   print "** static done"
-
 

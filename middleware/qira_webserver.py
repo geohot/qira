@@ -124,15 +124,6 @@ def navigateiaddr(iaddr):
     #print 'navigateiaddr', hex(iaddr), filename, line
     socketio.emit('setline', filename, line, namespace='/cda')
 
-@socketio.on('gotoname', namespace='/qira')
-@socket_method
-def gotoname(name):
-  # TODO: very low quality algorithm
-  for i in program.tags:
-    if 'name' in program.tags[i] and program.tags[i]['name'] == name:
-      emit('setiaddr', ghex(i))
-      break
-
 @socketio.on('forkat', namespace='/qira')
 @socket_method
 def forkat(forknum, clnum, pending):

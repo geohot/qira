@@ -101,6 +101,16 @@ function get_address_from_class(t, type) {
 
 var names_cache = {};
 
+function on_names(msg) { DS("names");
+  for (addr in msg) {
+    names_cache[addr] = msg[addr];
+    $(".addr_"+addr).each(function() {
+      $(this).addClass("name");
+      $(this).html(msg[addr]);
+    });
+  }
+} stream.on("names", on_names);
+
 // sync for no blink!
 function replace_names() {
   //return;
@@ -113,21 +123,6 @@ function replace_names() {
     }
     if (ret !== undefined) addrs.push(ret);
   });
-  //stream.emit('gettagsa', addrs);
-
-  function cb(tags) {
-    //p(tags);
-    for (var i=0;i<tags.length;i++) {
-      names_cache[tags[i]['address']] = tags[i]['name'];
-      $(".addr_"+tags[i]['address']).each(function() {
-        if (tags[i]['name'] !== undefined) {
-          $(this).addClass("name");
-          $(this).html(tags[i]['name']);
-        }
-      });
-    }
-  }
-
-  async_tags_request(addrs, cb);
+  stream.emit('getnames', addrs);
 }
 
