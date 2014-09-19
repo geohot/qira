@@ -95,19 +95,25 @@ $(document).ready(function() {
     endDrag(e.screenX, e.screenY, true);
   });
   $('#staticpanel').on('mouseout', '#outergbox', function(e) {
+    // TODO: FIX THIS!
     /*p(e.target);
     p(e.target.id);*/
-    if (e.target.id === "outergbox" || e.target.id === "gcanvas") {
+    /*if (e.target.id === "outergbox" || e.target.id === "gcanvas") {
       endDrag(e.screenX, e.screenY, true);
-    }
+    }*/
   });
   $('body').on('mousewheel', '.flat', function(e) {
     var cdr = $(".flat").children();
     if (e.originalEvent.wheelDelta < 0) {
-      Session.set('iaddr', get_address_from_class(cdr[16].childNodes[0]));
+      Session.set('iview', get_address_from_class(cdr[16].childNodes[0]));
     } else if (e.originalEvent.wheelDelta > 0) {
-      Session.set('iaddr', get_address_from_class(cdr[14].childNodes[0]));
+      Session.set('iview', get_address_from_class(cdr[14].childNodes[0]));
     }
+    /*if (e.originalEvent.wheelDelta < 0) {
+      Session.set('iview', bn_add(Session.get('iview'), -1));
+    } else if (e.originalEvent.wheelDelta > 0) {
+      Session.set('iview', bn_add(Session.get('iview'), 1));
+    }*/
   });
   $("#idump")[0].addEventListener("mousewheel", function(e) {
     //p("idump mousewheel");

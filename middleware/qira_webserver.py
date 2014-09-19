@@ -124,15 +124,6 @@ def navigateiaddr(iaddr):
     #print 'navigateiaddr', hex(iaddr), filename, line
     socketio.emit('setline', filename, line, namespace='/cda')
 
-@socketio.on('gotoname', namespace='/qira')
-@socket_method
-def gotoname(name):
-  # TODO: very low quality algorithm
-  for i in program.tags:
-    if 'name' in program.tags[i] and program.tags[i]['name'] == name:
-      emit('setiaddr', ghex(i))
-      break
-
 @socketio.on('forkat', namespace='/qira')
 @socket_method
 def forkat(forknum, clnum, pending):
@@ -415,14 +406,14 @@ def serve(path):
     return Response(dat, mimetype="text/html")
 
 # must go at the bottom
-import qira_static
-
 def run_server(largs, lprogram):
   global args
   global program
   args = largs
   program = lprogram
-  qira_static.init_static(program)
+  if qira_config.WITH_STATIC:
+    import qira_static
+    qira_static.init_static(program)
   if qira_config.WITH_CDA:
     import cacheserver
     app.register_blueprint(cacheserver.app)

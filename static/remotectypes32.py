@@ -33,7 +33,9 @@ else:
   else:
     raise Exception('Set env variable PYTHON32 to an i386 python.')
 
-p = subprocess.Popen(python32+(__file__, sockpath, secret))
+# ida process output redirected to /dev/null
+p = subprocess.Popen(python32+(__file__, sockpath, secret), stdout=open(os.devnull,'w'))
+#p = subprocess.Popen(python32+(__file__, sockpath, secret))
 
 sock, addr = sock.accept()
 conn = remoteobj.Connection(sock, secret)
@@ -60,3 +62,4 @@ __all__ = ['remote_func']
 d = conn._eval("{k:v for k, v in ctypes.__dict__.iteritems() if not (k.startswith('__') and k.endswith('__'))}", {'ctypes':ctypes})
 locals().update(d)
 __all__.extend(d.iterkeys())
+

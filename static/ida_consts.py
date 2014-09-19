@@ -1,18 +1,20 @@
 import os
 from os import environ
 
-
 """
 REAL_IDAPATH = "/home/vagrant/ida-6.6/"
 if os.path.isdir(REAL_IDAPATH):
   IDAPATH = environ.get("IDAPATH", REAL_IDAPATH)
 else:
 """
+
+# idademo66 is expected in the home directory
 if True:
-  DEMO_IDAPATH = "/home/vagrant/idademo66/"
+  DEMO_IDAPATH = os.path.realpath(os.path.expanduser("~")+"/idademo66/")
   IDAPATH = environ.get("IDAPATH", DEMO_IDAPATH)
 
-BADADDR = 0xFFFFFFFF
+#BADADDR = 0xFFFFFFFF
+BADADDR = -1
 NEF_FIRST = 0x80
 
 idp_notify = ['init', 'term', 'newprc', 'newasm', 'newfile', 'oldfile', 'newbinary', 'endbinary', 'newseg', 'assemble', 'obsolete_makemicro', 'outlabel', 'rename', 'may_show_sreg', 'closebase', 'load_idasgn', 'coagulate', 'auto_empty', 'auto_queue_empty', 'func_bounds', 'may_be_func', 'is_sane_insn', 'is_jump_func', 'gen_regvar_def', 'setsgr', 'set_compiler', 'is_basic_block_end', 'reglink', 'get_vxd_name', 'custom_ana', 'custom_out', 'custom_emu', 'custom_outop', 'custom_mnem', 'undefine', 'make_code', 'make_data', 'moving_segm', 'move_segm', 'is_call_insn', 'is_ret_insn', 'get_stkvar_scale_factor', 'create_flat_group', 'kernel_config_loaded', 'might_change_sp', 'is_alloca_probe', 'out_3byte', 'get_reg_name', 'savebase', 'gen_asm_or_lst', 'out_src_file_lnnum', 'get_autocmt', 'is_insn_table_jump', 'auto_empty_finally', 'loader_finished', 'loader_elf_machine', 'is_indirect_jump', 'verify_noreturn', 'verify_sp', 'renamed', 'add_func', 'del_func', 'set_func_start', 'set_func_end', 'treat_hindering_item', 'str2reg', 'create_switch_xrefs', 'calc_switch_cases', 'determined_main', 'preprocess_chart', 'get_bg_color', 'validate_flirt_func', 'get_operand_string', 'add_cref', 'add_dref', 'del_cref', 'del_dref', 'coagulate_dref', 'register_custom_fixup', 'custom_refinfo', 'set_proc_options', 'adjust_libfunc_ea', 'extlang_changed', 'last_cb_before_debugger']
