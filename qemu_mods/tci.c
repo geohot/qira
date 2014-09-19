@@ -468,7 +468,6 @@ void resize_change_buffer(size_t size);
 #define IS_MEM        0x20000000
 #define IS_START      0x10000000
 #define IS_SYSCALL    0x08000000
-#define IS_THUMB      0x04000000
 #define SIZE_MASK 0xFF
 
 #define FAKE_SYSCALL_LOADSEG 0x10001
@@ -989,19 +988,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
         GLOBAL_logstate->is_filtered = 0;
       }
       GLOBAL_logstate->changelist_number++;
-      // TODO(ned): add thumb logging here
       add_change(tb->pc, tb->size, IS_START);
-      /*
-      #ifdef TARGET_ARM
-        if (env->thumb) {
-          add_change(tb->pc, tb->size, IS_START | IS_THUMB);
-        } else {
-          add_change(tb->pc, tb->size, IS_START);
-        }
-      #else
-        add_change(tb->pc, tb->size, IS_START);
-      #endif
-      */
     }
 
 
