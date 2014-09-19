@@ -297,6 +297,7 @@ class Program:
       return
     cnt = 0
     for d in dat.split("\n"):
+      thumb = False
       if len(d) == 0:
         continue
       # hacks
@@ -313,6 +314,7 @@ class Program:
       else:
         inst = d[d.find(":")+3:]
       self.tags[addr]['instruction'] = inst
+      self.tags[addr]['thumb'] = thumb
       cnt += 1
       #print addr, inst
     #sys.stdout.write("%d..." % cnt); sys.stdout.flush()

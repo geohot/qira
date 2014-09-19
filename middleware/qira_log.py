@@ -6,6 +6,7 @@ IS_WRITE = 0x40000000
 IS_MEM =   0x20000000
 IS_START = 0x10000000
 IS_BIGE  = 0x08000000    # not supported
+#IS_THUMB = 0x04000000
 SIZE_MASK = 0xFF
 
 LOGFILE = "/tmp/qira_log"
@@ -13,6 +14,10 @@ LOGFILE = "/tmp/qira_log"
 def flag_to_type(flags):
   if flags & IS_START:
     typ = "I"
+    #if flags & IS_THUMB:
+    #  typ = "T"
+    #else:
+    #  typ = "I"
   elif flags & IS_WRITE and flags & IS_MEM:
     typ = "S"
   elif not flags & IS_WRITE and flags & IS_MEM:
