@@ -57,11 +57,6 @@ Trace::~Trace() {
 char Trace::get_type_from_flags(uint32_t flags) {
   if (!(flags & IS_VALID)) return '?';
   if (flags & IS_START) return 'I';
-  /*
-  if (flags & IS_START) {
-    if (flags & IS_THUMB) return 'T'; // IS_THUMB implies IS_START
-    else return 'I';
-  */
   if (flags & IS_SYSCALL) return 's';
 
   if (flags & IS_MEM) {

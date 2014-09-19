@@ -267,8 +267,8 @@ class Program:
         continue
       #print repr(d)
       if self.fb == 0x28:   # ARM
-        inst = d[d.rfind("  ")+2:-1] #last bit now the thumb bit
-        thumb_flag = d[-1]
+        inst = d[d.rfind("  ")+2] #last bit now the thumb bit
+        thumb_flag = d[0]
         if thumb_flag == 't':
           thumb = True
         elif thumb_flag == 'n':

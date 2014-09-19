@@ -309,6 +309,10 @@ void real_target_disas(FILE *out, CPUArchState *env, target_ulong code,
     }
 
     for (pc = code; size > 0; pc += count, size -= count) {
+    #ifdef TARGET_ARM
+    if (flags & 1) fprintf(out, "t");
+    else fprintf(out, "n");
+    #endif
 	fprintf(out, "0x" TARGET_FMT_lx ":  ", pc);
 	count = print_insn(pc, &s.info);
 #if 0
@@ -323,10 +327,6 @@ void real_target_disas(FILE *out, CPUArchState *env, target_ulong code,
             fprintf(out, " }");
         }
 #endif
-  #ifdef TARGET_ARM
-  if (flags & 1) fprintf(out, "t");
-  else fprintf(out, "n");
-  #endif
 	fprintf(out, "\n");
 	if (count < 0)
 	    break;
