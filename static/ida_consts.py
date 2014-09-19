@@ -1,6 +1,6 @@
 import os
 from os import environ
-
+HOMEDIR = os.path.realpath(os.path.dirname(os.path.realpath(__file__))+"/../../")
 
 """
 REAL_IDAPATH = "/home/vagrant/ida-6.6/"
@@ -9,7 +9,7 @@ if os.path.isdir(REAL_IDAPATH):
 else:
 """
 if True:
-  DEMO_IDAPATH = "/home/vagrant/idademo66/"
+  DEMO_IDAPATH = os.path.realpath(HOMEDIR+"/idademo66/")
   IDAPATH = environ.get("IDAPATH", DEMO_IDAPATH)
 
 BADADDR = 0xFFFFFFFF
