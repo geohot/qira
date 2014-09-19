@@ -34,8 +34,8 @@ else:
     raise Exception('Set env variable PYTHON32 to an i386 python.')
 
 # ida process output redirected to /dev/null
-p = subprocess.Popen(python32+(__file__, sockpath, secret), stdout=open(os.devnull,'w'))
-#p = subprocess.Popen(python32+(__file__, sockpath, secret))
+#p = subprocess.Popen(python32+(__file__, sockpath, secret), stdout=open(os.devnull,'w'))
+p = subprocess.Popen(python32+(__file__, sockpath, secret))
 
 sock, addr = sock.accept()
 conn = remoteobj.Connection(sock, secret)

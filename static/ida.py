@@ -1,3 +1,4 @@
+#!/usr/bin/env python2.7
 import sys
 import os
 import struct
@@ -21,7 +22,16 @@ os.environ['PATH'] += ":"+IDAPATH
 os.environ['LD_LIBRARY_PATH'] = IDAPATH
 os.environ['IDADIR'] = IDAPATH
 
-from remotectypes32 import *
+if sys.maxsize > 2**32:
+  if __name__ == "__main__":
+    print "relaunching as 32-bit python"
+    os.system("python32/Python/python "+__file__+" "+" ".join(sys.argv[1:]))
+    exit(0)
+  from remotectypes32 import *
+else:
+  from ctypes import *
+  def remote_func(x):
+    return x
 
 done = False
 argc = 1
@@ -238,4 +248,7 @@ def init_with_binary(filename):
   newfile = c_int(0)
   print "*** ida.init_database", ida.init_database(argc, argv, pointer(newfile))
   run_ida()
+
+if __name__ == "__main__":
+  init_with_binary(sys.argv[1])
 
