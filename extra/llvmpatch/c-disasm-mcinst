@@ -1,0 +1,268 @@
+Description: Add bindings for exporting MCInst structures to C
+ LLVM has an internal machine readable representation of disassembled
+ assembly code, but it is normally only available to C++. This patch makes
+ this functionality accessible from C.
+ .
+ llvm-toolchain-3.5 (1:3.5-1ubuntu1) utopic; urgency=medium
+ .
+   * Merge with Debian; remaining changes:
+     - Drop the build dependency on libjsoncpp-dev (universe).
+Author: Matthias Klose <doko@ubuntu.com>
+
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout http://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: https://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: <YYYY-MM-DD>
+
+--- llvm-toolchain-3.5-3.5.orig/include/llvm-c/Disassembler.h
++++ llvm-toolchain-3.5-3.5/include/llvm-c/Disassembler.h
+@@ -18,6 +18,8 @@
+ #include "llvm/Support/DataTypes.h"
+ #include <stddef.h>
+ 
++#include "llvm-c/MCInst.h"
++
+ /**
+  * @defgroup LLVMCDisassembler Disassembler
+  * @ingroup LLVMC
+@@ -221,12 +223,14 @@ void LLVMDisasmDispose(LLVMDisasmContext
+  * parameter Bytes, and contains at least BytesSize number of bytes.  The
+  * instruction is at the address specified by the PC parameter.  If a valid
+  * instruction can be disassembled, its string is returned indirectly in
+- * OutString whose size is specified in the parameter OutStringSize.  This
+- * function returns the number of bytes in the instruction or zero if there was
+- * no valid instruction.
++ * OutString whose size is specified in the parameter OutStringSize.
++ * If a MCInstRef is provided, the MCInst generated during disassembly is
++ * written there. This function returns the number of bytes in the instruction
++ * or zero if there was no valid instruction.
+  */
+ size_t LLVMDisasmInstruction(LLVMDisasmContextRef DC, uint8_t *Bytes,
+                              uint64_t BytesSize, uint64_t PC,
++                             LLVMMCInstRef* Inst,
+                              char *OutString, size_t OutStringSize);
+ 
+ /**
+--- /dev/null
++++ llvm-toolchain-3.5-3.5/include/llvm-c/MCInst.h
+@@ -0,0 +1,106 @@
++/*===-- llvm-c/MCInst.h - Disassembler Public C Interface ---*- C -*-===*\
++|*                                                                            *|
++|*                     The LLVM Compiler Infrastructure                       *|
++|*                                                                            *|
++|* This file is distributed under the University of Illinois Open Source      *|
++|* License. See LICENSE.TXT for details.                                      *|
++|*                                                                            *|
++|*===----------------------------------------------------------------------===*|
++|*                                                                            *|
++|* This header provides a public interface the MCInst type.                   *|
++|* LLVM provides an implementation of this interface.                         *|
++|*                                                                            *|
++\*===----------------------------------------------------------------------===*/
++
++#ifndef LLVM_C_MCINST_H
++#define LLVM_C_MCINST_H
++
++#include "llvm/Support/DataTypes.h"
++#include <stddef.h>
++
++/**
++ * @defgroup LLVMCInst MCInst
++ * @ingroup LLVMC
++ *
++ * @{
++ */
++
++/**
++ * An opaque reference to a native instruction.
++ */
++typedef void *LLVMMCInstRef;
++
++/**
++ * Opaque type for MCOperand.
++ */
++typedef void* LLVMMCOperandRef;
++
++/**
++ * Type tag for different kinds of operands.
++ */
++typedef enum {
++  LLVMOTInvalid,
++  LLVMOTReg,
++  LLVMOTImm,
++  LLVMOTFPImm,
++  LLVMOTExpr,
++  LLVMOTInst
++} LLVMMCOperandType;
++
++/**
++ * A native instruction operand, projected to C.
++ */
++typedef struct {
++  LLVMMCOperandType Kind;
++  union {
++    unsigned RegVal;
++    int64_t ImmVal;
++    double FPImmVal;
++    LLVMMCInstRef InstVal;
++  };
++} LLVMMCOperand;
++
++
++#ifdef __cplusplus
++extern "C" {
++#endif /* !defined(__cplusplus) */
++
++/**
++ * Dispose of an instruction.
++ */
++void LLVMMCInstRefDispose(LLVMMCInstRef Inst);
++
++/**
++ * Get total number of operands for an instruction.
++ */
++unsigned LLVMMCInstGetNumOperands(LLVMMCInstRef Inst);
++
++/**
++ * Get an abstract form of the ith operand of Inst.
++ * You may want to chain this with LLVMMCOperandProject.
++ * Note that the lifetime of this LLVMMCOperandRef is the same as the
++ * LLVMMCInstRef you created it from - when you dispose the Inst, the
++ * operand becomes invalid as well.
++ */
++LLVMMCOperandRef LLVMMCInstGetOperand(LLVMMCInstRef Inst, unsigned i);
++
++/**
++ * Get the opcode of a particular MCInst.
++ * Reference tblgen files for actual values.
++ */
++unsigned LLVMMCInstGetOpcode(LLVMMCInstRef Inst);
++
++/**
++ * Project an MCOperand into a C-struct
++ */
++void LLVMMCOperandProject(LLVMMCOperandRef OperandCPP, LLVMMCOperand* Operand);
++
++/**
++ * @}
++ */
++
++#ifdef __cplusplus
++}
++#endif /* !defined(__cplusplus) */
++
++#endif /* !defined(LLVM_C_MCINST_H) */
+--- llvm-toolchain-3.5-3.5.orig/lib/MC/MCDisassembler/Disassembler.cpp
++++ llvm-toolchain-3.5-3.5/lib/MC/MCDisassembler/Disassembler.cpp
+@@ -259,8 +259,9 @@ static void emitLatency(LLVMDisasmContex
+ // over by printing a .byte, .long etc. to continue.
+ //
+ size_t LLVMDisasmInstruction(LLVMDisasmContextRef DCR, uint8_t *Bytes,
+-                             uint64_t BytesSize, uint64_t PC, char *OutString,
+-                             size_t OutStringSize){
++                             uint64_t BytesSize, uint64_t PC,
++                             LLVMMCInstRef* InstOut,
++                             char *OutString, size_t OutStringSize){
+   LLVMDisasmContext *DC = (LLVMDisasmContext *)DCR;
+   // Wrap the pointer to the Bytes, BytesSize and PC in a MemoryObject.
+   DisasmMemoryObject MemoryObject(Bytes, BytesSize, PC);
+@@ -300,6 +301,10 @@ size_t LLVMDisasmInstruction(LLVMDisasmC
+     std::memcpy(OutString, InsnStr.data(), OutputSize);
+     OutString[OutputSize] = '\0'; // Terminate string.
+ 
++    if (InstOut) {
++      *(MCInst**)InstOut = new MCInst(Inst);
++    }
++
+     return Size;
+   }
+   }
+--- llvm-toolchain-3.5-3.5.orig/lib/MC/MCInst.cpp
++++ llvm-toolchain-3.5-3.5/lib/MC/MCInst.cpp
+@@ -13,6 +13,8 @@
+ #include "llvm/Support/Debug.h"
+ #include "llvm/Support/raw_ostream.h"
+ 
++#include "llvm-c/MCInst.h"
++
+ using namespace llvm;
+ 
+ void MCOperand::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
+@@ -70,3 +72,46 @@ void MCInst::dump() const {
+   dbgs() << "\n";
+ }
+ #endif
++
++void LLVMMCInstRefDispose(LLVMMCInstRef InstR) {
++  MCInst* Inst = (MCInst*)InstR;
++  delete Inst;
++}
++
++unsigned LLVMMCInstGetNumOperands(LLVMMCInstRef InstR) {
++  MCInst* Inst = (MCInst*)InstR;
++  return Inst->getNumOperands();
++}
++
++LLVMMCOperandRef LLVMMCInstGetOperand(LLVMMCInstRef InstR, unsigned i) {
++  MCInst* Inst = (MCInst*)InstR;
++  return &(Inst->getOperand(i));
++}
++
++unsigned LLVMMCInstGetOpcode(LLVMMCInstRef InstR) {
++  MCInst* Inst = (MCInst*)InstR;
++  return Inst->getOpcode();
++}
++
++void LLVMMCOperandProject(LLVMMCOperandRef OperandR, LLVMMCOperand* OperandC) {
++  MCOperand* OperandCPP = (MCOperand*)OperandR;
++  if (OperandCPP->isReg()) {
++    OperandC->Kind     = LLVMOTReg;
++    OperandC->RegVal   = OperandCPP->getReg();
++  } else if (OperandCPP->isImm()) {
++    OperandC->Kind     = LLVMOTImm;
++    OperandC->ImmVal   = OperandCPP->getImm();
++  } else if (OperandCPP->isReg()) {
++    OperandC->Kind     = LLVMOTFPImm;
++    OperandC->FPImmVal = OperandCPP->getFPImm();
++  } else if (OperandCPP->isExpr()) {
++    OperandC->Kind     = LLVMOTExpr;
++    //XXX: Haven't modeled Expr yet as this is for disasm
++  } else if (OperandCPP->isInst()) {
++    OperandC->Kind     = LLVMOTInst;
++    OperandC->InstVal  = (LLVMMCInstRef)OperandCPP->getInst();
++  } else {
++    assert((!OperandCPP.isValid()) && "Unknown Operand Type");
++    OperandC->Kind     = LLVMOTInvalid;
++  }
++}
+--- llvm-toolchain-3.5-3.5.orig/lldb/source/Plugins/UnwindAssembly/x86/UnwindAssembly-x86.cpp
++++ llvm-toolchain-3.5-3.5/lldb/source/Plugins/UnwindAssembly/x86/UnwindAssembly-x86.cpp
+@@ -491,6 +491,7 @@ AssemblyParse_x86::instruction_length (A
+                                                       opcode_data.data(),
+                                                       max_op_byte_size,
+                                                       pc, // PC value
++                                                      NULL,
+                                                       out_string,
+                                                       sizeof(out_string));
+ 
+--- llvm-toolchain-3.5-3.5.orig/tools/llvm-c-test/disassemble.c
++++ llvm-toolchain-3.5-3.5/tools/llvm-c-test/disassemble.c
+@@ -45,8 +45,8 @@ static void do_disassemble(const char *t
+ 
+   pos = 0;
+   while (pos < siz) {
+-    size_t l = LLVMDisasmInstruction(D, buf + pos, siz - pos, 0, outline,
+-                                     sizeof(outline));
++    size_t l = LLVMDisasmInstruction(D, buf + pos, siz - pos, 0, NULL,
++                                     outline, sizeof(outline));
+     if (!l) {
+       pprint(pos, buf + pos, 1, "\t???");
+       pos++;
