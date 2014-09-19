@@ -154,7 +154,6 @@ bfd_vma bfd_getb16 (const bfd_byte *addr)
 static int
 print_insn_thumb1(bfd_vma pc, disassemble_info *info)
 {
-  info->fprintf_func(info->stream, "t");
   return print_insn_arm(pc | 1, info);
 }
 #endif
@@ -324,6 +323,10 @@ void real_target_disas(FILE *out, CPUArchState *env, target_ulong code,
             fprintf(out, " }");
         }
 #endif
+  #ifdef TARGET_ARM
+  if (flags & 1) fprintf(out, "t");
+  else fprintf(out, "n");
+  #endif
 	fprintf(out, "\n");
 	if (count < 0)
 	    break;

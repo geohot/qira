@@ -468,6 +468,7 @@ void resize_change_buffer(size_t size);
 #define IS_MEM        0x20000000
 #define IS_START      0x10000000
 #define IS_SYSCALL    0x08000000
+#define IS_THUMB      0x04000000
 #define SIZE_MASK 0xFF
 
 #define FAKE_SYSCALL_LOADSEG 0x10001

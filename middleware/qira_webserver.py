@@ -285,10 +285,15 @@ def getinstructions(forknum, clnum, clstart, clend):
         rawins = trace.fetch_memory(i, rret['address'], rret['data'])
         if len(rawins) == rret['data']:
           raw = ''.join(map(lambda x: chr(x[1]), sorted(rawins.items())))
-          insdata = program.disasm(raw, rret['address'])
+          try:
+            thumb = program.tags[rret['address']]['thumb']
+          except KeyError:
+            thumb = False
+          insdata = program.disasm(raw, rret['address'], thumb)
         else:
           raise Exception("lack of swag")
       except Exception,e:
+        print "getinstructions failed: {}".format(sys.exc_info()[0]), e
         # fetch the instruction from the qemu dump
         insdata = {"repr": program.tags[rret['address']]['instruction']}
     else:
