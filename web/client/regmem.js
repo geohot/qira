@@ -164,9 +164,9 @@ function on_clnum(msg) { DS("clnum");
     if (dc.type == "L") typeclass = "regread";
     else if (dc.type == "S") typeclass = "regwrite";
     datachanges += '<div class="datachanges '+typeclass+'"> '+
-        '<span class="'+get_data_type(dc.address)+'">'+dc.address+'</span> '+
+        '<span class="'+get_data_type(dc.address, true)+'">'+dc.address+'</span> '+
         ((dc.type == "S")?'&lt;--':'--')+' '+
-        '<span class="'+get_data_type(dc.data)+'">'+dc.data+'</span> '+
+        '<span class="'+get_data_type(dc.data, true)+'">'+dc.data+'</span> '+
       '</div> ';
   }
   $('#datachanges').html(datachanges);

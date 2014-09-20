@@ -60,13 +60,19 @@ Deps.autorun(function() { DA("history");
 
 // ** end history ***
 
-function get_data_type(v) {
+function get_data_type(v, more) {
   if (typeof v == "number") throw "numbers no longer supported here";
   // haxx
   var pmaps = Session.get('pmaps');
   var a = pmaps[bn_round(v, 3)];
   if (a === undefined) return "";
-  else return "data"+a;
+  else {
+    if (more !== undefined) {
+      return "data"+a+" addr addr_"+v;
+    } else {
+      return "data"+a;
+    }
+  }
 }
 
 function update_dview(addr) {
