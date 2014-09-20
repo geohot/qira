@@ -988,7 +988,6 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
         GLOBAL_logstate->is_filtered = 0;
       }
       GLOBAL_logstate->changelist_number++;
-      // TODO(ned): add thumb logging here
       add_change(tb->pc, tb->size, IS_START);
     }
 

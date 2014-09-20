@@ -257,6 +257,7 @@ class Program:
       return
     cnt = 0
     for d in dat.split("\n"):
+      thumb = False
       if len(d) == 0:
         continue
       # hacks
@@ -266,13 +267,21 @@ class Program:
         continue
       #print repr(d)
       if self.fb == 0x28:   # ARM
-        inst = d[d.rfind("  ")+2:]
+        inst = d[d.rfind("  ")+2] #last bit now the thumb bit
+        thumb_flag = d[0]
+        if thumb_flag == 't':
+          thumb = True
+        elif thumb_flag == 'n':
+          thumb = False
+        else:
+          print "*** Invalid thumb flag at end of instruction"
         #address = d.split()[0]
       elif self.fb == 0xb7:   # aarch64
         inst = d[d.rfind("     ")+5:]
       else:
         inst = d[d.find(":")+3:]
       self.tags[addr]['instruction'] = inst
+      self.tags[addr]['thumb'] = thumb
       cnt += 1
       #print addr, inst
     #sys.stdout.write("%d..." % cnt); sys.stdout.flush()
@@ -322,7 +331,7 @@ class Program:
     #print "***",' '.join(eargs)
     os.execvp(eargs[0], eargs)
   
-  def disasm(self, raw, address):
+  def disasm(self, raw, address, thumb):
     default = {"repr": raw.encode("hex")}
     if qira_config.WITH_CAPSTONE:
       try:
@@ -332,10 +341,10 @@ class Program:
         elif arch == "x86-64":
           md = Cs(CS_ARCH_X86, CS_MODE_64)
         elif arch == "arm":
-          md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
-          # to switch between modes:
-          # md.mode = CS_MODE_THUMB
-          # md.mode = CS_MODE_ARM
+          if thumb:
+            md = Cs(CS_ARCH_ARM, CS_MODE_THUMB)
+          else:
+            md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
         elif arch == "aarch64":
           md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
         elif arch == "ppc":
@@ -346,7 +355,10 @@ class Program:
         #next: store different data based on type of operand
         #https://github.com/aquynh/capstone/blob/master/bindings/python/test_arm.py
         md.detail = True
-        i = md.disasm(raw, address).next()
+        try:
+          i = md.disasm(raw, address).next()
+        except StopIteration: #not a valid instruction
+          return default
         # should only be one instruction
         # may not need to track iset here
         # the repr field is a fallback representation of the instruction
@@ -364,7 +376,7 @@ class Program:
         return data
         #when ready, return data as json rather than static string
       except Exception, e:
-        #print "capstone disasm failed: {}".format(sys.exc_info()[0]), e
+        print "capstone disasm failed: {}".format(sys.exc_info()[0]), e
         return default
     else:
       return default
@@ -514,7 +526,7 @@ class Trace:
 
     # analysis stuff
     self.maxclnum = None
-    self.mixclnum = None
+    self.minclnum = None
     self.flow = None
     self.dmap = None
     self.maxd = 0
