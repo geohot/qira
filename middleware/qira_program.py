@@ -274,7 +274,8 @@ class Program:
         elif thumb_flag == 'n':
           thumb = False
         else:
-          print "*** Invalid thumb flag at end of instruction"
+          #print "*** Invalid thumb flag at beginning of instruction"
+          pass
         #address = d.split()[0]
       elif self.fb == 0xb7:   # aarch64
         inst = d[d.rfind("     ")+5:]
