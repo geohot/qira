@@ -262,12 +262,14 @@ class Program:
         continue
       # hacks
       try:
-        addr = int(d.split(" ")[0].strip(":"), 16)
+        if self.fb == 0x28:
+          #thumb bit in front
+          addr = int(d.split(" ")[0][1:].strip(":"), 16)
+        else:
+          addr = int(d.split(" ")[0].strip(":"), 16)
       except:
         continue
-      #print repr(d)
-      if self.fb == 0x28:   # ARM
-        inst = d[d.rfind("  ")+2] #last bit now the thumb bit
+      if self.fb == 0x28:
         thumb_flag = d[0]
         if thumb_flag == 't':
           thumb = True
@@ -276,7 +278,7 @@ class Program:
         else:
           #print "*** Invalid thumb flag at beginning of instruction"
           pass
-        #address = d.split()[0]
+        inst = d[d.rfind("  ")+2:]
       elif self.fb == 0xb7:   # aarch64
         inst = d[d.rfind("     ")+5:]
       else:
