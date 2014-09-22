@@ -25,4 +25,5 @@ WITH_STATIC = False
 WITH_CAPSTONE = False
 
 WITH_IDA = False
+WITH_RADARE = False
 

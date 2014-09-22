@@ -4,11 +4,16 @@ from qira_webserver import socket_method, socketio, app
 from flask import request
 from flask.ext.socketio import SocketIO, emit
 import os
+import sys
 import json
 
 if qira_config.WITH_IDA:
   # this import requires python32
   from static import ida
+
+if qira_config.WITH_RADARE:
+  sys.path.append(qira_config.BASEDIR+"/radare2/radare2-bindings/ctypes")
+  import r_bin
 
 # should namespace be changed to static?
 
@@ -191,7 +196,7 @@ def graph_dot():
 # *** INIT FUNCTIONS ***
 
 def init_static(lprogram):
-  global program
+  global program, rbin
   program = lprogram
   if qira_config.WITH_IDA:
     ida.init_with_binary(program.program)
@@ -204,6 +209,13 @@ def init_static(lprogram):
       for i in tags[addr]:
         program.tags[addr][i] = tags[addr][i]
 
+  if qira_config.WITH_RADARE:
+    rbin = r_bin.RBin()
+    if not rbin.load(program.program, 0, 0, False, 0, 0):
+      print "*** RBIN LOAD FAILED"
+    else:
+      info = rbin.get_info()
+      print "*** radare bin loaded"
 
   # as a hack, we can assume it's loading at 0x8048000
   # forget sections for now
