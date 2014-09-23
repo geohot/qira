@@ -132,13 +132,17 @@ function on_registers(msg) { DS("registers");
   var regviewer = "";
   for (i in msg) {
     var r = msg[i];
+    r.display_name = r.name;
+    if (r.name.indexOf("$") != -1) { // MIPS registers use '$' in display name
+      r.name = r.name.replace("$", "r"); // but '$' can't be part of div id
+    }
     draw_hflag(r.value, r.name, regcolors[r.num]);
     var exclass = get_data_type(r.value);
     if (exclass !== "") {
       exclass += " addr addr_"+r.value;
     }
     regviewer += '<div class="reg '+r.regactions+'">'+
-        '<div class="register data data_'+hex(r.address)+'" id="data_'+hex(r.address)+'" style="color:'+regcolors[r.num]+'">'+r.name+': </div>'+
+        '<div class="register data data_'+hex(r.address)+'" id="data_'+hex(r.address)+'" style="color:'+regcolors[r.num]+'">'+r.display_name+': </div>'+
         '<span class="'+exclass+'">'+r.value+'</span>'+
       '</div>';
   }
