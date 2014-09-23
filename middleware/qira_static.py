@@ -12,8 +12,9 @@ if qira_config.WITH_IDA:
   from static import ida
 
 if qira_config.WITH_RADARE:
-  sys.path.append(qira_config.BASEDIR+"/radare2/radare2-bindings/ctypes")
-  import r_bin
+  #sys.path.append(qira_config.BASEDIR+"/radare2/radare2-bindings/ctypes")
+  #import r_bin
+  from r2.r_bin import *
 
 # should namespace be changed to static?
 
@@ -195,8 +196,19 @@ def graph_dot():
 
 # *** INIT FUNCTIONS ***
 
+def init_radare(path):
+  io = RIO()
+  desc = io.open(path, 0, 0)
+  if desc == None:
+    print "*** RBIN LOAD FAILED"
+    return False
+  b = RBin()
+  b.iobind(io)
+  b.load(path, 0, 0, 0, desc.fd, False)
+  print "*** radare bin loaded @",hex(b.get_baddr())
+
 def init_static(lprogram):
-  global program, rbin
+  global program
   program = lprogram
   if qira_config.WITH_IDA:
     ida.init_with_binary(program.program)
@@ -210,12 +222,7 @@ def init_static(lprogram):
         program.tags[addr][i] = tags[addr][i]
 
   if qira_config.WITH_RADARE:
-    rbin = r_bin.RBin()
-    if not rbin.load(program.program, 0, 0, False, 0, 0):
-      print "*** RBIN LOAD FAILED"
-    else:
-      info = rbin.get_info()
-      print "*** radare bin loaded"
+    init_radare(program.program)
 
   # as a hack, we can assume it's loading at 0x8048000
   # forget sections for now
