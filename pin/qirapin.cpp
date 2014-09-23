@@ -150,7 +150,7 @@ FILE *strace_file = NULL;
 FILE *base_file = NULL;
 string *image_folder = NULL;
 
-void new_trace_files() {
+void new_trace_files(bool isfork = false) {
 	char pathbase[1024];
 	char path[1024];
 	sprintf(pathbase, "%s/%ld%d", KnobOutputDir.Value().c_str(), time(NULL)-1408570000, PIN_GetPid());
@@ -168,9 +168,14 @@ void new_trace_files() {
 	ASSERT(strace_file, "Failed to open strace output.");
 	
 	if(base_file) fpurge(base_file), fclose(base_file);
-	sprintf(path, "%s_base", pathbase);
-	base_file = fopen(path, "wb");
-	ASSERT(base_file, "Failed to open base output.");
+	if(isfork) {
+		// TODO: copy file. requires moving base file to memory, not just as FILE
+		base_file = NULL;
+	} else {
+		sprintf(path, "%s_base", pathbase);
+		base_file = fopen(path, "wb");
+		ASSERT(base_file, "Failed to open base output.");
+	}
 
 	if(KnobMakeStandaloneTrace) {
 		image_folder = new string(pathbase);
@@ -537,10 +542,10 @@ VOID Fini(INT32 code, VOID *v) {
 }
 
 VOID ForkChild(THREADID threadid, const CONTEXT *ctx, VOID *v) {
-	new_trace_files();
+	new_trace_files(true);
 	logstate->parent_id = logstate->this_pid;
 	logstate->this_pid = PIN_GetPid();
-	logstate->first_changelist_number = logstate->change_count;
+	logstate->first_changelist_number = logstate->changelist_number;
 	logstate->change_count = 1;
 }
 
