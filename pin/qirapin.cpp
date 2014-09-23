@@ -149,11 +149,15 @@ TRACEFILE_TYPE trace_file = 0;
 FILE *strace_file = NULL;
 FILE *base_file = NULL;
 string *image_folder = NULL;
+uint32_t file_id = 0;
 
 void new_trace_files(bool isfork = false) {
 	char pathbase[1024];
 	char path[1024];
-	sprintf(pathbase, "%s/%ld%d", KnobOutputDir.Value().c_str(), time(NULL)-1408570000, PIN_GetPid());
+	file_id = (time(NULL)-1408570000);
+	file_id = (file_id << 16) | (file_id >> 16);
+	file_id ^= PIN_GetPid();
+	sprintf(pathbase, "%s/%d", KnobOutputDir.Value().c_str(), file_id);
 
 	mkdir(KnobOutputDir.Value().c_str(), 0755);
 	
@@ -544,7 +548,7 @@ VOID Fini(INT32 code, VOID *v) {
 VOID ForkChild(THREADID threadid, const CONTEXT *ctx, VOID *v) {
 	new_trace_files(true);
 	logstate->parent_id = logstate->this_pid;
-	logstate->this_pid = PIN_GetPid();
+	logstate->this_pid = file_id;
 	logstate->first_changelist_number = logstate->changelist_number;
 	logstate->change_count = 1;
 }
@@ -569,7 +573,7 @@ int main(int argc, char *argv[]) {
 	logstate->is_filtered = 0;
 	logstate->first_changelist_number = 0;
 	logstate->parent_id = -1;
-	logstate->this_pid = PIN_GetPid();
+	logstate->this_pid = file_id;
 
 	PIN_AddFiniFunction(Fini, 0);
 
