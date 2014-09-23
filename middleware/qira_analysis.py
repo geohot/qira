@@ -282,6 +282,9 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
             program.tags[r[0]['address']]['capinstruction'] = program.disasm(raw, r[0]['address'])
             program.tags[r[0]['address']]['instruction'] = program.tags[r[0]['address']]['capinstruction']['repr']
             break
+          else:
+            # grr, bad case breaks analyzer
+            time.sleep(0.1)
         else:
           #print "sleeping ", hex(r[0]['address'])
           time.sleep(0.1)

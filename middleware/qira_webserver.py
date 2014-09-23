@@ -291,7 +291,7 @@ def getinstructions(forknum, clnum, clstart, clend):
             thumb = False
           insdata = program.disasm(raw, rret['address'], thumb)
         else:
-          raise Exception("lack of swag")
+          raise Exception("bytes not found backing instruction @ "+ghex(rret['address']))
       except Exception,e:
         print "getinstructions failed: {}".format(sys.exc_info()[0]), e
         # fetch the instruction from the qemu dump
