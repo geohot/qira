@@ -1,3 +1,8 @@
+#ifdef TARGET_WINDOWS
+#define _CRT_RAND_S
+#endif
+
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <time.h>
@@ -5,6 +10,11 @@
 #include <iomanip>
 #include <sstream>
 #include <string.h>
+
+#ifndef TARGET_WINDOWS
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 
 #include "pin.H"
 
@@ -129,9 +139,7 @@ static inline void MMAP_TRACEFILE(WINDOWS::HANDLE handle, size_t size) {
 	logstate = (struct logstate*)change;
 }
 #else
-#include <unistd.h>
 #include <sys/types.h>
-#include <fcntl.h>
 #include <sys/mman.h>
 #define TRACEFILE_TYPE int
 #define OPEN_TRACEFILE(fn) open((fn), O_RDWR|O_CREAT, 0644)
@@ -145,6 +153,27 @@ static inline void MMAP_TRACEFILE(int x, size_t size) {
 }
 #endif
 
+
+#ifdef TARGET_WINDOWS
+static inline uint32_t really_random() {
+	unsigned int x;
+	rand_s(&x);
+	return x;
+}
+#elif TARGET_MAC
+static inline uint32_t really_random() {
+	return arc4random();
+}
+#else
+static uint32_t really_random() {
+	static int fd = 0;
+	if(!fd) fd = open("/dev/urandom", O_RDONLY);
+	uint32_t x;
+	read(fd, &x, 4);
+	return x;
+}
+#endif
+
 TRACEFILE_TYPE trace_file = 0;
 FILE *strace_file = NULL;
 FILE *base_file = NULL;
@@ -154,10 +183,10 @@ uint32_t file_id = 0;
 void new_trace_files(bool isfork = false) {
 	char pathbase[1024];
 	char path[1024];
-	file_id = (time(NULL)-1408570000);
-	file_id = (file_id << 16) | (file_id >> 16);
-	file_id ^= PIN_GetPid();
-	sprintf(pathbase, "%s/%d", KnobOutputDir.Value().c_str(), file_id);
+	file_id = PIN_GetPid()<<16;
+	file_id |= (time(NULL)-1408570000)<<8;
+	file_id |= (really_random())&0xff;
+	sprintf(pathbase, "%s/%u", KnobOutputDir.Value().c_str(), file_id);
 
 	mkdir(KnobOutputDir.Value().c_str(), 0755);
 	
