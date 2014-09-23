@@ -181,11 +181,14 @@ string *image_folder = NULL;
 uint32_t file_id = 0;
 
 void new_trace_files(bool isfork = false) {
+	static uint32_t start_time = 0;
+	if(!start_time) start_time = time(NULL);
+
 	char pathbase[1024];
 	char path[1024];
 	file_id = PIN_GetPid()<<16;
-	file_id |= (time(NULL)-1408570000)<<8;
-	file_id |= (really_random())&0xff;
+	file_id |= ((time(NULL)-start_time)<<8)&0xff;
+	file_id |= really_random()&0xff;
 	sprintf(pathbase, "%s/%u", KnobOutputDir.Value().c_str(), file_id);
 
 	mkdir(KnobOutputDir.Value().c_str(), 0755);
