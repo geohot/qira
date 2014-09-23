@@ -1,6 +1,7 @@
 QIRA is a competitor to strace and gdb
 See http://qira.me/ for high level usage information
-All QIRA code is released under GPLv2
+All QIRA code is released under GPLv2 or BSD
+Other code in this repo released under it's respective license
 
 == Installing latest release ==
 

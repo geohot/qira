@@ -15,6 +15,7 @@ if qira_config.WITH_RADARE:
   #sys.path.append(qira_config.BASEDIR+"/radare2/radare2-bindings/ctypes")
   #import r_bin
   from r2.r_bin import *
+  from r2.r_core import RCore
 
 # should namespace be changed to static?
 
@@ -197,6 +198,7 @@ def graph_dot():
 # *** INIT FUNCTIONS ***
 
 def init_radare(path):
+  """
   io = RIO()
   desc = io.open(path, 0, 0)
   if desc == None:
@@ -205,7 +207,11 @@ def init_radare(path):
   b = RBin()
   b.iobind(io)
   b.load(path, 0, 0, 0, desc.fd, False)
-  print "*** radare bin loaded @",hex(b.get_baddr())
+  print "*** radare bin loaded @",ghex(b.get_baddr())
+  """
+  core = RCore()
+  core.bin.load(path, 0, 0, 0, 0, 0)
+  print (core.cmd_str ("pd 12 @ entry0"))
 
 def init_static(lprogram):
   global program

@@ -29,5 +29,5 @@ tests/bap/*.log
 bap/
 static/python32
 testvm/.vagrant
-radare2
+radare
 
