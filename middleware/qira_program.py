@@ -651,10 +651,20 @@ class Trace:
     return dat
 
   def load_base_memory(self):
+    def get_forkbase_from_log(n):
+      ret = struct.unpack("i", open(qira_config.TRACE_FILE_BASE+str(n)).read(0x18)[0x10:0x14])[0]
+      if ret == -1:
+        return n
+      else:
+        return get_forkbase_from_log(ret)
+
     self.base_memory = {}
     try:
-      f = open(qira_config.TRACE_FILE_BASE+str(self.forknum)+"_base")
-    except:
+      forkbase = get_forkbase_from_log(self.forknum) 
+      print "*** using base %d for %d" % (forkbase, self.forknum)
+      f = open(qira_config.TRACE_FILE_BASE+str(forkbase)+"_base")
+    except Exception, e:
+      print "*** base file issue",e
       # done
       return
 

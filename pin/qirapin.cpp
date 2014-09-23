@@ -551,6 +551,7 @@ VOID ForkChild(THREADID threadid, const CONTEXT *ctx, VOID *v) {
 	logstate->this_pid = file_id;
 	logstate->first_changelist_number = logstate->changelist_number;
 	logstate->change_count = 1;
+
 }
 
 int main(int argc, char *argv[]) {
