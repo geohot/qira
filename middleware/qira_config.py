@@ -30,6 +30,7 @@ WITH_IDA = False
 try:
   from r2.r_core import RCore
   WITH_RADARE = True
+  WITH_STATIC = True
 except:
   WITH_RADARE = False
 
