@@ -1,3 +1,8 @@
+#ifdef TARGET_WINDOWS
+#define _CRT_RAND_S
+#endif
+
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <time.h>
@@ -5,6 +10,11 @@
 #include <iomanip>
 #include <sstream>
 #include <string.h>
+
+#ifndef TARGET_WINDOWS
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 
 #include "pin.H"
 
@@ -129,9 +139,7 @@ static inline void MMAP_TRACEFILE(WINDOWS::HANDLE handle, size_t size) {
 	logstate = (struct logstate*)change;
 }
 #else
-#include <unistd.h>
 #include <sys/types.h>
-#include <fcntl.h>
 #include <sys/mman.h>
 #define TRACEFILE_TYPE int
 #define OPEN_TRACEFILE(fn) open((fn), O_RDWR|O_CREAT, 0644)
@@ -145,15 +153,43 @@ static inline void MMAP_TRACEFILE(int x, size_t size) {
 }
 #endif
 
+
+#ifdef TARGET_WINDOWS
+static inline uint32_t really_random() {
+	unsigned int x;
+	rand_s(&x);
+	return x;
+}
+#elif TARGET_MAC
+static inline uint32_t really_random() {
+	return arc4random();
+}
+#else
+static uint32_t really_random() {
+	static int fd = 0;
+	if(!fd) fd = open("/dev/urandom", O_RDONLY);
+	uint32_t x;
+	read(fd, &x, 4);
+	return x;
+}
+#endif
+
 TRACEFILE_TYPE trace_file = 0;
 FILE *strace_file = NULL;
 FILE *base_file = NULL;
 string *image_folder = NULL;
+uint32_t file_id = 0;
 
 void new_trace_files(bool isfork = false) {
+	static uint32_t start_time = 0;
+	if(!start_time) start_time = time(NULL);
+
 	char pathbase[1024];
 	char path[1024];
-	sprintf(pathbase, "%s/%ld%d", KnobOutputDir.Value().c_str(), time(NULL)-1408570000, PIN_GetPid());
+	file_id = PIN_GetPid()<<16;
+	file_id |= ((time(NULL)-start_time)<<8)&0xff;
+	file_id |= really_random()&0xff;
+	sprintf(pathbase, "%s/%u", KnobOutputDir.Value().c_str(), file_id);
 
 	mkdir(KnobOutputDir.Value().c_str(), 0755);
 	
@@ -544,8 +580,9 @@ VOID Fini(INT32 code, VOID *v) {
 VOID ForkChild(THREADID threadid, const CONTEXT *ctx, VOID *v) {
 	new_trace_files(true);
 	logstate->parent_id = logstate->this_pid;
-	logstate->this_pid = PIN_GetPid();
-	logstate->first_changelist_number = logstate->change_count;
+	logstate->this_pid = file_id;
+	logstate->first_changelist_number = logstate->changelist_number;
+	logstate->change_count = 1;
 }
 
 int main(int argc, char *argv[]) {
@@ -568,7 +605,7 @@ int main(int argc, char *argv[]) {
 	logstate->is_filtered = 0;
 	logstate->first_changelist_number = 0;
 	logstate->parent_id = -1;
-	logstate->this_pid = PIN_GetPid();
+	logstate->this_pid = file_id;
 
 	PIN_AddFiniFunction(Fini, 0);
 
