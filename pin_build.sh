@@ -9,7 +9,12 @@ if [[ "$unamestr" == 'Linux' ]]; then
   fi
 
   # pin build deps, good?
-  sudo apt-get install gcc-multilib g++-multilib
+  if [ $(which apt-get) ]; then
+    echo "fetching pin tool building deps, enter your password"
+    sudo apt-get install gcc-multilib g++-multilib
+  else
+    echo "WARNING: you don't have apt-get, you are required to fetch pin tool building deps (e.g. 32 bit libs) on your own"
+  fi
 elif [[ "$unamestr" == 'Darwin' ]]; then
   if [ ! -d pin-latest ]; then
     wget -O- http://software.intel.com/sites/landingpage/pintool/downloads/pin-2.14-67254-clang.5.1-mac.tar.gz | gunzip | tar x
