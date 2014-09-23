@@ -1,3 +1,4 @@
+#!/usr/bin/env python2.7
 from qira_base import *
 import qira_config
 from qira_webserver import socket_method, socketio, app
@@ -14,7 +15,6 @@ if qira_config.WITH_IDA:
 if qira_config.WITH_RADARE:
   #sys.path.append(qira_config.BASEDIR+"/radare2/radare2-bindings/ctypes")
   #import r_bin
-  from r2.r_bin import *
   from r2.r_core import RCore
 
 # should namespace be changed to static?
@@ -198,20 +198,33 @@ def graph_dot():
 # *** INIT FUNCTIONS ***
 
 def init_radare(path):
-  """
-  io = RIO()
-  desc = io.open(path, 0, 0)
+  core = RCore()
+  desc = core.io.open(path, 0, 0)
   if desc == None:
     print "*** RBIN LOAD FAILED"
     return False
-  b = RBin()
-  b.iobind(io)
-  b.load(path, 0, 0, 0, desc.fd, False)
-  print "*** radare bin loaded @",ghex(b.get_baddr())
+  core.bin.load(path, 0, 0, 0, desc.fd, False)
+  print "*** radare bin loaded @",ghex(core.bin.get_baddr())
   """
-  core = RCore()
-  core.bin.load(path, 0, 0, 0, 0, 0)
-  print (core.cmd_str ("pd 12 @ entry0"))
+  for e in core.bin.get_entries():
+    print e
+  """
+  """
+  for s in core.bin.get_symbols():
+    print s.name
+  """
+  #core.bin_load("", 0)
+
+  print core.cmd_str("ap")
+
+  for f in core.anal.get_fcns():
+    print f
+
+
+  #print dir(core)
+
+  #print (core.cmd_str ("pd 12 @ _start"))
+
 
 def init_static(lprogram):
   global program
@@ -252,4 +265,10 @@ def init_static(lprogram):
       # BAP IS BALLS SLOW
       #self.tags[addr]['bap'] = self.genbap(raw, addr)
   print "** static done"
+
+if __name__ == "__main__":
+  init_radare(sys.argv[1])
+
+
+
 

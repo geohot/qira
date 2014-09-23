@@ -25,5 +25,11 @@ WITH_STATIC = False
 WITH_CAPSTONE = False
 
 WITH_IDA = False
-WITH_RADARE = False
+
+# enable radare if it's installed
+try:
+  from r2.r_core import RCore
+  WITH_RADARE = True
+except:
+  WITH_RADARE = False
 

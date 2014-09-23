@@ -334,7 +334,7 @@ class Program:
     #print "***",' '.join(eargs)
     os.execvp(eargs[0], eargs)
   
-  def disasm(self, raw, address, thumb):
+  def disasm(self, raw, address, thumb = False):
     default = {"repr": raw.encode("hex")}
     if qira_config.WITH_CAPSTONE:
       try:
