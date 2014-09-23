@@ -199,12 +199,14 @@ def graph_dot():
 
 def init_radare(path):
   core = RCore()
+  """
   desc = core.io.open(path, 0, 0)
   if desc == None:
     print "*** RBIN LOAD FAILED"
     return False
   core.bin.load(path, 0, 0, 0, desc.fd, False)
   print "*** radare bin loaded @",ghex(core.bin.get_baddr())
+  """
   """
   for e in core.bin.get_entries():
     print e
@@ -213,13 +215,16 @@ def init_radare(path):
   for s in core.bin.get_symbols():
     print s.name
   """
-  #core.bin_load("", 0)
+  #core.config.set ("asm.arch", "x86");
+  #core.config.set ("asm.bits", "32");
+
+  f = core.file_open(path, False, 0)
+  core.bin_load("", 0)
 
   print core.cmd_str("ap")
 
   for f in core.anal.get_fcns():
-    print f
-
+    print f.name, f.addr
 
   #print dir(core)
 
@@ -268,7 +273,4 @@ def init_static(lprogram):
 
 if __name__ == "__main__":
   init_radare(sys.argv[1])
-
-
-
 

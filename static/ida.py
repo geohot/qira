@@ -152,7 +152,7 @@ def fetch_tags():
     flags = ida.get_flags_ex(i, 0)
     # is code
     if (flags&0x600) == 0x600:
-      print ghex(i)
+      #print ghex(i)
       tags[i]['flags'] = flags
       tags[i]['flow'] = []
       tags[i]['semantics'] = []

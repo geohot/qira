@@ -33,10 +33,13 @@ class Proxy(object):
     object.__getattribute__(self, '_proxyconn').callattr(self, '__delattr__', (attr,), {})
   def __call__(self, *args, **kwargs):
     return object.__getattribute__(self, '_proxyconn').call(self, args, kwargs)
+  # GC isn't useful anyway...
+  """
   def __del__(self):
     if object.__getattribute__(self, '_proxyparent') is not None: return
     if not marshal or not struct or not socket: return # Reduce spurious messages when quitting python
     object.__getattribute__(self, '_proxyconn').delete(self)
+  """
 
   # hash and repr need to be handled specially, due to hash(type) != type.__hash__()
   # (and the same for repr). Incidentally, we'll cache the hash.
