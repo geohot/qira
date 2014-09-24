@@ -25,25 +25,28 @@
 // Cross platform abstractions
 ////////////////////////////////////////////////////////////////
 
-static const bool isWindows =
 #ifdef TARGET_WINDOWS
-	true;
+#define isWindows 1
 #else
-	false;
+#define isWindows 0
 #endif
 
-static const bool isLinux =
 #ifdef TARGET_LINUX
-	true;
+#define isLinux 1
 #else
-	false;
+#define isLinux 0
 #endif
 
-static const bool isMac =
 #ifdef TARGET_MAC
-	true;
+#define isMac 1
 #else
-	false;
+#define isMac 0
+#endif
+
+#ifdef TARGET_IA32E
+#define is64Bit 1
+#else
+#define is64Bit 0
 #endif
 
 #ifdef TARGET_WINDOWS
@@ -84,23 +87,23 @@ static inline void perror_exit(const char *s) {
 #define mkdir(x, y) WINDOWS::CreateDirectoryA((x), NULL)
 #endif
 
-#ifndef TARGET_MAC
-#ifdef TARGET_WINDOWS
-static inline uint32_t arc4random() {
-	unsigned int x;
-	rand_s(&x);
-	return x;
-}
-#else
-static uint32_t arc4random() {
-	static int fd = 0;
-	if(!fd) fd = open("/dev/urandom", O_RDONLY);
-	uint32_t x;
-	read(fd, &x, 4);
-	return x;
-}
-#endif
-#endif
+// #ifndef TARGET_MAC
+// #ifdef TARGET_WINDOWS
+// static inline uint32_t arc4random() {
+// 	unsigned int x;
+// 	rand_s(&x);
+// 	return x;
+// }
+// #else
+// static uint32_t arc4random() {
+// 	static int fd = 0;
+// 	if(!fd) fd = open("/dev/urandom", O_RDONLY);
+// 	uint32_t x;
+// 	read(fd, &x, 4);
+// 	return x;
+// }
+// #endif
+// #endif
 
 #ifdef TARGET_WINDOWS
 #define MMAPFILE WINDOWS::HANDLE
@@ -157,7 +160,7 @@ static inline void mmap_close(MMAPFILE fd) {
 static void *mmap_map(MMAPFILE fd, size_t size, size_t offset = 0) {
 	struct stat st;
 	fstat(fd, &st);
-	if(st.st_size < offset+size)
+	if(static_cast<size_t>(st.st_size) < offset+size)
 		ftruncate(fd, offset+size);
 
 	void *ret = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
@@ -249,7 +252,6 @@ static KNOB<BOOL> KnobMakeStandaloneTrace(KNOB_MODE_WRITEONCE, "pintool", "stand
 ////////////////////////////////////////////////////////////////
 
 class Thread_State {
-	THREADID tid;
 	uint32_t qira_fileid;
 
 	FILE *strace_file;
@@ -268,7 +270,7 @@ public:
 		return get(PIN_ThreadId());
 	}
 	
-	Thread_State(THREADID tid_, uint32_t fileid, uint32_t parent, uint32_t chglist) : tid(tid_), qira_fileid(fileid) {
+	Thread_State(uint32_t fileid, uint32_t parent, uint32_t chglist) : qira_fileid(fileid) {
 		char path[2100];
 		int len = snprintf(path, sizeof path, "%s/%u", KnobOutputDir.Value().c_str(), qira_fileid);
 		file_handle = mmap_open(path);
@@ -407,7 +409,7 @@ public:
 	void thread_start(THREADID tid) {
 		uint32_t t = InterlockedIncrement(&threads_created)-1;
 		uint32_t qira_fileid = 0x7FFFFFFF & ((pid << 16) ^ t); // TODO: New trace format needs more (i.e. arbitrary) name bits
-		Thread_State *state = new Thread_State(tid, qira_fileid, main_thread, claim_changelist_number());
+		Thread_State *state = new Thread_State(qira_fileid, main_thread, claim_changelist_number());
 		PIN_SetThreadData(thread_state_tls_key, static_cast<void*>(state), tid);
 	}
 
@@ -417,16 +419,16 @@ public:
 		return InterlockedIncrement(&changelist_number)-1;
 	}
 
-	void load_image() const {
-		// PIN_GetLock(&lock, 0);
-		// if(KnobMakeStandaloneTrace) {
-		// 	// Dump image file here.
-		// 	FILE *f = fopen((*image_folder+urlencode(imgname)).c_str(), "wb");
-		// 	ASSERT(f, "Couldn't open image file destination.");
-		// 	fwrite((void*)IMG_StartAddress(img), 1, IMG_SizeMapped(img), f);
-		// 	fclose(f);
-		// }
-		// PIN_ReleaseLock(&lock);
+	inline int base_printf(const char *fmt, ...) {
+		va_list args;
+		va_start(args, fmt);
+		int x = vfprintf(base_file, fmt, args);
+		va_end(args);
+		return x;
+	}
+
+	inline void base_flush() {
+		fflush(base_file);
 	}
 };
 
@@ -756,30 +758,29 @@ string urlencode(const string &s) {
 }
 
 VOID ImageLoad(IMG img, VOID *v) {
-	// static int once = 0;
-	// if(!once) {
-	// 	once = 1;
-	// 	std::cerr << "qira: filtering to image " << IMG_Name(img) << std::endl;
-	// 	filter_ip_low = IMG_LowAddress(img);
-	// 	filter_ip_high = IMG_HighAddress(img)+1;
-	// }
-	//
-	// UINT32 numRegions = IMG_NumRegions(img);
-	// ADDRINT imglow = IMG_LowAddress(img);
-	// string imgname = IMG_Name(img);
-	//
-	// // TODO: iterate and copy sections for OSX
-	// if(!numRegions) { // TODO: Figure out if this is a windows bug
-	// 	fprintf(base_file, "%p-%p %x %s\n", (void*)imglow, (void*)IMG_HighAddress(img), 0, imgname.c_str());
-	// } else {
-	// 	for(UINT32 i = 0; i < numRegions; i++) {
-	// 		ADDRINT low = IMG_RegionLowAddress(img, i);
-	// 		ADDRINT high = IMG_RegionHighAddress(img, i)+1;
-	// 		fprintf(base_file, "%p-%p %zx %s\n", (void*)low, (void*)high, (size_t)(low - imglow), imgname.c_str());
-	// 	}
-	// }
-	// fflush(base_file);
+	static int once = 0;
+	if(!once) {
+		once = 1;
+		std::cerr << "qira: filtering to image " << IMG_Name(img) << std::endl;
+		filter_ip_low = IMG_LowAddress(img);
+		filter_ip_high = IMG_HighAddress(img)+1;
+	}
 
+	UINT32 numRegions = IMG_NumRegions(img);
+	ADDRINT imglow = IMG_LowAddress(img);
+	string imgname = IMG_Name(img);
+
+	// TODO: iterate and copy sections for OSX
+	if(!numRegions) { // TODO: Figure out if this is a windows bug
+		process_state.base_printf("%p-%p %x %s\n", (void*)imglow, (void*)IMG_HighAddress(img), 0, imgname.c_str());
+	} else {
+		for(UINT32 i = 0; i < numRegions; i++) {
+			ADDRINT low = IMG_RegionLowAddress(img, i);
+			ADDRINT high = IMG_RegionHighAddress(img, i)+1;
+			process_state.base_printf("%p-%p %zx %s\n", (void*)low, (void*)high, (size_t)(low - imglow), imgname.c_str());
+		}
+	}
+	process_state.base_flush();
 }
 
 ////////////////////////////////////////////////////////////////
