@@ -186,9 +186,10 @@ void new_trace_files(bool isfork = false) {
 
 	char pathbase[1024];
 	char path[1024];
-	file_id = PIN_GetPid()<<16;
-	file_id |= ((time(NULL)-start_time)&0x3f) << 10;
-	file_id |= really_random()&0x3ff;
+	file_id = (PIN_GetPid()&0x3ff)<<21;
+	file_id |= ((time(NULL)-start_time)&0x3f) << 15;
+	file_id |= (PIN_ThreadId()&0x7ff) << 4; // TODO: Determine if these are vaguely sequential
+	file_id |= really_random()&0xf;
 	sprintf(pathbase, "%s/%u", KnobOutputDir.Value().c_str(), file_id);
 
 	mkdir(KnobOutputDir.Value().c_str(), 0755);
@@ -564,13 +565,27 @@ VOID ImageLoad(IMG img, VOID *v) {
 }
 
 VOID ThreadStart(THREADID tid, CONTEXT *ctxt, INT32 flags, VOID *v) {
-	static int x = 0;
-	ASSERT(x++ == 0, "Beta, please wait to unlock more than one thread.");
+	printf("ThreadStart %d\n", tid);
+	static bool firstThread = true;
+	if(firstThread) {
+		// First thread had manual setup in main and was special wrt. image loading.
+		// This can be de-special cased in the future.
+		firstThread = false;
+		return;
+	}
+	struct logstate oldstate = *logstate;
+	new_trace_files(true);
+	*logstate = oldstate;
+	logstate->parent_id = oldstate.this_pid;
+	logstate->this_pid = file_id;
+	logstate->first_changelist_number = oldstate.changelist_number;
+	logstate->change_count = 1;
+
 	PIN_SetContextReg(ctxt, writeea_scratch_reg, 0);
 }
 
 VOID ThreadFini(THREADID tid, const CONTEXT *ctxt, INT32 code, VOID *v) {
-	ASSERT(PIN_GetContextReg(ctxt, writeea_scratch_reg) == 0, "o_O");
+	ASSERT(PIN_GetContextReg(ctxt, writeea_scratch_reg) == 0, "qirapin scratch reg WTF happened");
 }
 
 VOID Fini(INT32 code, VOID *v) {
@@ -578,6 +593,7 @@ VOID Fini(INT32 code, VOID *v) {
 }
 
 VOID ForkChild(THREADID threadid, const CONTEXT *ctx, VOID *v) {
+	printf("ForkChild %d\n", threadid);
 	struct logstate oldstate = *logstate;
 	new_trace_files(true);
 	*logstate = oldstate;
