@@ -187,8 +187,8 @@ void new_trace_files(bool isfork = false) {
 	char pathbase[1024];
 	char path[1024];
 	file_id = PIN_GetPid()<<16;
-	file_id |= ((time(NULL)-start_time)<<8)&0xff;
-	file_id |= really_random()&0xff;
+	file_id |= ((time(NULL)-start_time)&0x3f) << 10;
+	file_id |= really_random()&0x3ff;
 	sprintf(pathbase, "%s/%u", KnobOutputDir.Value().c_str(), file_id);
 
 	mkdir(KnobOutputDir.Value().c_str(), 0755);
