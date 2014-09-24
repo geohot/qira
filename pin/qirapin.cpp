@@ -160,7 +160,7 @@ static void *mmap_map(MMAPFILE fd, size_t size, size_t offset = 0) {
 	if(st.st_size < offset+size)
 		ftruncate(fd, offset+size);
 
-	ret = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, x, offset);
+	void *ret = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
 	if(ret == MAP_FAILED) perror_exit("mmap_map mmap");
 
 	return ret;
@@ -268,7 +268,7 @@ public:
 		return get(PIN_ThreadId());
 	}
 	
-	Thread_State(unsigned long tid_, uint32_t fileid, struct logstate const& parentstate) : tid(tid_), qira_fileid(fileid) {
+	Thread_State(THREADID tid_, uint32_t fileid, uint32_t parent, uint32_t chglist) : tid(tid_), qira_fileid(fileid) {
 		char path[2100];
 		int len = snprintf(path, sizeof path, "%s/%u", KnobOutputDir.Value().c_str(), qira_fileid);
 		file_handle = mmap_open(path);
@@ -281,37 +281,37 @@ public:
 		snprintf(path+len, sizeof(path) - len, "_strace");
 		strace_file = fopen(path, "wb");
 		
-		logstate() = parentstate;
-		logstate().parent_id = parentstate.this_pid;
-		logstate().this_pid = qira_fileid;
-		logstate().first_changelist_number = parentstate.changelist_number;
-		logstate().change_count = 1;
+		*logstate() = (struct logstate){
+			.change_count = 1,
+			.changelist_number = chglist,
+			.is_filtered = 1,
+			.first_changelist_number = chglist,
+			.parent_id = parent,
+			.this_pid = qira_fileid,
+		};
 	}
 
-	void ~Thread_State() {
+	~Thread_State() {
 		mmap_unmap(logstate_region, sizeof(struct logstate));
 		mmap_unmap(mapped_region, mapped_region_end - mapped_region_start);
 		mmap_close(file_handle);
 		fclose(strace_file);
 	}
 
-	static void tls_desstruct(Thread_State *tls) { delete tls; }
+	static void tls_destruct(Thread_State *tls) { delete tls; }
 
-	inline uint32_t get_file_id() const { return qira_fileid; }
-	inline THREADID get_tid() const { return tif; }
-
-	inline struct logstate &logstate() const {
+	inline struct logstate *logstate() const {
 		return static_cast<struct logstate *>(logstate_region);
 	}
 
 	// Get a change, shifting (and expanding) the loaded region of the file as necessary
-	inline struct change &change(size_t i) {
+	inline struct change *change(size_t i) {
 		size_t target = sizeof(struct change) * (i+1); // +1 because first "change" is actually a header.
 		register size_t endtarget = target + sizeof(struct change);
 		if(endtarget > mapped_region_end) {
 			size_t region_size = mapped_region_end - mapped_region_start;
 			mmap_unmap(mapped_region, region_size);
-			const register behind = 32*sizeof(struct change); // Seems prudent for some reason.
+			const register size_t behind = 32*sizeof(struct change); // Seems prudent for some reason.
 			mapped_region_start = target > behind ? target - behind : 0;
 			mapped_region_start &= ~4095ull;
 			region_size = region_size*2;
@@ -323,15 +323,16 @@ public:
 			mapped_region_end = mapped_region_start + region_size;
 			mapped_region = mmap_map(file_handle, region_size, mapped_region_start);
 		}
-		return static_cast<struct change *>((char*)mapped_region + target - mapped_region_start);
+		return reinterpret_cast<struct change *>((char*)mapped_region + target - mapped_region_start);
 	}
 
 	// TODO: Maybe need to do something smart to not screw up on forks
 	inline int strace_printf(const char *fmt, ...) {
 		va_list args;
 		va_start(args, fmt);
-		vfprintf(strace_file, fmt, args);
+		int x = vfprintf(strace_file, fmt, args);
 		va_end(args);
+		return x;
 	}
 
 	inline void strace_flush() {
@@ -339,16 +340,19 @@ public:
 	}
 };
 
-static class Process_State {
+class Process_State {
 	PIN_LOCK lock;
 	int parent_pid;
 	int pid;
 	uint32_t threads_created;
+	uint32_t changelist_number;
 	FILE *base_file;
 	string *image_folder;
 
+	uint32_t main_thread; //lol
+
 public:
-	Process_State() : pid(-1), parent_pid(0xDEADBEEF), threads_created(-1), base_file(NULL), image_folder(NULL) {
+	Process_State() : parent_pid(0xDEADBEEF), pid(-1), threads_created(-1), changelist_number(1), base_file(NULL), image_folder(NULL) {
 		PIN_InitLock(&lock);
 	}
 
@@ -358,11 +362,11 @@ public:
 		pid = pid_;
 		threads_created = 0;
 		
-		// New tracefile format needs to separate out the program from the main thread.
-		uint32_t first_thread = 0x7FFFFFFF & (pid << 16);
+		// New tracefile format needs to separate out the program from the first thread.
+		main_thread = 0x7FFFFFFF & (pid << 16);
 		
 		char path[2100];
-		int len = snprintf(path, sizeof path, "%s/%u", KnobOutputDir.Value().c_str(), first_thread);
+		int len = snprintf(path, sizeof path, "%s/%u", KnobOutputDir.Value().c_str(), main_thread);
 		
 		if(KnobMakeStandaloneTrace) {
 			if(image_folder) delete image_folder;
@@ -400,51 +404,43 @@ public:
 	}
 #endif
 
-	static void thread_start(THREADID tid) {
+	void thread_start(THREADID tid) {
 		uint32_t t = InterlockedIncrement(&threads_created)-1;
 		uint32_t qira_fileid = 0x7FFFFFFF & ((pid << 16) ^ t); // TODO: New trace format needs more (i.e. arbitrary) name bits
-		Thread_State *state = new Thread_State(tid, qira_fileid);
+		Thread_State *state = new Thread_State(tid, qira_fileid, main_thread, claim_changelist_number());
 		PIN_SetThreadData(thread_state_tls_key, static_cast<void*>(state), tid);
-		
-		// struct logstate oldstate = *logstate;
-		// new_trace_files(true);
-		// *logstate = oldstate;
-		// logstate->parent_id = oldstate.this_pid;
-		// logstate->this_pid = file_id;
-		// logstate->first_changelist_number = oldstate.changelist_number;
-		// logstate->change_count = 1;
-
-		PIN_SetContextReg(ctx, writeea_scratch_reg, WRITEEA_SENTINEL);
 	}
 
-	static void thread_fini(THREADID tid) {
-		ASSERT(PIN_GetContextReg(ctx, writeea_scratch_reg) == WRITEEA_SENTINEL, "qirapin scratch register ended up with a weird value.");
+	void thread_fini(THREADID tid) {}
+
+	inline int claim_changelist_number() const {
+		return InterlockedIncrement(&changelist_number)-1;
 	}
 
-	inline int get_pid() const { return pid; }
-	inline int get_parent() const { return parent; }
 	void load_image() const {
-		PIN_GetLock(&process_state.lock, 0);
-		if(KnobMakeStandaloneTrace) {
-			// Dump image file here.
-			FILE *f = fopen((*image_folder+urlencode(imgname)).c_str(), "wb");
-			ASSERT(f, "Couldn't open image file destination.");
-			fwrite((void*)IMG_StartAddress(img), 1, IMG_SizeMapped(img), f);
-			fclose(f);
-		}
-		PIN_ReleaseLock(&process_state.lock);
+		// PIN_GetLock(&lock, 0);
+		// if(KnobMakeStandaloneTrace) {
+		// 	// Dump image file here.
+		// 	FILE *f = fopen((*image_folder+urlencode(imgname)).c_str(), "wb");
+		// 	ASSERT(f, "Couldn't open image file destination.");
+		// 	fwrite((void*)IMG_StartAddress(img), 1, IMG_SizeMapped(img), f);
+		// 	fclose(f);
+		// }
+		// PIN_ReleaseLock(&lock);
 	}
-} process_state();
+};
+
+static Process_State process_state;
 
 static inline void add_change(THREADID tid, uint64_t addr, uint64_t data, uint32_t flags) {
 	Thread_State *state = Thread_State::get(tid);
-	struct logstate &log = state.logstate();
-	struct change &c = Thread_State::get(tid).change(tid, log.change_count-1);
-	c.address = addr;
-	c.data = data;
-	c.changelist_number = log.changelist_number;
-	c.flags = flags|IS_VALID;
-	log.change_count++;
+	struct logstate *log = state->logstate();
+	struct change *c = Thread_State::get(tid)->change(log->change_count-1);
+	c->address = addr;
+	c->data = data;
+	c->changelist_number = log->changelist_number;
+	c->flags = flags|IS_VALID;
+	log->change_count++;
 }
 
 static void add_big_change(THREADID tid, uint64_t addr, const void *data, uint32_t flags, size_t size) {
@@ -466,7 +462,7 @@ static void add_big_change(THREADID tid, uint64_t addr, const void *data, uint32
 // TODO: See if merging analysis routines improves perf.
 
 VOID RecordStart(THREADID tid, ADDRINT ip, UINT32 size) {
-	Thread_State::get(tid).logstate().changelist_number++;
+	Thread_State::get(tid)->logstate()->changelist_number = process_state.claim_changelist_number();
 	add_change(tid, ip, size, IS_START);
 }
 
@@ -546,14 +542,14 @@ UINT32 RegToQiraRegAddr(REG r) {
 }
 
 VOID Instruction(INS ins, VOID *v) {
-	// TODO: Maybe do Trace/BBL as per MemTrace example
+	// TODO: Maybe do Trace/BBL as per MemTrace example. Consider serializing program on BBs
 	ADDRINT address = INS_Address(ins);
 	
 	// TODO: Might want to consider processing non-traced instructions on a BB level.
 	const bool filtered = address < filter_ip_low || filter_ip_high <= address;
 
 	if(!filtered) INS_InsertCall(
-		ins, IPOINT_BEFORE, (AFUNPTR)RecordStart, IARG_THREAD_ID
+		ins, IPOINT_BEFORE, (AFUNPTR)RecordStart, IARG_THREAD_ID,
 		IARG_INST_PTR,
 		IARG_UINT32, (UINT32)INS_Size(ins),
 		IARG_CALL_ORDER, CALL_ORDER_FIRST,
@@ -570,7 +566,7 @@ VOID Instruction(INS ins, VOID *v) {
 		REG r = INS_RegR(ins, i);
 		if(!REG_is_gr(REG_FullRegName(r))) continue;
 		INS_InsertPredicatedCall(
-			ins, IPOINT_BEFORE, (AFUNPTR)RecordRegRead, IARG_THREAD_ID
+			ins, IPOINT_BEFORE, (AFUNPTR)RecordRegRead, IARG_THREAD_ID,
 			IARG_UINT32, RegToQiraRegAddr(r),
 			IARG_REG_CONST_REFERENCE, r,
 			IARG_UINT32, REG_Size(r),
@@ -583,7 +579,7 @@ VOID Instruction(INS ins, VOID *v) {
 		if(!REG_is_gr(REG_FullRegName(r))) continue;
 		if(INS_HasFallThrough(ins)) {
 			INS_InsertPredicatedCall(
-				ins, IPOINT_AFTER, (AFUNPTR)RecordRegWrite, IARG_THREAD_ID
+				ins, IPOINT_AFTER, (AFUNPTR)RecordRegWrite, IARG_THREAD_ID,
 				IARG_UINT32, RegToQiraRegAddr(r),
 				IARG_REG_CONST_REFERENCE, r,
 				IARG_UINT32, REG_Size(r),
@@ -592,7 +588,7 @@ VOID Instruction(INS ins, VOID *v) {
 		}
 		if(INS_IsBranchOrCall(ins)) {
 			INS_InsertPredicatedCall(
-				ins, IPOINT_TAKEN_BRANCH, (AFUNPTR)RecordRegWrite, IARG_THREAD_ID
+				ins, IPOINT_TAKEN_BRANCH, (AFUNPTR)RecordRegWrite, IARG_THREAD_ID,
 				IARG_UINT32, RegToQiraRegAddr(r),
 				IARG_REG_CONST_REFERENCE, r,
 				IARG_UINT32, REG_Size(r),
@@ -604,7 +600,7 @@ VOID Instruction(INS ins, VOID *v) {
 	for(UINT32 i = 0; i < memOps; i++) {
 		if(!filtered) if(INS_MemoryOperandIsRead(ins, i)) {
 			INS_InsertPredicatedCall(
-				ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead, IARG_THREAD_ID
+				ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead, IARG_THREAD_ID,
 				IARG_MEMORYOP_EA, i,
 				IARG_MEMORYREAD_SIZE,
 				IARG_END
@@ -614,7 +610,7 @@ VOID Instruction(INS ins, VOID *v) {
 		// Do these even when filtered.
 		if(INS_MemoryOperandIsWritten(ins, i)) {
 			INS_InsertPredicatedCall(
-				ins, IPOINT_BEFORE, (AFUNPTR)RecordMemWrite1, IARG_THREAD_ID
+				ins, IPOINT_BEFORE, (AFUNPTR)RecordMemWrite1, IARG_THREAD_ID,
 				IARG_MEMORYOP_EA, i,
 				IARG_REG_VALUE, writeea_scratch_reg,
 				IARG_RETURN_REGS, writeea_scratch_reg,
@@ -622,7 +618,7 @@ VOID Instruction(INS ins, VOID *v) {
 			);
 			if(INS_HasFallThrough(ins)) {
 				INS_InsertPredicatedCall(
-					ins, IPOINT_AFTER, (AFUNPTR)RecordMemWrite2, IARG_THREAD_ID
+					ins, IPOINT_AFTER, (AFUNPTR)RecordMemWrite2, IARG_THREAD_ID,
 					IARG_REG_VALUE, writeea_scratch_reg,
 					IARG_MEMORYWRITE_SIZE,
 					IARG_RETURN_REGS, writeea_scratch_reg,
@@ -631,7 +627,7 @@ VOID Instruction(INS ins, VOID *v) {
 			}
 			if(INS_IsBranchOrCall(ins)) {
 				INS_InsertPredicatedCall(
-					ins, IPOINT_TAKEN_BRANCH, (AFUNPTR)RecordMemWrite2, IARG_THREAD_ID
+					ins, IPOINT_TAKEN_BRANCH, (AFUNPTR)RecordMemWrite2, IARG_THREAD_ID,
 					IARG_REG_VALUE, writeea_scratch_reg,
 					IARG_MEMORYWRITE_SIZE,
 					IARG_RETURN_REGS, writeea_scratch_reg,
@@ -644,7 +640,7 @@ VOID Instruction(INS ins, VOID *v) {
 	// Do this even when filtered.
 	if(INS_IsSyscall(ins)) {
 		INS_InsertPredicatedCall(
-			ins, IPOINT_BEFORE, (AFUNPTR)RecordSyscall, IARG_THREAD_ID
+			ins, IPOINT_BEFORE, (AFUNPTR)RecordSyscall, IARG_THREAD_ID,
 			IARG_SYSCALL_NUMBER,
 			IARG_END
 		);
@@ -664,14 +660,14 @@ struct Syscall_TLS {
 	int nargs;
 	ADDRINT arg[SYSCALL_MAXARGS];
 };
-void syscall_tls_destruct(SyscallArgs *tls) { delete tls; }
+void syscall_tls_destruct(Syscall_TLS *tls) { delete tls; }
 
 VOID SyscallEntry(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v) {
-	sys_nr = (int)PIN_GetSyscallNumber(ctx, std);
+	int sys_nr = PIN_GetSyscallNumber(ctx, std);
 	if(isMac) sys_nr &= 0xFFFFFF;
 	
 	Syscall_TLS *tls = new Syscall_TLS();
-	ASSERT(PIN_GetThreadData(syscall_tls_key, tid) == NULL);
+	ASSERT(PIN_GetThreadData(syscall_tls_key, tid) == NULL, "Error, SyscallEntry/Exit entered recursively!");
 	PIN_SetThreadData(syscall_tls_key, static_cast<void*>(tls), tid);
 
 	Thread_State *state = Thread_State::get(tid);
@@ -679,7 +675,7 @@ VOID SyscallEntry(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v) {
 	tls->syscall = sys_nr;
 	if(sys_nr < MAX_SYSCALL_NUM) {
 		tls->nargs = syscalls[sys_nr].nargs;
-		state->strace_printf("%u %u %s(", logstate->changelist_number, logstate->this_pid, syscalls[sys_nr].name);
+		state->strace_printf("%u %u %s(", state->logstate()->changelist_number, state->logstate()->this_pid, syscalls[sys_nr].name);
 		for(int i = 0; i < syscalls[sys_nr].nargs; i++) {
 			if(i > 0) state->strace_printf(", ");
 			ADDRINT arg = PIN_GetSyscallArgument(ctx, std, i);
@@ -688,7 +684,7 @@ VOID SyscallEntry(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v) {
 				case ARG_STR: {
 					char buffer[104];
 					memcpy(&buffer[100], "...", 4);
-					PIN_SafeCopy(buffer, arg, 100);
+					PIN_SafeCopy((void*)buffer, (void*)arg, 100);
 					state->strace_printf("%p=\"%s\"", arg, (char *)buffer);
 					break;
 				}
@@ -710,7 +706,7 @@ VOID SyscallEntry(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v) {
 			tls->arg[i] = PIN_GetSyscallArgument(ctx, std, i);
 		}
 		state->strace_printf("%u %u %lu(%p, %p, %p, %p, %p, %p) = ",
-			logstate->changelist_number, logstate->this_pid, sys_nr,
+			state->logstate()->changelist_number, state->logstate()->this_pid, sys_nr,
 			(void*)tls->arg[0], (void*)tls->arg[1], (void*)tls->arg[2],
 			(void*)tls->arg[3], (void*)tls->arg[4], (void*)tls->arg[5]
 		);
@@ -760,29 +756,29 @@ string urlencode(const string &s) {
 }
 
 VOID ImageLoad(IMG img, VOID *v) {
-	static int once = 0;
-	if(!once) {
-		once = 1;
-		std::cerr << "qira: filtering to image " << IMG_Name(img) << std::endl;
-		filter_ip_low = IMG_LowAddress(img);
-		filter_ip_high = IMG_HighAddress(img)+1;
-	}
-	
-	UINT32 numRegions = IMG_NumRegions(img);
-	ADDRINT imglow = IMG_LowAddress(img);
-	string imgname = IMG_Name(img);
-	
-	// TODO: iterate and copy sections for OSX
-	if(!numRegions) { // TODO: Figure out if this is a windows bug
-		fprintf(base_file, "%p-%p %x %s\n", (void*)imglow, (void*)IMG_HighAddress(img), 0, imgname.c_str());
-	} else {
-		for(UINT32 i = 0; i < numRegions; i++) {
-			ADDRINT low = IMG_RegionLowAddress(img, i);
-			ADDRINT high = IMG_RegionHighAddress(img, i)+1;
-			fprintf(base_file, "%p-%p %zx %s\n", (void*)low, (void*)high, (size_t)(low - imglow), imgname.c_str());
-		}
-	}
-	fflush(base_file);
+	// static int once = 0;
+	// if(!once) {
+	// 	once = 1;
+	// 	std::cerr << "qira: filtering to image " << IMG_Name(img) << std::endl;
+	// 	filter_ip_low = IMG_LowAddress(img);
+	// 	filter_ip_high = IMG_HighAddress(img)+1;
+	// }
+	//
+	// UINT32 numRegions = IMG_NumRegions(img);
+	// ADDRINT imglow = IMG_LowAddress(img);
+	// string imgname = IMG_Name(img);
+	//
+	// // TODO: iterate and copy sections for OSX
+	// if(!numRegions) { // TODO: Figure out if this is a windows bug
+	// 	fprintf(base_file, "%p-%p %x %s\n", (void*)imglow, (void*)IMG_HighAddress(img), 0, imgname.c_str());
+	// } else {
+	// 	for(UINT32 i = 0; i < numRegions; i++) {
+	// 		ADDRINT low = IMG_RegionLowAddress(img, i);
+	// 		ADDRINT high = IMG_RegionHighAddress(img, i)+1;
+	// 		fprintf(base_file, "%p-%p %zx %s\n", (void*)low, (void*)high, (size_t)(low - imglow), imgname.c_str());
+	// 	}
+	// }
+	// fflush(base_file);
 
 }
 
@@ -791,8 +787,17 @@ VOID ImageLoad(IMG img, VOID *v) {
 ////////////////////////////////////////////////////////////////
 
 VOID Fini(INT32 code, VOID *v) { process_state.fini(); }
-VOID ThreadStart(THREADID tid, CONTEXT *ctx, INT32 flags, VOID *v) { process_state.thread_start(tid); }
-VOID ThreadFini(THREADID tid, const CONTEXT *ctx, INT32 code, VOID *v) { process_state.thread_fini(tid); }
+
+VOID ThreadStart(THREADID tid, CONTEXT *ctx, INT32 flags, VOID *v) {
+	process_state.thread_start(tid);
+	PIN_SetContextReg(ctx, writeea_scratch_reg, WRITEEA_SENTINEL);
+}
+
+VOID ThreadFini(THREADID tid, const CONTEXT *ctx, INT32 code, VOID *v) {
+	ASSERT(PIN_GetContextReg(ctx, writeea_scratch_reg) == WRITEEA_SENTINEL, "qirapin scratch register ended up with a weird value.");
+	process_state.thread_fini(tid);
+}
+
 VOID ForkBefore      (THREADID tid, const CONTEXT *ctx, VOID *v) { process_state.fork_before(tid); }
 VOID ForkAfterParent (THREADID tid, const CONTEXT *ctx, VOID *v) { process_state.fork_after_parent(tid); }
 VOID ForkAfterChild  (THREADID tid, const CONTEXT *ctx, VOID *v) { process_state.fork_after_child(tid, PIN_GetPid()); }
@@ -813,11 +818,11 @@ int main(int argc, char *argv[]) {
 
 	mkdir(KnobOutputDir.Value().c_str(), 0755);
 
-	syscall_tls_key = PIN_CreateThreadDataKey(syscall_tls_destruct);
+	syscall_tls_key = PIN_CreateThreadDataKey((DESTRUCTFUN)syscall_tls_destruct);
 	PIN_AddSyscallEntryFunction(SyscallEntry, 0);
 	PIN_AddSyscallExitFunction(SyscallExit, 0);
 
-	thread_state_tls_key = PIN_CreateThreadDataKey(Thread_State::tls_destruct);
+	thread_state_tls_key = PIN_CreateThreadDataKey((DESTRUCTFUN)Thread_State::tls_destruct);
 	PIN_AddFiniFunction(Fini, 0);
 	PIN_AddThreadStartFunction(ThreadStart, 0);
 	PIN_AddThreadFiniFunction(ThreadFini, 0);
