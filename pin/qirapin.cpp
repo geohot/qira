@@ -227,8 +227,8 @@ static REG writeea_scratch_reg;
 static const ADDRINT WRITEEA_SENTINEL = (sizeof(ADDRINT) > 4) ? (ADDRINT)0xDEADDEADDEADDEADull : (ADDRINT)0xDEADDEADul;
 
 // TODO: Something that supports multiple filter ranges, etc.
-static ADDRINT filter_ip_low;
-static ADDRINT filter_ip_high;
+static ADDRINT filter_ip_low = 0;
+static ADDRINT filter_ip_high = (ADDRINT)-1;
 
 ////////////////////////////////////////////////////////////////
 // pintool arguments
