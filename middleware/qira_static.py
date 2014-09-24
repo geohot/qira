@@ -199,36 +199,47 @@ def graph_dot():
 
 def init_radare(path):
   core = RCore()
-  """
   desc = core.io.open(path, 0, 0)
   if desc == None:
     print "*** RBIN LOAD FAILED"
     return False
   core.bin.load(path, 0, 0, 0, desc.fd, False)
   print "*** radare bin loaded @",ghex(core.bin.get_baddr())
-  """
+
   """
   for e in core.bin.get_entries():
     print e
   """
+
   """
   for s in core.bin.get_symbols():
-    print s.name
+    print ghex(s.vaddr), s.name
   """
-  #core.config.set ("asm.arch", "x86");
-  #core.config.set ("asm.bits", "32");
 
-  f = core.file_open(path, False, 0)
+  """
+  # why do i need to do this?
+  info = core.bin.get_info()
+  core.config.set("asm.arch", info.arch);
+  core.config.set("asm.bits", str(info.bits));
+  #core.file_open(path, 0, 0)
+
+  # find functions
+  core.search_preludes()
+  """
+
   core.bin_load("", 0)
+  core.anal_all()
 
-  print core.cmd_str("ap")
+  import collections
+  tags = collections.defaultdict(dict)
 
   for f in core.anal.get_fcns():
-    print f.name, f.addr
-
-  #print dir(core)
-
-  #print (core.cmd_str ("pd 12 @ _start"))
+    print f.name, ghex(f.addr), f.size
+    """
+    for b in f.get_bbs():
+      print "  ", ghex(b.addr), ghex(b.size)
+    """
+      #for i in 
 
 
 def init_static(lprogram):
