@@ -413,7 +413,7 @@ public:
 
 	void thread_fini(THREADID tid) {}
 
-	inline int claim_changelist_number() const {
+	inline int claim_changelist_number() {
 		return InterlockedIncrement(&changelist_number)-1;
 	}
 
