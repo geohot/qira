@@ -40,7 +40,6 @@ if qira_config.WITH_RADARE:
 #   function stack frames
 #   decompilation
 
-
 # *** NEWER STATIC FUNCTIONS USE IDA AS STATIC BACKEND ***
 
 def get_static_bytes(addr, llen, numlist=False):
@@ -195,6 +194,8 @@ def graph_dot():
   #print "DOT RESPONSE", ret
   return ret
 
+
+
 # *** INIT FUNCTIONS ***
 
 def init_radare(path):
@@ -301,7 +302,7 @@ def init_radare(path):
       print "  ", ghex(b.addr), b.size
     """
 
-  # fix ctrl-c
+  # fix ctl-c
   import signal
   signal.signal(signal.SIGINT, signal.SIG_DFL)
 
