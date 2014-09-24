@@ -578,10 +578,12 @@ VOID Fini(INT32 code, VOID *v) {
 }
 
 VOID ForkChild(THREADID threadid, const CONTEXT *ctx, VOID *v) {
+	struct logstate oldstate = *logstate;
 	new_trace_files(true);
-	logstate->parent_id = logstate->this_pid;
+	*logstate = oldstate;
+	logstate->parent_id = oldstate.this_pid;
 	logstate->this_pid = file_id;
-	logstate->first_changelist_number = logstate->changelist_number;
+	logstate->first_changelist_number = oldstate.changelist_number;
 	logstate->change_count = 1;
 }
 
