@@ -244,8 +244,13 @@ static KNOB<string> KnobOutputDir(KNOB_MODE_WRITEONCE, "pintool", "o",
 
 static KNOB<BOOL> KnobMakeStandaloneTrace(KNOB_MODE_WRITEONCE, "pintool", "standalone",
 	KNOB_ONLY_ON_WINDOWS, // Enable by default on windows, since qira doesn't work there yet
-	"produce trace package suitable for moving to other systems."
+	"produce trace package suitable for moving to other systems"
 );
+
+// static KNOB<BOOL> KnobSerializeThreads(KNOB_MODE_WRITEONCE, "pintool", "serialize",
+// 	"0",
+// 	"serialize threads for a more consistent view of time and memory"
+// );
 
 ////////////////////////////////////////////////////////////////
 // qirapin state
@@ -286,7 +291,7 @@ public:
 		*logstate() = (struct logstate){
 			.change_count = 1,
 			.changelist_number = chglist,
-			.is_filtered = 1,
+			.is_filtered = 0,
 			.first_changelist_number = chglist,
 			.parent_id = parent,
 			.this_pid = qira_fileid,
@@ -377,12 +382,20 @@ public:
 			mkdir(image_folder->c_str(), 0755);
 		}
 		
+		snprintf(path+len, sizeof(path) - len, "_base");
+		FILE *new_base_file = fopen(path, "wb");
 		if(base_file) {
-			// TODO: Copy base file.
+			long x = ftell(base_file);
+			rewind(base_file);
+			while(x > 0) {
+				size_t y = fread(path, 1, sizeof path, base_file);
+				size_t z = fwrite(path, 1, y, new_base_file);
+				ASSERT(y > 0 && z == y, "File IO error while copying base file.");
+				x -= y;
+			}
 			fclose(base_file);
 		}
-		snprintf(path+len, sizeof(path) - len, "_base");
-		base_file = fopen(path, "wb");
+		base_file = new_base_file;
 	}
 
 	void fini() {
