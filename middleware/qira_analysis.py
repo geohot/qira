@@ -307,7 +307,6 @@ def get_hacked_depth_map(flow, program):
   for (address, length, clnum, ins) in flow:
     # handing missing changes
     if last_clnum != None and clnum != last_clnum+1:
-      print clnum, last_clnum
       for i in range(clnum-last_clnum-1):
         ret.append(-1)
     last_clnum = clnum
@@ -351,7 +350,7 @@ def get_vtimeline_picture(trace, minclnum, maxclnum):
     except:
       # make missing changes red
       if i/sampling < im_y:
-        px[0, i/sampling] = (128,0,0)
+        px[0, i/sampling] = (96, 32, 32)
 
   buf = StringIO.StringIO()
   im.save(buf, format='PNG')
