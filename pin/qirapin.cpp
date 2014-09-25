@@ -414,6 +414,7 @@ public:
 	}
 	void fork_after_child(THREADID tid, int new_pid) {
 		init(new_pid);
+		changelist_number -= 1; // hax
 		thread_start(tid);
 		PIN_ReleaseLock(&lock);
 	}
