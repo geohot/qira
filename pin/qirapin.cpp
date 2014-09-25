@@ -383,7 +383,7 @@ public:
 		}
 		
 		snprintf(path+len, sizeof(path) - len, "_base");
-		FILE *new_base_file = fopen(path, "wb");
+		FILE *new_base_file = fopen(path, "wb+");
 		if(base_file) {
 			long x = ftell(base_file);
 			rewind(base_file);
