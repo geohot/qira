@@ -624,6 +624,13 @@ class Trace:
         maxclnum = self.db.get_maxclnum()
         self.flow = qira_analysis.get_instruction_flow(self, self.program, minclnum, maxclnum)
         self.dmap = qira_analysis.get_hacked_depth_map(self.flow, self.program)
+
+        # hacky pin offset problem fix
+        hpo = len(self.dmap)-(maxclnum-minclnum)
+        print hpo
+        if hpo == 2:
+          self.dmap = self.dmap[1:]
+
         self.maxd = max(self.dmap)
         self.picture = qira_analysis.get_vtimeline_picture(self, minclnum, maxclnum)
         self.minclnum = minclnum

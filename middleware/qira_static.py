@@ -40,7 +40,6 @@ if qira_config.WITH_RADARE:
 #   function stack frames
 #   decompilation
 
-
 # *** NEWER STATIC FUNCTIONS USE IDA AS STATIC BACKEND ***
 
 def get_static_bytes(addr, llen, numlist=False):
@@ -195,58 +194,137 @@ def graph_dot():
   #print "DOT RESPONSE", ret
   return ret
 
+
+
 # *** INIT FUNCTIONS ***
 
 def init_radare(path):
+  import collections
+  tags = collections.defaultdict(dict)
+
   core = RCore()
-  """
   desc = core.io.open(path, 0, 0)
   if desc == None:
     print "*** RBIN LOAD FAILED"
     return False
   core.bin.load(path, 0, 0, 0, desc.fd, False)
   print "*** radare bin loaded @",ghex(core.bin.get_baddr())
-  """
+
   """
   for e in core.bin.get_entries():
     print e
   """
-  """
-  for s in core.bin.get_symbols():
-    print s.name
-  """
-  #core.config.set ("asm.arch", "x86");
-  #core.config.set ("asm.bits", "32");
 
-  f = core.file_open(path, False, 0)
+
+  # why do i need to do this?
+  info = core.bin.get_info()
+  core.config.set("asm.arch", info.arch);
+  core.config.set("asm.bits", str(info.bits));
+  #core.file_open(path, 0, 0)
+
+  """
+  # find functions
+  core.search_preludes()
+  """
+
+
+  # you have to file_open to make analysis work
+  core.file_open(path, False, 0)
   core.bin_load("", 0)
+  core.anal_all()
 
-  print core.cmd_str("ap")
+  import collections
+  tags = collections.defaultdict(dict)
+
+  for s in core.bin.get_symbols():
+    print ghex(s.vaddr), s.name
+    tags[s.vaddr]['name'] = s.name
 
   for f in core.anal.get_fcns():
-    print f.name, f.addr
+    print f.name, ghex(f.addr), f.size
 
-  #print dir(core)
+    tags[f.addr]['funclength'] = f.size
 
-  #print (core.cmd_str ("pd 12 @ _start"))
+    sa = f.addr
+    starts = []
+    # find bblock starts, haxx
+    while sa < (f.addr + f.size):
+      op = core.op_anal(sa)
+      t = op.type & 0xFFFF
+      if t == 1 or t == 2:
+        starts.append(op.jump)
+
+      if op.size <= 0:
+        break
+      else:
+        sa += op.size
+
+    sa = f.addr
+    will_pass = True
+    while sa < (f.addr + f.size):
+      #print core.op_str(sa)
+      instr = core.op_str(sa)
+      op = core.op_anal(sa)
+      t = op.type
+      t2 = t & 0xFFFF
+      t3 = t & 0xFFFF0000
+
+      tags[sa]['len'] = op.size
+      tags[sa]['semantics'] = []
+      tags[sa]['flow'] = []
+      tags[sa]['scope'] = ghex(f.addr)
+      tags[sa]['flags'] = 0x10000 if will_pass else 0
+      will_pass = True
+
+      if t2 == 1 or t2 == 2 or t2 == 5 or (sa+op.size) in starts:
+        tags[sa]['semantics'].append("endbb")
+
+      if t == 1 or t == 2:
+        # jmp
+        tags[sa]['flow'].append(ghex(op.jump))
+        will_pass = False
+      elif t3 == 0x80000000 and (t2 == 1 or t2 == 2):
+        # cond jmp
+        tags[sa]['flow'].append(ghex(op.jump))
+
+      tags[sa]['instruction'] = instr
+
+      print "   ", ghex(sa), op.type & 0xFFFF, instr
+
+      if op.size <= 0:
+        break
+      else:
+        sa += op.size
+    #bbs = f.get_bbs()
+    """
+
+    for b in f.get_bbs():
+      print "  ", ghex(b.addr), b.size
+    """
+
+  # fix ctl-c
+  import signal
+  signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+  return tags
 
 
 def init_static(lprogram):
   global program
   program = lprogram
+  tags = []
+
   if qira_config.WITH_IDA:
     ida.init_with_binary(program.program)
-
     tags = ida.fetch_tags()
     print "*** ida returned %d tags" % (len(tags))
+  elif qira_config.WITH_RADARE:
+    tags = init_radare(program.program)
 
-    # grr, copied from settags, merge into tags
-    for addr in tags:
-      for i in tags[addr]:
-        program.tags[addr][i] = tags[addr][i]
-
-  if qira_config.WITH_RADARE:
-    init_radare(program.program)
+  # grr, copied from settags, merge into tags
+  for addr in tags:
+    for i in tags[addr]:
+      program.tags[addr][i] = tags[addr][i]
 
   # as a hack, we can assume it's loading at 0x8048000
   # forget sections for now
