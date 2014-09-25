@@ -366,7 +366,7 @@ public:
 		threads_created = 0;
 		
 		char path[2100];
-		int len = snprintf(path, sizeof path, "%s/%u", KnobOutputDir.Value().c_str(), pid);
+		int len = snprintf(path, sizeof path, "%s/%u", KnobOutputDir.Value().c_str(), main_id);
 		
 		if(KnobMakeStandaloneTrace) {
 			if(image_folder) delete image_folder;
