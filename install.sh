@@ -9,7 +9,7 @@ if [[ "$unamestr" == 'Linux' ]]; then
   # build for building qiradb and stuff for flask like gevent
   if [ $(which apt-get) ]; then
     echo "installing apt packages"
-    sudo apt-get install build-essential python-dev python-pip debootstrap libjpeg-dev zlib1g-dev unzip wget graphviz
+    sudo apt-get -y install build-essential python-dev python-pip debootstrap libjpeg-dev zlib1g-dev unzip wget graphviz
     if [ ! -f /usr/lib/libcapstone.so ]; then
       # now we need capstone so the user can see assembly
       if [[ $(uname -m) == 'i386' ]]; then
