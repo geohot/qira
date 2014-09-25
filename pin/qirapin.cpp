@@ -422,7 +422,7 @@ public:
 	void thread_start(THREADID tid) {
 		uint32_t t = InterlockedIncrement(&threads_created)-1;
 		uint32_t qira_fileid = 0x7FFFFFFF & ((pid << 16) ^ t); // TODO: New trace format needs more (i.e. arbitrary) name bits
-		Thread_State *state = new Thread_State(qira_fileid, main_thread, claim_changelist_number());
+		Thread_State *state = new Thread_State(qira_fileid, main_thread != qira_fileid ? main_thread : parent_pid, claim_changelist_number());
 		PIN_SetThreadData(thread_state_tls_key, static_cast<void*>(state), tid);
 	}
 
