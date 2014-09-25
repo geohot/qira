@@ -303,7 +303,15 @@ def get_hacked_depth_map(flow, program):
   start = time.time()
   return_stack = []
   ret = [0]
+  last_clnum = None
   for (address, length, clnum, ins) in flow:
+    # handing missing changes
+    if last_clnum != None and clnum != last_clnum+1:
+      print clnum, last_clnum
+      for i in range(clnum-last_clnum-1):
+        ret.append(-1)
+    last_clnum = clnum
+
     if address in return_stack:
       return_stack = return_stack[0:return_stack.index(address)]
     # ugh, so gross
@@ -334,9 +342,16 @@ def get_vtimeline_picture(trace, minclnum, maxclnum):
 
   for i in range(0, r, sampling):
     # could average the sampled
-    c = int((trace.dmap[i]*128.0)/trace.maxd)
-    if i/sampling < im_y:
-      px[0, i/sampling] = (0,c,c)
+    try:
+      if trace.dmap[i] == -1:
+        raise Exception("nope")
+      c = int((trace.dmap[i]*128.0)/trace.maxd)
+      if i/sampling < im_y:
+        px[0, i/sampling] = (0,c,c)
+    except:
+      # make missing changes red
+      if i/sampling < im_y:
+        px[0, i/sampling] = (128,0,0)
 
   buf = StringIO.StringIO()
   im.save(buf, format='PNG')
