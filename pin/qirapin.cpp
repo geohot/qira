@@ -349,22 +349,20 @@ public:
 
 class Process_State {
 	PIN_LOCK lock;
-	int parent_pid;
-	int pid;
+	uint32_t main_id; // lol
 	uint32_t threads_created;
 	uint32_t changelist_number;
 	FILE *base_file;
 	string *image_folder;
 
 public:
-	Process_State() : parent_pid(0xDEADBEEF), pid(-1), threads_created(-1), changelist_number(1), base_file(NULL), image_folder(NULL) {
+	Process_State() : main_id(0xDEADBEEF), threads_created(0xDEADBEEF), changelist_number(1), base_file(NULL), image_folder(NULL) {
 		PIN_InitLock(&lock);
 	}
 
-	void init(INT pid_) {
+	void init(INT pid) {
 		// Thread start will be called after this.
-		parent_pid = pid;
-		pid = 0x7FFFFFFF & (pid << 16); // New tracefile format needs to separate out the program from the first thread.
+		main_id = 0x7FFFFFFF & (pid << 16); // New tracefile format needs to separate out the program from the first thread.
 		threads_created = 0;
 		
 		char path[2100];
@@ -417,8 +415,8 @@ public:
 
 	void thread_start(THREADID tid) {
 		uint32_t t = InterlockedIncrement(&threads_created)-1;
-		uint32_t qira_fileid = 0x7FFFFFFF & ((pid << 16) ^ t); // TODO: New trace format needs more (i.e. arbitrary) name bits
-		Thread_State *state = new Thread_State(qira_fileid, pid != qira_fileid ? pid : parent_pid, claim_changelist_number());
+		uint32_t qira_fileid = main_id ^ t; // TODO: New trace format needs more (i.e. arbitrary) name bits
+		Thread_State *state = new Thread_State(qira_fileid, main_id == qira_fileid ? -1 : main_id, claim_changelist_number());
 		PIN_SetThreadData(thread_state_tls_key, static_cast<void*>(state), tid);
 	}
 
