@@ -786,12 +786,12 @@ VOID ImageLoad(IMG img, VOID *v) {
 
 	// TODO: iterate and copy sections for OSX
 	if(!numRegions) { // TODO: Figure out if this is a windows bug
-		process_state.base_printf("%p-%p %x %s\n", (void*)imglow, (void*)IMG_HighAddress(img), 0, imgname.c_str());
+		process_state.base_printf("%x-%x %x %s\n", (void*)imglow, (void*)IMG_HighAddress(img), 0, imgname.c_str());
 	} else {
 		for(UINT32 i = 0; i < numRegions; i++) {
 			ADDRINT low = IMG_RegionLowAddress(img, i);
 			ADDRINT high = IMG_RegionHighAddress(img, i)+1;
-			process_state.base_printf("%p-%p %zx %s\n", (void*)low, (void*)high, (size_t)(low - imglow), imgname.c_str());
+			process_state.base_printf("%x-%x %zx %s\n", (void*)low, (void*)high, (size_t)(low - imglow), imgname.c_str());
 		}
 	}
 	process_state.base_flush();
