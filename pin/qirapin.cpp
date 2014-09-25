@@ -291,7 +291,7 @@ public:
 		*logstate() = (struct logstate){
 			.change_count = 1,
 			.changelist_number = chglist,
-			.is_filtered = 0,
+			.is_filtered = 1,
 			.first_changelist_number = chglist,
 			.parent_id = parent,
 			.this_pid = qira_fileid,
@@ -562,6 +562,7 @@ VOID Instruction(INS ins, VOID *v) {
 	
 	// TODO: Might want to consider processing non-traced instructions on a BB level.
 	const bool filtered = address < filter_ip_low || filter_ip_high <= address;
+	if(filtered) return; // TODO: Need to ask about how filtering works again...
 
 	if(!filtered) INS_InsertCall(
 		ins, IPOINT_BEFORE, (AFUNPTR)RecordStart, IARG_THREAD_ID,
