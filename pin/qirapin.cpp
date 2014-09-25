@@ -305,7 +305,7 @@ public:
 		fclose(strace_file);
 	}
 
-	static void tls_destruct(Thread_State *tls) { delete tls; }
+	static inline void tls_destruct(void *tls) { delete static_cast<Thread_State *>(tls); }
 
 	inline struct logstate *logstate() const {
 		return static_cast<struct logstate *>(logstate_region);
@@ -676,7 +676,7 @@ struct Syscall_TLS {
 	int nargs;
 	ADDRINT arg[SYSCALL_MAXARGS];
 };
-void syscall_tls_destruct(Syscall_TLS *tls) { delete tls; }
+static inline void syscall_tls_destruct(void *tls) { delete static_cast<Syscall_TLS *>(tls); }
 
 VOID SyscallEntry(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v) {
 	int sys_nr = PIN_GetSyscallNumber(ctx, std);
@@ -815,7 +815,11 @@ VOID ThreadFini(THREADID tid, const CONTEXT *ctx, INT32 code, VOID *v) {
 
 VOID ForkBefore      (THREADID tid, const CONTEXT *ctx, VOID *v) { process_state.fork_before(tid); }
 VOID ForkAfterParent (THREADID tid, const CONTEXT *ctx, VOID *v) { process_state.fork_after_parent(tid); }
-VOID ForkAfterChild  (THREADID tid, const CONTEXT *ctx, VOID *v) { process_state.fork_after_child(tid, PIN_GetPid()); }
+VOID ForkAfterChild  (THREADID tid, const CONTEXT *ctx, VOID *v) {
+	syscall_tls_destruct(PIN_GetThreadData(syscall_tls_key, tid));
+	PIN_SetThreadData(syscall_tls_key, NULL, tid);
+	process_state.fork_after_child(tid, PIN_GetPid());
+}
 
 int main(int argc, char *argv[]) {
 	PIN_InitSymbols();
@@ -833,11 +837,11 @@ int main(int argc, char *argv[]) {
 
 	mkdir(KnobOutputDir.Value().c_str(), 0755);
 
-	syscall_tls_key = PIN_CreateThreadDataKey((DESTRUCTFUN)syscall_tls_destruct);
+	syscall_tls_key = PIN_CreateThreadDataKey(syscall_tls_destruct);
 	PIN_AddSyscallEntryFunction(SyscallEntry, 0);
 	PIN_AddSyscallExitFunction(SyscallExit, 0);
 
-	thread_state_tls_key = PIN_CreateThreadDataKey((DESTRUCTFUN)Thread_State::tls_destruct);
+	thread_state_tls_key = PIN_CreateThreadDataKey(Thread_State::tls_destruct);
 	PIN_AddFiniFunction(Fini, 0);
 	PIN_AddThreadStartFunction(ThreadStart, 0);
 	PIN_AddThreadFiniFunction(ThreadFini, 0);
