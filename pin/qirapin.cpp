@@ -356,8 +356,6 @@ class Process_State {
 	FILE *base_file;
 	string *image_folder;
 
-	uint32_t main_thread; //lol
-
 public:
 	Process_State() : parent_pid(0xDEADBEEF), pid(-1), threads_created(-1), changelist_number(1), base_file(NULL), image_folder(NULL) {
 		PIN_InitLock(&lock);
@@ -366,14 +364,11 @@ public:
 	void init(INT pid_) {
 		// Thread start will be called after this.
 		parent_pid = pid;
-		pid = pid_;
+		pid = 0x7FFFFFFF & (pid << 16); // New tracefile format needs to separate out the program from the first thread.
 		threads_created = 0;
 		
-		// New tracefile format needs to separate out the program from the first thread.
-		main_thread = 0x7FFFFFFF & (pid << 16);
-		
 		char path[2100];
-		int len = snprintf(path, sizeof path, "%s/%u", KnobOutputDir.Value().c_str(), main_thread);
+		int len = snprintf(path, sizeof path, "%s/%u", KnobOutputDir.Value().c_str(), pid);
 		
 		if(KnobMakeStandaloneTrace) {
 			if(image_folder) delete image_folder;
@@ -423,7 +418,7 @@ public:
 	void thread_start(THREADID tid) {
 		uint32_t t = InterlockedIncrement(&threads_created)-1;
 		uint32_t qira_fileid = 0x7FFFFFFF & ((pid << 16) ^ t); // TODO: New trace format needs more (i.e. arbitrary) name bits
-		Thread_State *state = new Thread_State(qira_fileid, main_thread != qira_fileid ? main_thread : parent_pid, claim_changelist_number());
+		Thread_State *state = new Thread_State(qira_fileid, pid != qira_fileid ? pid : parent_pid, claim_changelist_number());
 		PIN_SetThreadData(thread_state_tls_key, static_cast<void*>(state), tid);
 	}
 
