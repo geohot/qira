@@ -46,6 +46,6 @@ ln -sf ../../../qemu_mods/qemu.h linux-user/qemu.h
 ln -sf ../../../qemu_mods/main.c linux-user/main.c
 ln -sf ../../../qemu_mods/strace.c linux-user/strace.c
 ln -sf ../../../qemu_mods/strace.list linux-user/strace.list
-./configure --target-list=i386-linux-user,x86_64-linux-user,arm-linux-user,ppc-linux-user,aarch64-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown,mips-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown
+./configure --target-list=i386-linux-user,x86_64-linux-user,arm-linux-user,ppc-linux-user,aarch64-linux-user,mips-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown
 make -j $(grep processor < /proc/cpuinfo | wc -l)
 
