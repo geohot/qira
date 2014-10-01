@@ -30,4 +30,13 @@ WITH_STATIC2 = True
 
 WITH_IDA = False
 
+# enable radare if it's installed
+"""
+try:
+  from r2.r_core import RCore
+  WITH_RADARE = True
+  WITH_STATIC = True
+except:
+  WITH_RADARE = False
+"""
 
