@@ -410,15 +410,22 @@ def serve(path):
   else:
     return Response(dat, mimetype="text/html")
 
+
+
 # must go at the bottom
 def run_server(largs, lprogram):
   global args
   global program
+  global static
   args = largs
   program = lprogram
+
   if qira_config.WITH_STATIC:
     import qira_static
     qira_static.init_static(program)
+  if qira_config.WITH_STATIC2:
+    import qira_static2
+    static = qira_static2.init_static(program)
   if qira_config.WITH_CDA:
     import cacheserver
     app.register_blueprint(cacheserver.app)

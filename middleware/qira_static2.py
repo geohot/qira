@@ -1,8 +1,17 @@
 #!/usr/bin/env python2.7
+
+# qira_static2 only supports radare
+
 from qira_base import *
 import qira_config
 import collections
 import os, sys
+
+# webserver imports
+import json
+from qira_webserver import socket_method, socketio, app
+from flask import request
+from flask.ext.socketio import SocketIO, emit
 
 # radare2 is best static, and the only one we support
 # if we want QIRA to work without it,
@@ -63,17 +72,20 @@ class Static:
 
     # sadly the analyzer jacks stdout and stderr
     # flush bullshit and fix ctrl-c
-    print ""
     sys.stderr.flush()
     sys.stdout.flush()
+    print ""
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     # get names
+    name_count = 0
     for s in self.core.bin.get_symbols():
       self.set_name(s.vaddr, s.name)
+      name_count += 1
 
     # get other things here?
+    print "static found %d names" % (name_count)
 
   # return a dictionary of addresses:names
   # don't allow two things to share a name
@@ -141,6 +153,42 @@ class Static:
 
   def make_function_at(self, address):
     pass
+
+# *** CALLS FROM THE FRONTEND ***
+
+@socketio.on('getnames', namespace='/qira')
+@socket_method
+def getnames(addrs):
+  ret = static.get_names(map(fhex, addrs))
+  send = {}
+  for addr in ret:
+    send[ghex(addr)] = ret[addr]
+  emit('names', send)
+
+@socketio.on('gotoname', namespace='/qira')
+@socket_method
+def gotoname(name):
+  addr = static.get_address_by_name
+  if addr != None:
+    emit('setiaddr', ghex(addr))
+
+@socketio.on('settags', namespace='/qira')
+@socket_method
+def settags(tags):
+  for addr in tags:
+    naddr = fhex(addr)
+    for i in tags[addr]:
+      if i == 'name':
+        static.set_name(addr, tags[addr][i])
+      else:
+        static[naddr][i] = tags[addr][i]
+
+# *** STATIC INIT STUFF ***
+
+def init_static(program):
+  global static
+  static = Static(program)
+  return static
 
 if __name__ == "__main__":
   class Program:

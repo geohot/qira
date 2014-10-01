@@ -100,10 +100,12 @@ def settags(tags):
       program.tags[naddr][i] = tags[addr][i]
       print hex(naddr), i, program.tags[naddr][i]
 
+"""
 @socketio.on('getstaticview', namespace='/qira')
 @socket_method
 def getstaticview(haddr, flat, flatrange):
   addr = fhex(haddr)
+"""
 
 # *** OLDER, LESS SUPPORTED STATIC FUNCTIONS ***
 

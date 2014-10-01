@@ -627,7 +627,6 @@ class Trace:
 
         # hacky pin offset problem fix
         hpo = len(self.dmap)-(maxclnum-minclnum)
-        print hpo
         if hpo == 2:
           self.dmap = self.dmap[1:]
 
