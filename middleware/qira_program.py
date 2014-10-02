@@ -117,6 +117,9 @@ class Program:
     self.proghash = sha1(open(self.program, "rb").read()).hexdigest()
     print "*** program is",self.program,"with hash",self.proghash
 
+    # init static
+    self.static = qira_static2.Static(program) 
+
     # no traces yet
     self.traces = {}
     self.runnable = False
@@ -410,29 +413,6 @@ class Program:
     except Exception, e:
       print "ERROR: csearch issue",e
       return []
-
-  def getnames(self):
-    from elftools.elf.elffile import ELFFile
-    from elftools.elf.sections import SymbolTableSection
-    from elftools.elf.relocation import RelocationSection
-    elf = ELFFile(open(self.program))
-    ncount = 0
-    for section in elf.iter_sections():
-      if isinstance(section, RelocationSection):
-        symtable = elf.get_section(section['sh_link'])
-        for rel in section.iter_relocations():
-          symbol = symtable.get_symbol(rel['r_info_sym'])
-          #print rel, symbol.name
-          if rel['r_offset'] != 0 and symbol.name != "":
-            self.tags[rel['r_offset']]['name'] = "__"+symbol.name
-            ncount += 1
-      if isinstance(section, SymbolTableSection):
-        for nsym, symbol in enumerate(section.iter_symbols()):
-          if symbol['st_value'] != 0 and symbol.name != "" and symbol['st_info']['type'] == "STT_FUNC":
-            #print symbol['st_value'], symbol.name
-            self.tags[symbol['st_value']]['name'] = symbol.name
-            ncount += 1
-    print "** found %d names" % ncount
 
   def getdwarf(self):
     if not qira_config.WITH_DWARF:

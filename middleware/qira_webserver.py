@@ -384,6 +384,35 @@ def do_search(b64search):
     ret.append(s)
   return '<br/>'.join(ret)
 
+# *** STATIC CALLS FROM THE FRONTEND ***
+
+@socketio.on('getnames', namespace='/qira')
+@socket_method
+def getnames(addrs):
+  ret = program.static.get_names(map(fhex, addrs))
+  send = {}
+  for addr in ret:
+    send[ghex(addr)] = ret[addr]
+  emit('names', send)
+
+@socketio.on('gotoname', namespace='/qira')
+@socket_method
+def gotoname(name):
+  addr = program.static.get_address_by_name(name)
+  if addr != None:
+    emit('setiaddr', ghex(addr))
+
+@socketio.on('settags', namespace='/qira')
+@socket_method
+def settags(tags):
+  for addr in tags:
+    naddr = fhex(addr)
+    for i in tags[addr]:
+      if i == 'name':
+        program.static.set_name(addr, tags[addr][i])
+      else:
+        program.static[naddr][i] = tags[addr][i]
+
 # ***** generic webserver stuff *****
   
 @app.route('/', defaults={'path': 'index.html'})
@@ -423,9 +452,6 @@ def run_server(largs, lprogram):
   if qira_config.WITH_STATIC:
     import qira_static
     qira_static.init_static(program)
-  if qira_config.WITH_STATIC2:
-    import qira_static2
-    static = qira_static2.init_static(program)
   if qira_config.WITH_CDA:
     import cacheserver
     app.register_blueprint(cacheserver.app)
