@@ -21,15 +21,18 @@ def get_arch(fb):
 def load_binary(static, path):
   elf = ELFFile(open(path))
 
-  # hacks say ELF loads at 0x8048000
-  progdat = open(path).read()
-  static.add_memory_chunk(0x8048000, progdat)
-
+  # TODO: replace with elf['e_machine']
+  progdat = open(path).read(0x20)
   fb = struct.unpack("H", progdat[0x12:0x14])[0]   # e_machine
   static['arch'] = get_arch(fb)
 
   ncount = 0
   for section in elf.iter_sections():
+    addr = section['sh_addr']
+    slen = section['sh_size']
+    if addr != 0 and slen > 0:
+      static.add_memory_chunk(addr, section.data())
+
     if isinstance(section, RelocationSection):
       symtable = elf.get_section(section['sh_link'])
       for rel in section.iter_relocations():

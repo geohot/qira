@@ -2,10 +2,6 @@ from qira_base import *
 import qira_config
 import qira_analysis
 
-# new home of static2
-sys.path.append(qira_config.BASEDIR+"/static2")
-import static2
-
 import os
 import shutil
 import sys
@@ -21,6 +17,10 @@ import json
 
 import struct
 import qiradb
+
+# new home of static2
+sys.path.append(qira_config.BASEDIR+"/static2")
+import static2
 
 # (regname, regsize, is_big_endian, arch_name, branches)
 PPCREGS = ([], 4, True, "ppc", ["bl "])
