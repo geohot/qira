@@ -62,6 +62,7 @@ class Static:
     elf = ELFFile(open(path))
     ncount = 0
     for section in elf.iter_sections():
+
       if isinstance(section, RelocationSection):
         symtable = elf.get_section(section['sh_link'])
         for rel in section.iter_relocations():
@@ -70,6 +71,7 @@ class Static:
           if rel['r_offset'] != 0 and symbol.name != "":
             self[rel['r_offset']]['name'] = "__"+symbol.name
             ncount += 1
+
       if isinstance(section, SymbolTableSection):
         for nsym, symbol in enumerate(section.iter_symbols()):
           if symbol['st_value'] != 0 and symbol.name != "" and symbol['st_info']['type'] == "STT_FUNC":
