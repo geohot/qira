@@ -2,50 +2,44 @@
 # capstone is a requirement now
 from capstone import *
 
-def disasm(self, raw, address, arch):
-  default = {"repr": raw.encode("hex")}
-  try:
+class disasm(object):
+  """one disassembled instruction"""
+  def __init__(self, raw, address, arch="i386"):
+    self.raw = raw
+    self.address = address
     if arch == "i386":
-      md = Cs(CS_ARCH_X86, CS_MODE_32)
+      self.md = Cs(CS_ARCH_X86, CS_MODE_32)
     elif arch == "x86-64":
-      md = Cs(CS_ARCH_X86, CS_MODE_64)
+      self.md = Cs(CS_ARCH_X86, CS_MODE_64)
     elif arch == "thumb":
-      md = Cs(CS_ARCH_ARM, CS_MODE_THUMB)
+      self.md = Cs(CS_ARCH_ARM, CS_MODE_THUMB)
     elif arch == "arm":
-      md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
+      self.md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
     elif arch == "aarch64":
-      md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
+      self.md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
     elif arch == "ppc":
-      md = Cs(CS_ARCH_PPC, CS_MODE_32)
-      #if 64 bit: md.mode = CS_MODE_64
+      self.md = Cs(CS_ARCH_PPC, CS_MODE_32)
     else:
-      raise Exception('arch not in capstone')
-    #next: store different data based on type of operand
-    #https://github.com/aquynh/capstone/blob/master/bindings/python/test_arm.py
-    md.detail = True
+      raise Exception('arch not supported by capstone')
+    self.md.detail = True
     try:
-      i = md.disasm(raw, address).next()
-    except StopIteration: #not a valid instruction
-      return default
-    # should only be one instruction
-    # may not need to track iset here
-    # the repr field is a fallback representation of the instruction
-    data = {"mnemonic": i.mnemonic, "op_str": i.op_str,
-        "repr": "{}\t{}".format(i.mnemonic,i.op_str)}
-    if len(i.regs_read) > 0:
-      data["regs_read"] = [i.reg_name(r) for r in i.regs_read]
-    if len(i.regs_write) > 0:
-      data["regs_write"] = [i.reg_name(r) for r in i.regs_write]
-    #groups: is it in arm neon, intel sse, etc
-    #if len(i.groups) > 0:
-    #  data["groups"] = []
-    #  for g in i.groups:
-    #    data["groups"].append(g)
+      self.i = self.md.disasm(self.raw, self.address).next()
+    except StopIteration:
+      return None
 
-    # we aren't ready for more yet
-    return data['mnemonic']
-    #when ready, return data as json rather than static string
-  except Exception, e:
-    print "capstone disasm failed: {}".format(sys.exc_info()[0]), e
-    return default
+    self.regs_read = self.i.regs_read
+    self.regs_write = self.i.regs_write
 
+  def __str__(self):
+    return "%s\t%s"%(self.i.mnemonic,self.i.op_str)
+
+  def is_jump(self):
+    return x86.X86_GRP_JUMP in self.i.groups
+
+  def is_ret(self):
+    #TODO: what about iret?
+    return x86.X86_GRP_RET in self.i.groups
+
+  def is_ending(self):
+    '''is this something which should end a basic block'''
+    return self.is_jump() or self.is_ret()
