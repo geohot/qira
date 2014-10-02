@@ -2,7 +2,7 @@
 # capstone is a requirement now
 from capstone import *
 
-def disasm(self, raw, address, arch):
+def disasm(raw, address, arch):
   default = {"repr": raw.encode("hex")}
   try:
     if arch == "i386":
@@ -43,7 +43,7 @@ def disasm(self, raw, address, arch):
     #    data["groups"].append(g)
 
     # we aren't ready for more yet
-    return data['mnemonic']
+    return data
     #when ready, return data as json rather than static string
   except Exception, e:
     print "capstone disasm failed: {}".format(sys.exc_info()[0]), e

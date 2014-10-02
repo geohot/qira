@@ -29,6 +29,12 @@ import os, sys
 import disasm
 import loader
 
+# debugging
+try:
+  from hexdump import hexdump
+except:
+  pass
+
 # allow for special casing certain tags
 class Tags:
   def __init__(self, static, address):
@@ -38,10 +44,15 @@ class Tags:
 
   def __getitem__(self, tag):
     if tag == "instruction":
-      return disasm(self.static.memory(self.address, self['len']), self.address, self['arch'])
-    try:
+      dat = self.static.memory(self.address, 0x10)
+      rawdat = ''.join(map(chr, dat.values()))
+      return disasm.disasm(rawdat, self.address, self['arch'])['repr']
+
+    if tag in self.backing:
       return self.backing[tag]
-    except:
+    else:
+      if tag in static.global_tags:
+        return static.global_tags[tag]
       return None
 
   def __setitem__(self, tag, val):
@@ -61,6 +72,10 @@ class Static:
     # radare doesn't seem to have a concept of names
     # doesn't matter if this is in the python
     self.rnames = {}
+
+    # fall through on an instruction
+    # 'arch'
+    self.global_tags = {}
 
     # concept from qira_program
     self.base_memory = {}
@@ -106,8 +121,17 @@ class Static:
         ret[a] = rret
     return ret
   
+  def __setitem__(self, address, dat):
+    if type(address) is str:
+      self.global_tags[address] = dat
+
   # for a single address
   def __getitem__(self, address):
+    if type(address) is str:
+      if address in self.global_tags:
+        return self.global_tags[address]
+      else:
+        return None
     if address not in self.tags:
       self.tags[address] = Tags(self, address)
     return self.tags[address]
@@ -115,6 +139,7 @@ class Static:
   # return the memory at address:ln
   # replaces get_static_bytes
   def memory(self, address, ln):
+    dat = {}
     for i in range(ln):
       ri = address+i
       for (ss, se) in self.base_memory:
@@ -123,6 +148,7 @@ class Static:
             dat[i] = ord(self.base_memory[(ss,se)][ri-ss])
           except:
             pass
+    return dat
 
   def add_memory_chunk(self, address, dat):
     self.base_memory[(address, address+len(dat))] = dat
@@ -141,6 +167,7 @@ if __name__ == "__main__":
   # find main
   main = static.get_address_by_name("main")
   print "main is at", hex(main)
+  print static[main]['instruction']
 
   print static.get_tags(['name'])
 

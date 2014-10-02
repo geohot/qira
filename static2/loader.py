@@ -1,13 +1,32 @@
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
 from elftools.elf.relocation import RelocationSection
+import struct
+
+def get_arch(fb):
+  if fb == 0x28:
+    return 'arm'
+  elif fb == 0xb7:
+    return 'aarch64'
+  elif fb == 0x3e:
+    return 'x86-64'
+  elif fb == 0x03:
+    return 'i386'
+  elif fb == 0x1400:   # big endian...
+    return 'ppc'
+  elif fb == 0x800:
+    return 'mips'
+
 
 def load_binary(static, path):
   elf = ELFFile(open(path))
 
   # hacks say ELF loads at 0x8048000
-  dat = open(path).read()
-  static.add_memory_chunk(0x8048000, dat)
+  progdat = open(path).read()
+  static.add_memory_chunk(0x8048000, progdat)
+
+  fb = struct.unpack("H", progdat[0x12:0x14])[0]   # e_machine
+  static['arch'] = get_arch(fb)
 
   ncount = 0
   for section in elf.iter_sections():
