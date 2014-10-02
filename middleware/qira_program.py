@@ -1,6 +1,7 @@
 from qira_base import *
 import qira_config
 import qira_analysis
+import qira_static2
 import os
 import shutil
 import sys
@@ -10,12 +11,6 @@ import time
 import collections
 from hashlib import sha1
 sys.path.append(qira_config.BASEDIR+"/cda")
-
-# it doesn't hurt to always try to import it
-try:
-  from capstone import *
-except:
-  pass
 
 from subprocess import (Popen, PIPE)
 import json
@@ -118,7 +113,7 @@ class Program:
     print "*** program is",self.program,"with hash",self.proghash
 
     # init static
-    self.static = qira_static2.Static(program) 
+    self.static = qira_static2.Static(self) 
 
     # no traces yet
     self.traces = {}
@@ -147,7 +142,7 @@ class Program:
     # this is the key value store for static information about the address
     # it replaces self.instructions with self.kv[addr]['instruction']
     # tags is a term from eda-3
-    self.tags = collections.defaultdict(dict)
+    # moved to qira_static2
     # it should also replace dwarves
 
     # pmaps is global, but updated by the traces
@@ -197,7 +192,6 @@ class Program:
       self.qirabinary = os.path.realpath(self.qirabinary)
       print "**** using",self.qirabinary,"for",hex(self.fb)
 
-      self.getnames()
       self.getdwarf()
       self.runnable = True
 
@@ -303,8 +297,11 @@ class Program:
         inst = d[d.rfind("     ")+5:]
       else:
         inst = d[d.find(":")+3:]
-      self.tags[addr]['instruction'] = inst
-      self.tags[addr]['thumb'] = thumb
+      self.static[addr]['instruction'] = inst
+      if thumb:
+        self.static[addr]['arch'] = "thumb"
+      else:
+        self.static[addr]['arch'] = "thumb"
       cnt += 1
       #print addr, inst
     #sys.stdout.write("%d..." % cnt); sys.stdout.flush()
@@ -354,56 +351,6 @@ class Program:
     #print "***",' '.join(eargs)
     os.execvp(eargs[0], eargs)
   
-  def disasm(self, raw, address, thumb = False):
-    default = {"repr": raw.encode("hex")}
-    if qira_config.WITH_CAPSTONE:
-      try:
-        arch = self.tregs[3]
-        if arch == "i386":
-          md = Cs(CS_ARCH_X86, CS_MODE_32)
-        elif arch == "x86-64":
-          md = Cs(CS_ARCH_X86, CS_MODE_64)
-        elif arch == "arm":
-          if thumb:
-            md = Cs(CS_ARCH_ARM, CS_MODE_THUMB)
-          else:
-            md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
-        elif arch == "aarch64":
-          md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
-        elif arch == "ppc":
-          md = Cs(CS_ARCH_PPC, CS_MODE_32)
-          #if 64 bit: md.mode = CS_MODE_64
-        else:
-          raise Exception('arch not in capstone')
-        #next: store different data based on type of operand
-        #https://github.com/aquynh/capstone/blob/master/bindings/python/test_arm.py
-        md.detail = True
-        try:
-          i = md.disasm(raw, address).next()
-        except StopIteration: #not a valid instruction
-          return default
-        # should only be one instruction
-        # may not need to track iset here
-        # the repr field is a fallback representation of the instruction
-        data = {"mnemonic": i.mnemonic, "op_str": i.op_str,
-            "repr": "{}\t{}".format(i.mnemonic,i.op_str)}
-        if len(i.regs_read) > 0:
-          data["regs_read"] = [i.reg_name(r) for r in i.regs_read]
-        if len(i.regs_write) > 0:
-          data["regs_write"] = [i.reg_name(r) for r in i.regs_write]
-        #groups: is it in arm neon, intel sse, etc
-        #if len(i.groups) > 0:
-        #  data["groups"] = []
-        #  for g in i.groups:
-        #    data["groups"].append(g)
-        return data
-        #when ready, return data as json rather than static string
-      except Exception, e:
-        print "capstone disasm failed: {}".format(sys.exc_info()[0]), e
-        return default
-    else:
-      return default
-
   def research(self, re):
     try:
       csearch = qira_config.CODESEARCHDIR + "/csearch"

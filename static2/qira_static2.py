@@ -12,16 +12,69 @@
 #   this class should contain all of the information about an independent run of the binary
 # move the webserver code out of here, and perhaps into qira_webserver
 
-from qira_base import *
-import qira_config
+
+# *** EXISTING TAGS ***
+# len -- bytes that go with this one
+# name -- name of this address
+# comment -- comment on this address
+# instruction -- string of this instruction
+# arch -- arch of this instruction
+
+# fhex and ghex shouldn't be used
+# all addresses are numbers
+
 import collections
 import os, sys
 
-# webserver imports
-import json
-from qira_webserver import socket_method, socketio, app
-from flask import request
-from flask.ext.socketio import SocketIO, emit
+# capstone is a requirement now
+from capstone import *
+
+def disasm(self, raw, address, arch):
+  default = {"repr": raw.encode("hex")}
+  try:
+    if arch == "i386":
+      md = Cs(CS_ARCH_X86, CS_MODE_32)
+    elif arch == "x86-64":
+      md = Cs(CS_ARCH_X86, CS_MODE_64)
+    elif arch == "thumb":
+      md = Cs(CS_ARCH_ARM, CS_MODE_THUMB)
+    elif arch == "arm":
+      md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
+    elif arch == "aarch64":
+      md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
+    elif arch == "ppc":
+      md = Cs(CS_ARCH_PPC, CS_MODE_32)
+      #if 64 bit: md.mode = CS_MODE_64
+    else:
+      raise Exception('arch not in capstone')
+    #next: store different data based on type of operand
+    #https://github.com/aquynh/capstone/blob/master/bindings/python/test_arm.py
+    md.detail = True
+    try:
+      i = md.disasm(raw, address).next()
+    except StopIteration: #not a valid instruction
+      return default
+    # should only be one instruction
+    # may not need to track iset here
+    # the repr field is a fallback representation of the instruction
+    data = {"mnemonic": i.mnemonic, "op_str": i.op_str,
+        "repr": "{}\t{}".format(i.mnemonic,i.op_str)}
+    if len(i.regs_read) > 0:
+      data["regs_read"] = [i.reg_name(r) for r in i.regs_read]
+    if len(i.regs_write) > 0:
+      data["regs_write"] = [i.reg_name(r) for r in i.regs_write]
+    #groups: is it in arm neon, intel sse, etc
+    #if len(i.groups) > 0:
+    #  data["groups"] = []
+    #  for g in i.groups:
+    #    data["groups"].append(g)
+
+    # we aren't ready for more yet
+    return data['mnemonic']
+    #when ready, return data as json rather than static string
+  except Exception, e:
+    print "capstone disasm failed: {}".format(sys.exc_info()[0]), e
+    return default
 
 # allow for special casing certain tags
 class Tags:
@@ -31,6 +84,8 @@ class Tags:
     self.address = address
 
   def __getitem__(self, tag):
+    if tag == "instruction":
+      return disasm(self.static.get_memory(self.address, self['len']), self.address, self['arch'])
     return self.backing[tag]
 
   def __setitem__(self, tag, val):
@@ -42,10 +97,9 @@ class Tags:
 # will only support radare2 for now
 # mostly tags, except for names and functions
 class Static:
-  # called with a qira_program.Program
-  def __init__(self, program):
+  def __init__(self, path):
     self.tags = {}
-    self.program = program
+    self.path = path
 
     # radare doesn't seem to have a concept of names
     # doesn't matter if this is in the python
@@ -53,7 +107,7 @@ class Static:
     self.rnames = {}
 
     # init radare
-    self.load_binary(program.program)
+    self.load_binary(path)
 
   def load_binary(self, path):
     from elftools.elf.elffile import ELFFile
@@ -150,17 +204,11 @@ class Static:
 # *** STATIC INIT STUFF ***
 
 if __name__ == "__main__":
-  class Program:
-    def __init__(self, f):
-      self.program = f
-
-  program = Program(sys.argv[1])
-  static = Static(program)
+  static = Static(sys.argv[1])
 
   # find main
   main = static.get_address_by_name("main")
-  print "main is at", ghex(main)
+  print "main is at", hex(main)
 
   print static.get_function_blocks(main)
-
 
