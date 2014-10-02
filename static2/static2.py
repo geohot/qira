@@ -25,7 +25,9 @@
 
 import collections
 import os, sys
-from disasm import *
+
+import disasm
+import loader
 
 # allow for special casing certain tags
 class Tags:
@@ -36,12 +38,13 @@ class Tags:
 
   def __getitem__(self, tag):
     if tag == "instruction":
-      return disasm(self.static.get_memory(self.address, self['len']), self.address, self['arch'])
+      return disasm(self.static.memory(self.address, self['len']), self.address, self['arch'])
     return self.backing[tag]
 
   def __setitem__(self, tag, val):
     if tag == "name":
-      self.static.set_name(self.address, val)
+      # name can change by adding underscores
+      val = self.static.set_name(self.address, val)
     self.backing[tag] = val
 
 # the new interface for all things static
@@ -57,33 +60,11 @@ class Static:
     self.names = {}
     self.rnames = {}
 
-    # init radare
-    self.load_binary(path)
+    # concept from qira_program
+    self.base_memory = {}
 
-  def load_binary(self, path):
-    from elftools.elf.elffile import ELFFile
-    from elftools.elf.sections import SymbolTableSection
-    from elftools.elf.relocation import RelocationSection
-    elf = ELFFile(open(path))
-    ncount = 0
-    for section in elf.iter_sections():
-
-      if isinstance(section, RelocationSection):
-        symtable = elf.get_section(section['sh_link'])
-        for rel in section.iter_relocations():
-          symbol = symtable.get_symbol(rel['r_info_sym'])
-          #print rel, symbol.name
-          if rel['r_offset'] != 0 and symbol.name != "":
-            self[rel['r_offset']]['name'] = "__"+symbol.name
-            ncount += 1
-
-      if isinstance(section, SymbolTableSection):
-        for nsym, symbol in enumerate(section.iter_symbols()):
-          if symbol['st_value'] != 0 and symbol.name != "" and symbol['st_info']['type'] == "STT_FUNC":
-            #print symbol['st_value'], symbol.name
-            self[symbol['st_value']]['name'] = symbol.name
-            ncount += 1
-    print "** found %d names" % ncount
+    # run the elf loader
+    loader.load_binary(self, path)
 
   # return a dictionary of addresses:names
   # don't allow two things to share a name
@@ -98,11 +79,11 @@ class Static:
   # this should be replaced with a 
   def set_name(self, address, name):
     if name not in self.rnames:
-      self.names[address] = name
       self.rnames[name] = address
     else:
       # add underscore if name already exists
-      self.set_name(address, name+"_")
+      return self.set_name(address, name+"_")
+    return name
 
   def get_address_by_name(self, name):
     if name in self.rnames:
@@ -135,22 +116,24 @@ class Static:
 
   # return the memory at address:ln
   # replaces get_static_bytes
-  def get_memory(self, address, ln):
-    pass
+  def memory(self, address, ln):
+    for i in range(ln):
+      ri = address+i
+      for (ss, se) in self.base_memory:
+        if ss <= ri and ri < se:
+          try:
+            dat[i] = ord(self.base_memory[(ss,se)][ri-ss])
+          except:
+            pass
 
-  # returns a graph of the blocks and the flow for a function
-  # this is a divergence from the old tags approach
-  # return None if not in function
-  def get_function_blocks(self, address):
-    pass
+  def add_memory_chunk(self, address, dat):
+    self.base_memory[(address, address+len(dat))] = dat
 
   # things to actually drive the static analyzer
   # runs the recursive descent parser at address
   def make_code_at(self, address):
     pass
 
-  def make_function_at(self, address):
-    pass
 
 # *** STATIC INIT STUFF ***
 
@@ -160,6 +143,4 @@ if __name__ == "__main__":
   # find main
   main = static.get_address_by_name("main")
   print "main is at", hex(main)
-
-  print static.get_function_blocks(main)
 
