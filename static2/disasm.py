@@ -43,3 +43,6 @@ class disasm(object):
   def is_ending(self):
     '''is this something which should end a basic block'''
     return self.is_jump() or self.is_ret()
+
+  def size(self):
+    return self.i.size
