@@ -39,7 +39,10 @@ class Tags:
   def __getitem__(self, tag):
     if tag == "instruction":
       return disasm(self.static.memory(self.address, self['len']), self.address, self['arch'])
-    return self.backing[tag]
+    try:
+      return self.backing[tag]
+    except:
+      return None
 
   def __setitem__(self, tag, val):
     if tag == "name":
@@ -57,7 +60,6 @@ class Static:
 
     # radare doesn't seem to have a concept of names
     # doesn't matter if this is in the python
-    self.names = {}
     self.rnames = {}
 
     # concept from qira_program
@@ -65,16 +67,6 @@ class Static:
 
     # run the elf loader
     loader.load_binary(self, path)
-
-  # return a dictionary of addresses:names
-  # don't allow two things to share a name
-  # not even worth trying to fit into the tags interface
-  def get_names(self, addresses):
-    ret = {}
-    for a in addresses:
-      if a in self.names:
-        ret[a] = self.names[a]
-    return ret
 
   # this should be replaced with a 
   def set_name(self, address, name):
@@ -99,13 +91,19 @@ class Static:
   # len         -- number of bytes grouped with this one
   # instruction -- string of this instruction
   # type        -- unset, 'instruction', 'data', 'string'
-  def get_tags(self, addresses, filt=None):
+  def get_tags(self, filt, addresses=None):
     ret = {}
+    if addresses == None:
+      # all the addresses
+      addresses = self.tags.keys()
     for a in addresses:
-      ret[a] = {}
-      for t in self.tags[a]:
-        if filt == None or t in filt:
-          ret[a][t] = self.tags[a][t]
+      rret = {}
+      for f in filt:
+        t = self.tags[a][f]
+        if t != None:
+          rret[f] = t
+      if rret != {}:
+        ret[a] = rret
     return ret
   
   # for a single address
@@ -135,7 +133,7 @@ class Static:
     pass
 
 
-# *** STATIC INIT STUFF ***
+# *** STATIC TEST STUFF ***
 
 if __name__ == "__main__":
   static = Static(sys.argv[1])
@@ -143,4 +141,7 @@ if __name__ == "__main__":
   # find main
   main = static.get_address_by_name("main")
   print "main is at", hex(main)
+
+  print static.get_tags(['name'])
+
 
