@@ -26,7 +26,7 @@ WITH_STATIC = False
 WITH_CAPSTONE = False
 WITH_RADARE = False
 
-WITH_STATIC2 = True
+WITH_STATIC2 = False
 
 WITH_IDA = False
 

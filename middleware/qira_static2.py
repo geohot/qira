@@ -2,6 +2,18 @@
 
 # qira_static2 only supports radare
 
+# soon, the plan is to remove radare from here
+# tags should be dynamically generated
+#   like when you request the 'instruction' tag, it triggers the disassembly
+#   when you set the 'name' tag, it dedups names, and updates the reverse index
+#   when you set the 'scope' tag, it adds it as a member of the function
+# so it's a "managed" key value store
+# don't worry at all about caching unless things are too slow
+
+# stuff from Program should be moved here
+#   this class should contain all of the information about an independent run of the binary
+# move the webserver code out of here, and perhaps into qira_webserver
+
 from qira_base import *
 import qira_config
 import collections
@@ -13,6 +25,7 @@ from qira_webserver import socket_method, socketio, app
 from flask import request
 from flask.ext.socketio import SocketIO, emit
 
+
 # radare2 is best static, and the only one we support
 # if we want QIRA to work without it,
 #   this file import must gate on qira_config.WITH_RADARE
@@ -20,8 +33,9 @@ from r2.r_core import RCore
 
 # allow for special casing certain tags
 class Tags:
-  def __init__(self):
+  def __init__(self, static):
     self.backing = {}
+    self.static = static
 
   def __getitem__(self, address):
     return self.backing[address]
@@ -35,7 +49,7 @@ class Tags:
 class Static:
   # called with a qira_program.Program
   def __init__(self, program):
-    self.tags = collections.defaultdict(Tags)
+    self.tags = collections.defaultdict(lambda: Tags(self))
     self.program = program
 
     # radare doesn't seem to have a concept of names
@@ -97,6 +111,7 @@ class Static:
         ret[a] = self.names[a]
     return ret
 
+  # this should be replaced with a 
   def set_name(self, address, name):
     if name not in self.rnames:
       self.names[address] = name
