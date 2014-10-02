@@ -84,8 +84,15 @@ class Static:
       self.set_name(s.vaddr, s.name)
       name_count += 1
 
+    # get functions
+    fcn_count = 0
+    for f in self.core.anal.get_fcns():
+      #print hex(f.addr), f.name
+      #print f.get_bbs()
+      fcn_count += 1
+
     # get other things here?
-    print "static found %d names" % (name_count)
+    print "static found %d names and %d functions" % (name_count, fcn_count)
 
   # return a dictionary of addresses:names
   # don't allow two things to share a name
@@ -141,10 +148,19 @@ class Static:
   # this is a divergence from the old tags approach
   # return None if not in function
   def get_function_blocks(self, address):
-    fcn = self.core.anal.get_fcn_at(address)
+    # this is broken
+    #fcn = self.core.anal.get_fcn_at(address)
+
+    fcn = None
+    for f in self.core.anal.get_fcns():
+      if f.addr <= address and address <= f.addr+f.size:
+        fcn = f
+    if fcn == None:
+      print "function not found"
+      return None
     # how to detect if not in function?
     for bb in fcn.get_bbs():
-      print bb
+      print "block %x-%x ninstr: %d jump:%x fail:%x" % (bb.addr, bb.addr+bb.size, bb.ninstr, bb.jump, bb.fail)
 
   # things to actually drive the static analyzer
   # runs the recursive descent parser at address
@@ -168,7 +184,7 @@ def getnames(addrs):
 @socketio.on('gotoname', namespace='/qira')
 @socket_method
 def gotoname(name):
-  addr = static.get_address_by_name
+  addr = static.get_address_by_name(name)
   if addr != None:
     emit('setiaddr', ghex(addr))
 
@@ -201,4 +217,7 @@ if __name__ == "__main__":
   # find main
   main = static.get_address_by_name("main")
   print "main is at", ghex(main)
+
+  print static.get_function_blocks(main)
+
 
