@@ -19,6 +19,11 @@
 # comment -- comment on this address
 # instruction -- string of this instruction
 # arch -- arch of this instruction
+# crefs -- code xrefs
+
+
+# objects are allowed in the key-value store,
+#   but they should do something sane for the javascript on repr
 
 # fhex and ghex shouldn't be used
 # all addresses are numbers
@@ -28,6 +33,7 @@ import os, sys
 
 import disasm
 import loader
+import Queue
 
 # debugging
 try:
@@ -43,14 +49,19 @@ class Tags:
     self.address = address
 
   def __getitem__(self, tag):
+    # should reading the instruction tag trigger disasm?
+    """
     if tag == "instruction":
       dat = self.static.memory(self.address, 0x10)
-      rawdat = ''.join(map(chr, dat.values()))
-      return disasm.disasm(rawdat, self.address, self['arch'])['repr']
+      return disasm.disasm(dat, self.address, self['arch'])
+    """
 
     if tag in self.backing:
       return self.backing[tag]
     else:
+      if tag == "crefs":
+        # crefs has a default value of a new array
+        return []
       if tag in static.global_tags:
         return static.global_tags[tag]
       return None
@@ -139,36 +150,58 @@ class Static:
   # return the memory at address:ln
   # replaces get_static_bytes
   def memory(self, address, ln):
-    dat = {}
+    dat = []
     for i in range(ln):
       ri = address+i
       for (ss, se) in self.base_memory:
         if ss <= ri and ri < se:
           try:
-            dat[i] = ord(self.base_memory[(ss,se)][ri-ss])
+            dat.append(self.base_memory[(ss,se)][ri-ss])
           except:
-            pass
-    return dat
+            return ''.join(dat)
+    return ''.join(dat)
 
   def add_memory_chunk(self, address, dat):
     self.base_memory[(address, address+len(dat))] = dat
 
   # things to actually drive the static analyzer
   # runs the recursive descent parser at address
+  # how to deal with block groupings?
   def make_code_at(self, address):
-    pass
+    def disassemble(address):
+      raw = self.memory(address, 0x10)
+      d = disasm.disasm(raw, address, self[address]['arch'])
+      self[address]['instruction'] = d
+      self[address]['len'] = d.size()
+      for c in d.dests():
+        if c != address + d.size():
+          self[c]['crefs'].append(address)
+      return d.dests()
 
+    # recursive descent pass
+    pending = Queue.Queue()
+    done = set()
+    pending.put(address)
+    while not pending.empty():
+      dests = disassemble(pending.get())
+      for d in dests:
+        if d not in done:
+          pending.put(d)
+          done.add(d)
+    print map(hex, list(done))
 
 # *** STATIC TEST STUFF ***
 
 if __name__ == "__main__":
   static = Static(sys.argv[1])
+  print "arch:",static['arch']
 
   # find main
   main = static.get_address_by_name("main")
   print "main is at", hex(main)
-  print static[main]['instruction']
+  static.make_code_at(main)
 
-  print static.get_tags(['name'])
+  print static[main]['instruction'], map(hex, static[main]['crefs'])
+  #print static.get_tags(['name'])
 
 
