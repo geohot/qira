@@ -41,6 +41,14 @@ try:
 except:
   pass
 
+class Function:
+  def __init__(self):
+    pass
+
+class Block:
+  def __init__(self):
+    pass
+
 # allow for special casing certain tags
 class Tags:
   def __init__(self, static, address):
@@ -59,10 +67,10 @@ class Tags:
     if tag in self.backing:
       return self.backing[tag]
     else:
-      if tag == "crefs":
+      if tag == "crefs" or tag == "xrefs":
         # crefs has a default value of a new array
-        self.backing['crefs'] = []
-        return self.backing['crefs']
+        self.backing[tag] = set()
+        return self.backing[tag]
       if tag in static.global_tags:
         return static.global_tags[tag]
       return None
@@ -168,16 +176,24 @@ class Static:
   # things to actually drive the static analyzer
   # runs the recursive descent parser at address
   # how to deal with block groupings?
-  def make_code_at(self, address):
+  def make_function_at(self, address, recurse = True):
     block_starts = set([address])
+    function_starts = set()
+    this_function = Function()
+
     def disassemble(address):
       raw = self.memory(address, 0x10)
       d = disasm.disasm(raw, address, self[address]['arch'])
       self[address]['instruction'] = d
       self[address]['len'] = d.size()
       for (c,flag) in d.dests():
+        if flag == disasm.DESTTYPE.call:
+          function_starts.add(c)
+          self[c]['xrefs'].add(address)
+          # add this to the potential function boundary starts
+          continue
         if c != address + d.size():
-          self[c]['crefs'].append(address)
+          self[c]['crefs'].add(address)
           block_starts.add(c)
       return d.dests()
 
@@ -212,6 +228,15 @@ class Static:
         if self[a]['instruction'] != None:
           print "  ",hex(a),self[a]['instruction']
 
+    # this is wrong
+    self[address]['function'] = "start"
+
+    # find more functions
+    for f in function_starts:
+      if self[f]['function'] == None:
+        self.make_function_at(f)
+
+
 # *** STATIC TEST STUFF ***
 
 if __name__ == "__main__":
@@ -221,7 +246,7 @@ if __name__ == "__main__":
   # find main
   main = static.get_address_by_name("main")
   print "main is at", hex(main)
-  static.make_code_at(main)
+  static.make_function_at(main)
 
   #print static[main]['instruction'], map(hex, static[main]['crefs'])
   #print static.get_tags(['name'])

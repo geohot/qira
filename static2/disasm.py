@@ -2,12 +2,11 @@
 # capstone is a requirement now
 from capstone import *
 
-class Destination(object):
+class DESTTYPE(object):
   cjump = 1
   jump = 2
   call = 3
   implicit = 4
-
 
 class disasm(object):
   """one disassembled instruction"""
@@ -72,25 +71,23 @@ class disasm(object):
   def dests(self):
     if self.decoded and not self.is_ret():
       dl = []
-      
-      
-      
       if self.is_jump() or self.is_call():
         if (self.i.operands[0].value.reg) and (self.i.operands[0].value.mem.disp == 0):
           if self.i.mnemonic == "jmp":
-            dtype = Destination.jump
+            dtype = DESTTYPE.jump
           else:
             #the next instruction after this one
-            dl.append((self.address+self.size(),Destination.implicit))
+            dl.append((self.address+self.size(),DESTTYPE.implicit))
             if self.i.mnemonic == "call":
-              dtype = Destination.call
+              dtype = DESTTYPE.call
             else:
-              dtype = Destination.cjump
+              dtype = DESTTYPE.cjump
           dl.append((self.i.operands[0].value.imm,dtype)) #the target of the jump/call
 
         else:
-          dl.append((self.address+self.size(),Destination.implicit))
+          dl.append((self.address+self.size(),DESTTYPE.implicit))
         return dl
       else:
-        return [(self.address+self.size(),Destination.implicit)]
+       return [(self.address+self.size(),DESTTYPE.implicit)]
     return []
+
