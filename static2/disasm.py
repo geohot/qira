@@ -24,30 +24,41 @@ class disasm(object):
     self.md.detail = True
     try:
       self.i = self.md.disasm(self.raw, self.address).next()
+      self.decoded = True
     except StopIteration:
-      return None
+      self.decoded = False
 
     self.regs_read = self.i.regs_read
     self.regs_write = self.i.regs_write
 
   def __str__(self):
-    return "%s\t%s"%(self.i.mnemonic,self.i.op_str)
+    if self.decoded:
+      return "%s\t%s"%(self.i.mnemonic,self.i.op_str)
+    return ""
 
   def is_jump(self):
     #TODO: what about not x86?
-    return x86.X86_GRP_JUMP in self.i.groups
+    if self.decoded:
+      return x86.X86_GRP_JUMP in self.i.groups
+    return False
 
   def is_ret(self):
-    return self.i.mnemonic == "ret"
+    if self.decoded:
+      return self.i.mnemonic == "ret"
+    return False
     #TODO: what about iret? and RET isn't in the apt version of capstone
     return x86.X86_GRP_RET in self.i.groups
 
   def is_ending(self):
-    '''is this something which should end a basic block'''
-    return self.is_jump() or self.is_ret()
+    if self.decoded:
+      '''is this something which should end a basic block'''
+      return self.is_jump() or self.is_ret()
+    return False
 
   def size(self):
-    return self.i.size
+    return self.i.size if self.decoded else 0
 
   def dests(self):
-    return [self.address+self.size()]+([self.i.operands[0].value.imm] if self.is_jump() else [])
+    if self.decoded:
+      return [self.address+self.size()]+([self.i.operands[0].value.imm] if self.is_jump() else [])
+    return []
