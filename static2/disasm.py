@@ -25,11 +25,12 @@ class disasm(object):
     try:
       self.i = self.md.disasm(self.raw, self.address).next()
       self.decoded = True
+      self.regs_read = self.i.regs_read
+      self.regs_write = self.i.regs_write
     except StopIteration:
       self.decoded = False
 
-    self.regs_read = self.i.regs_read
-    self.regs_write = self.i.regs_write
+
 
   def __str__(self):
     if self.decoded:
