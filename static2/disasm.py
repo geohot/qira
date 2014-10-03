@@ -34,10 +34,12 @@ class disasm(object):
     return "%s\t%s"%(self.i.mnemonic,self.i.op_str)
 
   def is_jump(self):
+    #TODO: what about not x86?
     return x86.X86_GRP_JUMP in self.i.groups
 
   def is_ret(self):
-    #TODO: what about iret?
+    return self.i.mnemonic == "ret"
+    #TODO: what about iret? and RET isn't in the apt version of capstone
     return x86.X86_GRP_RET in self.i.groups
 
   def is_ending(self):
@@ -46,3 +48,6 @@ class disasm(object):
 
   def size(self):
     return self.i.size
+
+  def dests(self):
+    return [self.address+self.size()]+([self.i.operands[0].value.imm] if self.is_jump() else [])
