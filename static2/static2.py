@@ -168,7 +168,7 @@ class Static:
   # runs the recursive descent parser at address
   # how to deal with block groupings?
   def make_code_at(self, address):
-    block_starts = [address]
+    block_starts = set([address])
     def disassemble(address):
       raw = self.memory(address, 0x10)
       d = disasm.disasm(raw, address, self[address]['arch'])
@@ -176,7 +176,7 @@ class Static:
       self[address]['len'] = d.size()
       for c in d.dests():
         if c != address + d.size():
-          block_starts.append(c)
+          block_starts.add(c)
           self[c]['crefs'].append(address)
       return d.dests()
 
@@ -191,9 +191,25 @@ class Static:
           pending.put(d)
           done.add(d)
   
-    print map(hex, done)
+    #print map(hex, done)
+
     # block finding pass
-    #for block_starts
+    blocks = []
+    for b in block_starts:
+      address = b
+      i = self[address]['instruction']
+      while not i.is_ending() and i.size() != 0:
+        if address + i.size() in block_starts:
+          break
+        address += i.size()
+        i = self[address]['instruction']
+      blocks.append((b, address))
+
+    for b in blocks:
+      print hex(b[0]), hex(b[1]), self[b[1]]['instruction'].dests()
+      for a in range(b[0], b[1]+1):
+        if self[a]['instruction'] != None:
+          print "  ",hex(a),self[a]['instruction']
 
 # *** STATIC TEST STUFF ***
 
