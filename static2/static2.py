@@ -61,7 +61,8 @@ class Tags:
     else:
       if tag == "crefs":
         # crefs has a default value of a new array
-        return []
+        self.backing['crefs'] = []
+        return self.backing['crefs']
       if tag in static.global_tags:
         return static.global_tags[tag]
       return None
@@ -174,10 +175,10 @@ class Static:
       d = disasm.disasm(raw, address, self[address]['arch'])
       self[address]['instruction'] = d
       self[address]['len'] = d.size()
-      for c in d.dests():
+      for (c,flag) in d.dests():
         if c != address + d.size():
-          block_starts.add(c)
           self[c]['crefs'].append(address)
+          block_starts.add(c)
       return d.dests()
 
     # recursive descent pass
@@ -186,7 +187,7 @@ class Static:
     pending.put(address)
     while not pending.empty():
       dests = disassemble(pending.get())
-      for d in dests:
+      for (d,flag) in dests:
         if d not in done:
           pending.put(d)
           done.add(d)
@@ -206,7 +207,7 @@ class Static:
       blocks.append((b, address))
 
     for b in blocks:
-      print hex(b[0]), hex(b[1]), self[b[1]]['instruction'].dests()
+      print hex(b[0]), hex(b[1]), self[b[0]]['crefs'], self[b[1]]['instruction'].dests()
       for a in range(b[0], b[1]+1):
         if self[a]['instruction'] != None:
           print "  ",hex(a),self[a]['instruction']
@@ -222,7 +223,7 @@ if __name__ == "__main__":
   print "main is at", hex(main)
   static.make_code_at(main)
 
-  print static[main]['instruction'], map(hex, static[main]['crefs'])
+  #print static[main]['instruction'], map(hex, static[main]['crefs'])
   #print static.get_tags(['name'])
 
 
