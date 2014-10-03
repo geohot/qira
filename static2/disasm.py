@@ -68,7 +68,8 @@ class disasm(object):
       if not self.is_ret():
         dl.append(self.address+self.size())
       if self.is_jump():
-        if self.i.operands[0].value.reg != 0:
+        if (self.i.operands[0].value.reg) and (self.i.operands[0].value.mem.scale == 0) \
+         and (self.i.operands[0].value.mem.disp == 0):
           dl.append(self.i.operands[0].value.imm) #the target of the jump
       elif self.is_call():
         dl.append(self.i.operands[0].value.imm)
