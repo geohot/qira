@@ -2,6 +2,13 @@
 # capstone is a requirement now
 from capstone import *
 
+class Destination(object):
+  cjump = 1
+  jump = 2
+  call = 3
+  implicit = 4
+
+
 class disasm(object):
   """one disassembled instruction"""
   def __init__(self, raw, address, arch="i386"):
@@ -63,13 +70,27 @@ class disasm(object):
     return self.i.size if self.decoded else 0
 
   def dests(self):
-    if self.decoded:
+    if self.decoded and not self.is_ret():
       dl = []
-      if not self.is_ret():
-        dl.append(self.address+self.size())
+      
+      
+      
       if self.is_jump() or self.is_call():
-        if (self.i.operands[0].value.reg) and (self.i.operands[0].value.mem.scale == 0) \
-         and (self.i.operands[0].value.mem.disp == 0):
-          dl.append(self.i.operands[0].value.imm) #the target of the jump/call
-      return dl
+        if (self.i.operands[0].value.reg) and (self.i.operands[0].value.mem.disp == 0):
+          if self.i.mnemonic == "jmp":
+            dtype = Destination.jump
+          else:
+            #the next instruction after this one
+            dl.append((self.address+self.size(),Destination.implicit))
+            if self.i.mnemonic == "call":
+              dtype = Destination.call
+            else:
+              dtype = Destination.cjump
+          dl.append((self.i.operands[0].value.imm,dtype)) #the target of the jump/call
+
+        else:
+          dl.append((self.address+self.size(),Destination.implicit))
+        return dl
+      else:
+        return [(self.address+self.size(),Destination.implicit)]
     return []
