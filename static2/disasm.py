@@ -50,6 +50,11 @@ class disasm(object):
     #TODO: what about iret? and RET isn't in the apt version of capstone
     return x86.X86_GRP_RET in self.i.groups
 
+  def is_call(self):
+    if self.decoded:
+      return self.i.mnemonic == "call"
+    return False
+
   def is_ending(self):
     if self.decoded:
       '''is this something which should end a basic block'''
@@ -61,5 +66,12 @@ class disasm(object):
 
   def dests(self):
     if self.decoded:
-      return [self.address+self.size()]+([self.i.operands[0].value.imm] if self.is_jump() else [])
+      dl = []
+      if not self.is_ret():
+        dl.append(self.address+self.size())
+      if self.is_jump():
+        dl.append(self.i.operands[0].value.imm) #the target of the jump
+      elif self.is_call():
+        dl.append(self.i.operands[0].value.imm)
+      return dl
     return []
