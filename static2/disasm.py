@@ -62,7 +62,7 @@ class disasm(object):
   def is_ending(self):
     if self.decoded:
       '''is this something which should end a basic block'''
-      return self.is_jump() or self.is_ret()
+      return self.is_jump() or self.is_ret() or self.i.mnemonic == "hlt"
     return False
 
   def size(self):

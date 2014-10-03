@@ -276,18 +276,18 @@ if __name__ == "__main__":
   # find main
   main = static.get_address_by_name("main")
   print "main is at", hex(main)
+  static.make_function_at(static['entry'])
+  print "found %d functions" % len(static['functions'])
   static.make_function_at(main)
-
   print "found %d functions" % len(static['functions'])
 
   # function printer
-  for f in static['functions']:
+  for f in sorted(static['functions']):
     print f
     for b in sorted(f.blocks):
       print "  ",b
       for a in sorted(b.addresses):
         print "    ",hex(a),static[a]['instruction']
-
 
 
   #print static['functions']

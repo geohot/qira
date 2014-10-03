@@ -25,6 +25,7 @@ def load_binary(static, path):
   progdat = open(path).read(0x20)
   fb = struct.unpack("H", progdat[0x12:0x14])[0]   # e_machine
   static['arch'] = get_arch(fb)
+  static['entry'] = elf['e_entry']
 
   ncount = 0
   for section in elf.iter_sections():
