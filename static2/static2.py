@@ -42,12 +42,32 @@ except:
   pass
 
 class Function:
-  def __init__(self):
-    pass
+  def __init__(self, start):
+    self.start = start
+    self.blocks = set()
+
+  def __repr__(self):
+    return hex(self.start) + " " + str(self.blocks)
+
+  def add_block(self, block):
+    self.blocks.add(block)
 
 class Block:
-  def __init__(self):
-    pass
+  def __init__(self, start):
+    self.__start__ = start
+    self.addresses = set([start])
+
+  def __repr__(self):
+    return hex(self.start())+"-"+hex(self.end())
+
+  def start(self):
+    return self.__start__
+
+  def end(self):
+    return max(self.addresses)
+
+  def add(self, address):
+    self.addresses.add(address)
 
 # allow for special casing certain tags
 class Tags:
@@ -96,6 +116,7 @@ class Static:
     # fall through on an instruction
     # 'arch'
     self.global_tags = {}
+    self.global_tags['functions'] = set()
 
     # concept from qira_program
     self.base_memory = {}
@@ -179,13 +200,15 @@ class Static:
   def make_function_at(self, address, recurse = True):
     block_starts = set([address])
     function_starts = set()
-    this_function = Function()
+    this_function = Function(address)
+    self['functions'].add(this_function)
 
     def disassemble(address):
       raw = self.memory(address, 0x10)
       d = disasm.disasm(raw, address, self[address]['arch'])
       self[address]['instruction'] = d
       self[address]['len'] = d.size()
+      self[address]['function'] = this_function
       for (c,flag) in d.dests():
         if flag == disasm.DESTTYPE.call:
           function_starts.add(c)
@@ -204,6 +227,8 @@ class Static:
     while not pending.empty():
       dests = disassemble(pending.get())
       for (d,flag) in dests:
+        if flag == disasm.DESTTYPE.call:
+          continue
         if d not in done:
           pending.put(d)
           done.add(d)
@@ -213,23 +238,28 @@ class Static:
     # block finding pass
     blocks = []
     for b in block_starts:
+      this_block = Block(b)
+      this_function.add_block(this_block)
       address = b
       i = self[address]['instruction']
+      self[address]['block'] = this_block
       while not i.is_ending() and i.size() != 0:
         if address + i.size() in block_starts:
           break
         address += i.size()
         i = self[address]['instruction']
+        this_block.add(address)
+        self[address]['block'] = this_block
       blocks.append((b, address))
 
+    # print blocks
+    """
     for b in blocks:
       print hex(b[0]), hex(b[1]), self[b[0]]['crefs'], self[b[1]]['instruction'].dests()
       for a in range(b[0], b[1]+1):
         if self[a]['instruction'] != None:
           print "  ",hex(a),self[a]['instruction']
-
-    # this is wrong
-    self[address]['function'] = "start"
+    """
 
     # find more functions
     for f in function_starts:
@@ -247,6 +277,20 @@ if __name__ == "__main__":
   main = static.get_address_by_name("main")
   print "main is at", hex(main)
   static.make_function_at(main)
+
+  print "found %d functions" % len(static['functions'])
+
+  # function printer
+  for f in static['functions']:
+    print f
+    for b in sorted(f.blocks):
+      print "  ",b
+      for a in sorted(b.addresses):
+        print "    ",hex(a),static[a]['instruction']
+
+
+
+  #print static['functions']
 
   #print static[main]['instruction'], map(hex, static[main]['crefs'])
   #print static.get_tags(['name'])

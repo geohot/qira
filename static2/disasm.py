@@ -36,7 +36,7 @@ class disasm(object):
     except StopIteration:
       self.decoded = False
 
-  def __str__(self):
+  def __repr__(self):
     if self.decoded:
       return "%s\t%s"%(self.i.mnemonic,self.i.op_str)
     return ""
