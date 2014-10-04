@@ -120,7 +120,8 @@ class Static:
   def _insert_names(self,st):
     '''TODO kind of fugly
        takes in a string and replaces things like 0x???????? with
-       the name of that address, if it exists'''
+       the name of that address, if it exists
+       doesn't make sense to be used externally...'''
     st = str(st)
     m = map(lambda x:int(x,16),re.findall(r"(?<=0x)[0-9a-f]+",st))
     for val in m:

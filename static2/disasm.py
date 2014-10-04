@@ -84,6 +84,7 @@ class disasm(object):
   def is_conditional(self):
     if not self.decoded:
       return False
+    #TODO shouldn't be x86 specific
     return x86.X86_REG_EFLAGS in self.regs_read
 
   def code_follows(self):
@@ -109,6 +110,7 @@ class disasm(object):
 
     if self.is_jump() or self.is_call():
       #if we take a PTR and not a MEM or REG operand (TODO: better support for MEM operands)
+      #TODO: shouldn't be x86 specific
       if (self.i.operands[0].type == x86.X86_OP_IMM):
         dl.append((self.i.operands[0].value.imm,self.dtype)) #the target of the jump/call
 
