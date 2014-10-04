@@ -35,6 +35,8 @@ import disasm
 import loader
 import Queue
 
+import re
+
 # debugging
 try:
   from hexdump import hexdump
@@ -111,6 +113,18 @@ class Static:
       return self.rnames[name]
     else:
       return None
+
+  def _insert_names(self,st):
+    '''TODO kind of fugly
+       takes in a string and replaces things like 0x???????? with
+       the name of that address, if it exists'''
+    st = str(st)
+    m = map(lambda x:int(x,16),re.findall(r"(?<=0x)[0-9a-f]+",st))
+    for val in m:
+      if self[val]['name']:
+        st = st.replace(hex(val),self[val]['name'])
+    return st
+
 
   # keep the old tags interface
   # names and function data no longer stored here
@@ -228,7 +242,7 @@ class Static:
         print "  -------  %s [%s] -------"%(self[b[0]]['name']," ".join(map(hex,self[b[0]]['crefs'])))
         for a in range(b[0], b[1]+1):
           if self[a]['instruction'] != None:
-            print "  ",hex(a),self[a]['instruction']
+            print "  ",hex(a),self._insert_names(self[a]['instruction'])
 
         print "  -------  %s [%s] -------"%(hex(b[1]), \
          " ".join( map(lambda x:hex(x[0]),self[b[1]]['instruction'].dests()) ))
