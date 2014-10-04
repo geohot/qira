@@ -180,8 +180,17 @@ class Static:
       for (c,flag) in d.dests():
         #if we aren't just the next instruction, we have an explicit xref
         if c != address + d.size():
+          #destination of a call is a function
+          if d.is_call():
+            self[c]['function'] = True
+
+          #if we don't have a name, update our name
+          if not self[c]['name']:
+            self[c]['name'] = "%s_%x"%("sub" if d.is_call() else "loc",c)
+
           self[c]['crefs'].append(address)
           block_starts.add(c)
+
         #if we come after a jump and are an implicit xref, we are the start
         #of a new block
         elif d.is_jump():
@@ -216,12 +225,13 @@ class Static:
     #print out basic blocks in simple disassembly view
     if self.debug:
       for b in sorted(blocks,key=lambda b:b[0]):
-        print "  -------  %s [%s] -------"%(hex(b[0])," ".join(map(hex,self[b[0]]['crefs'])))
+        print "  -------  %s [%s] -------"%(self[b[0]]['name']," ".join(map(hex,self[b[0]]['crefs'])))
         for a in range(b[0], b[1]+1):
           if self[a]['instruction'] != None:
             print "  ",hex(a),self[a]['instruction']
 
-        print "  -------  %s [%s] -------"%(hex(b[1])," ".join( map(lambda x:hex(x[0]),self[b[1]]['instruction'].dests()) ))
+        print "  -------  %s [%s] -------"%(hex(b[1]), \
+         " ".join( map(lambda x:hex(x[0]),self[b[1]]['instruction'].dests()) ))
         print
 
 # *** STATIC TEST STUFF ***

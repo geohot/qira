@@ -50,6 +50,8 @@ class disasm(object):
     except StopIteration:
       self.decoded = False
 
+  def __repr__(self):
+    return self.__str__()
 
   def __str__(self):
     if self.decoded:
@@ -78,6 +80,11 @@ class disasm(object):
     if not self.decoded:
       return False
     return self.is_jump() or self.is_ret()
+
+  def is_conditional(self):
+    if not self.decoded:
+      return False
+    return x86.X86_REG_EFLAGS in self.regs_read
 
   def code_follows(self):
     '''should the data after this instructino be treated as code
