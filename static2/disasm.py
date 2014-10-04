@@ -103,11 +103,9 @@ class disasm(object):
       return []
 
     dl = []
-    
     if self.code_follows():
       #this piece of code leads implicitly to the next instruction
       dl.append((self.address+self.size(),Destination.implicit)) 
-
 
     if self.is_jump() or self.is_call():
       #if we take a PTR and not a MEM or REG operand (TODO: better support for MEM operands)

@@ -97,6 +97,9 @@ class Static:
     # run the elf loader
     loader.load_binary(self, path)
 
+    # all basic blocks in the binary
+    self.global_tags['blocks'] = []
+
     self.debug = debug
 
   # this should be replaced with a 
@@ -208,6 +211,8 @@ class Static:
         #if we come after a jump and are an implicit xref, we are the start
         #of a new block
         elif d.is_jump():
+          if not self[c]['name']:
+            self[c]['name'] = "loc_%x"%(c)
           block_starts.add(c)
       return d.dests()
 
@@ -225,7 +230,6 @@ class Static:
     #print map(hex, done)
 
     # block finding pass
-    blocks = []
     for b in block_starts:
       address = b
       i = self[address]['instruction']
@@ -234,12 +238,13 @@ class Static:
           break
         address += i.size()
         i = self[address]['instruction']
-      blocks.append((b, address))
+      self['blocks'].append((b, address))
 
     #print out basic blocks in simple disassembly view
     if self.debug:
-      for b in sorted(blocks,key=lambda b:b[0]):
-        print "  -------  %s [%s] -------"%(self[b[0]]['name']," ".join(map(hex,self[b[0]]['crefs'])))
+      for b in sorted(self['blocks'],key=lambda b:b[0]):
+        print "  -------  %s [%s] -------"%(self[b[0]]['name'] or hex(b[0]), \
+         " ".join(map(hex,self[b[0]]['crefs'])))
         for a in range(b[0], b[1]+1):
           if self[a]['instruction'] != None:
             print "  ",hex(a),self._insert_names(self[a]['instruction'])
