@@ -110,8 +110,8 @@ class disasm(object):
 
 
     if self.is_jump() or self.is_call():
-      #if we take a PTR and not a MEM operand (TODO: better support for MEM operands)
-      if (self.i.operands[0].value.reg) and (self.i.operands[0].value.mem.disp == 0):
+      #if we take a PTR and not a MEM or REG operand (TODO: better support for MEM operands)
+      if (self.i.operands[0].type == x86.X86_OP_IMM):
         dl.append((self.i.operands[0].value.imm,self.dtype)) #the target of the jump/call
 
     return dl
