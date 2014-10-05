@@ -35,6 +35,8 @@ import disasm
 import loader
 import Queue
 
+import re
+
 # debugging
 try:
   from hexdump import hexdump
@@ -105,7 +107,7 @@ class Tags:
 # will only support radare2 for now
 # mostly tags, except for names and functions
 class Static:
-  def __init__(self, path):
+  def __init__(self, path, debug=False):
     self.tags = {}
     self.path = path
 
@@ -117,12 +119,15 @@ class Static:
     # 'arch'
     self.global_tags = {}
     self.global_tags['functions'] = set()
+    self.global_tags['blocks'] = set()
 
     # concept from qira_program
     self.base_memory = {}
 
     # run the elf loader
     loader.load_binary(self, path)
+
+    self.debug = debug
 
   # this should be replaced with a 
   def set_name(self, address, name):
@@ -133,11 +138,29 @@ class Static:
       return self.set_name(address, name+"_")
     return name
 
+  def _auto_update_name(self, address, name):
+    '''modifies the name of address based on data from analyses
+       but if we already have a name (from a user or symbols) do nothing'''
+    if not self[address]['name']:
+      self[address]['name'] = name
+
   def get_address_by_name(self, name):
     if name in self.rnames:
       return self.rnames[name]
     else:
       return None
+
+  def _insert_names(self,st):
+    '''TODO kind of fugly
+       takes in a string and replaces things like 0x???????? with
+       the name of that address, if it exists
+       doesn't make sense to be used externally...'''
+    st = str(st)
+    m = map(lambda x:int(x,16),re.findall(r"(?<=0x)[0-9a-f]+",st))
+    for val in m:
+      if self[val]['name']:
+        st = st.replace(hex(val),self[val]['name'])
+    return st
 
   # keep the old tags interface
   # names and function data no longer stored here
@@ -211,12 +234,20 @@ class Static:
       self[address]['function'] = this_function
       for (c,flag) in d.dests():
         if flag == disasm.DESTTYPE.call:
+          self._auto_update_name(c,"sub_%x"%(c))
           function_starts.add(c)
           self[c]['xrefs'].add(address)
           # add this to the potential function boundary starts
           continue
         if c != address + d.size():
           self[c]['crefs'].add(address)
+          self._auto_update_name(c,"loc_%x"%(c))
+          block_starts.add(c)
+
+        #if we come after a jump and are an implicit xref, we are the start
+        #of a new block
+        elif d.is_jump():
+          self._auto_update_name(c,"loc_%x"%(c))
           block_starts.add(c)
       return d.dests()
 
@@ -228,6 +259,7 @@ class Static:
       dests = disassemble(pending.get())
       for (d,flag) in dests:
         if flag == disasm.DESTTYPE.call:
+          #this will get handled in the function pass
           continue
         if d not in done:
           pending.put(d)
@@ -236,13 +268,11 @@ class Static:
     #print map(hex, done)
 
     # block finding pass
-    blocks = []
     for b in block_starts:
       this_block = Block(b)
       this_function.add_block(this_block)
       address = b
       i = self[address]['instruction']
-      self[address]['block'] = this_block
       while not i.is_ending() and i.size() != 0:
         if address + i.size() in block_starts:
           break
@@ -250,27 +280,17 @@ class Static:
         i = self[address]['instruction']
         this_block.add(address)
         self[address]['block'] = this_block
-      blocks.append((b, address))
+      self['blocks'].add(this_block)
 
-    # print blocks
-    """
-    for b in blocks:
-      print hex(b[0]), hex(b[1]), self[b[0]]['crefs'], self[b[1]]['instruction'].dests()
-      for a in range(b[0], b[1]+1):
-        if self[a]['instruction'] != None:
-          print "  ",hex(a),self[a]['instruction']
-    """
-
-    # find more functions
+     # find more functions
     for f in function_starts:
       if self[f]['function'] == None:
         self.make_function_at(f)
 
-
 # *** STATIC TEST STUFF ***
 
 if __name__ == "__main__":
-  static = Static(sys.argv[1])
+  static = Static(sys.argv[1],debug=True)
   print "arch:",static['arch']
 
   # find main
@@ -283,12 +303,11 @@ if __name__ == "__main__":
 
   # function printer
   for f in sorted(static['functions']):
-    print f
+    print static[f.start]['name'] or hex(f.start), f
     for b in sorted(f.blocks):
       print "  ",b
       for a in sorted(b.addresses):
-        print "    ",hex(a),static[a]['instruction']
-
+        print "    ",hex(a),static._insert_names(static[a]['instruction'])
 
   #print static['functions']
 
