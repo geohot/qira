@@ -78,23 +78,24 @@ class Tags:
     self.static = static
     self.address = address
 
-  def __getitem__(self, tag):
-    # should reading the instruction tag trigger disasm?
-    """
-    if tag == "instruction":
-      dat = self.static.memory(self.address, 0x10)
-      return disasm.disasm(dat, self.address, self['arch'])
-    """
 
+  def __contains__(self, tag):
+    return tag in self.backing
+
+  def __getitem__(self, tag):
     if tag in self.backing:
       return self.backing[tag]
     else:
+      # should reading the instruction tag trigger disasm?
+      if tag == "instruction":
+        dat = self.static.memory(self.address, 0x10)
+        return disasm.disasm(dat, self.address, self.static['arch'])
       if tag == "crefs" or tag == "xrefs":
         # crefs has a default value of a new array
         self.backing[tag] = set()
         return self.backing[tag]
-      if tag in static.global_tags:
-        return static.global_tags[tag]
+      if tag in self.static.global_tags:
+        return self.static.global_tags[tag]
       return None
 
   def __setitem__(self, tag, val):
@@ -128,6 +129,7 @@ class Static:
     loader.load_binary(self, path)
 
     self.debug = debug
+    print "*** elf loaded"
 
   # this should be replaced with a 
   def set_name(self, address, name):
@@ -178,7 +180,7 @@ class Static:
     for a in addresses:
       rret = {}
       for f in filt:
-        t = self.tags[a][f]
+        t = self[a][f]
         if t != None:
           rret[f] = t
       if rret != {}:

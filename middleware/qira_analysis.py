@@ -271,6 +271,7 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
     r = trace.db.fetch_changes_by_clnum(i, 1)
     if len(r) != 1:
       continue
+    """
     ins = ""
     if program != None and r[0]['data'] > 0:
       while 'instruction' not in program.tags[r[0]['address']]:
@@ -288,11 +289,14 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
         else:
           #print "sleeping ", hex(r[0]['address'])
           time.sleep(0.1)
+    """
 
-      ins = program.tags[r[0]['address']]['instruction']
 
       # set the lengths of the instructions
-      program.tags[r[0]['address']]['len'] = r[0]['data']
+      # we shouldn't have to do this if the memory model is correct
+      #program.tags[r[0]['address']]['len'] = r[0]['data']
+
+    ins = str(program.static[r[0]['address']]['instruction'])
     ret.append((r[0]['address'], r[0]['data'], r[0]['clnum'], ins))
     if (time.time() - start) > 0.01:
       time.sleep(0.01)

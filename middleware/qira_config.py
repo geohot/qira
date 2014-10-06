@@ -30,6 +30,8 @@ WITH_STATIC2 = False
 
 WITH_IDA = False
 
+WEBSOCKET_DEBUG = False
+
 # enable radare if it's installed
 """
 try:

@@ -6,6 +6,7 @@ import time
 import base64
 sys.path.append(qira_config.BASEDIR+"/cda")
 
+
 def socket_method(func):
   def func_wrapper(*args, **kwargs):
     # before things are initted in the js, we get this
@@ -19,7 +20,7 @@ def socket_method(func):
       tm = (time.time() - start) * 1000
 
       # print slow calls, slower than 50ms
-      if tm > 50:
+      if tm > 50 or qira_config.WEBSOCKET_DEBUG:
         print "SOCKET %6.2f ms in %-20s with" % (tm, func.func_name), args
       return ret
     except Exception, e:
@@ -279,6 +280,7 @@ def getinstructions(forknum, clnum, clstart, clend):
 
     #ned: always use program.disasm if possible for smarter
     #representation of instruction
+    """
     if qira_config.WITH_CAPSTONE or 'instruction' not in program.tags[rret['address']]:
       try:
         # use the memory
@@ -304,12 +306,15 @@ def getinstructions(forknum, clnum, clstart, clend):
     #we can use these on the frontend somehow - pass as JSON?
     #some other arch specific stuff may also be available if desired
     rret['instruction'] = insdata['repr']
+    """
+
+    rret['instruction'] = program.static[rret['address']]['instruction']
     
-    if 'name' in program.tags[rret['address']]:
+    if 'name' in program.static[rret['address']]:
       #print "setting name"
-      rret['name'] = program.tags[rret['address']]['name']
-    if 'comment' in program.tags[rret['address']]:
-      rret['comment'] = program.tags[rret['address']]['comment']
+      rret['name'] = program.static[rret['address']]['name']
+    if 'comment' in program.static[rret['address']]:
+      rret['comment'] = program.static[rret['address']]['comment']
     elif rret['address'] in program.dwarves:
       rret['comment'] = program.dwarves[rret['address']][2]
     if i in slce:
@@ -389,10 +394,10 @@ def do_search(b64search):
 @socketio.on('getnames', namespace='/qira')
 @socket_method
 def getnames(addrs):
-  ret = program.static.get_names(map(fhex, addrs))
+  ret = program.static.get_tags(['name'], map(fhex, addrs))
   send = {}
   for addr in ret:
-    send[ghex(addr)] = ret[addr]
+    send[ghex(addr)] = ret[addr]['name']
   emit('names', send)
 
 @socketio.on('gotoname', namespace='/qira')
@@ -456,6 +461,7 @@ def run_server(largs, lprogram):
     import cacheserver
     app.register_blueprint(cacheserver.app)
     cacheserver.set_cache(program.cda)
+
   print "****** starting WEB SERVER on %s:%d" % (qira_config.HOST, qira_config.WEB_PORT)
   threading.Thread(target=mwpoller).start()
   socketio.run(app, host=qira_config.HOST, port=qira_config.WEB_PORT, log=open("/dev/null", "w"))
