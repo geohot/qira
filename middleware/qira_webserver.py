@@ -4,8 +4,8 @@ import os
 import sys
 import time
 import base64
+import json
 sys.path.append(qira_config.BASEDIR+"/cda")
-
 
 def socket_method(func):
   def func_wrapper(*args, **kwargs):
@@ -35,7 +35,7 @@ import qira_log
 
 LIMIT = 0
 
-from flask import Flask, Response, redirect
+from flask import Flask, Response, redirect, request
 from flask.ext.socketio import SocketIO, emit
 
 # http://stackoverflow.com/questions/8774958/keyerror-in-module-threading-after-a-successful-py-test-run
@@ -370,6 +370,23 @@ def getnames(addrs):
     send[ghex(addr)] = ret[addr]['name']
   emit('names', send)
 
+@app.route('/gettagsa', methods=["POST"])
+@socket_method
+def gettagsa():
+  arr = json.loads(request.data)
+  ret = []
+  for i in arr:
+    i = fhex(i)
+
+    # always return them all
+    # a bit of a hack, this is so javascript can display it
+    rret = {}
+    for tags in ['name', 'comment']:
+      rret[tags] = program.static[i][tags]
+    rret['address'] = ghex(i)
+    ret.append(rret)
+  return json.dumps(ret)
+
 @socketio.on('gotoname', namespace='/qira')
 @socket_method
 def gotoname(name):
@@ -383,10 +400,7 @@ def settags(tags):
   for addr in tags:
     naddr = fhex(addr)
     for i in tags[addr]:
-      if i == 'name':
-        program.static.set_name(addr, tags[addr][i])
-      else:
-        program.static[naddr][i] = tags[addr][i]
+      program.static[naddr][i] = tags[addr][i]
 
 # ***** generic webserver stuff *****
   

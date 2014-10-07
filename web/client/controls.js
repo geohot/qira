@@ -171,7 +171,8 @@ window.onkeydown = function(e) {
   } else if (e.keyCode == 67 && e.shiftKey == true) {
     // shift-C = clear all forks
     delete_all_forks();
-  } else if (e.keyCode == 78) {
+  } else if (e.keyCode == 78 || e.keyCode == 186) {
+    // 186 is comment
     if (e.shiftKey) {
       // shift-n = rename data
       var addr = Session.get("daddr");
@@ -179,36 +180,33 @@ window.onkeydown = function(e) {
       // n = rename instruction
       var addr = Session.get("iaddr");
     }
-    if (addr == undefined) return;
-    var old = sync_tags_request([addr])[0]['name'];
-    if (old == undefined) old = "";
-    var dat = prompt("Rename address "+addr, old);
-    if (dat == undefined) return;
-    var send = {};
-    send[addr] = {"name": dat};
-    stream.emit("settags", send);
-
-    replace_names();
-  } else if (e.keyCode == 186) {
-    var addr = undefined;
-    if (e.shiftKey) {
-      // shift-; = comment data
-      var addr = Session.get("daddr");
-    } else {
-      // n = comment instruction
-      var addr = Session.get("iaddr");
+    var tagname = 'name';
+    if (e.keyCode == 186) {
+      tagname = 'comment';
     }
+
     if (addr == undefined) return;
-    var old = sync_tags_request([addr])[0]['comment'];
+    var old = sync_tags_request([addr])[0][tagname];
     if (old == undefined) old = "";
-    var dat = prompt("Enter comment on "+addr, old);
+
+    if (tagname == 'name') {
+      var dat = prompt("Rename address "+addr, old);
+    } else {
+      var dat = prompt("Enter comment for "+addr, old);
+    }
+
     if (dat == undefined) return;
     var send = {};
-    send[addr] = {"comment": dat};
+    send[addr] = {}
+    send[addr][tagname] = dat;
     stream.emit("settags", send);
 
-    // do this explictly?
-    $(".comment_"+addr).html("; "+dat);
+    if (tagname == 'name') {
+      replace_names();
+    } else if (tagname == 'comment') {
+      // do this explictly?
+      $(".comment_"+addr).html("; "+dat);
+    }
   } else if (e.keyCode == 71) {
     var dat = prompt("Enter change or address");
     if (dat == undefined) return;
