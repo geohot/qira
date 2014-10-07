@@ -271,31 +271,8 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
     r = trace.db.fetch_changes_by_clnum(i, 1)
     if len(r) != 1:
       continue
-    """
-    ins = ""
-    if program != None and r[0]['data'] > 0:
-      while 'instruction' not in program.tags[r[0]['address']]:
-        if qira_config.USE_PIN:
-          # do the disassembly for pin mode
-          rawins = trace.fetch_memory(r[0]['clnum'], r[0]['address'], r[0]['data'])
-          if len(rawins) == r[0]['data']:
-            raw = ''.join(map(lambda x: chr(x[1]), sorted(rawins.items())))
-            program.tags[r[0]['address']]['capinstruction'] = program.disasm(raw, r[0]['address'])
-            program.tags[r[0]['address']]['instruction'] = program.tags[r[0]['address']]['capinstruction']['repr']
-            break
-          else:
-            # grr, bad case breaks analyzer
-            time.sleep(0.1)
-        else:
-          #print "sleeping ", hex(r[0]['address'])
-          time.sleep(0.1)
-    """
-
-
-      # set the lengths of the instructions
-      # we shouldn't have to do this if the memory model is correct
-      #program.tags[r[0]['address']]['len'] = r[0]['data']
-
+    
+    # this will trigger the disassembly
     ins = str(program.static[r[0]['address']]['instruction'])
     ret.append((r[0]['address'], r[0]['data'], r[0]['clnum'], ins))
     if (time.time() - start) > 0.01:

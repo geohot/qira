@@ -278,38 +278,8 @@ def getinstructions(forknum, clnum, clstart, clend):
     else:
       rret = rret[0]
 
-    #ned: always use program.disasm if possible for smarter
-    #representation of instruction
-    """
-    if qira_config.WITH_CAPSTONE or 'instruction' not in program.tags[rret['address']]:
-      try:
-        # use the memory
-        rawins = trace.fetch_memory(i, rret['address'], rret['data'])
-        if len(rawins) == rret['data']:
-          raw = ''.join(map(lambda x: chr(x[1]), sorted(rawins.items())))
-          try:
-            thumb = program.tags[rret['address']]['thumb']
-          except KeyError:
-            thumb = False
-          insdata = program.disasm(raw, rret['address'], thumb)
-        else:
-          raise Exception("bytes not found backing instruction @ "+ghex(rret['address']))
-      except Exception,e:
-        print "getinstructions failed: {}".format(sys.exc_info()[0]), e
-        # fetch the instruction from the qemu dump
-        insdata = {"repr": program.tags[rret['address']]['instruction']}
-    else:
-      insdata = {"repr": program.tags[rret['address']]['instruction']}
-
-    #if the capstone disas succeeded, besides repr we'll have:
-    #mnemonic, op_str, regs_read, regs_write if applicable
-    #we can use these on the frontend somehow - pass as JSON?
-    #some other arch specific stuff may also be available if desired
-    rret['instruction'] = insdata['repr']
-    """
-
     rret['instruction'] = program.static[rret['address']]['instruction']
-    
+
     if 'name' in program.static[rret['address']]:
       #print "setting name"
       rret['name'] = program.static[rret['address']]['name']

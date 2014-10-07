@@ -115,3 +115,4 @@ class disasm(object):
         dl.append((self.i.operands[0].value.imm,self.dtype)) #the target of the jump/call
 
     return dl
+
