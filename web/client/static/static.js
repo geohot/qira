@@ -35,6 +35,11 @@ function display_flat(addrs) {
   $("#staticpanel").html(idump);
 }
 
+function on_function(fxn) { DS("function"); 
+  var graph = new Graph();
+  p(fxn);
+} stream.on('function', on_function);
+
 function on_tags(addrs, fxn) { DS("tags"); 
   if (!fxn) {
     display_flat(addrs);

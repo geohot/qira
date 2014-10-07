@@ -278,7 +278,7 @@ def getinstructions(forknum, clnum, clstart, clend):
     else:
       rret = rret[0]
 
-    rret['instruction'] = program.static[rret['address']]['instruction']
+    rret['instruction'] = str(program.static[rret['address']]['instruction'])
 
     if 'name' in program.static[rret['address']]:
       #print "setting name"
@@ -370,6 +370,8 @@ def getnames(addrs):
     send[ghex(addr)] = ret[addr]['name']
   emit('names', send)
 
+
+# TODO: this is a shitty function
 @app.route('/gettagsa', methods=["POST"])
 @socket_method
 def gettagsa():
@@ -386,6 +388,26 @@ def gettagsa():
     rret['address'] = ghex(i)
     ret.append(rret)
   return json.dumps(ret)
+
+@socketio.on('getstaticview', namespace='/qira')
+@socket_method
+def getstaticview(haddr, flat, flatrange):
+  fxn = program.static[fhex(haddr)]['function']
+  if fxn == None:
+    return
+
+  blocks = []
+  for b in fxn.blocks:
+    bb = []
+    for i in sorted(b.addresses):
+      bbb = {'address': ghex(i)}
+      bbb['comment'] = program.static[i]['comment']
+      bbb['instruction'] = str(program.static[i]['instruction'])
+      bbb['dests'] = map(lambda (x,y): (ghex(x), y), program.static[i]['instruction'].dests())
+      bb.append(bbb)
+    blocks.append(bb)
+
+  emit('function', {'blocks': blocks})
 
 @socketio.on('gotoname', namespace='/qira')
 @socket_method
@@ -427,7 +449,6 @@ def serve(path):
     return Response(dat, mimetype="text/css")
   else:
     return Response(dat, mimetype="text/html")
-
 
 
 # must go at the bottom

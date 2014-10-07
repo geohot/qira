@@ -118,6 +118,7 @@ class Program:
 
     # init static
     self.static = static2.Static(self.program) 
+    self.static.process()
 
     # no traces yet
     self.traces = {}
@@ -291,6 +292,8 @@ class Program:
         thumb_flag = d[0]
         if thumb_flag == 't':
           thumb = True
+          # override the arch since it's thumb
+          self.static[addr]['arch'] = "thumb"
         elif thumb_flag == 'n':
           thumb = False
         else:
@@ -301,12 +304,12 @@ class Program:
         inst = d[d.rfind("     ")+5:]
       else:
         inst = d[d.find(":")+3:]
-      self.static[addr]['instruction'] = inst
-      if thumb:
-        self.static[addr]['arch'] = "thumb"
-      else:
-        self.static[addr]['arch'] = "thumb"
       cnt += 1
+
+      #self.static[addr]['instruction'] = inst
+
+      # trigger disasm
+      d = self.static[addr]['instruction']
       #print addr, inst
     #sys.stdout.write("%d..." % cnt); sys.stdout.flush()
 

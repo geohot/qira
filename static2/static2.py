@@ -73,6 +73,8 @@ class Tags:
       return None
 
   def __setitem__(self, tag, val):
+    if tag == "instruction" and type(val) == str:
+      raise Exception("instructions shouldn't be strings")
     if tag == "name":
       # name can change by adding underscores
       val = self.static.set_name(self.address, val)
@@ -192,6 +194,13 @@ class Static:
 
   def add_memory_chunk(self, address, dat):
     self.base_memory[(address, address+len(dat))] = dat
+
+  def process(self):
+    recursive.make_function_at(self, self['entry'])
+    main = self.get_address_by_name("main")
+    if main != None:
+      recursive.make_function_at(self, main)
+    print "*** found %d functions" % len(self['functions'])
 
 
 # *** STATIC TEST STUFF ***
