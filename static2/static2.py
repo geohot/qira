@@ -59,8 +59,10 @@ class Tags:
       return self.backing[tag]
     else:
       # should reading the instruction tag trigger disasm?
+      # and should dests be a seperate tag?
       if tag == "instruction":
         dat = self.static.memory(self.address, 0x10)
+        # arch should probably come from the address with fallthrough
         self.backing['instruction'] = disasm.disasm(dat, self.address, self.static['arch'])
         self.backing['len'] = self.backing['instruction'].size()
         return self.backing[tag]
