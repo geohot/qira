@@ -38,6 +38,7 @@ function display_flat(addrs) {
 function on_function(fxn) { DS("function"); 
   var graph = new Graph();
   p(fxn);
+
 } stream.on('function', on_function);
 
 function on_tags(addrs, fxn) { DS("tags"); 

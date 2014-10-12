@@ -396,6 +396,7 @@ def run_server(largs, lprogram):
   global static
   args = largs
   program = lprogram
+  qira_webstatic.init(lprogram)
 
   if qira_config.WITH_STATIC:
     import qira_static

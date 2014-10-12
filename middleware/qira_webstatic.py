@@ -5,6 +5,11 @@ from qira_webserver import socketio
 from qira_webserver import socket_method
 from qira_webserver import app
 
+from flask.ext.socketio import SocketIO, emit
+
+from qira_base import *
+import json
+
 # *** STATIC CALLS FROM THE FRONTEND ***
 
 @socketio.on('getnames', namespace='/qira')
@@ -69,4 +74,9 @@ def settags(tags):
     naddr = fhex(addr)
     for i in tags[addr]:
       program.static[naddr][i] = tags[addr][i]
+
+def init(lprogram):
+  global program
+  program = lprogram
+
 
