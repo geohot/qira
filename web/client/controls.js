@@ -104,6 +104,7 @@ $(document).ready(function() {
   });
   $('body').on('mousewheel', '.flat', function(e) {
     var cdr = $(".flat").children();
+    // TODO: HAXX!!!
     if (e.originalEvent.wheelDelta < 0) {
       Session.set('iview', get_address_from_class(cdr[16].childNodes[0]));
     } else if (e.originalEvent.wheelDelta > 0) {

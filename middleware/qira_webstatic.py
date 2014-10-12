@@ -46,21 +46,67 @@ def gettagsa():
 @socket_method
 def getstaticview(haddr, flat, flatrange):
   fxn = program.static[fhex(haddr)]['function']
-  if fxn == None:
-    return
+  if fxn == None or flat == True:
+    addr = fhex(haddr)
 
-  blocks = []
-  for b in fxn.blocks:
-    bb = []
-    for i in sorted(b.addresses):
+    # not a function, return flat view
+    ret = []
+    # find backward
+    i = addr
+    while len(ret) != abs(flatrange[0]):
+      did_append = False
+      # search up to 256 back
+      for j in range(1, 256):
+        if 'len' in program.static[i-j] and program.static[i-j]['len'] == j:
+          i -= j
+          bbb = {'address': ghex(i)}
+          bbb['bytes'] = map(ord, program.static.memory(i, j))
+          ret.append(bbb)
+          did_append = True
+          break
+      if not did_append:
+        i -= 1
+        bbb = {'address': ghex(i)}
+        bbb['bytes'] = map(ord, program.static.memory(i, 1))
+        ret.append(bbb)
+    ret = ret[::-1]
+
+    # find forward
+    i = addr
+    while len(ret) != abs(flatrange[0]) + flatrange[1]:
       bbb = {'address': ghex(i)}
-      bbb['comment'] = program.static[i]['comment']
-      bbb['instruction'] = str(program.static[i]['instruction'])
-      bbb['dests'] = map(lambda (x,y): (ghex(x), y), program.static[i]['instruction'].dests())
-      bb.append(bbb)
-    blocks.append(bb)
+      #print program.tags[i]
+      if 'len' in program.static[i]:
+        l = program.static[i]['len']
+        if l == 0:
+          l = 1
+      else:
+        l = 1
+      bbb['bytes'] = map(ord, program.static.memory(i, l))
+      i += l
+      ret.append(bbb)
 
-  emit('function', {'blocks': blocks})
+    for bbb in ret:
+      a = fhex(bbb['address'])
+      bbb['comment'] = program.static[a]['comment']
+      if 'instruction' in program.static[a]:
+        bbb['instruction'] = str(program.static[a]['instruction'])
+      # dests?
+
+    emit('flat', ret)
+  else:
+    blocks = []
+    for b in fxn.blocks:
+      bb = []
+      for i in sorted(b.addresses):
+        bbb = {'address': ghex(i)}
+        bbb['comment'] = program.static[i]['comment']
+        bbb['instruction'] = str(program.static[i]['instruction'])
+        bbb['dests'] = map(lambda (x,y): (ghex(x), y), program.static[i]['instruction'].dests())
+        bb.append(bbb)
+      blocks.append(bb)
+
+    emit('function', {'blocks': blocks})
 
 @socketio.on('gotoname', namespace='/qira')
 @socket_method
