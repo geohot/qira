@@ -20,7 +20,7 @@ function instruction_html_from_tags(ins) {
   idump += '<span class="insaddr datainstruction addr addr_'+ins.address+'">'+ins.address+'</span> '+
   //'<div class="instructiondesc">'+hex(ins.flags)+'</div> '+
   '<div class="instructiondesc">'+highlight_instruction(ins.instruction)+'</div> '+
-  '<span class="comment comment_'+ins.address+'">'+(ins.comment !== undefined ? "; "+ins.comment : "")+'</span>';
+  '<span class="comment comment_'+ins.address+'">'+(ins.comment != undefined ? "; "+ins.comment : "")+'</span>';
   idump += '</div>';
   return idump;
 }
@@ -39,6 +39,42 @@ function on_function(fxn) { DS("function");
   var graph = new Graph();
   p(fxn);
 
+  for (var bn = 0; bn < fxn.blocks.length; bn++) {
+    var bb = fxn.blocks[bn];
+    if (bb.length == 0) continue;
+    var addr = bb[0].address;
+    var cnt = bb.length;
+    
+    var idump = "";
+    for (var i = 0; i < cnt; i++) {
+      idump += instruction_html_from_tags(bb[i]);
+    }
+    var dom = $('<div class="basicblock" id="bb_'+addr+'">');
+
+    dom.html(idump);
+    graph.addVertex(addr, cnt, dom[0]);
+
+    // add edges
+    for (var i = 0; i < bb[cnt-1].dests.length; i++) {
+      var dd = bb[cnt-1].dests[i];
+      if (dd[1] == 3) continue;
+
+      var col = "blue";  // base off dd[1]
+      if (bb[cnt-1].dests.length > 1 && dd[1] == 4) {
+        col = "red";
+      } else if (dd[1] == 1) {
+        col = "green";
+      }
+      graph.addEdge(addr, dd[0], col);
+    }
+
+  }
+
+  graph.assignLevels();
+  graph.render();
+
+  rehighlight();
+  replace_names();
 } stream.on('function', on_function);
 
 function on_tags(addrs, fxn) { DS("tags"); 

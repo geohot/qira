@@ -187,13 +187,13 @@ def getstaticview(haddr, flat, flatrange):
 @app.route('/dot', methods=["POST"])
 def graph_dot():
   req = request.data
-  #print "DOT REQUEST", req
+  print "DOT REQUEST", req
   f = open("/tmp/in.dot", "w")
   f.write(req)
   f.close()
   os.system("dot /tmp/in.dot > /tmp/out.dot")
   ret = open("/tmp/out.dot").read()
-  #print "DOT RESPONSE", ret
+  print "DOT RESPONSE", ret
   return ret
 
 

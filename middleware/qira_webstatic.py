@@ -10,6 +10,7 @@ from flask.ext.socketio import SocketIO, emit
 
 from qira_base import *
 import json
+import os
 
 # *** STATIC CALLS FROM THE FRONTEND ***
 
@@ -75,6 +76,19 @@ def settags(tags):
     naddr = fhex(addr)
     for i in tags[addr]:
       program.static[naddr][i] = tags[addr][i]
+
+# dot as a service
+@app.route('/dot', methods=["POST"])
+def graph_dot():
+  req = request.data
+  #print "DOT REQUEST", req
+  f = open("/tmp/in.dot", "w")
+  f.write(req)
+  f.close()
+  os.system("dot /tmp/in.dot > /tmp/out.dot")
+  ret = open("/tmp/out.dot").read()
+  #print "DOT RESPONSE", ret
+  return ret 
 
 def init(lprogram):
   global program
