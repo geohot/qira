@@ -99,6 +99,7 @@ class Static:
     self.global_tags = {}
     self.global_tags['functions'] = set()
     self.global_tags['blocks'] = set()
+    self.global_tags['sections'] = []
 
     # concept from qira_program
     self.base_memory = {}
@@ -182,6 +183,7 @@ class Static:
 
   # return the memory at address:ln
   # replaces get_static_bytes
+  # TODO: refactor this! 
   def memory(self, address, ln):
     dat = []
     for i in range(ln):
@@ -195,6 +197,8 @@ class Static:
     return ''.join(dat)
 
   def add_memory_chunk(self, address, dat):
+    # sections should have an idea of section permission
+    self['sections'].append((address, len(dat)))
     self.base_memory[(address, address+len(dat))] = dat
 
   def process(self):
