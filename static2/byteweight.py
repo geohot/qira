@@ -62,14 +62,12 @@ def load(sig_file):
 
 # main function start identification function
 def fsi(static):
-  trie = load("bw_sig")
-  # print trie
+  trie = load("bw_x86")
   functions = set()
   (addr, lenn) = static['sections'][-3]
   for (addr, lenn) in static['sections']:
     strr = static.memory(addr, lenn)
     for i in range(lenn):
-      # if addr+i == 0x805ff93:
       s = score(strr[i:i+sig_len], trie)
       # print hex(addr+i), repr(strr[i:i+sig_len]), s
       if s > threshold:
