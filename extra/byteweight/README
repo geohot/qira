@@ -1,0 +1,6 @@
+ByteWeight is a function identification project for cross platforms. It is based
+on CMU Binary Analysis Platform.
+
+Current code contains both training and testing implementation. To train out
+signature file, one should use train by:
+  ./train -bin-dir [training binary] -sig [output signature file]

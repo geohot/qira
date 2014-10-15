@@ -34,6 +34,7 @@ import os, sys
 import recursive
 import loader
 import disasm
+import byteweight
 
 import re
 
@@ -235,5 +236,9 @@ if __name__ == "__main__":
 
   #print static[main]['instruction'], map(hex, static[main]['crefs'])
   #print static.get_tags(['name'])
+  bw_functions = byteweight.fsi(static)
+  for i in bw_functions:
+      print hex(i)
+  # byteweight.fsi(static)
 
 
