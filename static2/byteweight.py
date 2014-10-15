@@ -62,7 +62,7 @@ def load(sig_file):
 
 # main function start identification function
 def fsi(static):
-  trie = load("dummy_sig_1")
+  trie = load("bw_sig")
   # print trie
   functions = set()
   (addr, lenn) = static['sections'][-3]
