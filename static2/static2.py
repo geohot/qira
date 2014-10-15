@@ -227,7 +227,6 @@ if __name__ == "__main__":
   # function printer
   for f in sorted(static['functions']):
     print static[f.start]['name'] or hex(f.start), f
-    print hex(f.start)
     for b in sorted(f.blocks):
       print "  ",b
       for a in sorted(b.addresses):
