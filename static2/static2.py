@@ -237,8 +237,8 @@ if __name__ == "__main__":
   #print static[main]['instruction'], map(hex, static[main]['crefs'])
   #print static.get_tags(['name'])
   bw_functions = byteweight.fsi(static)
-  for i in bw_functions:
-      print hex(i)
-  # byteweight.fsi(static)
+  for f in bw_functions:
+    print hex(f)
+    hexdump(static.memory(f, 0x20))
 
 
