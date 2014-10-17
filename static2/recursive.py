@@ -33,8 +33,8 @@ class Block:
 # runs the recursive descent parser at address
 # how to deal with block groupings?
 def make_function_at(self, address, recurse = True):
-  if self['arch'] != "i386":
-    print "*** static only works with x86, someone should fix it"
+  if self['arch'] != "i386" and self['arch'] != "x86-64":
+    print "*** static only works with x86(_64), someone should fix it"
     return
   block_starts = set([address])
   function_starts = set()
