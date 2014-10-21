@@ -33,9 +33,9 @@ class Block:
 # runs the recursive descent parser at address
 # how to deal with block groupings?
 def make_function_at(self, address, recurse = True):
-  if self['arch'] != "i386" and self['arch'] != "x86-64":
-    print "*** static only works with x86(_64), someone should fix it"
-    return
+  #if self['arch'] != "i386" and self['arch'] != "x86-64":
+  #  print "*** static only works with x86(_64), someone should fix it"
+  #  return
   block_starts = set([address])
   function_starts = set()
   this_function = Function(address)
@@ -46,7 +46,7 @@ def make_function_at(self, address, recurse = True):
     d = self[address]['instruction']
     self[address]['function'] = this_function
     for (c,flag) in d.dests():
-      if flag == disasm.DESTTYPE.call:
+      if flag == disasm.ITYPE.call:
         self._auto_update_name(c,"sub_%x"%(c))
         function_starts.add(c)
         self[c]['xrefs'].add(address)
@@ -71,7 +71,7 @@ def make_function_at(self, address, recurse = True):
   while not pending.empty():
     dests = disassemble(pending.get())
     for (d,flag) in dests:
-      if flag == disasm.DESTTYPE.call:
+      if flag == disasm.ITYPE.call:
         #this will get handled in the function pass
         continue
       if d not in done:

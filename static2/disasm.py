@@ -1,9 +1,10 @@
 
 # capstone is a requirement now
 from capstone import *
+import capstone.arm as arm
 
 # The pair (INSTYPE, DESTTYPE) tells us the type of instruction, as well
-# as the type of destination address. 
+# as the type of destination address.
 
 # ITYPE tells us the type of instruction we are dealing with
 class ITYPE(object):
@@ -18,7 +19,7 @@ class ITYPE(object):
 # type ttype = seq of addresss | immediate of address | other
 class TTYPE(object):
   seq = 0         # the target is the next seq. instruction
-  immediate = 1   # the target is an immediate value. 
+  immediate = 1   # the target is an immediate value.
   ret = 2         # ret target (on stack?, bl? these are questions we could answer with BAP!)
   other = 3       # Any other target type, e.g., an indirect jump target
 
@@ -30,7 +31,7 @@ class TTYPE(object):
 #  - The ITYPE for the instruction.
 #  - The set of successor targets TTYPE
 
-# This allows a user for the disasm instruction to group an instruction by its type, 
+# This allows a user for the disasm instruction to group an instruction by its type,
 # as well as to find the successor addresses as best as can be determined locally.
 
 class disasm(object):
@@ -39,7 +40,7 @@ class disasm(object):
     self.raw = raw
     self.address = address
     self.succ = set() # no successors
-    self.itype = seq  # default is a sequential instruction
+    self.itype = ITYPE.seq  # default is a sequential instruction
     if arch == "i386":
       self.md = Cs(CS_ARCH_X86, CS_MODE_32)
       self.arch = CS_ARCH_X86.i386
@@ -68,19 +69,19 @@ class disasm(object):
       if(self.arch == CS_ARCH_ARM):
           # first set type of instruction
           if(self.i.mnemonic == "bl"):
-            self.itype = DESTTYPE.call
+            self.itype = ITYPE.call
           elif(self.i.mnemonic == "b"):
-            self.itype = DESTTYPE.jump
+            self.itype = ITYPE.jump
           elif(arm.ARM_GRP_JUMP in self.i.groups):
-            self.itype = DESTTYPE.cjump
+            self.itype = ITYPE.cjump
           # then calculate initial control flow targets (under)approx.
           if(self.itype in [ITYPE.call, ITYPE.jump, ITYPE.cjump]):
             if(self.i.operands[0].type == arm.ARM_OP_IMM):
               t = self.i.operands[0].value.imm + self.address + 0x8
-              self.succ.add((t, self.dtype))
+              self.succ.add((t, TTYPE.immediate))
           # sequential instructions and cjumps have the next instruction
           # as a potential target. Note here we treat calls as "sequential"
-          if(self.dtype in [ITYPE.cjump, ITYPE.seq, ITYPE.call]):
+          if(self.itype in [ITYPE.cjump, ITYPE.seq, ITYPE.call]):
             # fallthrough address is also a target for seq and cjumps
             self.succ.add((self.address+self.size(), TTYPE.seq))
 
@@ -117,7 +118,7 @@ class disasm(object):
   def is_jump(self):
     if not self.decoded:
       return False
-    return self.dtype in [DESTTYPE.jump,DESTTYPE.cjump]
+    return self.itype in [ITYPE.jump,ITYPE.cjump]
 
   def is_ret(self):
     if not self.decoded:
@@ -168,7 +169,7 @@ class disasm(object):
 
     # if self.code_follows():
     #   #this piece of code leads implicitly to the next instruction
-    #   dl.append((self.address+self.size(),DESTTYPE.implicit)) 
+    #   dl.append((self.address+self.size(),DESTTYPE.implicit))
 
 
     # if self.is_jump() or self.is_call():
