@@ -217,14 +217,19 @@ if __name__ == "__main__":
   static = Static(sys.argv[1],debug=True)
   print "arch:",static['arch']
 
+  ##### new (linear sweep) style #####
+
   function_starts = linear.get_function_starts(static)
+  recursive.make_function_at(recurse=False,function_starts=function_starts)
+
+  ##### old (recursive descent) style here #####
 
   # find main
   main = static.get_address_by_name("main")
   print "main is at", hex(main)
-  recursive.make_function_at(static, static['entry'])
+  recursive.make_function_at(static, static['entry'], recurse=True)
   print "found %d functions" % len(static['functions'])
-  recursive.make_function_at(static, main)
+  recursive.make_function_at(static, main, recurse=True)
   print "found %d functions" % len(static['functions'])
 
   # function printer
