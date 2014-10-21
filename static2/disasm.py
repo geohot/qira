@@ -67,23 +67,23 @@ class disasm(object):
 
       # ARM-local code. Could be a subclass.
       if(self.arch == CS_ARCH_ARM):
-          # first set type of instruction
-          if(self.i.mnemonic == "bl"):
-            self.itype = ITYPE.call
-          elif(self.i.mnemonic == "b"):
-            self.itype = ITYPE.jump
-          elif(arm.ARM_GRP_JUMP in self.i.groups):
-            self.itype = ITYPE.cjump
-          # then calculate initial control flow targets (under)approx.
-          if(self.itype in [ITYPE.call, ITYPE.jump, ITYPE.cjump]):
-            if(self.i.operands[0].type == arm.ARM_OP_IMM):
-              t = self.i.operands[0].value.imm + self.address + 0x8
-              self.succ.add((t, TTYPE.immediate))
-          # sequential instructions and cjumps have the next instruction
-          # as a potential target. Note here we treat calls as "sequential"
-          if(self.itype in [ITYPE.cjump, ITYPE.seq, ITYPE.call]):
-            # fallthrough address is also a target for seq and cjumps
-            self.succ.add((self.address+self.size(), TTYPE.seq))
+        # first set type of instruction
+        if(self.i.mnemonic == "bl"):
+          self.itype = ITYPE.call
+        elif(self.i.mnemonic == "b"):
+          self.itype = ITYPE.jump
+        elif(arm.ARM_GRP_JUMP in self.i.groups):
+          self.itype = ITYPE.cjump
+        # then calculate initial control flow targets (under)approx.
+        if(self.itype in [ITYPE.call, ITYPE.jump, ITYPE.cjump]):
+          if(self.i.operands[0].type == arm.ARM_OP_IMM):
+            t = self.i.operands[0].value.imm + self.address + 0x8
+            self.succ.add((t, TTYPE.immediate))
+        # sequential instructions and cjumps have the next instruction
+        # as a potential target. Note here we treat calls as "sequential"
+        if(self.itype in [ITYPE.cjump, ITYPE.seq, ITYPE.call]):
+          # fallthrough address is also a target for seq and cjumps
+          self.succ.add((self.address+self.size(), TTYPE.seq))
 
       if(self.arch == CS_ARCH_X86):
         if self.i.mnemonic == "call":
