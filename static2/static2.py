@@ -31,6 +31,7 @@
 import collections
 import os, sys
 
+import linear
 import recursive
 import loader
 import disasm
@@ -111,7 +112,7 @@ class Static:
     self.debug = debug
     print "*** elf loaded"
 
-  # this should be replaced with a 
+  # this should be replaced with a
   def set_name(self, address, name):
     if name not in self.rnames:
       self.rnames[name] = address
@@ -166,7 +167,7 @@ class Static:
       if rret != {}:
         ret[a] = rret
     return ret
-  
+
   def __setitem__(self, address, dat):
     if type(address) is str:
       self.global_tags[address] = dat
@@ -184,7 +185,7 @@ class Static:
 
   # return the memory at address:ln
   # replaces get_static_bytes
-  # TODO: refactor this! 
+  # TODO: refactor this!
   def memory(self, address, ln):
     dat = []
     for i in range(ln):
@@ -215,6 +216,8 @@ class Static:
 if __name__ == "__main__":
   static = Static(sys.argv[1],debug=True)
   print "arch:",static['arch']
+
+  function_starts = linear.get_function_starts(static)
 
   # find main
   main = static.get_address_by_name("main")
