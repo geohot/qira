@@ -114,7 +114,7 @@ def make_functions_from_starts(static, function_starts):
 
     this_block = Block(address)
     this_function.add_block(this_block)
-    block_starts = set([this_block])
+    block_starts = set([address])
 
     i = static[address]['instruction']
     while not i.is_ending() and i.size() != 0:
@@ -142,4 +142,5 @@ def make_functions_from_starts(static, function_starts):
 
       if address in block_starts:
         this_block = Block(address)
-        static['blocks'].add(this_block)
+        this_function.add_block(this_block)
+        #static['blocks'].add(this_block)

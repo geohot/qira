@@ -106,8 +106,11 @@ class Static:
     # concept from qira_program
     self.base_memory = {}
 
+    if debug:
+      self['debug_names'] = set()
+
     # run the elf loader
-    loader.load_binary(self, path)
+    loader.load_binary(self, path, debug=debug)
 
     self.debug = debug
     print "*** elf loaded"
@@ -263,3 +266,13 @@ if __name__ == "__main__":
   for f in bw_functions:
     print hex(f)
     hexdump(recursive_static.memory(f, 0x20))
+
+
+  ### compare the results: linear sweep vs. recursive descent ###
+  #these should be based on the addresses, not the names
+  real_functions = linear_static['debug_names']
+  linear_functions = set(linear_static[f.start]['name'] for f in linear_static['functions'])
+  recursive_functions = set(recursive_static[f.start]['name'] for f in recursive_static['functions'])
+  print "Real functions:",real_functions
+  print "Linear sweep functions:",linear_functions
+  print "Recursive functions:",recursive_functions

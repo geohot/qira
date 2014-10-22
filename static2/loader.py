@@ -18,7 +18,7 @@ def get_arch(fb):
     return 'mips'
 
 
-def load_binary(static, path):
+def load_binary(static, path, debug=False):
   elf = ELFFile(open(path))
 
   # TODO: replace with elf['e_machine']
@@ -41,6 +41,8 @@ def load_binary(static, path):
         #print rel, symbol.name
         if rel['r_offset'] != 0 and symbol.name != "":
           static[rel['r_offset']]['name'] = "__"+symbol.name
+          if debug:
+            static['debug_names'].add("__"+symbol.name)
           ncount += 1
 
     if isinstance(section, SymbolTableSection):
@@ -48,6 +50,8 @@ def load_binary(static, path):
         if symbol['st_value'] != 0 and symbol.name != "" and symbol['st_info']['type'] == "STT_FUNC":
           #print symbol['st_value'], symbol.name
           static[symbol['st_value']]['name'] = symbol.name
+          if debug:
+            static['debug_names'].add(symbol.name)
           ncount += 1
   print "** found %d names" % ncount
 
