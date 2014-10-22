@@ -118,7 +118,12 @@ class disasm(object):
   def is_jump(self):
     if not self.decoded:
       return False
-    return self.itype in [ITYPE.jump,ITYPE.cjump]
+    return self.itype == ITYPE.jump
+
+  def is_cjump(self):
+    if not self.decoded:
+      return False
+    return self.itype == ITYPE.cjump
 
   def is_ret(self):
     if not self.decoded:

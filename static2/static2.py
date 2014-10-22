@@ -214,39 +214,52 @@ class Static:
 # *** STATIC TEST STUFF ***
 
 if __name__ == "__main__":
-  static = Static(sys.argv[1],debug=True)
-  print "arch:",static['arch']
+  linear_static = Static(sys.argv[1],debug=True)
+  print "arch:",linear_static['arch']
 
   ##### new (linear sweep) style #####
 
-  function_starts = linear.get_function_starts(static)
-  recursive.make_function_at(recurse=False,function_starts=function_starts)
+  function_starts = linear.get_function_starts(linear_static)
 
-  ##### old (recursive descent) style here #####
+  #because main isn't called using BL, we add it manually
+  function_starts.add(linear_static.get_address_by_name("main"))
 
-  # find main
-  main = static.get_address_by_name("main")
-  print "main is at", hex(main)
-  recursive.make_function_at(static, static['entry'], recurse=True)
-  print "found %d functions" % len(static['functions'])
-  recursive.make_function_at(static, main, recurse=True)
-  print "found %d functions" % len(static['functions'])
+  print "linear technique found {} functions".format(len(function_starts))
+  recursive.make_functions_from_starts(linear_static,function_starts)
 
-  # function printer
-  for f in sorted(static['functions']):
-    print static[f.start]['name'] or hex(f.start), f
+
+  for f in sorted(linear_static['functions']):
+    print linear_static[f.start]['name'] or hex(f.start), f
     for b in sorted(f.blocks):
       print "  ",b
       for a in sorted(b.addresses):
-        print "    ",hex(a),static._insert_names(static[a]['instruction'])
+        print "    ",hex(a),linear_static._insert_names(linear_static[a]['instruction'])
 
-  #print static['functions']
+  ##### old (recursive descent) style here #####
 
-  #print static[main]['instruction'], map(hex, static[main]['crefs'])
-  #print static.get_tags(['name'])
-  bw_functions = byteweight.fsi(static)
+  recursive_static = Static(sys.argv[1],debug=True)
+
+  # find main
+  main = recursive_static.get_address_by_name("main")
+  print "main is at", hex(main)
+  recursive.make_function_at(recursive_static, recursive_static['entry'], recurse=True)
+  print "recursive descent found %d functions" % len(recursive_static['functions'])
+  recursive.make_function_at(recursive_static, main, recurse=True)
+  print "recursive descent found %d functions" % len(recursive_static['functions'])
+
+  # function printer
+  for f in sorted(recursive_static['functions']):
+    print recursive_static[f.start]['name'] or hex(f.start), f
+    for b in sorted(f.blocks):
+      print "  ",b
+      for a in sorted(b.addresses):
+        print "    ",hex(a),recursive_static._insert_names(recursive_static[a]['instruction'])
+
+  #print recursive_static['functions']
+
+  #print recursive_static[main]['instruction'], map(hex, recursive_static[main]['crefs'])
+  #print recursive_static.get_tags(['name'])
+  bw_functions = byteweight.fsi(recursive_static)
   for f in bw_functions:
     print hex(f)
-    hexdump(static.memory(f, 0x20))
-
-
+    hexdump(recursive_static.memory(f, 0x20))

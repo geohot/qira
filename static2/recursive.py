@@ -41,6 +41,7 @@ def make_function_at(self, address, recurse = True):
   this_function = Function(address)
   self['functions'].add(this_function)
 
+  #this function should be fixed up after the changes to disasm
   def disassemble(address):
     raw = self.memory(address, 0x10)
     d = self[address]['instruction']
@@ -59,7 +60,10 @@ def make_function_at(self, address, recurse = True):
 
       #if we come after a jump and are an implicit xref, we are the start
       #of a new block
-      elif d.is_jump():
+
+      #ned: not sure if is_cjump goes here but cjumps used to
+      #be part of is_jump() so this is the same behavior
+      elif d.is_jump() or d.is_cjump():
         self._auto_update_name(c,"loc_%x"%(c))
         block_starts.add(c)
     return d.dests()
@@ -100,66 +104,42 @@ def make_function_at(self, address, recurse = True):
     if self[f]['function'] == None:
       make_function_at(self, f)
 
-def make_function_only_at(self, address):
-  block_starts = set([address])
-  this_function = Function(address)
-  self['functions'].add(this_function)
+#this removes the recursive descent pass and makes basic blocks
+#this should be in linear.py, but it relies on the Function and Block
+#classes - maybe a refactor is necessary
+def make_functions_from_starts(static, function_starts):
+  for address in function_starts:
+    this_function = Function(address)
+    static['functions'].add(this_function)
 
-  def disassemble(address):
-    raw = self.memory(address, 0x10)
-    d = self[address]['instruction']
-    self[address]['function'] = this_function
-    for (c,flag) in d.dests():
-      if flag == disasm.ITYPE.call:
-        self._auto_update_name(c,"sub_%x"%(c))
-        function_starts.add(c)
-        self[c]['xrefs'].add(address)
-        # add this to the potential function boundary starts
-        continue
-      if c != address + d.size():
-        self[c]['crefs'].add(address)
-        self._auto_update_name(c,"loc_%x"%(c))
-        block_starts.add(c)
-
-      #if we come after a jump and are an implicit xref, we are the start
-      #of a new block
-      elif d.is_jump():
-        self._auto_update_name(c,"loc_%x"%(c))
-        block_starts.add(c)
-    return d.dests()
-
-  # recursive descent pass
-  pending = Queue.Queue()
-  done = set()
-  pending.put(address)
-  while not pending.empty():
-    dests = disassemble(pending.get())
-    for (d,flag) in dests:
-      if flag == disasm.ITYPE.call:
-        #this will get handled in the function pass
-        continue
-      if d not in done:
-        pending.put(d)
-        done.add(d)
-
-  #print map(hex, done)
-
-  # block finding pass
-  for b in block_starts:
-    this_block = Block(b)
+    this_block = Block(address)
     this_function.add_block(this_block)
-    address = b
-    i = self[address]['instruction']
-    while not i.is_ending() and i.size() != 0:
-      if address + i.size() in block_starts:
-        break
-      address += i.size()
-      i = self[address]['instruction']
-      this_block.add(address)
-      self[address]['block'] = this_block
-    self['blocks'].add(this_block)
+    block_starts = set([this_block])
 
-   # find more functions
-  for f in function_starts:
-    if self[f]['function'] == None:
-      make_function_at(self, f)
+    i = static[address]['instruction']
+    while not i.is_ending() and i.size() != 0:
+      i = static[address]['instruction']
+      this_block.add(address)
+      static[address]['block'] = this_block
+      static[address]['function'] = this_function
+
+      if i.is_cjump():
+        for (succ_address, target_type) in i.dests():
+          if target_type != disasm.TTYPE.seq:
+            static[succ_address]['crefs'].add(address)
+            static._auto_update_name(succ_address,"loc_%x"%(succ_address))
+            block_starts.add(succ_address)
+          #do we do anything with the sequential target?
+          #is the sequential target a new basic block?
+      elif i.is_jump():
+        static._auto_update_name(succ_address,"loc_%x"%(succ_address))
+        block_starts.add(succ_address)
+
+      address += i.size()
+
+      if address in function_starts:
+        break #done with this function
+
+      if address in block_starts:
+        this_block = Block(address)
+        static['blocks'].add(this_block)
