@@ -1,5 +1,8 @@
 #linear.py
-#Makes a linear sweep over the binary to identify function starts.
+# Makes a linear sweep over the binary to identify function starts,
+# then builds basic blocks for each identified function. This approach
+# should be superior with ARM, or in cases where the compiler does not
+# emit a return instruction at the end of a function (infinite loop, etc.).
 
 import disasm
 
@@ -28,6 +31,8 @@ def get_function_starts(static):
       succ_l = [i for (i,t) in d.succ if (t == disasm.TTYPE.immediate)]
       assert len(succ_l) == 1 #only one target
       successor_f = succ_l[0] #unpack from list
+      static[successor_f]['xrefs'].add(current_address)
+      static._auto_update_name(successor_f, "sub_{%x}"%(successor_f))
       function_starts.add(successor_f)
     #assume sizeof(instruction) is 16 for ARM
     #we can also get this information from the disasm
@@ -37,5 +42,3 @@ def get_function_starts(static):
   print "found function starts",function_starts
 
   return function_starts
-
-
