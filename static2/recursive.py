@@ -41,13 +41,12 @@ def make_function_at(self, address, recurse = True):
   this_function = Function(address)
   self['functions'].add(this_function)
 
-  #this function should be fixed up after the changes to disasm
   def disassemble(address):
     raw = self.memory(address, 0x10)
     d = self[address]['instruction']
     self[address]['function'] = this_function
     for (c,flag) in d.dests():
-      if flag == disasm.ITYPE.call:
+      if d.itype == disasm.ITYPE.call:
         self._auto_update_name(c,"sub_%x"%(c))
         function_starts.add(c)
         self[c]['xrefs'].add(address)
@@ -60,7 +59,6 @@ def make_function_at(self, address, recurse = True):
 
       #if we come after a jump and are an implicit xref, we are the start
       #of a new block
-
       #ned: not sure if is_cjump goes here but cjumps used to
       #be part of is_jump() so this is the same behavior
       elif d.is_jump() or d.is_cjump():
@@ -75,7 +73,7 @@ def make_function_at(self, address, recurse = True):
   while not pending.empty():
     dests = disassemble(pending.get())
     for (d,flag) in dests:
-      if flag == disasm.ITYPE.call:
+      if flag == disasm.TTYPE.immediate:
         #this will get handled in the function pass
         continue
       if d not in done:
