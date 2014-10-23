@@ -42,7 +42,7 @@ def load_binary(static, path, debug=False):
         if rel['r_offset'] != 0 and symbol.name != "":
           static[rel['r_offset']]['name'] = "__"+symbol.name
           if debug:
-            static['debug_names'].add("__"+symbol.name)
+            static['debug_functions'].add((rel['r_offset'],"__"+symbol.name))
           ncount += 1
 
     if isinstance(section, SymbolTableSection):
@@ -51,7 +51,7 @@ def load_binary(static, path, debug=False):
           #print symbol['st_value'], symbol.name
           static[symbol['st_value']]['name'] = symbol.name
           if debug:
-            static['debug_names'].add(symbol.name)
+            static['debug_functions'].add((symbol['st_value'],symbol.name))
           ncount += 1
   print "** found %d names" % ncount
 

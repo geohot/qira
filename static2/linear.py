@@ -39,6 +39,6 @@ def get_function_starts(static):
     #TODO: add thumb support to disasm, it seems the class refactor broke it
     current_address += 0x10
 
-  print "found function starts",function_starts
+  #print "found function starts",function_starts
 
   return function_starts
