@@ -108,6 +108,9 @@ def make_function_at(self, address, recurse = True):
 #this should be in linear.py, but it relies on the Function and Block
 #classes - maybe a refactor is necessary
 def make_functions_from_starts(static, function_starts):
+  # we don't have to sort function_starts because this loop breaks when we
+  # reach another function and we are only building basic blocks/updating
+  # the interface.
   for address in function_starts:
     this_function = Function(address)
     static['functions'].add(this_function)
@@ -132,6 +135,8 @@ def make_functions_from_starts(static, function_starts):
           #do we do anything with the sequential target?
           #is the sequential target a new basic block?
       elif i.is_jump():
+        (succ_address,target_type) = list(i.dests())[0] #only one destination
+        assert target_type == disasm.TTYPE.immediate
         static._auto_update_name(succ_address,"loc_%x"%(succ_address))
         block_starts.add(succ_address)
 
