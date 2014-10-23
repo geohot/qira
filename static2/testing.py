@@ -82,3 +82,6 @@ if __name__ == "__main__":
   #print "Functions missed by recursive sweep:",recursive_missed,"\n"
   print "\nFunctions in linear and not in recursive:",linear_not_rec
   print "\nFunctions in recursive and not in linear:",rec_not_linear
+
+  #function_printer(linear_static)
+  #function_printer(recursive_static)
