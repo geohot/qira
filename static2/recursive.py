@@ -119,7 +119,6 @@ def make_functions_from_starts(static, function_starts):
 
     i = static[address]['instruction']
     while not i.is_ending() and i.size() != 0:
-      i = static[address]['instruction']
       this_block.add(address)
       static[address]['block'] = this_block
       static[address]['function'] = this_function
@@ -147,3 +146,5 @@ def make_functions_from_starts(static, function_starts):
         this_block = Block(address)
         this_function.add_block(this_block)
         #static['blocks'].add(this_block)
+
+      i = static[address]['instruction']
