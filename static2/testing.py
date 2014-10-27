@@ -72,14 +72,15 @@ if __name__ == "__main__":
   print "ELF symbols:       {} functions found.".format(len(real_addresses))
   print "Linear sweep:      {} functions found.".format(len(linear_addresses))
   print "Recursive descent: {} functions found.".format(len(recursive_addresses))
+  print ""
 
   linear_missed = set(x[1] for x in real_functions if x[0] in (real_addresses-linear_addresses))
   recursive_missed = set(x[1] for x in real_functions if x[0] in (real_addresses-recursive_addresses))
   linear_not_rec = set(x[1] for x in linear_functions if x[0] in (linear_addresses-recursive_addresses))
   rec_not_linear = set(x[1] for x in recursive_functions if x[0] in recursive_addresses-linear_addresses)
 
-  #print "Functions missed by linear sweep:",linear_missed,"\n"
-  #print "Functions missed by recursive sweep:",recursive_missed,"\n"
+  print "Functions missed by linear sweep:",linear_missed,"\n"
+  print "Functions missed by recursive sweep:",recursive_missed,"\n"
   print "\nFunctions in linear and not in recursive:",linear_not_rec
   print "\nFunctions in recursive and not in linear:",rec_not_linear
 
