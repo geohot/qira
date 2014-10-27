@@ -72,17 +72,21 @@ if __name__ == "__main__":
   print "ELF symbols:       {} functions found.".format(len(real_addresses))
   print "Linear sweep:      {} functions found.".format(len(linear_addresses))
   print "Recursive descent: {} functions found.".format(len(recursive_addresses))
-  print ""
 
   linear_missed = set(x[1] for x in real_functions if x[0] in (real_addresses-linear_addresses))
   recursive_missed = set(x[1] for x in real_functions if x[0] in (real_addresses-recursive_addresses))
   linear_not_rec = set(x[1] for x in linear_functions if x[0] in (linear_addresses-recursive_addresses))
   rec_not_linear = set(x[1] for x in recursive_functions if x[0] in recursive_addresses-linear_addresses)
 
-  print "Functions missed by linear sweep:",linear_missed,"\n"
-  print "Functions missed by recursive sweep:",recursive_missed,"\n"
+  linear_false_pos = set(x[1] for x in linear_functions if x[0] in (linear_addresses-real_addresses))
+  recursive_false_pos = set(x[1] for x in linear_functions if x[0] in (recursive_addresses-real_addresses))
+
+  #print "Functions missed by linear sweep:",linear_missed,"\n"
+  #print "Functions missed by recursive sweep:",recursive_missed,"\n"
   print "\nFunctions in linear and not in recursive:",linear_not_rec
   print "\nFunctions in recursive and not in linear:",rec_not_linear
+  print "\nFalse positives for linear sweep:",linear_false_pos
+  print "\nFalse positives for recursive descent:",recursive_false_pos
 
   #function_printer(linear_static)
   #function_printer(recursive_static)
