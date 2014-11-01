@@ -255,4 +255,6 @@ if __name__ == "__main__":
     sys.exit()
   else:
     init_with_binary(sys.argv[1])
+    tags = fetch_tags()
+    print tags
 
