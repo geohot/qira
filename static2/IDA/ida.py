@@ -25,7 +25,7 @@ os.environ['IDADIR'] = IDAPATH
 if sys.maxsize > 2**32:
   if __name__ == "__main__":
     print "relaunching as 32-bit python"
-    os.system("python32/Python/python "+__file__+" "+" ".join(sys.argv[1:]))
+    os.system("python32/Python/python.exe "+__file__+" "+" ".join(sys.argv[1:]))
     exit(0)
   from remotectypes32 import *
 else:
@@ -250,5 +250,9 @@ def init_with_binary(filename):
   run_ida()
 
 if __name__ == "__main__":
-  init_with_binary(sys.argv[1])
+  if len(sys.argv) != 2:
+    print "Need to provide a file for ida.py!"
+    sys.exit()
+  else:
+    init_with_binary(sys.argv[1])
 
