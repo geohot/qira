@@ -25,7 +25,7 @@ os.environ['IDADIR'] = IDAPATH
 if sys.maxsize > 2**32:
   if __name__ == "__main__":
     print "relaunching as 32-bit python"
-    os.system("python32/Python/python.exe "+__file__+" "+" ".join(sys.argv[1:]))
+    os.system("python32/Python/python "+__file__+" "+" ".join(sys.argv[1:]))
     exit(0)
   from remotectypes32 import *
 else:
