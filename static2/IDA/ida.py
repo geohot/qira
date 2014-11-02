@@ -252,5 +252,9 @@ if __name__ == "__main__":
   else:
     init_with_binary(sys.argv[1])
     tags = fetch_tags()
-    print tags
-
+    ks = sorted(tags)
+    for tag_addr in ks:
+      sample_addr = tags[tag_addr]
+      print "address",hex(tag_addr)
+      for k in sample_addr:
+        print k,tags[k]
