@@ -39,6 +39,7 @@ def load_binary(static, path, debug=False):
       if symtable.is_null():
         #this was breaking on null sections.
         #is there a better way to fix it? why are we seeing a nullsection here?
+        print "null section found"
         continue
       for rel in section.iter_relocations():
         symbol = symtable.get_symbol(rel['r_info_sym'])

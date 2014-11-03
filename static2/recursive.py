@@ -36,13 +36,14 @@ def make_function_at(self, address, recurse = True):
   #if self['arch'] != "i386" and self['arch'] != "x86-64":
   #  print "*** static only works with x86(_64), someone should fix it"
   #  return
+  if address is None:
+    return
   block_starts = set([address])
   function_starts = set()
   this_function = Function(address)
   self['functions'].add(this_function)
 
   def disassemble(address):
-    raw = self.memory(address, 0x10)
     d = self[address]['instruction']
     self[address]['function'] = this_function
     for (c,flag) in d.dests():

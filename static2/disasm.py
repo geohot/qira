@@ -37,29 +37,31 @@ class TTYPE(object):
 
 class disasm(object):
   """one disassembled instruction"""
-  def __init__(self, raw, address, arch="i386"):
+  def __init__(self, raw, address, arch="i386", md=None):
     self.raw = raw
     self.address = address
     self.succ = set() # no successors
     self.itype = ITYPE.seq  # default is a sequential instruction
     self.arch = arch
-    if arch == "i386":
-      self.md = Cs(CS_ARCH_X86, CS_MODE_32)
-      #x86 and x86_64 are the same thing for capstone :(
-      #self.arch = CS_ARCH_X86.i386
-    elif arch == "x86-64":
-      self.md = Cs(CS_ARCH_X86, CS_MODE_64)
-    elif arch == "thumb":
-      self.md = Cs(CS_ARCH_ARM, CS_MODE_THUMB)
-    elif arch == "arm":
-      self.md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
-      self.arch = "arm" #CS_ARCH_ARM
-    elif arch == "aarch64":
-      self.md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
-    elif arch == "ppc":
-      self.md = Cs(CS_ARCH_PPC, CS_MODE_32)
+    if md is None:
+      if arch == "i386":
+        self.md = Cs(CS_ARCH_X86, CS_MODE_32)
+        #x86 and x86_64 are the same thing for capstone :(
+        #self.arch = CS_ARCH_X86.i386
+      elif arch == "x86-64":
+        self.md = Cs(CS_ARCH_X86, CS_MODE_64)
+      elif arch == "thumb":
+        self.md = Cs(CS_ARCH_ARM, CS_MODE_THUMB)
+      elif arch == "arm":
+        self.md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
+      elif arch == "aarch64":
+        self.md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
+      elif arch == "ppc":
+        self.md = Cs(CS_ARCH_PPC, CS_MODE_32)
+      else:
+        raise Exception('arch not supported by capstone')
     else:
-      raise Exception('arch not supported by capstone')
+      self.md = md
     self.md.detail = True
     try:
       self.i = self.md.disasm(self.raw, self.address).next()
