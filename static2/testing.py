@@ -49,6 +49,7 @@ def test_byteweight(static):
     hexdump(recursive_static.memory(f, 0x20))
 
 #TODO: refactor this into functions, add commandline args
+#make profiling its own flag which outputs a .png
 if __name__ == "__main__":
   #if len(sys.argv) != 2:
   #  print "Please provide a binary to test as an argument."
@@ -63,6 +64,10 @@ if __name__ == "__main__":
     info = subprocess.check_output(["file",fn])
     if "ELF" in info and "not stripped" in info:
       nonstripped.append(fn)
+
+  #nonstrippednonida = [x for x in nonstripped if not os.path.isfile(x+".ida_info")]
+  #print "Please generate an ida_info file for the following:",nonstrippednonida
+  #sys.exit()
 
   d = {}
   d['i386_total_fns'] = 0
@@ -138,21 +143,21 @@ if __name__ == "__main__":
       print "unknown arch",arch
 
   print "\ni386:"
-  print "Total functions (from symbols):      {}".format(d['i386_total_fns'])
-  print "Functions found by linear sweep:     {}".format(d['i386_total_fns']-d['i386_missed_lin'])
+  print "Total functions (from symbols):       {}".format(d['i386_total_fns'])
+  print "Functions found by linear sweep:      {}".format(d['i386_total_fns']-d['i386_missed_lin'])
   print "Functions found by recursive descent: {}".format(d['i386_total_fns']-d['i386_missed_rec'])
 
   print "\nx86-64:"
-  print "Total functions (from symbols):      {}".format(d['x86-64_total_fns'])
-  print "Functions found by linear sweep:     {}".format(d['x86-64_total_fns']-d['x86-64_missed_lin'])
+  print "Total functions (from symbols):       {}".format(d['x86-64_total_fns'])
+  print "Functions found by linear sweep:      {}".format(d['x86-64_total_fns']-d['x86-64_missed_lin'])
   print "Functions found by recursive descent: {}".format(d['x86-64_total_fns']-d['x86-64_missed_rec'])
 
   print "\nARM:"
-  print "Total functions (from symbols):      {}".format(d['arm_total_fns'])
-  print "Functions found by linear sweep:     {}".format(d['arm_total_fns']-d['arm_missed_lin'])
+  print "Total functions (from symbols):       {}".format(d['arm_total_fns'])
+  print "Functions found by linear sweep:      {}".format(d['arm_total_fns']-d['arm_missed_lin'])
   print "Functions found by recursive descent: {}".format(d['arm_total_fns']-d['arm_missed_rec'])
 
   print "\nAARCH64:"
-  print "Total functions (from symbols):      {}".format(d['aarch64_total_fns'])
-  print "Functions found by linear sweep:     {}".format(d['aarch64_total_fns']-d['aarch64_missed_lin'])
+  print "Total functions (from symbols):       {}".format(d['aarch64_total_fns'])
+  print "Functions found by linear sweep:      {}".format(d['aarch64_total_fns']-d['aarch64_missed_lin'])
   print "Functions found by recursive descent: {}".format(d['aarch64_total_fns']-d['aarch64_missed_rec'])
