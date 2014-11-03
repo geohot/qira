@@ -54,17 +54,20 @@ if __name__ == "__main__":
   fn = sys.argv[1]
   linear_static = test_linear(fn)
   recursive_static = test_recursive(fn)
+  arch = linear_static['arch']
+  ida_available = arch in ['i386','x86-64']
+  if not ida_available:
+    print "arch not supported by ida demo"
 
   #test_byteweight(Static(fn,debug=True))
 
   real_functions = linear_static['debug_functions']
   linear_functions = set((f.start,linear_static[f.start]['name']) for f in linear_static['functions'])
   recursive_functions = set((f.start,recursive_static[f.start]['name']) for f in recursive_static['functions'])
-  ida.init_with_binary(fn)
-  ida_tags = ida.fetch_tags()
-  print "*** ida returned %d tags" % (len(tags))
-  ida_functions = set((f,recursive_static[f.start]['name']) for f in ida_tags.keys()) #keys for tags from IDA are the function addresses?
-  print ida_functions
+  if ida_available:
+    ida.init_with_binary(fn)
+    ida_tags = ida.fetch_tags()
+    ida_functions = set((f,recursive_static[f]['name']) for f in ida_tags.keys()) #keys for tags from IDA are the function addresses?
 
   """
   real_functions, linear_functions, and recursive_functions all are sets of
@@ -74,13 +77,20 @@ if __name__ == "__main__":
   real_addresses = set(x[0] for x in real_functions)
   linear_addresses = set(x[0] for x in linear_functions)
   recursive_addresses = set(x[0] for x in recursive_functions)
+  if ida_available:
+    ida_addresses = set(x[0] for x in ida_functions)
 
   print "ELF symbols:       {} functions found.".format(len(real_addresses))
+  if ida_available:
+    print "IDA:               {} functions found.".format(len(ida_functions))
   print "Linear sweep:      {} functions found.".format(len(linear_addresses))
   print "Recursive descent: {} functions found.".format(len(recursive_addresses))
 
   linear_missed = set(x[1] for x in real_functions if x[0] in (real_addresses-linear_addresses))
   recursive_missed = set(x[1] for x in real_functions if x[0] in (real_addresses-recursive_addresses))
+  if ida_available:
+    ida_missed = set(x[1] for x in real_functions if x[0] in (real_addresses-ida_addresses))
+    ida_extra = set(x[1] for x in ida_functions if x[0] in (ida_addresses-real_addresses))
   linear_not_rec = set(x[1] for x in linear_functions if x[0] in (linear_addresses-recursive_addresses))
   rec_not_linear = set(x[1] for x in recursive_functions if x[0] in recursive_addresses-linear_addresses)
 
@@ -89,6 +99,8 @@ if __name__ == "__main__":
 
   #print "Functions missed by linear sweep:",linear_missed,"\n"
   #print "Functions missed by recursive sweep:",recursive_missed,"\n"
+  if ida_available:
+    print "\nFunctions missed by IDA",ida_missed
   print "\nFunctions in linear and not in recursive:",linear_not_rec
   print "\nFunctions in recursive and not in linear:",rec_not_linear
   print "\nFalse positives for linear sweep:",linear_false_pos
