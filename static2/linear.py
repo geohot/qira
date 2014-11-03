@@ -41,10 +41,8 @@ def get_function_starts(static):
       #we need something dynamic to tell us where it jumps ;)
     size = d.size()
     if size == 0:
-      print "found instruction of size 0, exiting"
+      #print "capstone could not decode the instruction, stopping"
       break
     current_address += size
-
-  #print "found function starts",function_starts
 
   return function_starts
