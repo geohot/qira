@@ -5,6 +5,7 @@
 # emit a return instruction at the end of a function (infinite loop, etc.).
 
 import disasm
+import sys
 
 #this is designed with ARM in mind.
 #if we take this approach with other architectures it should be modularized.
@@ -18,6 +19,9 @@ def get_function_starts(static):
   #get the section that contains the entry
   #if it's always the case that the entry is the beginning of a section,
   #we can just look for it in static['sections'] and be done
+  if len(static['sections']) == 0:
+    print "linear: there are no sections in the static object"
+    return function_starts #empty
   (start,size) = max((x for x in static['sections'] if get_start(x) <= entry),
                      key=get_start)
   end = start+size

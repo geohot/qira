@@ -134,7 +134,7 @@ class Static:
     self.md = md
 
     self.debug = debug
-    print "*** elf loaded"
+    #print "*** elf loaded"
 
   # this should be replaced with a
   def set_name(self, address, name):
@@ -202,6 +202,7 @@ class Static:
       if address in self.global_tags:
         return self.global_tags[address]
       else:
+        print "returning None for",address
         return None
     if address not in self.tags:
       self.tags[address] = Tags(self, address)

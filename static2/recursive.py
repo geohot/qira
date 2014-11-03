@@ -111,6 +111,8 @@ def make_functions_from_starts(static, function_starts):
   # reach another function and we are only building basic blocks/updating
   # the interface.
   for address in function_starts:
+    if address is None: #None's happen when we have a binary made from assembly?
+      continue
     this_function = Function(address)
     static['functions'].add(this_function)
 

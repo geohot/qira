@@ -58,5 +58,5 @@ def load_binary(static, path, debug=False):
           if debug:
             static['debug_functions'].add((symbol['st_value'],symbol.name))
           ncount += 1
-  print "** found %d names" % ncount
+  #print "** found %d names" % ncount
 
