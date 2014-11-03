@@ -254,7 +254,7 @@ if __name__ == "__main__":
     tags = fetch_tags()
     ks = sorted(tags)
     for tag_addr in ks:
-      sample_addr = tags[tag_addr]
+      addr_data = tags[tag_addr]
       print "address",hex(tag_addr)
-      for k in sample_addr:
-        print k,tags[k]
+      #print "name_test:",get_name(tag_addr)
+      print "instruction",addr_data
