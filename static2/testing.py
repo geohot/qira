@@ -4,6 +4,7 @@ from static2 import *
 #import ida
 import os
 import subprocess
+import argparse
 
 import sys
 
@@ -48,23 +49,7 @@ def test_byteweight(static):
     print hex(f)
     hexdump(recursive_static.memory(f, 0x20))
 
-#TODO: refactor this into functions, add commandline args
-#make profiling its own flag which outputs a .png
-if __name__ == "__main__":
-  #if len(sys.argv) != 2:
-  #  print "Please provide a binary to test as an argument."
-  #  sys.exit(1)
-
-  #get all files in ../tests/
-  fns = [os.path.join(path,fn) for path,_,fns in os.walk("../tests/") for fn in fns]
-
-  #get nonstripped elf binaries (this is hacky)
-  nonstripped = []
-  for fn in fns:
-    info = subprocess.check_output(["file",fn])
-    if "ELF" in info and "not stripped" in info:
-      nonstripped.append(fn)
-
+def test(fns):
   #nonstrippednonida = [x for x in nonstripped if not os.path.isfile(x+".ida_info")]
   #print "Please generate an ida_info file for the following:",nonstrippednonida
   #sys.exit()
@@ -142,22 +127,49 @@ if __name__ == "__main__":
     else:
       print "unknown arch",arch
 
-  print "\ni386:"
-  print "Total functions (from symbols):       {}".format(d['i386_total_fns'])
-  print "Functions found by linear sweep:      {}".format(d['i386_total_fns']-d['i386_missed_lin'])
-  print "Functions found by recursive descent: {}".format(d['i386_total_fns']-d['i386_missed_rec'])
+  if d['i386_total_fns'] != 0:
+    print "\ni386:"
+    print "Total functions (from symbols):       {}".format(d['i386_total_fns'])
+    print "Functions found by linear sweep:      {}".format(d['i386_total_fns']-d['i386_missed_lin'])
+    print "Functions found by recursive descent: {}".format(d['i386_total_fns']-d['i386_missed_rec'])
 
-  print "\nx86-64:"
-  print "Total functions (from symbols):       {}".format(d['x86-64_total_fns'])
-  print "Functions found by linear sweep:      {}".format(d['x86-64_total_fns']-d['x86-64_missed_lin'])
-  print "Functions found by recursive descent: {}".format(d['x86-64_total_fns']-d['x86-64_missed_rec'])
+  if d['x86-64_total_fns'] != 0:
+    print "\nx86-64:"
+    print "Total functions (from symbols):       {}".format(d['x86-64_total_fns'])
+    print "Functions found by linear sweep:      {}".format(d['x86-64_total_fns']-d['x86-64_missed_lin'])
+    print "Functions found by recursive descent: {}".format(d['x86-64_total_fns']-d['x86-64_missed_rec'])
 
-  print "\nARM:"
-  print "Total functions (from symbols):       {}".format(d['arm_total_fns'])
-  print "Functions found by linear sweep:      {}".format(d['arm_total_fns']-d['arm_missed_lin'])
-  print "Functions found by recursive descent: {}".format(d['arm_total_fns']-d['arm_missed_rec'])
+  if d['arm_total_fns'] != 0:
+    print "\nARM:"
+    print "Total functions (from symbols):       {}".format(d['arm_total_fns'])
+    print "Functions found by linear sweep:      {}".format(d['arm_total_fns']-d['arm_missed_lin'])
+    print "Functions found by recursive descent: {}".format(d['arm_total_fns']-d['arm_missed_rec'])
 
-  print "\nAARCH64:"
-  print "Total functions (from symbols):       {}".format(d['aarch64_total_fns'])
-  print "Functions found by linear sweep:      {}".format(d['aarch64_total_fns']-d['aarch64_missed_lin'])
-  print "Functions found by recursive descent: {}".format(d['aarch64_total_fns']-d['aarch64_missed_rec'])
+  if d['aarch64_total_fns'] != 0:
+    print "\nAARCH64:"
+    print "Total functions (from symbols):       {}".format(d['aarch64_total_fns'])
+    print "Functions found by linear sweep:      {}".format(d['aarch64_total_fns']-d['aarch64_missed_lin'])
+    print "Functions found by recursive descent: {}".format(d['aarch64_total_fns']-d['aarch64_missed_rec'])
+
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--file', help="a single file to test (must have symbols)")
+  #parser.add_argument('--profile', dest='profile_enabled', action='store_true')
+  args = parser.parse_args()
+
+  #if args.profile_enabled:
+  #  import cProfile
+  #  cProfile.run("test()")
+
+  if args.file is None:
+    fns = [os.path.join(path,fn) for path,_,fns in os.walk("../tests/") for fn in fns]
+    #get nonstripped elf binaries (this is hacky)
+    nonstripped = []
+    for fn in fns:
+      info = subprocess.check_output(["file",fn])
+      if "ELF" in info and "not stripped" in info:
+        nonstripped.append(fn)
+  else:
+    fns = [args.file]
+
+  test(fns)
