@@ -31,19 +31,31 @@ Graph.prototype.assignLevels = function() {
     }
   }
   // got all sinks on level 0
+  // fix these not to move?
   var onlevel = 0;
   while (this.levels[onlevel].length > 0) {
+    if (onlevel > 100) {
+      p("MAX LEVELS EXCEEDED");
+      break;
+    }
     this.levels.push([]); // add new level
-    var remove = []
+    var remove = [];
     for (var i=0; i<this.levels[onlevel].length; i++) {
       // loop over all in the current level
       var addr = this.levels[onlevel][i];
       var vertex = this.vertices[addr];
+
+      // loop over their parents
       for (var j=0; j< vertex['parents'].length; j++) {
         var paddr = vertex.parents[j];
         var pvertex = this.vertices[paddr];
         if (paddr != addr) {
           if (pvertex['level'] !== undefined) {
+            // if paddr > addr, continue
+            if (bn_cmp(paddr, addr) > 0) {
+              //p(paddr+ " > "+addr+", not replacing");
+              continue;
+            }
             remove.push([paddr,pvertex['level']]);
           }
           pvertex['level'] = onlevel+1;
@@ -75,14 +87,30 @@ Graph.prototype.inLineage = function(addr, qaddr, seen) {
   return false;
 };
 
+var gPos = {};
+
 // this runs sugiyama...
 Graph.prototype.render = function() {
+  var name = Object.keys(this.vertices).toString();
   var send = "digraph graphname {\n";
 
-  $("#gbox").remove();
+  // record the old gbox position
+  var oldgbox = $("#gbox");
+  if (oldgbox.length > 0) {
+    gPos[oldgbox[0].className] = [fdec(oldgbox.css("margin-left")), fdec(oldgbox.css("margin-top"))];
+  }
+
+  var outergbox = $('<div id="outergbox"></div>');
+  $("#staticpanel").html("");
   gbox = document.createElement('div');
-  document.getElementById("staticpanel").appendChild(gbox);
+  outergbox[0].appendChild(gbox);
+  document.getElementById("staticpanel").appendChild(outergbox[0]);
   gbox.id = 'gbox';
+  gbox.className = name;
+  if (name in gPos) {
+    $("#gbox").css("margin-left", gPos[name][0]);
+    $("#gbox").css("margin-top", gPos[name][1]);
+  }
 
   for (addr in this.vertices) {
     var r = this.vertices[addr].rendered;
@@ -116,6 +144,7 @@ Graph.prototype.render = function() {
   var canvas = document.createElement("canvas");
   canvas.width = fnum(gdata[2])+10;
   canvas.height = fnum(gdata[3])+10;
+  canvas.id = "gcanvas";
   gbox.appendChild(canvas);
   var ctx = canvas.getContext("2d");
 

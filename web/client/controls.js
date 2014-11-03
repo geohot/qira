@@ -15,6 +15,20 @@ Deps.autorun(function() { DA("set backend know iaddr changed");
   stream.emit('navigateiaddr', iaddr);
 });
 
+Deps.autorun(function() { DA("select first fork if current fork isn't valid");
+  var maxclnum = Session.get("max_clnum");
+  if (maxclnum === undefined) return;
+  var forknum = Session.get('forknum', true)
+  if (maxclnum[forknum] === undefined) {
+    // i don't know javascript
+    for (i in maxclnum) {
+      Session.set('forknum', fdec(i));
+      Session.set('clnum', maxclnum[i][1]);
+      break;
+    }
+  }
+});
+
 Deps.autorun(function() { DA("update controls");
   $("#control_clnum").val(Session.get("clnum"));
   $("#control_forknum").val(Session.get("forknum"));
@@ -47,14 +61,94 @@ $(document).ready(function() {
   });
 });
 
+$(document).ready(function() {
+  var drag_x, drag_y, is_dragging;
+  function startDrag(x, y) {
+    //p("startDrag "+x+" "+y);
+    drag_x = fdec($("#gbox").css("margin-left")) - x;
+    drag_y = fdec($("#gbox").css("margin-top")) - y;
+    is_dragging = true;
+  }
+  function endDrag(x, y, isend) {
+    //p("endDrag "+x+" "+y);
+    if (is_dragging) {
+      $("#gbox").css("margin-left", (drag_x+x));
+      $("#gbox").css("margin-top", (drag_y+y));
+    }
+    if (isend) is_dragging = false;
+  }
+  $('#staticpanel').on('mousewheel', '#outergbox', function(e) {
+    var wdx = e.originalEvent.wheelDeltaX;
+    var wdy = e.originalEvent.wheelDeltaY;
+    $("#gbox").css("margin-left", fdec($("#gbox").css("margin-left")) + wdx);
+    $("#gbox").css("margin-top", fdec($("#gbox").css("margin-top")) + wdy);
+  });
+  $('#staticpanel').on('mousedown', '#outergbox', function(e) {
+    //p("mousedown");
+    startDrag(e.screenX, e.screenY);
+    return false;
+  });
+  $('#staticpanel').on('mousemove', '#outergbox', function(e) {
+    endDrag(e.screenX, e.screenY, false);
+  });
+  $('#staticpanel').on('mouseup', '#outergbox', function(e) {
+    endDrag(e.screenX, e.screenY, true);
+  });
+  $('#staticpanel').on('mouseout', '#outergbox', function(e) {
+    // TODO: FIX THIS!
+    /*p(e.target);
+    p(e.target.id);*/
+    /*if (e.target.id === "outergbox" || e.target.id === "gcanvas") {
+      endDrag(e.screenX, e.screenY, true);
+    }*/
+  });
+  $('body').on('mousewheel', '.flat', function(e) {
+    var cdr = $(".flat").children();
+    // TODO: HAXX!!!
+    if (e.originalEvent.wheelDelta < 0) {
+      Session.set('iview', get_address_from_class(cdr[16].childNodes[0]));
+    } else if (e.originalEvent.wheelDelta > 0) {
+      Session.set('iview', get_address_from_class(cdr[14].childNodes[0]));
+    }
+    /*if (e.originalEvent.wheelDelta < 0) {
+      Session.set('iview', bn_add(Session.get('iview'), -1));
+    } else if (e.originalEvent.wheelDelta > 0) {
+      Session.set('iview', bn_add(Session.get('iview'), 1));
+    }*/
+  });
+  $("#idump")[0].addEventListener("mousewheel", function(e) {
+    //p("idump mousewheel");
+    if (e.wheelDelta < 0) {
+      Session.set('clnum', Session.get('clnum')+1);
+    } else if (e.wheelDelta > 0) {
+      Session.set('clnum', Session.get('clnum')-1);
+    }
+  });
+});
+
+Session.setDefault("flat", false);
+
 // keyboard shortcuts
 window.onkeydown = function(e) {
   //p(e.keyCode);
   //p(e);
-  if (e.keyCode == 37) {
-    Session.set("forknum", Session.get("forknum")-1);
-  } else if (e.keyCode == 39) {
-    Session.set("forknum", Session.get("forknum")+1);
+  if (e.keyCode == 32) {
+    // space bar
+    Session.set("flat", !Session.get("flat"));
+  } else if (e.keyCode == 37 || e.keyCode == 39) {
+    var fn = Session.get("forknum");
+    var maxclnum = Session.get("max_clnum");
+    var arr = Object.keys(maxclnum).map(fdec);
+    var idx = arr.indexOf(fn);
+    if (e.keyCode == 37) {
+      if (idx > 0) {
+        Session.set("forknum", arr[idx-1]);
+      }
+    } else {
+      if (idx < (arr.length-1)) {
+        Session.set("forknum", arr[idx+1]);
+      }
+    }
   } else if (e.keyCode == 38) {
     Session.set("clnum", Session.get("clnum")-1);
   } else if (e.keyCode == 40) {
@@ -78,7 +172,8 @@ window.onkeydown = function(e) {
   } else if (e.keyCode == 67 && e.shiftKey == true) {
     // shift-C = clear all forks
     delete_all_forks();
-  } else if (e.keyCode == 78) {
+  } else if (e.keyCode == 78 || e.keyCode == 186) {
+    // 186 is comment
     if (e.shiftKey) {
       // shift-n = rename data
       var addr = Session.get("daddr");
@@ -86,40 +181,40 @@ window.onkeydown = function(e) {
       // n = rename instruction
       var addr = Session.get("iaddr");
     }
-    if (addr == undefined) return;
-    var old = sync_tags_request([addr])[0]['name'];
-    if (old == undefined) old = "";
-    var dat = prompt("Rename address "+addr, old);
-    if (dat == undefined) return;
-    var send = {};
-    send[addr] = {"name": dat};
-    stream.emit("settags", send);
-    Session.set("clnum", Session.get("clnum"));
-  } else if (e.keyCode == 186) {
-    var addr = undefined;
-    if (e.shiftKey) {
-      // shift-; = comment data
-      var addr = Session.get("daddr");
-    } else {
-      // n = comment instruction
-      var addr = Session.get("iaddr");
+    var tagname = 'name';
+    if (e.keyCode == 186) {
+      tagname = 'comment';
     }
+
     if (addr == undefined) return;
-    var old = sync_tags_request([addr])[0]['comment'];
+    var old = sync_tags_request([addr])[0][tagname];
     if (old == undefined) old = "";
-    var dat = prompt("Enter comment on "+addr, old);
+
+    if (tagname == 'name') {
+      var dat = prompt("Rename address "+addr, old);
+    } else {
+      var dat = prompt("Enter comment for "+addr, old);
+    }
+
     if (dat == undefined) return;
     var send = {};
-    send[addr] = {"comment": dat};
+    send[addr] = {}
+    send[addr][tagname] = dat;
     stream.emit("settags", send);
-    Session.set("clnum", Session.get("clnum"));
+
+    if (tagname == 'name') {
+      replace_names();
+    } else if (tagname == 'comment') {
+      // do this explictly?
+      $(".comment_"+addr).html("; "+dat);
+    }
   } else if (e.keyCode == 71) {
     var dat = prompt("Enter change or address");
     if (dat == undefined) return;
     if (dat.substr(0, 2) == "0x") { update_iaddr(dat); }
     else if (fdec(dat) == dat) { Session.set("clnum", fdec(dat)); }
     else {
-      // names soon
+      stream.emit("gotoname", dat);
     }
   }
 };
@@ -138,7 +233,9 @@ $(document).ready(function() {
     push_history("click iaddr");
   });*/
   $('body').on('click', '.data', function(e) {
-    var daddr = e.target.getAttribute('id').split("_")[1].split(" ")[0];
+    //var daddr = e.target.getAttribute('id').split("_")[1].split(" ")[0];
+    var daddr = get_address_from_class(e.target, "data");
+
     Session.set('daddr', daddr);
     push_history("click data");
   });

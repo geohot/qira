@@ -1,17 +1,33 @@
 QIRA is a competitor to strace and gdb
 See http://qira.me/ for high level usage information
-All QIRA code is released under GPLv2
+All QIRA code is released under GPLv2 or BSD
+Other code in this repo released under it's respective license
 
-== Installation ==
+== Installing latest release ==
 
-./install.sh should handle everything for a base QIRA install
+wget -qO- https://github.com/BinaryAnalysisPlatform/qira/raw/master/releases/qira-1.1.tar.xz | unxz | tar x && cd qira && ./install.sh
 
 
-== Installation Extras
+== Installation Extras ==
 
 ./fetchlibs.sh will fetch the libraries for armhf, armel, aarch64, and ppc
 ./cda_build.sh will install CDA, allowing cda and --cda to work
 ./pin_build.sh will install the QIRA PIN plugin, allowing --pin to work
+
+
+== Releases ==
+
+v1.1 -- Support for names and comments. Static stuff added. Register colors.
+v1.0 -- Perf is good! Tons of bugfixes. Quality software. http://qira.me/
+v0.9 -- Function indentation. haddrline added(look familiar?). Register highlighting in hexdump.
+v0.8 -- Intel syntax! Shipping CDA(cda a.out) and experimental PIN backend. Bugfixes. Windows support?
+v0.7 -- DWARF support. Builds QEMU if distributed binaries don't work. Windows IDA plugin.
+v0.6 -- Added changes before webforking. Highlight strace addresses. Default on analysis.
+v0.5 -- Fixed regression in C++ database causing wrong values. Added PowerPC support. Added "A" button.
+v0.4 -- Using 50x faster C++ database. strace support. argv and envp are there.
+v0.3 -- Built in socat, multiple traces, forks(experimental). Somewhat working x86-64 and ARM support
+v0.2 -- Removed dependency on mongodb, much faster. IDA plugin fixes, Mac version.
+v0.1 -- Initial release
 
 
 == UI ==
@@ -69,8 +85,10 @@ shift-n -- rename data
 ; -- add comment at instruction
 shift-; -- add comment at data
 
-g -- go to change or address (or name soon)
+g -- go to change, address, or name
 
+c -- analyze code at iaddr
+p -- analyze function at iaddr
 
 == Installation on Windows (experimental) ==
 
@@ -89,4 +107,23 @@ The binary must have DWARF data, and the source files must exist on the system
 
 If you used --cda, you have to go to localhost:3002/cda
 Everything should be intuitive, except press '/' to regex search
+
+
+== Session state ==
+
+clnum -- Selected changelist number
+forknum -- Selected fork number
+iaddr -- Selected instruction address
+daddr -- Selected data address
+
+cview -- Viewed changelists in the vtimeline
+dview -- Viewed window into data in the hexeditor
+iview -- Viewed address in the static view
+
+max_clnum -- Max changelist number for each fork
+
+dirtyiaddr -- Whether we should update the clnum based on the iaddr or not
+
+flat -- if we are in flat view
+
 

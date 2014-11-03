@@ -22,6 +22,7 @@ function push_history(reason, replace) {
   json['cview'] = Session.get('cview');
   json['dview'] = Session.get('dview');
   json['sview'] = Session.get('sview');
+  json['iview'] = Session.get('iview');
 
   // any addresses that we navigated to in a reasonable way
   json['clnum'] = Session.get('clnum');
@@ -59,13 +60,19 @@ Deps.autorun(function() { DA("history");
 
 // ** end history ***
 
-function get_data_type(v) {
+function get_data_type(v, more) {
   if (typeof v == "number") throw "numbers no longer supported here";
   // haxx
   var pmaps = Session.get('pmaps');
   var a = pmaps[bn_round(v, 3)];
   if (a === undefined) return "";
-  else return "data"+a;
+  else {
+    if (more !== undefined) {
+      return "data"+a+" addr addr_"+v;
+    } else {
+      return "data"+a;
+    }
+  }
 }
 
 function update_dview(addr) {
@@ -79,6 +86,7 @@ function update_iaddr(addr, dirty) {
   Session.set("iaddr", addr);
   if (dirty) {
     Session.set("dirtyiaddr", true);
+    Session.set("iview", addr);
   }
   push_history("update iaddr");
 }
@@ -130,5 +138,16 @@ function sync_tags_request(addrs) {
   req.open('POST', '/gettagsa', false);
   req.send(JSON.stringify(addrs));
   return JSON.parse(req.response);
+}
+
+function async_tags_request(addrs, cb) {
+  var req = new XMLHttpRequest();
+  req.open('POST', '/gettagsa', true);
+  req.onreadystatechange = function() {
+    if (req.readyState == 4 && req.status == 200) {
+      cb(JSON.parse(req.response));
+    }
+  }
+  req.send(JSON.stringify(addrs));
 }
 

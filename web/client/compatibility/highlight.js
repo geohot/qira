@@ -7,29 +7,13 @@ var escapeHTML = (function () {
 }());
 
 function highlight_addresses(a) {
-  // no XSS :)
-  var d = escapeHTML(a);
-  var re = /0x[0123456789abcdef]+/g;
-  var m = d.match(re);
-  if (m !== null) {
-    // make matches unique?
-    m = m.filter(function (v,i,a) { return a.indexOf(v) == i });
-    m.map(function(a) { 
-      var cl = get_data_type(a);
-      if (cl == "") {
-        d = d.replace(a, "<span class='hexnumber'>"+a+"</span>");
-      } else {
-        cl += " addr addr_"+a;
-        d = d.replace(a, "<span class='"+cl+"'>"+a+"</span>");
-      }
-    });
-  }
-  // does this work outside templates?
-  return d;
+  return highlight_instruction(a, false);
 }
 
-function highlight_instruction(a) {
-  var ret = highlight_addresses(a);
+function highlight_instruction(a, instruction) {
+  if (a == undefined) return "undefined";
+  if (instruction === undefined) instruction = true;
+  var ret = escapeHTML(a);
 
   // dim colors
   function fc(a) {
@@ -44,25 +28,50 @@ function highlight_instruction(a) {
     return "#"+hex2(r)+hex2(g)+hex2(b);
   }
 
-  // highlight registers
+  // highlight registers and addresses
   if (arch !== undefined) {
-    for (var i = 0; i < arch[0].length; i++) {
-      var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i]+'</span>';
-      ret = ret.replace(arch[0][i], rep);
+    var re = "(0x[0123456789abcdef]+)";
+    var reps = {};
+    if (instruction) {
+      for (var i = arch[0].length-1; i >= 0; i--) {
+        if (arch[0][i] == null) continue;  // aarch64
+        var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i]+'</span>';
+        reps[arch[0][i]] = rep;
 
-      var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i].toLowerCase()+'</span>';
-      ret = ret.replace(arch[0][i].toLowerCase(), rep);
+        var rep = '<span style="color: '+fc(regcolors[i])+'" class="data_'+hex(i*arch[1])+'">'+arch[0][i].toLowerCase()+'</span>';
+        reps[arch[0][i].toLowerCase()] = rep;
+      }
+      for (i in reps) {
+        re += "|(" + i + ")";
+      }
     }
+    function dorep(a) {
+      if (a.substr(0, 2) == "0x") {
+        var cl = get_data_type(a);
+        if (cl == "") {
+          return "<span class='hexnumber'>"+a+"</span>";
+        } else {
+          cl += " addr addr_"+a;
+          return "<span class='"+cl+"'>"+a+"</span>";
+        }
+      } else {
+        return reps[a];
+      }
+    }
+    ret = ret.replace(new RegExp(re, "g"), dorep);
   }
 
   // highlight opcode
-  var i = 0;
-  for (i = 0; i < ret.length; i++) {
-    if (ret[i] == ' ' || ret[i] == '\t') {
-      break;
+  if (instruction) {
+    var i = 0;
+    for (i = 0; i < ret.length; i++) {
+      if (ret[i] == ' ' || ret[i] == '\t') {
+        break;
+      }
     }
+    ret = '<span class="op">' + ret.substr(0, i) + '</span>' + ret.substr(i)
   }
-  return '<span class="op">' + ret.substr(0, i) + '</span>' + ret.substr(i)
+  return ret;
 }
 
 function rehighlight() {
@@ -83,31 +92,37 @@ Deps.autorun(function() { DA("rehighlight");
 
 stream = io.connect(STREAM_URL);
 
-function get_address_from_class(t) {
-  var l = t.className.split(" ").filter(function(x) { return x.substr(0,5) == "addr_"; });
+function get_address_from_class(t, type) {
+  if (type === undefined) type = "addr";
+  var l = t.className.split(" ").filter(function(x) { return x.substr(0,5) == type+"_"; });
   if (l.length != 1) return undefined;
   return l[0].split("_")[1].split(" ")[0];
 }
 
+var names_cache = {};
+
+function on_names(msg) { DS("names");
+  for (addr in msg) {
+    names_cache[addr] = msg[addr];
+    $(".addr_"+addr).each(function() {
+      $(this).addClass("name");
+      $(this).html(msg[addr]);
+    });
+  }
+} stream.on("names", on_names);
+
 // sync for no blink!
 function replace_names() {
+  //return;
   var addrs = [];
   $(".addr").each(function() {
     var ret = get_address_from_class(this);
+    if (names_cache[ret] !== undefined) {
+      $(this).addClass("name");
+      $(this).html(names_cache[ret]);
+    }
     if (ret !== undefined) addrs.push(ret);
   });
-  //stream.emit('gettagsa', addrs);
-
-  var tags = sync_tags_request(addrs);
-
-  //p(tags);
-  for (var i=0;i<tags.length;i++) {
-    $(".addr_"+tags[i]['address']).each(function() {
-      if (tags[i]['name'] !== undefined) {
-        $(this).addClass("name");
-        $(this).html(tags[i]['name']);
-      }
-    });
-  }
+  stream.emit('getnames', addrs);
 }
 

@@ -1,0 +1,10 @@
+The goal of this library is to do a good job of recovering static structure.
+
+We should develop an automated testing framework to take in binaries, and
+compare the results of CFG recovery stripped and unstripped with DWARF. Variable
+recovery and stuff should eventually all live here.
+
+We could also have the testing framework compare against IDA, since we can script it.
+
+
+

@@ -1,6 +1,7 @@
 from qira_base import *
 import qira_config
 import qira_analysis
+
 import os
 import shutil
 import sys
@@ -11,13 +12,15 @@ import collections
 from hashlib import sha1
 sys.path.append(qira_config.BASEDIR+"/cda")
 
-try:  
-  from capstone import *
-except:
-  pass
+from subprocess import (Popen, PIPE)
+import json
 
 import struct
 import qiradb
+
+# new home of static2
+sys.path.append(qira_config.BASEDIR+"/static2")
+import static2
 
 # (regname, regsize, is_big_endian, arch_name, branches)
 PPCREGS = ([], 4, True, "ppc", ["bl "])
@@ -39,6 +42,20 @@ for i in range(32):
 #AARCH64REGS[0][8+29] = "fp"
 AARCH64REGS[0][8+31] = "sp"
 AARCH64REGS[0].append("pc")
+
+MIPSREGS = (['$zero', '$at', '$v0', '$v1', '$a0', '$a1', '$a2', '$a3'], 4, True, "mips", ["jal\t","jr\t","jal","jr"])
+for i in range(8):
+  MIPSREGS[0].append('$t'+str(i))
+for i in range(8):
+  MIPSREGS[0].append('$s'+str(i))
+MIPSREGS[0].append('$t8')
+MIPSREGS[0].append('$t9')
+MIPSREGS[0].append('$k0')
+MIPSREGS[0].append('$k1')
+MIPSREGS[0].append('$gp')
+MIPSREGS[0].append('$sp')
+MIPSREGS[0].append('$fp')
+MIPSREGS[0].append('$ra')
 
 ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 4, False, "arm", ["bl\t", "blx\t"])
 X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, False, "i386", ["call ", "call\t"])
@@ -99,6 +116,10 @@ class Program:
     self.proghash = sha1(open(self.program, "rb").read()).hexdigest()
     print "*** program is",self.program,"with hash",self.proghash
 
+    # init static
+    self.static = static2.Static(self.program) 
+    self.static.process()
+
     # no traces yet
     self.traces = {}
     self.runnable = False
@@ -126,25 +147,8 @@ class Program:
     # this is the key value store for static information about the address
     # it replaces self.instructions with self.kv[addr]['instruction']
     # tags is a term from eda-3
-    self.tags = collections.defaultdict(dict)
+    # moved to qira_static2
     # it should also replace dwarves
-
-    # call out to ida
-    print "*** running the ida parser"
-    ret = os.system(qira_config.BASEDIR+"/static/ida_parser.py /tmp/qira_binary > /tmp/qida_log")
-    try:
-      import json
-      ttags = json.load(open("/tmp/qida/tags"))
-      print "*** ida returned %d tags" % (len(ttags['tags']))
-
-      # grr, copied from settags
-      for addr in ttags['tags']:
-        naddr = fhex(addr)
-        for i in ttags['tags'][addr]:
-          self.tags[naddr][i] = ttags['tags'][addr][i]
-          #print hex(naddr), self.tags[naddr][i]
-    except:
-      print "*** IDA PARSER FAILED"
 
     # pmaps is global, but updated by the traces
     (self.dwarves, self.rdwarves) = ({}, {})
@@ -184,6 +188,9 @@ class Program:
         use_lib('powerpc')
         self.tregs = PPCREGS
         self.qirabinary = qemu_dir + "qira-ppc"
+      elif self.fb == 0x800:
+        self.tregs = MIPSREGS
+        self.qirabinary = qemu_dir + 'qira-mips'
       else:
         raise Exception("binary type "+hex(self.fb)+" not supported")
 
@@ -221,11 +228,27 @@ class Program:
       else:
         raise Exception("osx binary not supported")
 
-      self.getdwarf()
+      #self.getdwarf()
       self.runnable = True
 
     else:
         raise Exception("unknown binary type")
+
+  def genbap(self, raw, addr):
+    toil = qira_config.BASEDIR+"/bap/bap-lifter/toil.native"
+    arch = self.tregs[3]
+    if arch == "i386":
+      arch = "x86"
+    toilProc = Popen([toil, '--arch', arch, '--addr', str(addr),'--format' , 'json', '--dump-asm', '--dump-fallthrough'], stdout=PIPE, stderr=PIPE, stdin=PIPE)
+    toilProc.stdin.write(raw)
+    toilProc.stdin.close()
+    s = toilProc.stdout.read().decode()
+    try:
+      out,pos = json.JSONDecoder().raw_decode(s)
+      return out
+    except:
+      return None
+
 
   def clear(self):
     # probably always good to do except in development of middleware
@@ -253,22 +276,40 @@ class Program:
       return
     cnt = 0
     for d in dat.split("\n"):
+      thumb = False
       if len(d) == 0:
         continue
       # hacks
       try:
-        addr = int(d.split(" ")[0].strip(":"), 16)
+        if self.fb == 0x28:
+          #thumb bit in front
+          addr = int(d.split(" ")[0][1:].strip(":"), 16)
+        else:
+          addr = int(d.split(" ")[0].strip(":"), 16)
       except:
         continue
-      #print repr(d)
-      if self.fb == 0x28:   # ARM
+      if self.fb == 0x28:
+        thumb_flag = d[0]
+        if thumb_flag == 't':
+          thumb = True
+          # override the arch since it's thumb
+          self.static[addr]['arch'] = "thumb"
+        elif thumb_flag == 'n':
+          thumb = False
+        else:
+          #print "*** Invalid thumb flag at beginning of instruction"
+          pass
         inst = d[d.rfind("  ")+2:]
       elif self.fb == 0xb7:   # aarch64
         inst = d[d.rfind("     ")+5:]
       else:
         inst = d[d.find(":")+3:]
-      self.tags[addr]['instruction'] = inst
       cnt += 1
+
+      #self.static[addr]['instruction'] = inst
+
+      # trigger disasm
+      d = self.static[addr]['instruction']
       #print addr, inst
     #sys.stdout.write("%d..." % cnt); sys.stdout.flush()
 
@@ -317,21 +358,6 @@ class Program:
     #print "***",' '.join(eargs)
     os.execvp(eargs[0], eargs)
   
-  def disasm(self, raw, address):
-    try:
-      if self.tregs[3] == "i386":
-        md = Cs(CS_ARCH_X86, CS_MODE_32)
-      elif self.tregs[3] == "x86-64":
-        md = Cs(CS_ARCH_X86, CS_MODE_64)
-      else:
-        raise Exception('arch not in capstone')
-      for i in md.disasm(raw, address):
-        # should only be one instruction
-        return "%s\t%s" % (i.mnemonic, i.op_str)
-    except:
-      pass
-    return raw.encode("hex")
-
   def research(self, re):
     try:
       csearch = qira_config.CODESEARCHDIR + "/csearch"
@@ -454,7 +480,7 @@ class Trace:
 
     # analysis stuff
     self.maxclnum = None
-    self.mixclnum = None
+    self.minclnum = None
     self.flow = None
     self.dmap = None
     self.maxd = 0
@@ -532,6 +558,12 @@ class Trace:
         maxclnum = self.db.get_maxclnum()
         self.flow = qira_analysis.get_instruction_flow(self, self.program, minclnum, maxclnum)
         self.dmap = qira_analysis.get_hacked_depth_map(self.flow, self.program)
+
+        # hacky pin offset problem fix
+        hpo = len(self.dmap)-(maxclnum-minclnum)
+        if hpo == 2:
+          self.dmap = self.dmap[1:]
+
         self.maxd = max(self.dmap)
         self.picture = qira_analysis.get_vtimeline_picture(self, minclnum, maxclnum)
         self.minclnum = minclnum
@@ -559,10 +591,20 @@ class Trace:
     return dat
 
   def load_base_memory(self):
+    def get_forkbase_from_log(n):
+      ret = struct.unpack("i", open(qira_config.TRACE_FILE_BASE+str(n)).read(0x18)[0x10:0x14])[0]
+      if ret == -1:
+        return n
+      else:
+        return get_forkbase_from_log(ret)
+
     self.base_memory = {}
     try:
-      f = open(qira_config.TRACE_FILE_BASE+str(self.forknum)+"_base")
-    except:
+      forkbase = get_forkbase_from_log(self.forknum) 
+      print "*** using base %d for %d" % (forkbase, self.forknum)
+      f = open(qira_config.TRACE_FILE_BASE+str(forkbase)+"_base")
+    except Exception, e:
+      print "*** base file issue",e
       # done
       return
 

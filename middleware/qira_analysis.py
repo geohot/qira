@@ -271,21 +271,9 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
     r = trace.db.fetch_changes_by_clnum(i, 1)
     if len(r) != 1:
       continue
-    ins = ""
-    if program != None and r[0]['data'] > 0:
-      while 'instruction' not in program.tags[r[0]['address']]:
-        if qira_config.USE_PIN:
-          # do the disassembly for pin mode
-          rawins = trace.fetch_memory(r[0]['clnum'], r[0]['address'], r[0]['data'])
-          if len(rawins) == r[0]['data']:
-            raw = ''.join(map(lambda x: chr(x[1]), sorted(rawins.items())))
-            program.tags[r[0]['address']]['instruction'] = program.disasm(raw, r[0]['address'])
-            break
-        else:
-          #print "sleeping ", hex(r[0]['address'])
-          time.sleep(0.1)
-
-      ins = program.tags[r[0]['address']]['instruction']
+    
+    # this will trigger the disassembly
+    ins = str(program.static[r[0]['address']]['instruction'])
     ret.append((r[0]['address'], r[0]['data'], r[0]['clnum'], ins))
     if (time.time() - start) > 0.01:
       time.sleep(0.01)
@@ -296,7 +284,14 @@ def get_hacked_depth_map(flow, program):
   start = time.time()
   return_stack = []
   ret = [0]
+  last_clnum = None
   for (address, length, clnum, ins) in flow:
+    # handing missing changes
+    if last_clnum != None and clnum != last_clnum+1:
+      for i in range(clnum-last_clnum-1):
+        ret.append(-1)
+    last_clnum = clnum
+
     if address in return_stack:
       return_stack = return_stack[0:return_stack.index(address)]
     # ugh, so gross
@@ -327,9 +322,16 @@ def get_vtimeline_picture(trace, minclnum, maxclnum):
 
   for i in range(0, r, sampling):
     # could average the sampled
-    c = int((trace.dmap[i]*128.0)/trace.maxd)
-    if i/sampling < im_y:
-      px[0, i/sampling] = (0,c,c)
+    try:
+      if trace.dmap[i] == -1:
+        raise Exception("nope")
+      c = int((trace.dmap[i]*128.0)/trace.maxd)
+      if i/sampling < im_y:
+        px[0, i/sampling] = (0,c,c)
+    except:
+      # make missing changes red
+      if i/sampling < im_y:
+        px[0, i/sampling] = (96, 32, 32)
 
   buf = StringIO.StringIO()
   im.save(buf, format='PNG')

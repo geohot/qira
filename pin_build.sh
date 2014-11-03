@@ -8,14 +8,12 @@ if [[ "$unamestr" == 'Linux' ]]; then
     ln -s pin-2.14-67254-gcc.4.4.7-linux pin-latest
   fi
 
-  if [ ! -f /usr/lib/libcapstone.so ]; then
-    # pin build deps, good?
+  # pin build deps, good?
+  if [ $(which apt-get) ]; then
+    echo "fetching pin tool building deps, enter your password"
     sudo apt-get install gcc-multilib g++-multilib
-
-    # now we need capstone so the user can see assembly
-    wget -O /tmp/cs.deb http://www.capstone-engine.org/download/2.1.2/capstone-2.1.2_amd64.deb
-    sudo dpkg -i /tmp/cs.deb
-    rm /tmp/cs.deb
+  else
+    echo "WARNING: you don't have apt-get, you are required to fetch pin tool building deps (e.g. 32 bit libs) on your own"
   fi
 elif [[ "$unamestr" == 'Darwin' ]]; then
   if [ ! -d pin-latest ]; then

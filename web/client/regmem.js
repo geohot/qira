@@ -20,7 +20,7 @@ function redraw_reg_flags() {
       if (t.length == 1 && !t.hasClass("register")) {
         var rr = $('<div class="rflag"></div>');
         rr.css("background-color", regcolors[th.num]);
-        var pos = t.children().length*3;  // rflag width
+        var pos = (t.children().length-1)*3;  // rflag width
         rr.css("margin-left", pos+"px");
         t.prepend(rr);
       }
@@ -66,10 +66,10 @@ function on_memory(msg) { DS("memory");
     if (a !== "") {
       // this has a datatype, and therefore is clickable, so add addr
       var exclass = "data_"+bn_add(addr, i);
-      exclass += " addr addr_"+v;
+      var exclassmore = exclass + " addr addr_"+v;
       var minwidth = 84;
       if (PTRSIZE == 8) minwidth = 172;
-      html += '<td colspan="'+PTRSIZE+'"><div style="overflow: hidden; width:'+minwidth+'px" class="data hexdump'+a+' '+exclass+'" id="'+exclass+'">'+v+"</div></td>";
+      html += '<td colspan="'+PTRSIZE+'"><div style="overflow: hidden; width:'+minwidth+'px" id="'+exclass+'"><div class="data hexdump'+a+' '+exclassmore+'">'+v+"</div></div></td>";
     } else {
       for (var j = 0; j < PTRSIZE; j++) {
         var ii = msg['dat'][i+j];
@@ -132,13 +132,17 @@ function on_registers(msg) { DS("registers");
   var regviewer = "";
   for (i in msg) {
     var r = msg[i];
+    r.display_name = r.name;
+    if (r.name.indexOf("$") != -1) { // MIPS registers use '$' in display name
+      r.name = r.name.replace("$", "r"); // but '$' can't be part of div id
+    }
     draw_hflag(r.value, r.name, regcolors[r.num]);
     var exclass = get_data_type(r.value);
     if (exclass !== "") {
       exclass += " addr addr_"+r.value;
     }
     regviewer += '<div class="reg '+r.regactions+'">'+
-        '<div class="register data data_'+hex(r.address)+'" id="data_'+hex(r.address)+'" style="color:'+regcolors[r.num]+'">'+r.name+': </div>'+
+        '<div class="register data data_'+hex(r.address)+'" id="data_'+hex(r.address)+'" style="color:'+regcolors[r.num]+'">'+r.display_name+': </div>'+
         '<span class="'+exclass+'">'+r.value+'</span>'+
       '</div>';
   }
@@ -164,9 +168,9 @@ function on_clnum(msg) { DS("clnum");
     if (dc.type == "L") typeclass = "regread";
     else if (dc.type == "S") typeclass = "regwrite";
     datachanges += '<div class="datachanges '+typeclass+'"> '+
-        '<span class="'+get_data_type(dc.address)+'">'+dc.address+'</span> '+
+        '<span class="'+get_data_type(dc.address, true)+'">'+dc.address+'</span> '+
         ((dc.type == "S")?'&lt;--':'--')+' '+
-        '<span class="'+get_data_type(dc.data)+'">'+dc.data+'</span> '+
+        '<span class="'+get_data_type(dc.data, true)+'">'+dc.data+'</span> '+
       '</div> ';
   }
   $('#datachanges').html(datachanges);

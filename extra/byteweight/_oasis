@@ -1,0 +1,28 @@
+OASISFormat: 0.4
+Name:        byteweight
+Version:     0.1
+Synopsis:    Function Identification Tool
+Authors:     Tiffany Bao
+License:     MIT
+Plugins:     META (0.4), DevFiles (0.4)
+BuildTools:  ocamlbuild
+BuildDepends: str,
+              bap-lifter,
+              bap-types,
+              bap-container
+
+Library "byteweight"
+  Path: .
+  BuildTools: ocamlbuild
+  Modules: Byteweight
+  CompiledObject: best
+
+Executable "byteweight"
+  Path: .
+  MainIs: byteweight.ml
+  CompiledObject: best
+
+Executable "train"
+  Path: .
+  MainIs: train.ml
+  CompiledObject: best

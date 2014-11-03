@@ -4,6 +4,7 @@ import os
 import sys
 import time
 import base64
+import json
 sys.path.append(qira_config.BASEDIR+"/cda")
 
 def socket_method(func):
@@ -19,7 +20,7 @@ def socket_method(func):
       tm = (time.time() - start) * 1000
 
       # print slow calls, slower than 50ms
-      if tm > 50:
+      if tm > 50 or qira_config.WEBSOCKET_DEBUG:
         print "SOCKET %6.2f ms in %-20s with" % (tm, func.func_name), args
       return ret
     except Exception, e:
@@ -34,7 +35,7 @@ import qira_log
 
 LIMIT = 0
 
-from flask import Flask, Response, redirect
+from flask import Flask, Response, redirect, request
 from flask.ext.socketio import SocketIO, emit
 
 # http://stackoverflow.com/questions/8774958/keyerror-in-module-threading-after-a-successful-py-test-run
@@ -277,21 +278,13 @@ def getinstructions(forknum, clnum, clstart, clend):
     else:
       rret = rret[0]
 
-    if 'instruction' in program.tags[rret['address']]:
-      # fetch the instruction from the qemu dump
-      rret['instruction'] = program.tags[rret['address']]['instruction']
-    else:
-      # otherwise use the memory
-      rawins = trace.fetch_memory(i, rret['address'], rret['data'])
-      if len(rawins) == rret['data']:
-        raw = ''.join(map(lambda x: chr(x[1]), sorted(rawins.items())))
-        rret['instruction'] = program.disasm(raw, rret['address'])
+    rret['instruction'] = str(program.static[rret['address']]['instruction'])
 
-    if 'name' in program.tags[rret['address']]:
+    if 'name' in program.static[rret['address']]:
       #print "setting name"
-      rret['name'] = program.tags[rret['address']]['name']
-    if 'comment' in program.tags[rret['address']]:
-      rret['comment'] = program.tags[rret['address']]['comment']
+      rret['name'] = program.static[rret['address']]['name']
+    if 'comment' in program.static[rret['address']]:
+      rret['comment'] = program.static[rret['address']]['comment']
     elif rret['address'] in program.dwarves:
       rret['comment'] = program.dwarves[rret['address']][2]
     if i in slce:
@@ -301,7 +294,7 @@ def getinstructions(forknum, clnum, clstart, clend):
     # for numberless javascript
     rret['address'] = ghex(rret['address'])
     try:
-      rret['depth'] = trace.dmap[i]
+      rret['depth'] = trace.dmap[i - trace.minclnum]
     except:
       rret['depth'] = 0
     ret.append(rret)
@@ -366,6 +359,9 @@ def do_search(b64search):
     ret.append(s)
   return '<br/>'.join(ret)
 
+# web static moved to external file
+import qira_webstatic
+
 # ***** generic webserver stuff *****
   
 @app.route('/', defaults={'path': 'index.html'})
@@ -392,19 +388,24 @@ def serve(path):
   else:
     return Response(dat, mimetype="text/html")
 
-# must go at the bottom
-import qira_static
 
+# must go at the bottom
 def run_server(largs, lprogram):
   global args
   global program
+  global static
   args = largs
   program = lprogram
-  qira_static.init_static(program)
+  qira_webstatic.init(lprogram)
+
+  if qira_config.WITH_STATIC:
+    import qira_static
+    qira_static.init_static(program)
   if qira_config.WITH_CDA:
     import cacheserver
     app.register_blueprint(cacheserver.app)
     cacheserver.set_cache(program.cda)
+
   print "****** starting WEB SERVER on %s:%d" % (qira_config.HOST, qira_config.WEB_PORT)
   threading.Thread(target=mwpoller).start()
   socketio.run(app, host=qira_config.HOST, port=qira_config.WEB_PORT, log=open("/dev/null", "w"))

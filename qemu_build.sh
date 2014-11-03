@@ -5,7 +5,7 @@ if [ $(which apt-get) ]; then
   echo "fetching qemu build-deps, enter your password"
   sudo apt-get update
   sudo apt-get --no-install-recommends -y build-dep qemu
-  sudo apt-get install wget flex bison libtool automake autoconf autotools-dev pkg-config libglib2.0-dev
+  sudo apt-get install -y wget flex bison libtool automake autoconf autotools-dev pkg-config libglib2.0-dev
 else
   echo "WARNING: you don't have apt-get, you are required to fetch the build deps of QEMU on your own"
 fi
@@ -27,6 +27,7 @@ if [ ! -d qemu/qemu-latest ]; then
   ln -s qemu-latest/x86_64-linux-user/qemu-x86_64 qira-x86_64
   ln -s qemu-latest/ppc-linux-user/qemu-ppc qira-ppc
   ln -s qemu-latest/aarch64-linux-user/qemu-aarch64 qira-aarch64
+  ln -s qemu-latest/mips-linux-user/qemu-mips qira-mips
 
   cd qemu-latest
   mv tci.c tci.c.bak
@@ -45,6 +46,6 @@ ln -sf ../../../qemu_mods/qemu.h linux-user/qemu.h
 ln -sf ../../../qemu_mods/main.c linux-user/main.c
 ln -sf ../../../qemu_mods/strace.c linux-user/strace.c
 ln -sf ../../../qemu_mods/strace.list linux-user/strace.list
-./configure --target-list=i386-linux-user,x86_64-linux-user,arm-linux-user,ppc-linux-user,aarch64-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown
+./configure --target-list=i386-linux-user,x86_64-linux-user,arm-linux-user,ppc-linux-user,aarch64-linux-user,mips-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown
 make -j $(grep processor < /proc/cpuinfo | wc -l)
 
