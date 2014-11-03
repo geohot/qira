@@ -36,6 +36,10 @@ def load_binary(static, path, debug=False):
 
     if isinstance(section, RelocationSection):
       symtable = elf.get_section(section['sh_link'])
+      if symtable.is_null():
+        #this was breaking on null sections.
+        #is there a better way to fix it? why are we seeing a nullsection here?
+        continue
       for rel in section.iter_relocations():
         symbol = symtable.get_symbol(rel['r_info_sym'])
         #print rel, symbol.name

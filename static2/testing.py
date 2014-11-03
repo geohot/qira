@@ -1,7 +1,9 @@
 # *** STATIC TEST STUFF ***
 
 from static2 import *
-import ida #ida.py from this file, needs ida demo in appropriate directory
+#import ida
+import os
+import subprocess
 
 import sys
 
@@ -21,7 +23,7 @@ def test_linear(fn):
 
 
 def test_recursive(fn):
-  recursive_static = Static(sys.argv[1],debug=True)
+  recursive_static = Static(fn,debug=True)
 
   # find main
   main = recursive_static.get_address_by_name("main")
@@ -48,63 +50,62 @@ def test_byteweight(static):
     hexdump(recursive_static.memory(f, 0x20))
 
 if __name__ == "__main__":
-  if len(sys.argv) != 2:
-    print "Please provide a binary to test as an argument."
-    sys.exit(1)
-  fn = sys.argv[1]
-  linear_static = test_linear(fn)
-  recursive_static = test_recursive(fn)
-  arch = linear_static['arch']
-  ida_available = arch in ['i386','x86-64']
-  if not ida_available:
-    print "arch not supported by ida demo"
+  #if len(sys.argv) != 2:
+  #  print "Please provide a binary to test as an argument."
+  #  sys.exit(1)
 
-  #test_byteweight(Static(fn,debug=True))
+  #get all files in ../tests/
+  fns = [os.path.join(path,fn) for path,_,fns in os.walk("../tests/") for fn in fns]
 
-  real_functions = linear_static['debug_functions']
-  linear_functions = set((f.start,linear_static[f.start]['name']) for f in linear_static['functions'])
-  recursive_functions = set((f.start,recursive_static[f.start]['name']) for f in recursive_static['functions'])
-  if ida_available:
-    ida.init_with_binary(fn)
-    ida_tags = ida.fetch_tags()
-    ida_functions = set((f,recursive_static[f]['name']) for f in ida_tags.keys()) #keys for tags from IDA are the function addresses?
+  #get nonstripped elf binaries (this is hacky)
+  nonstripped = []
+  for fn in fns:
+    info = subprocess.check_output(["file",fn])
+    if "ELF" in info and "not stripped" in info:
+      nonstripped.append(fn)
 
-  """
-  real_functions, linear_functions, and recursive_functions all are sets of
-  tuples (address, name) for each function identified
-  """
+  d = {}
+  d['total_fns'] = 0
+  d['missed_lin'] = 0
+  d['missed_rec'] = 0
 
-  real_addresses = set(x[0] for x in real_functions)
-  linear_addresses = set(x[0] for x in linear_functions)
-  recursive_addresses = set(x[0] for x in recursive_functions)
-  if ida_available:
-    ida_addresses = set(x[0] for x in ida_functions)
+  #each argument is a set of addresses and names (we take the intersection by address)
+  #functions1-functions2
+  def get_missed(functions1,functions2):
+    f1_addresses = set(x[0] for x in functions1)
+    f2_addresses = set(x[0] for x in functions2)
+    return f1_addresses-f2_addresses
+    #return set(x[1] for x in functions1 if x[0] in (f1_addresses-f2_addresses))
 
-  print "ELF symbols:       {} functions found.".format(len(real_addresses))
-  if ida_available:
-    print "IDA:               {} functions found.".format(len(ida_functions))
-  print "Linear sweep:      {} functions found.".format(len(linear_addresses))
-  print "Recursive descent: {} functions found.".format(len(recursive_addresses))
+  def static_to_function_set(static):
+    return set((f.start,static[f.start]['name']) for f in static['functions'])
 
-  linear_missed = set(x[1] for x in real_functions if x[0] in (real_addresses-linear_addresses))
-  recursive_missed = set(x[1] for x in real_functions if x[0] in (real_addresses-recursive_addresses))
-  if ida_available:
-    ida_missed = set(x[1] for x in real_functions if x[0] in (real_addresses-ida_addresses))
-    ida_extra = set(x[1] for x in ida_functions if x[0] in (ida_addresses-real_addresses))
-  linear_not_rec = set(x[1] for x in linear_functions if x[0] in (linear_addresses-recursive_addresses))
-  rec_not_linear = set(x[1] for x in recursive_functions if x[0] in recursive_addresses-linear_addresses)
+  for fn in nonstripped:
+    print "testing",fn
+    linear_static = test_linear(fn)
+    recursive_static = test_recursive(fn)
+    arch = linear_static['arch']
+    ida_available = False #disable IDA for now
+    #ida_available = arch in ['i386','x86-64']
+    if not ida_available:
+      print "ida not enabled"
 
-  linear_false_pos = set(x[1] for x in linear_functions if x[0] in (linear_addresses-real_addresses))
-  recursive_false_pos = set(x[1] for x in linear_functions if x[0] in (recursive_addresses-real_addresses))
+    #test_byteweight(Static(fn,debug=True))
 
-  #print "Functions missed by linear sweep:",linear_missed,"\n"
-  #print "Functions missed by recursive sweep:",recursive_missed,"\n"
-  if ida_available:
-    print "\nFunctions missed by IDA",ida_missed
-  print "\nFunctions in linear and not in recursive:",linear_not_rec
-  print "\nFunctions in recursive and not in linear:",rec_not_linear
-  print "\nFalse positives for linear sweep:",linear_false_pos
-  print "\nFalse positives for recursive descent:",recursive_false_pos
+    real_functions = linear_static['debug_functions']
+    linear_functions = static_to_function_set(linear_static)
+    recursive_functions = static_to_function_set(recursive_static)
+    if ida_available:
+      ida.init_with_binary(fn)
+      ida_tags = ida.fetch_tags()
+      ida_functions = set((f,recursive_static[f]['name']) for f in ida_tags.keys()) #keys for tags from IDA are the function addresses?
 
-  #function_printer(linear_static)
-  #function_printer(recursive_static)
+    num_real_functions = len(real_functions)
+
+    d['total_fns'] += num_real_functions
+    d['missed_lin'] = len(get_missed(real_functions,linear_functions))
+    d['missed_rec'] = len(get_missed(real_functions,recursive_functions))
+
+  print "Total functions across binaries:",d['total_fns']
+  print "Functions missed by linear sweep:",d['missed_lin']
+  print "Funtions missed by recursive descent:",d['missed_rec']

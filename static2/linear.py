@@ -24,20 +24,22 @@ def get_function_starts(static):
 
   current_address = entry
   while (current_address < end):
-    #mem = static.memory(current_address,0x10) #get an instruction
     d = static[current_address]['instruction']
     if d.itype == disasm.ITYPE.call:
       #we want the immediate (the function), not the next instruction
       succ_l = [i for (i,t) in d.succ if (t == disasm.TTYPE.immediate)]
-      assert len(succ_l) == 1 #only one target
-      successor_f = succ_l[0] #unpack from list
-      static[successor_f]['xrefs'].add(current_address)
-      static._auto_update_name(successor_f, "sub_%x"%(successor_f))
-      function_starts.add(successor_f)
-    #assume sizeof(instruction) is 16 for ARM
-    #we can also get this information from the disasm
-    #TODO: add thumb support to disasm, it seems the class refactor broke it
-    current_address += 0x10
+      if len(succ_l) == 1: #direct jump
+        successor_f = succ_l[0] #unpack from list
+        static[successor_f]['xrefs'].add(current_address)
+        static._auto_update_name(successor_f, "sub_%x"%(successor_f))
+        function_starts.add(successor_f)
+      #we lack the ability to deal with indirect jumps here
+      #we need something dynamic to tell us where it jumps ;)
+    size = d.size()
+    if size == 0:
+      print "found instruction of size 0, exiting"
+      break
+    current_address += size
 
   #print "found function starts",function_starts
 
