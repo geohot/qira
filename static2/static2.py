@@ -39,6 +39,9 @@ import byteweight
 
 import re
 
+#so we can initialize one Cs class for one static
+from capstone import *
+
 # debugging
 try:
   from hexdump import hexdump
@@ -52,7 +55,6 @@ class Tags:
     self.static = static
     self.address = address
 
-
   def __contains__(self, tag):
     return tag in self.backing
 
@@ -65,7 +67,7 @@ class Tags:
       if tag == "instruction":
         dat = self.static.memory(self.address, 0x10)
         # arch should probably come from the address with fallthrough
-        self.backing['instruction'] = disasm.disasm(dat, self.address, self.static['arch'])
+        self.backing['instruction'] = disasm.disasm(dat, self.address, self.static['arch'], self.static.md)
         self.backing['len'] = self.backing['instruction'].size()
         return self.backing[tag]
       if tag == "crefs" or tag == "xrefs":
@@ -111,6 +113,25 @@ class Static:
 
     # run the elf loader
     loader.load_binary(self, path, debug=debug)
+
+    #initialize disasm class here so we don't init one per instruction
+    if self['arch'] == "i386":
+      md = Cs(CS_ARCH_X86, CS_MODE_32)
+      #x86 and x86_64 are the same thing for capstone :(
+      #self.arch = CS_ARCH_X86.i386
+    elif self['arch'] == "x86-64":
+      md = Cs(CS_ARCH_X86, CS_MODE_64)
+    elif self['arch'] == "thumb":
+      md = Cs(CS_ARCH_ARM, CS_MODE_THUMB)
+    elif self['arch'] == "arm":
+      md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
+    elif self['arch'] == "aarch64":
+      md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
+    elif self['arch'] == "ppc":
+      md = Cs(CS_ARCH_PPC, CS_MODE_32)
+    else:
+      raise Exception('arch not supported by capstone (raised in linear.py)')
+    self.md = md
 
     self.debug = debug
     print "*** elf loaded"
