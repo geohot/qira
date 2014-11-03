@@ -163,13 +163,14 @@ if __name__ == "__main__":
 
   if args.file is None:
     fns = [os.path.join(path,fn) for path,_,fns in os.walk("../tests/") for fn in fns]
-    #get nonstripped elf binaries (this is hacky)
-    nonstripped = []
-    for fn in fns:
-      info = subprocess.check_output(["file",fn])
-      if "ELF" in info and "not stripped" in info:
-        nonstripped.append(fn)
   else:
     fns = [args.file]
 
-  test(fns)
+  #get nonstripped elf binaries (this is hacky)
+  nonstripped = []
+  for fn in fns:
+    info = subprocess.check_output(["file",fn])
+    if "ELF" in info and "not stripped" in info:
+      nonstripped.append(fn)
+
+  test(nonstripped)
