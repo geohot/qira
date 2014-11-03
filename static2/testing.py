@@ -1,6 +1,7 @@
 # *** STATIC TEST STUFF ***
 
 from static2 import *
+import ida #ida.py from this file, needs ida demo in appropriate directory
 
 import sys
 
@@ -59,6 +60,11 @@ if __name__ == "__main__":
   real_functions = linear_static['debug_functions']
   linear_functions = set((f.start,linear_static[f.start]['name']) for f in linear_static['functions'])
   recursive_functions = set((f.start,recursive_static[f.start]['name']) for f in recursive_static['functions'])
+  ida.init_with_binary(fn)
+  ida_tags = ida.fetch_tags()
+  print "*** ida returned %d tags" % (len(tags))
+  ida_functions = set((f,recursive_static[f.start]['name']) for f in ida_tags.keys()) #keys for tags from IDA are the function addresses?
+  print ida_functions
 
   """
   real_functions, linear_functions, and recursive_functions all are sets of
