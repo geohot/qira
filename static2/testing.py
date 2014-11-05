@@ -165,6 +165,8 @@ if __name__ == "__main__":
                       help="prepare directory of stripped binaries for IDA")
   parser.add_argument('--become-ida',dest="use_libida",action='store_true',
                       help='use libida.so directly, requires 32bit python')
+  parser.add_argument('--profile',dest="profile",action='store_true',
+                      help='use internal profiling, output to prof.png')
   args = parser.parse_args()
 
   if args.use_libida:
@@ -205,4 +207,13 @@ if __name__ == "__main__":
         print "{} -A -OIDAPython:get_ida_info.py {}".format(ida_cmd,stripped_fn)
   nonstripped = [fn for fn,_ in nonstripped_info]
 
-  test(nonstripped,stripped,use_libida=args.use_libida)
+  if args.profile:
+    #needs graphvizoutput and pycallgraph
+    from pycallgraph import PyCallGraph
+    from pycallgraph.output import GraphvizOutput
+    graphviz = GraphvizOutput()
+    graphviz.output_file = 'prof.png'
+    with PyCallGraph(output=graphviz):
+      test(nonstripped,stripped,use_libida=args.use_libida)
+  else:
+    test(nonstripped,stripped,use_libida=args.use_libida)
