@@ -154,7 +154,8 @@ def test(fns):
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument('--file', help="a single file to test (must have symbols)")
-  #parser.add_argument('--profile', dest='profile_enabled', action='store_true')
+  parser.add_argument('--prepare-ida', dest='prepare_ida', action='store_true',
+                      help="prepare directory of stripped binaries for IDA")
   args = parser.parse_args()
 
   #if args.profile_enabled:
@@ -171,6 +172,29 @@ if __name__ == "__main__":
   for fn in fns:
     info = subprocess.check_output(["file",fn])
     if "ELF" in info and "not stripped" in info:
-      nonstripped.append(fn)
+      nonstripped.append((fn,"x86-64" in info))
 
-  test(nonstripped)
+  if args.prepare_ida:
+    #make directory of stripped binaries
+    subprocess.call(["mkdir","-p","stripped"])
+    #handle errors here?
+
+    successful = []
+    for fn,is_64 in nonstripped:
+      raw_fn = fn.split("/")[-1]
+      stripped_fn = "stripped/"+raw_fn
+      cmd1 = ["cp",fn,stripped_fn]
+      #need binutils-multiarch to work on ARM
+      cmd2 = ["strip",stripped_fn]
+      #print " ".join(cmd1)
+      #print " ".join(cmd2)
+      subprocess.call(cmd1) #check if these exist
+      subprocess.call(cmd2)
+      ida_cmd = "idaw64" if is_64 else "idaw"
+      print "{} -A -OIDAPython:get_ida_info.py {}".format(ida_cmd,stripped_fn)
+
+    sys.exit()
+
+  just_filenames = [fn for fn,_ in nonstripped]
+
+  test(just_filenames)
