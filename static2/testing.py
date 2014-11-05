@@ -48,7 +48,7 @@ def test_byteweight(static):
     print hex(f)
     hexdump(recursive_static.memory(f, 0x20))
 
-def test(fns,use_libida=False):
+def test(fns,stripped=[],use_libida=False):
   #nonstrippednonida = [x for x in nonstripped if not os.path.isfile(x+".ida_info")]
   #print "Please generate an ida_info file for the following:",nonstrippednonida
   #sys.exit()
@@ -89,11 +89,13 @@ def test(fns,use_libida=False):
     recursive_static = test_recursive(fn)
     arch = linear_static['arch']
 
-    if arch in ["i386","x86-64"]: #archs supported in demo - incorporate real libida?
-      ida.init_with_binary(stripped_fn)
-      ida_functions = get_functions_from_ida_tags(ida.fetch_tags())
-    else:
-      print "ida not available for this binary"
+    if use_libida:
+      if arch in ["i386","x86-64"]: #archs supported in demo - incorporate real libida?
+        stripped_fn = stripped[i] #this is so ugly; it can be done better
+        ida.init_with_binary(stripped_fn)
+        ida_functions = get_functions_from_ida_tags(ida.fetch_tags())
+      else:
+        print "ida not available for this binary"
 
     #test_byteweight(Static(fn,debug=True))
 
@@ -107,12 +109,12 @@ def test(fns,use_libida=False):
       d['i386_total_fns'] += num_real_functions
       d['i386_missed_lin'] += len(get_missed(real_functions,linear_functions))
       d['i386_missed_rec'] += len(get_missed(real_functions,recursive_functions))
-      d['i386_missed_ida'] += len((set(x[0] for x in real_functions))-ida_functions)
+      if use_libida: d['i386_missed_ida'] += len((set(x[0] for x in real_functions))-ida_functions)
     elif arch == "x86-64":
       d['x86-64_total_fns'] += num_real_functions
       d['x86-64_missed_lin'] += len(get_missed(real_functions,linear_functions))
       d['x86-64_missed_rec'] += len(get_missed(real_functions,recursive_functions))
-      d['x86-64_missed_ida'] += len((set(x[0] for x in real_functions))-ida_functions)
+      if use_libida: d['x86-64_missed_ida'] += len((set(x[0] for x in real_functions))-ida_functions)
     elif arch == "arm":
       d['arm_total_fns'] += num_real_functions
       d['arm_missed_lin'] += len(get_missed(real_functions,linear_functions))
@@ -171,20 +173,19 @@ if __name__ == "__main__":
     fns = [os.path.join(path,fn) for path,_,fns in os.walk("../tests/") for fn in fns]
 
   #get nonstripped elf binaries (this is hacky)
-  nonstripped = []
+  nonstripped_info = []
   for fn in fns:
     info = subprocess.check_output(["file",fn])
     if "ELF" in info and "not stripped" in info:
-      nonstripped.append((fn,info))
+      nonstripped_info.append((fn,info))
 
-  #strip files
+  #strip files if we're using IDA
+  stripped = []
   if args.prepare_ida or args.use_libida:
     #make directory of stripped binaries
     subprocess.call(["mkdir","-p","stripped"])
     #handle errors here?
-
-    stripped_fns = []
-    for fn,info in nonstripped:
+    for fn,info in nonstripped_info:
       raw_fn = fn.split("/")[-1]
       stripped_fn = "stripped/"+raw_fn
       cmd1 = ["cp",fn,stripped_fn]
@@ -194,13 +195,11 @@ if __name__ == "__main__":
       #print " ".join(cmd2)
       subprocess.call(cmd1) #check if these exist
       subprocess.call(cmd2)
-      stripped_fns.append(stripped_fn)
+      stripped.append(stripped_fn)
 
       if not args.use_libida:
         ida_cmd = "idaw64" if "x86-64" in info else "idaw"
         print "{} -A -OIDAPython:get_ida_info.py {}".format(ida_cmd,stripped_fn)
-    test_files = stripped_fns
-  else:
-    test_files = [fn for fn,_ in test_files]
+  nonstripped = [fn for fn,_ in nonstripped_info]
 
-  test(test_files,use_libida=args.use_libida)
+  test(nonstripped,stripped,use_libida=args.use_libida)
