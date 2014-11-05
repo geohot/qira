@@ -218,7 +218,7 @@ class Static:
       for (ss, se),mem in self.base_memory.iteritems():
         if ss <= ri and ri < se:
           try:
-            dat.append(self.mem[ri-ss])
+            dat.append(mem[ri-ss])
           except:
             return ''.join(dat)
     return ''.join(dat)
