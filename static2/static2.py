@@ -215,10 +215,10 @@ class Static:
     dat = []
     for i in range(ln):
       ri = address+i
-      for (ss, se) in self.base_memory:
+      for (ss, se),mem in self.base_memory.iteritems():
         if ss <= ri and ri < se:
           try:
-            dat.append(self.base_memory[(ss,se)][ri-ss])
+            dat.append(self.mem[ri-ss])
           except:
             return ''.join(dat)
     return ''.join(dat)
