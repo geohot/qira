@@ -92,8 +92,11 @@ def test(fns,stripped=[],use_libida=False):
     if use_libida:
       if arch in ["i386","x86-64"]: #archs supported in demo - incorporate real libida?
         stripped_fn = stripped[i] #this is so ugly; it can be done better
-        ida.init_with_binary(stripped_fn)
-        ida_functions = get_functions_from_ida_tags(ida.fetch_tags())
+        try:
+          ida.init_with_binary(stripped_fn)
+          ida_functions = get_functions_from_ida_tags(ida.fetch_tags())
+        except:
+          print "ida failed on",stripped_fn
       else:
         print "ida not available for this binary"
 
@@ -129,14 +132,14 @@ def test(fns,stripped=[],use_libida=False):
   if d['i386_total_fns'] != 0:
     print "\ni386:"
     print "Total functions (from symbols):       {}".format(d['i386_total_fns'])
-    if use_libida: print "Functions found by IDA:               {}".format(d['i386_total_fns']-d['i386_missed_lin'])
+    if use_libida: print "Functions found by IDA:               {}".format(d['i386_total_fns']-d['i386_missed_ida'])
     print "Functions found by linear sweep:      {}".format(d['i386_total_fns']-d['i386_missed_lin'])
     print "Functions found by recursive descent: {}".format(d['i386_total_fns']-d['i386_missed_rec'])
 
   if d['x86-64_total_fns'] != 0:
     print "\nx86-64:"
     print "Total functions (from symbols):       {}".format(d['x86-64_total_fns'])
-    if use_libida: print "Functions found by IDA:               {}".format(d['i386_total_fns']-d['i386_missed_lin'])
+    if use_libida: print "Functions found by IDA:               {}".format(d['x86-64_total_fns']-d['x86-64_missed_ida'])
     print "Functions found by linear sweep:      {}".format(d['x86-64_total_fns']-d['x86-64_missed_lin'])
     print "Functions found by recursive descent: {}".format(d['x86-64_total_fns']-d['x86-64_missed_rec'])
 
