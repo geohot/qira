@@ -267,32 +267,28 @@ def get_depth_map(fxns, maxclnum):
 def convert_reg(trace,ins,cap_reg,arch,tregs,clnum):
   if cap_reg == 0:
     return 0
-  if arch == "x86-64":
-    x86_64_regs = {"rip" : "RIP", "r12" : "R12", "rbx" : "RBX"}
-    cap_name = ins.i.reg_name(cap_reg)
-    if cap_name in x86_64_regs:
-      reg_name = x86_64_regs[cap_name]
-      #get data from registers at this time in the execution
-      return trace.db.fetch_registers(clnum)[tregs.index(reg_name)]
-    else:
-      print "unimplemented capstone reg",cap_name
-      return 0
-  else:
-    print "unimplemented arch",arch
+  cap_name = ins.i.reg_name(cap_reg)
+  reg_name = cap_name.upper()
+  if reg_name not in tregs:
+    print "capstone reg {} not found in tregs".format(cap_name)
     return 0
+  #get data from registers at this time in the execution
+  return trace.db.fetch_registers(clnum)[tregs.index(reg_name)]
 
 #capstone register values to our register values
 def process_regs(trace,program,ins,clnum):
-  #print "arch",program.static['arch']
   arch = program.static['arch']
   indirect_target = ins.get_indirect_targets()[0][0] #only one right?
   base_reg_cap = indirect_target[0]
   base_reg_val = convert_reg(trace,ins,base_reg_cap,arch,program.tregs[0],clnum)
   index_reg_cap = indirect_target[1]
   index_reg_val = convert_reg(trace,ins,index_reg_cap,arch,program.tregs[0],clnum)
-  disp = indirect_target[2]
-  print "total_offset",[hex(x) for x in [base_reg_val,index_reg_val,disp]]
-  return sum([base_reg_val,index_reg_val,disp])
+  scale = indirect_target[2]
+  disp = indirect_target[3]
+  print "{}: {}".format(clnum,ins)
+  print "indirect info:",base_reg_val, index_reg_val, scale, disp
+  print "total_offset",hex(base_reg_val + (index_reg_val * scale) + disp)
+  return base_reg_val + (index_reg_val * scale) + disp
 
 def get_instruction_flow(trace, program, minclnum, maxclnum):
   start = time.time()
@@ -304,25 +300,14 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
 
     # this will trigger the disassembly
     ins_temp = program.static[r[0]['address']]['instruction']
-    #print "trace",dir(trace)
-    #print "trace.db",dir(trace.db)
     if ins_temp.is_indirect_jump():
-      #print "found indirect jump"
-      #print trace.db.fetch_registers(i)
-      print "{}: indirect found".format(i),ins_temp
-      print "registers",[hex(x) for x in trace.db.fetch_registers(i)]
       real_jump_addr = process_regs(trace,program,ins_temp,i)
-      print "real jump addr",hex(real_jump_addr)
       reg_size = program.tregs[1] #address size always same as reg size?
-      print "reg_size",reg_size
-      real_jump_target = trace.fetch_memory(i,real_jump_addr,reg_size)#trace.db.fetch_memory(i,real_jump_addr,reg_size)
+      real_jump_target = trace.fetch_memory(i,real_jump_addr,reg_size)
       try:
         real_target_bytes = [real_jump_target[i] for i in range(reg_size)]
-        print "real target:",real_target_bytes
-        print "adjusted",[x*(16**i) for i,x in enumerate(real_target_bytes)]
         fixed_values = sum(x*(16**i) for i,x in enumerate(real_target_bytes))
-        print hex(fixed_values)
-
+        #print hex(fixed_values)
       except:
         pass #no target available
       #add succesor
@@ -331,8 +316,6 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
     if (time.time() - start) > 0.01:
       time.sleep(0.01)
       start = time.time()
-  #for ins in ret:
-  #  print (hex(ins[0]),ins[1],ins[2],ins[3])
   return ret
 
 def get_hacked_depth_map(flow, program):

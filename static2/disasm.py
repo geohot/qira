@@ -103,13 +103,20 @@ class disasm(object):
 
         if (self.itype in [ITYPE.call, ITYPE.jump, ITYPE.cjump]):
           first_op = self.i.operands[0]
-          if (first_op.type == x86.X86_OP_IMM):
-            self.succ.add((self.i.operands[0].value.imm, TTYPE.immediate))
-          if (self.itype in [ITYPE.cjump, ITYPE.seq]): #this case looks wrong.. revisit
-            self.succ.add((self.address+self.size(), TTYPE.seq))
-          if (first_op.type == x86.X86_OP_MEM): #indirect jump
-            info = (first_op.value.mem.base, first_op.value.mem.index, first_op.value.mem.disp)
-            self.succ.add((info,TTYPE.indirect))
+          for i,first_op in enumerate(self.i.operands):
+            if (first_op.type == x86.X86_OP_IMM):
+              self.succ.add((self.i.operands[0].value.imm, TTYPE.immediate))
+            if (self.itype in [ITYPE.cjump, ITYPE.seq]): #this case looks wrong.. revisit
+              self.succ.add((self.address+self.size(), TTYPE.seq))
+            if (first_op.type == x86.X86_OP_REG): #indirect reg jump
+              #for consistency this is the info type:
+              #base reg * index reg * index scale * displacement
+              info = (first_op.value.reg, 0, 0, 0)
+              self.succ.add((info,TTYPE.indirect))
+            if (first_op.type == x86.X86_OP_MEM): #indirect mem jump
+              info = (first_op.value.mem.base, first_op.value.mem.index,
+                      first_op.value.mem.scale, first_op.value.mem.disp)
+              self.succ.add((info,TTYPE.indirect))
 
     #if capstone can't decode it, we're screwed
     except StopIteration:
