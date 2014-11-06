@@ -117,7 +117,7 @@ class Program:
     print "*** program is",self.program,"with hash",self.proghash
 
     # this is always initted, as it's the tag repo
-    self.static = static2.Static(self.program) 
+    self.static = static2.Static(self.program)
 
     # init static
     if qira_config.WITH_STATIC:
@@ -320,7 +320,7 @@ class Program:
     # delete the logs
     shutil.rmtree(qira_config.TRACE_FILE_BASE)
     os.mkdir(qira_config.TRACE_FILE_BASE)
-  
+
   def get_maxclnum(self):
     ret = {}
     for t in self.traces:
@@ -360,7 +360,7 @@ class Program:
       eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
     #print "***",' '.join(eargs)
     os.execvp(eargs[0], eargs)
-  
+
   def research(self, re):
     try:
       csearch = qira_config.CODESEARCHDIR + "/csearch"
@@ -461,7 +461,7 @@ class Program:
         except:
           print "ERROR: cindex not found"
         exit(0)
-          
+
       # no need to wait
 
     # cda
@@ -561,6 +561,7 @@ class Trace:
         maxclnum = self.db.get_maxclnum()
         self.flow = qira_analysis.get_instruction_flow(self, self.program, minclnum, maxclnum)
         self.dmap = qira_analysis.get_hacked_depth_map(self.flow, self.program)
+        #qira_analysis.update_indirect_jumps(self)
 
         # hacky pin offset problem fix
         hpo = len(self.dmap)-(maxclnum-minclnum)
@@ -603,7 +604,7 @@ class Trace:
 
     self.base_memory = {}
     try:
-      forkbase = get_forkbase_from_log(self.forknum) 
+      forkbase = get_forkbase_from_log(self.forknum)
       print "*** using base %d for %d" % (forkbase, self.forknum)
       f = open(qira_config.TRACE_FILE_BASE+str(forkbase)+"_base")
     except Exception, e:

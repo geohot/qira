@@ -77,7 +77,7 @@ def draw_multigraph(blocks):
 
   print "drawing png @ /tmp/graph.png"
   graph.write_png('/tmp/graph.png')
-  
+
 
 def get_blocks(flow, static=True):
   # look at addresses
@@ -221,7 +221,7 @@ def do_loop_analysis(blocks):
             loopcnt += 1
           #print "loop",bb[i:i+j],"@",i,"with count",loopcnt
           # document the loop
-          loop = {"clstart":blocks[ab[i]]['clstart'], 
+          loop = {"clstart":blocks[ab[i]]['clstart'],
                   "clendone":blocks[ab[i+j-1]]['clend'],
                   "clend":blocks[ab[i+j*loopcnt]]['clend'],
                   "blockstart":ab[i],
@@ -264,6 +264,34 @@ def get_depth_map(fxns, maxclnum):
     dmap.append(thisd)
   return dmap
 
+def convert_reg(trace,ins,cap_reg,arch,tregs,clnum):
+  if cap_reg == 0:
+    return 0
+  if arch == "x86-64":
+    cap_name = ins.i.reg_name(cap_reg)
+    if cap_name == "rip":
+      #get data from registers at this time in the execution
+      return trace.db.fetch_registers(clnum)[tregs.index("RIP")]
+    else:
+      print "unimplemented capstone instruction",cap_name
+      return 0
+  else:
+    print "unimplemented arch",arch
+    return 0
+
+#capstone register values to our register values
+def process_regs(trace,program,ins,clnum):
+  #print "arch",program.static['arch']
+  arch = program.static['arch']
+  indirect_target = ins.get_indirect_targets()[0][0] #only one right?
+  base_reg_cap = indirect_target[0]
+  base_reg_val = convert_reg(trace,ins,base_reg_cap,arch,program.tregs[0],clnum)
+  index_reg_cap = indirect_target[1]
+  index_reg_val = convert_reg(trace,ins,index_reg_cap,arch,program.tregs[0],clnum)
+  disp = indirect_target[2]
+  #print "total_offset",hex(sum([base_reg_val,index_reg_val,disp]))
+  return sum([base_reg_val,index_reg_val,disp])
+
 def get_instruction_flow(trace, program, minclnum, maxclnum):
   start = time.time()
   ret = []
@@ -271,13 +299,38 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
     r = trace.db.fetch_changes_by_clnum(i, 1)
     if len(r) != 1:
       continue
-    
+
     # this will trigger the disassembly
+    ins_temp = program.static[r[0]['address']]['instruction']
+    #print "trace",dir(trace)
+    #print "trace.db",dir(trace.db)
+    if ins_temp.is_indirect_jump():
+      #print "found indirect jump"
+      #print trace.db.fetch_registers(i)
+      print "{}: indirect found".format(i),ins_temp
+      print "registers",[hex(x) for x in trace.db.fetch_registers(i)]
+      real_jump_addr = process_regs(trace,program,ins_temp,i)
+      print "real jump addr",hex(real_jump_addr)
+      reg_size = program.tregs[1] #address size always same as reg size?
+      print "reg_size",reg_size
+      real_jump_target = trace.fetch_memory(i,real_jump_addr,reg_size)#trace.db.fetch_memory(i,real_jump_addr,reg_size)
+      try:
+        real_target_bytes = [real_jump_target[i] for i in range(reg_size)]
+        print "real target:",real_target_bytes
+        print "adjusted",[x*(16**i) for i,x in enumerate(real_target_bytes)]
+        fixed_values = sum(x*(16**i) for i,x in enumerate(real_target_bytes))
+        print hex(fixed_values)
+
+      except:
+        pass #no target available
+      #add succesor
     ins = str(program.static[r[0]['address']]['instruction'])
     ret.append((r[0]['address'], r[0]['data'], r[0]['clnum'], ins))
     if (time.time() - start) > 0.01:
       time.sleep(0.01)
       start = time.time()
+  #for ins in ret:
+  #  print (hex(ins[0]),ins[1],ins[2],ins[3])
   return ret
 
 def get_hacked_depth_map(flow, program):
@@ -339,6 +392,8 @@ def get_vtimeline_picture(trace, minclnum, maxclnum):
   dat = "data:image/png;base64,"+base64.b64encode(buf.getvalue())
   return dat
 
+#def update_indirect_jumps(trace, program):
+
 def analyze(trace, program):
   minclnum = trace.db.get_minclnum()
   maxclnum = trace.db.get_maxclnum()
@@ -347,7 +402,7 @@ def analyze(trace, program):
     # don't analyze if the program is bigger than this
     return None
   """
-  
+
   flow = get_instruction_flow(trace, program, minclnum, maxclnum)
 
   #blocks = get_blocks(flow)
@@ -359,7 +414,7 @@ def analyze(trace, program):
 
   #dmap = get_depth_map(fxns, maxclnum)
   dmap = get_hacked_depth_map(flow)
-  
+
   #loops = do_loop_analysis(blocks)
   #print loops
 
@@ -388,7 +443,7 @@ def slice(trace, inclnum):
       st = st.union(get_loads(clnum))
       cls.append(clnum)
       #print clnum, overwrite, st
-    
+
     """
     r = trace.db.fetch_changes_by_clnum(clnum, 100)
     for e in r:
@@ -415,7 +470,7 @@ if __name__ == "__main__":
 
   flow = get_instruction_flow(trace, program, trace.db.get_minclnum(), trace.db.get_maxclnum())
   blocks = get_blocks(flow, True)
-  
+
   print slice(trace, 124)
 
   #print analyze(t, program)

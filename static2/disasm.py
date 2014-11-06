@@ -22,8 +22,7 @@ class TTYPE(object):
   seq = 0          # the target is the next seq. instruction
   immediate = 1    # the target is an immediate value.
   ret = 2          # ret target (on stack?, bl? these are questions we could answer with BAP!)
-  indirect_reg = 3 # indirect jump to register
-  indirect_mem = 4 # indirect jump to memory
+  indirect = 3     # explicit indirect jump target
   other = 5        # Any other target type, e.g., an indirect jump target
 
 
@@ -108,12 +107,9 @@ class disasm(object):
             self.succ.add((self.i.operands[0].value.imm, TTYPE.immediate))
           if (self.itype in [ITYPE.cjump, ITYPE.seq]): #this case looks wrong.. revisit
             self.succ.add((self.address+self.size(), TTYPE.seq))
-          if (first_op.type == x86.X86_OP_REG): #indirect jump to reg
-            self.succ.add((self.i.reg_name(first_op.value.reg), TTYPE.indirect_reg))
-          if (first_op.type == x86.X86_OP_MEM): #indirect jump to reg
-            info = (self.i.reg_name(first_op.value.mem.base), self.i.reg_name(first_op.value.mem.index),first_op.value.mem.disp)
-            print info
-            self.succ.add((info, TTYPE.indirect_mem))
+          if (first_op.type == x86.X86_OP_MEM): #indirect jump
+            info = (first_op.value.mem.base, first_op.value.mem.index, first_op.value.mem.disp)
+            self.succ.add((info,TTYPE.indirect))
 
     #if capstone can't decode it, we're screwed
     except StopIteration:
@@ -155,7 +151,12 @@ class disasm(object):
     if not self.decoded:
       return False
     #check if any target types are indirect
-    return any(succ[1] in [TTYPE.indirect_reg,TTYPE.indirect_mem] for succ in self.succ)
+    return any(succ[1] == TTYPE.indirect for succ in self.succ)
+
+  def get_indirect_targets(self):
+    if not self.decoded:
+      return []
+    return list(x for x in self.succ if x[1] == TTYPE.indirect)
 
   def is_ending(self):
     '''is this something which should end a basic block'''
