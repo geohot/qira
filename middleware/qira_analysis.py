@@ -278,7 +278,7 @@ def convert_reg(trace,ins,cap_reg,arch,tregs,clnum):
 #capstone register values to our register values
 def process_regs(trace,program,ins,clnum):
   arch = program.static['arch']
-  indirect_target = ins.get_indirect_targets()[0][0] #only one right?
+  indirect_target = ins.get_indirect_targets()[0] #only one right?
   base_reg_cap = indirect_target[0]
   base_reg_val = convert_reg(trace,ins,base_reg_cap,arch,program.tregs[0],clnum)
   index_reg_cap = indirect_target[1]
@@ -293,29 +293,41 @@ def process_regs(trace,program,ins,clnum):
 def get_instruction_flow(trace, program, minclnum, maxclnum):
   start = time.time()
   ret = []
+  indirect_targets = {}
   for i in range(minclnum, maxclnum):
     r = trace.db.fetch_changes_by_clnum(i, 1)
     if len(r) != 1:
       continue
 
+    current_addr = r[0]['address']
+
     # this will trigger the disassembly
-    ins_temp = program.static[r[0]['address']]['instruction']
-    if ins_temp.is_indirect_jump():
-      real_jump_addr = process_regs(trace,program,ins_temp,i)
-      reg_size = program.tregs[1] #address size always same as reg size?
-      real_jump_target = trace.fetch_memory(i,real_jump_addr,reg_size)
-      try:
-        real_target_bytes = [real_jump_target[i] for i in range(reg_size)]
-        fixed_values = sum(x*(16**i) for i,x in enumerate(real_target_bytes))
-        #print hex(fixed_values)
-      except:
-        pass #no target available
-      #add succesor
-    ins = str(program.static[r[0]['address']]['instruction'])
-    ret.append((r[0]['address'], r[0]['data'], r[0]['clnum'], ins))
+    ins = program.static[current_addr]['instruction']
+    if ins.is_indirect_jump():
+      real_jump_addr = process_regs(trace,program,ins,i)
+      indirect_targets[current_addr] = real_jump_addr
+
+      ###
+      ### can we call a pointer stored at a memory address?
+      ### I think so, but we don't have the memory for when
+      ### that happens (not mapped?)
+      ###
+      #reg_size = program.tregs[1] #address size always same as reg size?
+      #real_jump_target = trace.fetch_memory(i,real_jump_addr,reg_size)
+      #print "real jump: 0x{:x} -> {}".format(real_jump_addr,real_jump_target)
+      #try:
+      #  real_target_bytes = [real_jump_target[i] for i in range(reg_size)]
+      #  fixed_values = sum(x*(16**i) for i,x in enumerate(real_target_bytes))
+      #  print hex(fixed_values)
+      #except:
+      #  pass #no target available
+    ret.append((r[0]['address'], r[0]['data'], r[0]['clnum'], str(ins)))
     if (time.time() - start) > 0.01:
       time.sleep(0.01)
       start = time.time()
+  if len(indirect_targets) != 0:
+    program.static.add_indirect_jump_edges(indirect_targets)
+    program.static.process() #reprocess with new edges
   return ret
 
 def get_hacked_depth_map(flow, program):

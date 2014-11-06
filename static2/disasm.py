@@ -42,6 +42,7 @@ class disasm(object):
     self.raw = raw
     self.address = address
     self.succ = set() # no successors
+    self.unresolved_indirect = set()
     self.itype = ITYPE.seq  # default is a sequential instruction
     self.arch = arch
     if md is None:
@@ -112,11 +113,11 @@ class disasm(object):
               #for consistency this is the info type:
               #base reg * index reg * index scale * displacement
               info = (first_op.value.reg, 0, 0, 0)
-              self.succ.add((info,TTYPE.indirect))
+              self.unresolved_indirect.add(info)
             if (first_op.type == x86.X86_OP_MEM): #indirect mem jump
               info = (first_op.value.mem.base, first_op.value.mem.index,
                       first_op.value.mem.scale, first_op.value.mem.disp)
-              self.succ.add((info,TTYPE.indirect))
+              self.unresolved_indirect.add(info)
 
     #if capstone can't decode it, we're screwed
     except StopIteration:
@@ -163,7 +164,7 @@ class disasm(object):
   def get_indirect_targets(self):
     if not self.decoded:
       return []
-    return list(x for x in self.succ if x[1] == TTYPE.indirect)
+    return list(self.unresolved_indirect)
 
   def is_ending(self):
     '''is this something which should end a basic block'''
