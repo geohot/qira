@@ -19,10 +19,12 @@ class ITYPE(object):
 # Hmm. What I really want is a sum type here:
 # type ttype = seq of addresss | immediate of address | other
 class TTYPE(object):
-  seq = 0         # the target is the next seq. instruction
-  immediate = 1   # the target is an immediate value.
-  ret = 2         # ret target (on stack?, bl? these are questions we could answer with BAP!)
-  other = 3       # Any other target type, e.g., an indirect jump target
+  seq = 0          # the target is the next seq. instruction
+  immediate = 1    # the target is an immediate value.
+  ret = 2          # ret target (on stack?, bl? these are questions we could answer with BAP!)
+  indirect_reg = 3 # indirect jump to register
+  indirect_mem = 4 # indirect jump to memory
+  other = 5        # Any other target type, e.g., an indirect jump target
 
 
 
@@ -100,11 +102,18 @@ class disasm(object):
         elif (x86.X86_GRP_JUMP in self.i.groups):
           self.itype = ITYPE.cjump
 
-        if(self.itype in [ITYPE.call, ITYPE.jump, ITYPE.cjump]):
-          if(self.i.operands[0].type == x86.X86_OP_IMM):
+        if (self.itype in [ITYPE.call, ITYPE.jump, ITYPE.cjump]):
+          first_op = self.i.operands[0]
+          if (first_op.type == x86.X86_OP_IMM):
             self.succ.add((self.i.operands[0].value.imm, TTYPE.immediate))
-          if(self.itype in [ITYPE.cjump, ITYPE.seq]):
+          if (self.itype in [ITYPE.cjump, ITYPE.seq]): #this case looks wrong.. revisit
             self.succ.add((self.address+self.size(), TTYPE.seq))
+          if (first_op.type == x86.X86_OP_REG): #indirect jump to reg
+            self.succ.add((self.i.reg_name(first_op.value.reg), TTYPE.indirect_reg))
+          if (first_op.type == x86.X86_OP_MEM): #indirect jump to reg
+            info = (self.i.reg_name(first_op.value.mem.base), self.i.reg_name(first_op.value.mem.index),first_op.value.mem.disp)
+            print info
+            self.succ.add((info, TTYPE.indirect_mem))
 
     #if capstone can't decode it, we're screwed
     except StopIteration:
@@ -140,7 +149,13 @@ class disasm(object):
   def is_call(self):
     if not self.decoded:
       return False
-    return self.dtype == DESTTYPE.call
+    return self.itype == ITYPE.call
+
+  def is_indirect_jump(self):
+    if not self.decoded:
+      return False
+    #check if any target types are indirect
+    return any(succ[1] in [TTYPE.indirect_reg,TTYPE.indirect_mem] for succ in self.succ)
 
   def is_ending(self):
     '''is this something which should end a basic block'''
