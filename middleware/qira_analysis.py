@@ -268,12 +268,14 @@ def convert_reg(trace,ins,cap_reg,arch,tregs,clnum):
   if cap_reg == 0:
     return 0
   if arch == "x86-64":
+    x86_64_regs = {"rip" : "RIP", "r12" : "R12", "rbx" : "RBX"}
     cap_name = ins.i.reg_name(cap_reg)
-    if cap_name == "rip":
+    if cap_name in x86_64_regs:
+      reg_name = x86_64_regs[cap_name]
       #get data from registers at this time in the execution
-      return trace.db.fetch_registers(clnum)[tregs.index("RIP")]
+      return trace.db.fetch_registers(clnum)[tregs.index(reg_name)]
     else:
-      print "unimplemented capstone instruction",cap_name
+      print "unimplemented capstone reg",cap_name
       return 0
   else:
     print "unimplemented arch",arch
@@ -289,7 +291,7 @@ def process_regs(trace,program,ins,clnum):
   index_reg_cap = indirect_target[1]
   index_reg_val = convert_reg(trace,ins,index_reg_cap,arch,program.tregs[0],clnum)
   disp = indirect_target[2]
-  #print "total_offset",hex(sum([base_reg_val,index_reg_val,disp]))
+  print "total_offset",[hex(x) for x in [base_reg_val,index_reg_val,disp]]
   return sum([base_reg_val,index_reg_val,disp])
 
 def get_instruction_flow(trace, program, minclnum, maxclnum):
