@@ -38,9 +38,9 @@ class disasm(object):
       self.regs_write = self.i.regs_write
 
       self.dtype = DESTTYPE.none
-      if self.i.mnemonic == "call":
+      if self.i.mnemonic == "call":   # TODO: this is still x86-specific
         self.dtype = DESTTYPE.call
-      elif self.i.mnemonic == "jmp":
+      elif self.i.mnemonic == "jmp":  # TODO: this is still x86-specific
         self.dtype = DESTTYPE.jump
       #TODO: what about not x86?
       elif x86.X86_GRP_JUMP in self.i.groups:
@@ -66,9 +66,9 @@ class disasm(object):
   def is_ret(self):
     if not self.decoded:
       return False
-    return self.i.mnemonic == "ret"
     #TODO: what about iret? and RET isn't in the apt version of capstone
-    return x86.X86_GRP_RET in self.i.groups
+    # Capstone 3.0 will support all these groups: RET & IRET
+    return (x86.X86_GRP_RET in self.i.groups) or (x86.X86_GRP_IRET in self.i.groups)
 
   def is_call(self):
     if not self.decoded:
@@ -79,7 +79,7 @@ class disasm(object):
     '''is this something which should end a basic block'''
     if not self.decoded:
       return False
-    return self.is_jump() or self.is_ret() or self.i.mnemonic == "hlt"
+    return self.is_jump() or self.is_ret() or self.i.mnemonic == "hlt"  # TODO: 'hlt' is x86-specific
 
   def is_conditional(self):
     if not self.decoded:
