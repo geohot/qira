@@ -1,3 +1,4 @@
+<pre>
 <?php
-system("git pull");
+passthru("git pull");
 
