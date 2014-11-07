@@ -33,8 +33,10 @@ class Block:
 # runs the recursive descent parser at address
 # how to deal with block groupings?
 def make_function_at(self, address, recurse = True):
-  if self['arch'] != "i386" and self['arch'] != "x86-64":
-    print "*** static only works with x86(_64), someone should fix it"
+  #if self['arch'] != "i386" and self['arch'] != "x86-64":
+  #  print "*** static only works with x86(_64), someone should fix it"
+  #  return
+  if address is None:
     return
   block_starts = set([address])
   function_starts = set()
@@ -42,11 +44,10 @@ def make_function_at(self, address, recurse = True):
   self['functions'].add(this_function)
 
   def disassemble(address):
-    raw = self.memory(address, 0x10)
     d = self[address]['instruction']
     self[address]['function'] = this_function
     for (c,flag) in d.dests():
-      if flag == disasm.DESTTYPE.call:
+      if d.itype == disasm.ITYPE.call:
         self._auto_update_name(c,"sub_%x"%(c))
         function_starts.add(c)
         self[c]['xrefs'].add(address)
@@ -59,7 +60,9 @@ def make_function_at(self, address, recurse = True):
 
       #if we come after a jump and are an implicit xref, we are the start
       #of a new block
-      elif d.is_jump():
+      #ned: not sure if is_cjump goes here but cjumps used to
+      #be part of is_jump() so this is the same behavior
+      elif d.is_jump() or d.is_cjump():
         self._auto_update_name(c,"loc_%x"%(c))
         block_starts.add(c)
     return d.dests()
@@ -71,7 +74,7 @@ def make_function_at(self, address, recurse = True):
   while not pending.empty():
     dests = disassemble(pending.get())
     for (d,flag) in dests:
-      if flag == disasm.DESTTYPE.call:
+      if flag == disasm.TTYPE.immediate:
         #this will get handled in the function pass
         continue
       if d not in done:
@@ -100,3 +103,51 @@ def make_function_at(self, address, recurse = True):
     if self[f]['function'] == None:
       make_function_at(self, f)
 
+#this removes the recursive descent pass and makes basic blocks
+#this should be in linear.py, but it relies on the Function and Block
+#classes - maybe a refactor is necessary
+def make_functions_from_starts(static, function_starts):
+  # we don't have to sort function_starts because this loop breaks when we
+  # reach another function and we are only building basic blocks/updating
+  # the interface.
+  for address in function_starts:
+    if address is None: #None's happen when we have a binary made from assembly?
+      continue
+    this_function = Function(address)
+    static['functions'].add(this_function)
+
+    this_block = Block(address)
+    this_function.add_block(this_block)
+    block_starts = set([address])
+
+    i = static[address]['instruction']
+    while not i.is_ending() and i.size() != 0:
+      this_block.add(address)
+      static[address]['block'] = this_block
+      static[address]['function'] = this_function
+
+      if i.is_cjump():
+        for (succ_address, target_type) in i.dests():
+          if target_type != disasm.TTYPE.seq:
+            static[succ_address]['crefs'].add(address)
+            static._auto_update_name(succ_address,"loc_%x"%(succ_address))
+            block_starts.add(succ_address)
+          #do we do anything with the sequential target?
+          #is the sequential target a new basic block?
+      elif i.is_jump():
+        (succ_address,target_type) = list(i.dests())[0] #only one destination
+        assert target_type == disasm.TTYPE.immediate
+        static._auto_update_name(succ_address,"loc_%x"%(succ_address))
+        block_starts.add(succ_address)
+
+      address += i.size()
+
+      if address in function_starts:
+        break #done with this function
+
+      if address in block_starts:
+        this_block = Block(address)
+        this_function.add_block(this_block)
+        #static['blocks'].add(this_block)
+
+      i = static[address]['instruction']

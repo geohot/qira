@@ -1,0 +1,10 @@
+Now that we have a testing framework, we want the ability to stress test our static engine. Therefore we may need to make use of profiling.
+
+Traditional way (gprof style):
+pip install gprof2dot
+python -m cProfile -s time -o testing.prof testing.py
+gprof2dot -f pstats testing.prof | dot -Tpng -o testing_prof.png
+
+New way, slower? (PyCallGraph):
+using pycallgraph (--profile):
+pip install pycallgraph

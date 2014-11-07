@@ -1,0 +1,30 @@
+Implemented tags:
+* len -- number of bytes that go with this one, forming a word, ex "1", "2", "4"
+* endian -- the endianness of that word, ex "little", "big"
+* iset -- the instruction set of the word, if it's an instruction, ex "arm", "x86", "thumb"
+* comment -- comment on this byte
+* parsed -- the parsed instruction, ex "\t{\o{ADD}}\l{0xEDA0001C}, \l{0xEDA00034}, #\i{8}"
+  * \t{...} - left instructionish region
+  * \o{...} - opcode ex \o{ADD}
+  * \c{...} - condition ex \c{NE}
+  * \f{...} - flag ex \f{S}
+  * \l{addr} - location(these are registers) ex \l{0xEDA0001C}
+  * \i{num} - immed
+* flow -- JSON array of places outside the normal flow this can go, ex "['O3A40']"
+  * Oxxxx - optional, green line in IDA
+  * Axxxx - always, blue line in IDA
+  * Cxxxx - call, doesn't interupt basic block
+  * Xxxxx - xref, doesn't interupt basic block
+  * R - return
+* scope -- start address of function this is in
+* function -- list of addresses in function 3A30:50 is format
+
+Global tags(0xFFFFFFFF):
+* range_start
+* range_length
+* endian
+
+Considering tags:
+* compiled -- the javascript code that actually runs the instruction, can call instruction set locals
+* mmio -- javascript to run when this is read or written
+* type -- the type
