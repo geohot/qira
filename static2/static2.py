@@ -202,6 +202,7 @@ class Static:
     self['sections'].append((address, len(dat)))
     self.base_memory[(address, address+len(dat))] = dat
 
+  # run the analysis, not required for use of static
   def process(self):
     recursive.make_function_at(self, self['entry'])
     """
