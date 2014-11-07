@@ -37,7 +37,11 @@ import loader
 import disasm
 import byteweight
 
+
 import re
+
+sys.path.insert(0, '../middleware')
+import qira_config
 
 #so we can initialize one Cs class for one static
 from capstone import *
@@ -229,15 +233,14 @@ class Static:
     self.base_memory[(address, address+len(dat))] = dat
 
   def process(self):
-    if self['arch'] == "arm":
-      print "Using linear sweep approach for ARM, does not support thumb yet."
+    if qira_config.USE_LINEAR:
       function_starts = linear.get_function_starts(self)
       function_starts.add(self['entry'])
       main = self.get_address_by_name("main")
       if main != None:
         function_starts.add(main)
       recursive.make_functions_from_starts(self,function_starts)
-    else:
+    else: #original recursive descent
       recursive.make_function_at(self, self['entry'])
       main = self.get_address_by_name("main")
       if main != None:
