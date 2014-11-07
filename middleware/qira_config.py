@@ -20,25 +20,11 @@ CODESEARCHDIR = BASEDIR+"/cda/codesearch-latest/"
 
 CALLED_AS_CDA = False
 
+# capstone is now a requirement
+WITH_CAPSTONE = True
+
 # turn this off for now on releases
-# this should all be removed
 WITH_STATIC = False
-WITH_CAPSTONE = False
-WITH_RADARE = False
-
-WITH_STATIC2 = False
-
-WITH_IDA = False
 
 WEBSOCKET_DEBUG = False
-
-# enable radare if it's installed
-"""
-try:
-  from r2.r_core import RCore
-  WITH_RADARE = True
-  WITH_STATIC = True
-except:
-  WITH_RADARE = False
-"""
 
