@@ -1,0 +1,3 @@
+<?php
+system("git pull");
+
