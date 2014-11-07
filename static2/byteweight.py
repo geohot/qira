@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, '../middleware') #needed for testing
+
 import qira_config
 
 # returns list of addresses with respect to the qira memory model
