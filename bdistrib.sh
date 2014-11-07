@@ -39,6 +39,14 @@ echo "copying middleware"
 mkdir -p distrib/qira/middleware
 cp -av middleware/*.py distrib/qira/middleware/
 
+# static2
+echo "copying static2"
+mkdir -p distrib/qira/static2
+cp -av static2/*.py distrib/qira/static2/
+
+# is this worth it?
+cp -av static2/bw_* distrib/qira/static2/
+
 # built for ida 6.6
 # perhaps build for older IDA as well, ie 6.1
 # and mac + windows

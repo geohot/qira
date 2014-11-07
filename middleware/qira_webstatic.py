@@ -1,5 +1,6 @@
 # eventually, this can live in a different process
 # or we can break the boundary at static2
+# these calls don't have to be included for qira to work
 
 from qira_webserver import socketio
 from qira_webserver import socket_method
