@@ -28,9 +28,7 @@ if __name__ == '__main__':
   parser.add_argument("--host", metavar="HOST", help="listen address for web interface and socat. 127.0.0.1 by default", default=qira_config.HOST)
   parser.add_argument("--web-port", metavar="PORT", help="listen port for web interface. 3002 by default", type=int, default=qira_config.WEB_PORT)
   parser.add_argument("--socat-port", metavar="PORT", help="listen port for socat. 4000 by default", type=int, default=qira_config.SOCAT_PORT)
-  parser.add_argument("--ida", help="use ida to generate static data", action="store_true")
-  parser.add_argument("--radare", help="use radare to generate static data", action="store_true")
-  #parser.add_argument("--with-capstone", metavar="WITH_CAPSTONE", help="enable capstone for smarter disassembly", action="store_true")
+  parser.add_argument("--static", help="enable static features using static2", action="store_true")
   #capstone flag in qira_config for now
 
   # parse arguments, first try
@@ -84,12 +82,7 @@ if __name__ == '__main__':
   if args.cda:
     qira_config.WITH_CDA = True
     qira_config.WITH_DWARF = True
-  if args.ida:
-    qira_config.WITH_IDA = True
-    qira_config.WITH_STATIC = True
-    qira_config.WITH_CAPSTONE = True
-  if args.radare:
-    qira_config.WITH_RADARE = True
+  if args.static:
     qira_config.WITH_STATIC = True
   if args.flush_cache:
     print "*** flushing caches"

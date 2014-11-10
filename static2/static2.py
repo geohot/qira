@@ -236,14 +236,12 @@ class Static:
     if qira_config.USE_LINEAR:
       function_starts = linear.get_function_starts(self)
       function_starts.add(self['entry'])
-      main = self.get_address_by_name("main")
-      if main != None:
-        function_starts.add(main)
+      #bw_functions = byteweight.fsi(self)
       recursive.make_functions_from_starts(self,function_starts)
     else: #original recursive descent
       recursive.make_function_at(self, self['entry'])
-      main = self.get_address_by_name("main")
-      if main != None:
-        recursive.make_function_at(self, main)
+      bw_functions = byteweight.fsi(self)
+      for f in bw_functions:
+        recursive.make_function_at(self, f)
     print "*** found %d functions" % len(self['functions'])
 
