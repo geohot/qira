@@ -1,5 +1,8 @@
 # *** STATIC TEST STUFF ***
 
+import sys
+sys.path.insert(0, '../')
+
 from static2 import *
 import os
 import subprocess
@@ -95,7 +98,10 @@ def test(fns,stripped=[],use_libida=False):
         try:
           ida.init_with_binary(stripped_fn)
           ida_functions = get_functions_from_ida_tags(ida.fetch_tags())
+          ida_success = True
         except:
+          ida_success = False
+          print "Unexpected error:", sys.exc_info()[0]
           print "ida failed on",stripped_fn
       else:
         print "ida not available for this binary"
@@ -112,12 +118,14 @@ def test(fns,stripped=[],use_libida=False):
       d['i386_total_fns'] += num_real_functions
       d['i386_missed_lin'] += len(get_missed(real_functions,linear_functions))
       d['i386_missed_rec'] += len(get_missed(real_functions,recursive_functions))
-      if use_libida: d['i386_missed_ida'] += len((set(x[0] for x in real_functions))-ida_functions)
+      if use_libida and ida_success:
+        d['i386_missed_ida'] += len((set(x[0] for x in real_functions))-ida_functions)
     elif arch == "x86-64":
       d['x86-64_total_fns'] += num_real_functions
       d['x86-64_missed_lin'] += len(get_missed(real_functions,linear_functions))
       d['x86-64_missed_rec'] += len(get_missed(real_functions,recursive_functions))
-      if use_libida: d['x86-64_missed_ida'] += len((set(x[0] for x in real_functions))-ida_functions)
+      if use_libida and ida_success:
+        d['x86-64_missed_ida'] += len((set(x[0] for x in real_functions))-ida_functions)
     elif arch == "arm":
       d['arm_total_fns'] += num_real_functions
       d['arm_missed_lin'] += len(get_missed(real_functions,linear_functions))
@@ -132,14 +140,16 @@ def test(fns,stripped=[],use_libida=False):
   if d['i386_total_fns'] != 0:
     print "\ni386:"
     print "Total functions (from symbols):       {}".format(d['i386_total_fns'])
-    if use_libida: print "Functions found by IDA:               {}".format(d['i386_total_fns']-d['i386_missed_ida'])
+    if use_libida and ida_success:
+      print "Functions found by IDA:               {}".format(d['i386_total_fns']-d['i386_missed_ida'])
     print "Functions found by linear sweep:      {}".format(d['i386_total_fns']-d['i386_missed_lin'])
     print "Functions found by recursive descent: {}".format(d['i386_total_fns']-d['i386_missed_rec'])
 
   if d['x86-64_total_fns'] != 0:
     print "\nx86-64:"
     print "Total functions (from symbols):       {}".format(d['x86-64_total_fns'])
-    if use_libida: print "Functions found by IDA:               {}".format(d['x86-64_total_fns']-d['x86-64_missed_ida'])
+    if use_libida and ida_success:
+      print "Functions found by IDA:               {}".format(d['x86-64_total_fns']-d['x86-64_missed_ida'])
     print "Functions found by linear sweep:      {}".format(d['x86-64_total_fns']-d['x86-64_missed_lin'])
     print "Functions found by recursive descent: {}".format(d['x86-64_total_fns']-d['x86-64_missed_rec'])
 
@@ -159,7 +169,7 @@ def get_functions_from_ida_tags(tags):
   return {int(tags[addr]['scope'],16) for addr in tags if 'scope' in tags[addr]}
 
 if __name__ == "__main__":
-  parser = argparse.ArgumentParser(description="By default, tests all applicable files in ../tests/")
+  parser = argparse.ArgumentParser(description="By default, tests all applicable files in ../../tests/")
   parser.add_argument('--file', help="a single file to test (must have symbols)")
   parser.add_argument('--prepare-for-ida', dest='prepare_ida', action='store_true',
                       help="prepare directory of stripped binaries for IDA")
@@ -170,12 +180,12 @@ if __name__ == "__main__":
   args = parser.parse_args()
 
   if args.use_libida:
-    import ida
+    from ida import ida
 
   if args.file is not None:
     fns = [args.file]
   else:
-    fns = [os.path.join(path,fn) for path,_,fns in os.walk("../tests/") for fn in fns]
+    fns = [os.path.join(path,fn) for path,_,fns in os.walk("../../tests/") for fn in fns]
 
   #get nonstripped elf binaries (this is hacky)
   nonstripped_info = []
