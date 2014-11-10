@@ -171,29 +171,3 @@ class disasm(object):
       return set()
 
     return self.succ
-
-    # dl = []
-    # #if(self.address == 0x930c):
-    #   #print "HI"
-    #   #pdb.set_trace()
-
-    # if self.code_follows():
-    #   #this piece of code leads implicitly to the next instruction
-    #   dl.append((self.address+self.size(),DESTTYPE.implicit))
-
-
-    # if self.is_jump() or self.is_call():
-    #   #if we take a PTR and not a MEM or REG operand (TODO: better support for MEM operands)
-    #   #TODO: shouldn't be x86 specific
-    #   if (self.arch == CS_ARCH_X86 and self.i.operands[0].type == x86.X86_OP_IMM):
-    #     dl.append((self.i.operands[0].value.imm,self.dtype)) #the target of the jump/call
-    #   elif (self.arch == CS_ARCH_ARM and self.i.operands[0].type == arm.ARM_OP_IMM):
-    #     #if self.is_call():
-    #       # add in pipeline offset on arm
-    #       target = self.i.operands[0].value.imm + self.i.address + 0x8
-    #       dl.append((target, self.dtype))
-    #     #else:
-    #     #  dl.append((self.i.operands[0].value.imm, self.dtype))
-
-    # return dl
-
