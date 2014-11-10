@@ -20,7 +20,7 @@ import qiradb
 
 # new home of static2
 sys.path.append(qira_config.BASEDIR+"/static2")
-import static2
+from static2 import static2
 
 # (regname, regsize, is_big_endian, arch_name, branches)
 PPCREGS = ([], 4, True, "ppc", ["bl "])
