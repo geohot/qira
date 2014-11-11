@@ -2,6 +2,7 @@
 # capstone is a requirement now
 from capstone import *
 import capstone.arm as arm
+import capstone.x86 as x86
 
 # The pair (INSTYPE, DESTTYPE) tells us the type of instruction, as well
 # as the type of destination address.
@@ -41,16 +42,18 @@ class disasm(object):
     self.address = address
     self.succ = set() # no successors
     self.itype = ITYPE.seq  # default is a sequential instruction
+    self.arch = arch
     if arch == "i386":
       self.md = Cs(CS_ARCH_X86, CS_MODE_32)
-      self.arch = CS_ARCH_X86.i386
+      #x86 and x86_64 are the same thing for capstone :(
+      #self.arch = CS_ARCH_X86.i386
     elif arch == "x86-64":
       self.md = Cs(CS_ARCH_X86, CS_MODE_64)
     elif arch == "thumb":
       self.md = Cs(CS_ARCH_ARM, CS_MODE_THUMB)
     elif arch == "arm":
       self.md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
-      self.arch = CS_ARCH_ARM
+      self.arch = "arm" #CS_ARCH_ARM
     elif arch == "aarch64":
       self.md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
     elif arch == "ppc":
@@ -66,7 +69,7 @@ class disasm(object):
       self.regs_write = self.i.regs_write
 
       # ARM-local code. Could be a subclass.
-      if(self.arch == CS_ARCH_ARM):
+      if(self.arch == "arm"):
         # first set type of instruction
         if(self.i.mnemonic == "bl"):
           self.itype = ITYPE.call
@@ -85,21 +88,21 @@ class disasm(object):
           # fallthrough address is also a target for seq and cjumps
           self.succ.add((self.address+self.size(), TTYPE.seq))
 
-      if(self.arch == CS_ARCH_X86):
+      if(self.arch in ["i386","x86-64"]):
         if self.i.mnemonic == "call":
-          self.dtype = ITYPE.call
+          self.itype = ITYPE.call
         elif self.i.mnemonic == "jmp":
-          self.dtype = ITYPE.jmp
+          self.itype = ITYPE.jump
         elif self.i.mnemonic == "ret":
-          self.dtype = ITYPE.ret
+          self.itype = ITYPE.ret
         elif (x86.X86_GRP_JUMP in self.i.groups):
-          self.dtype = ITYPE.cjump
+          self.itype = ITYPE.cjump
 
-        if(self.dtype in [ITYPE.call, ITYPE.jump, ITYPE.cjump]):
+        if(self.itype in [ITYPE.call, ITYPE.jump, ITYPE.cjump]):
           if(self.i.operands[0].type == x86.X86_OP_IMM):
-            self.succ.add(self.i.operands[0].value.imm)
-          if(self.dtype in [DESTTYPE.cjump, DESTTYPE.none]):
-            self.succ.add(self.address+self.size)
+            self.succ.add((self.i.operands[0].value.imm, TTYPE.immediate))
+          if(self.itype in [ITYPE.cjump, ITYPE.seq]):
+            self.succ.add((self.address+self.size(), TTYPE.seq))
 
     #if capstone can't decode it, we're screwed
     except StopIteration:

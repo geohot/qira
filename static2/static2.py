@@ -208,14 +208,15 @@ class Static:
 
   # run the analysis, not required for use of static
   def process(self):
-    recursive.make_function_at(self, self['entry'])
-    """
-    main = self.get_address_by_name("main")
-    if main != None:
-      recursive.make_function_at(self, main)
-    """
-    bw_functions = byteweight.fsi(self)
-    for f in bw_functions:
-      recursive.make_function_at(self, f)
+    if self['arch'] == "arm":
+      print "Using linear sweep approach for ARM, does not support thumb yet."
+      function_starts = linear.get_function_starts(self)
+      function_starts.add(self['entry'])
+      recursive.make_functions_from_starts(self,function_starts)
+    else:
+      recursive.make_function_at(self, self['entry'])
+      bw_functions = byteweight.fsi(self)
+      for f in bw_functions:
+        recursive.make_function_at(self, f)
     print "*** found %d functions" % len(self['functions'])
 
