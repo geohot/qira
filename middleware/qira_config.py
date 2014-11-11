@@ -24,7 +24,7 @@ CALLED_AS_CDA = False
 WITH_CAPSTONE = True
 
 # turn this off for now on releases
-WITH_STATIC = True
+WITH_STATIC = False
 
 USE_LINEAR = False #use linear sweep for static2
 
