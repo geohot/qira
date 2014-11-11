@@ -359,8 +359,6 @@ def do_search(b64search):
     ret.append(s)
   return '<br/>'.join(ret)
 
-# web static moved to external file
-import qira_webstatic
 
 # ***** generic webserver stuff *****
   
@@ -396,11 +394,11 @@ def run_server(largs, lprogram):
   global static
   args = largs
   program = lprogram
-  qira_webstatic.init(lprogram)
-
   if qira_config.WITH_STATIC:
-    import qira_static
-    qira_static.init_static(program)
+    # web static moved to external file
+    import qira_webstatic
+    qira_webstatic.init(lprogram)
+
   if qira_config.WITH_CDA:
     import cacheserver
     app.register_blueprint(cacheserver.app)

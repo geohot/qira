@@ -1,3 +1,4 @@
+import qira_config
 
 # returns list of addresses with respect to the qira memory model
 # use no dependencies other than bap toil
@@ -62,7 +63,7 @@ def load(sig_file):
 
 # main function start identification function
 def fsi(static):
-  trie = load("bw_x86")
+  trie = load(qira_config.BASEDIR+"/static2/bw_x86")
   functions = set()
   (addr, lenn) = static['sections'][-3]
   for (addr, lenn) in static['sections']:

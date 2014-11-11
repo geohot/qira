@@ -202,11 +202,17 @@ class Static:
     self['sections'].append((address, len(dat)))
     self.base_memory[(address, address+len(dat))] = dat
 
+  # run the analysis, not required for use of static
   def process(self):
     recursive.make_function_at(self, self['entry'])
+    """
     main = self.get_address_by_name("main")
     if main != None:
       recursive.make_function_at(self, main)
+    """
+    bw_functions = byteweight.fsi(self)
+    for f in bw_functions:
+      recursive.make_function_at(self, f)
     print "*** found %d functions" % len(self['functions'])
 
 

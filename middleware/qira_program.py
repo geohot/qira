@@ -116,9 +116,12 @@ class Program:
     self.proghash = sha1(open(self.program, "rb").read()).hexdigest()
     print "*** program is",self.program,"with hash",self.proghash
 
-    # init static
+    # this is always initted, as it's the tag repo
     self.static = static2.Static(self.program) 
-    self.static.process()
+
+    # init static
+    if qira_config.WITH_STATIC:
+      self.static.process()
 
     # no traces yet
     self.traces = {}
