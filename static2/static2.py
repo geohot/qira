@@ -34,7 +34,6 @@ import re
 import qira_config
 
 from model import Tags
-#import model.Tag
 
 # debugging
 try:
@@ -67,18 +66,18 @@ class Static:
     self.base_memory = {}
 
     if qira_config.STATIC_ENGINE == "r2":
-        from r2pipe import r2pipe
-        import loader_r2
-        self.r2core = r2pipe(path)
+        sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "r2"))
+        import r2pipe 
+        import loader 
+        self.r2core = r2pipe.r2pipe(path)
         # capstone is not working ok yet, so using udis for now
         self.r2core.cmd("e asm.arch=x86.udis")
-        self.r2core.cmd("aa")
-        self.r2core.cmd("af @ main")
-        loader_r2.load_binary(self)
+        self.r2core.cmd("aa;af @ main")
     else:
         # run the elf loader
+        sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "builtin"))
         import loader
-        loader.load_binary(self, path)
+    loader.load_binary(self)
 
     self.debug = debug
     print "*** elf loaded"
@@ -176,11 +175,12 @@ class Static:
 
   def process(self):
     if qira_config.STATIC_ENGINE == "r2" and self.r2core is not None:
-        import analyzer_r2
-        analyzer_r2.analyze_functions(self)
-    else:
+        sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "r2"))
         import analyzer
-        analyzer.analyze_functions(self)
+    else:
+        sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "builtin"))
+        import analyzer
+    analyzer.analyze_functions(self)
     print "*** found %d functions" % len(self['functions'])
 
 
@@ -210,9 +210,9 @@ if __name__ == "__main__":
 
   #print static[main]['instruction'], map(hex, static[main]['crefs'])
   #print static.get_tags(['name'])
-  bw_functions = byteweight.fsi(static)
-  for f in bw_functions:
-    print hex(f)
-    hexdump(static.memory(f, 0x20))
+  #bw_functions = byteweight.fsi(static)
+  #for f in bw_functions:
+    #print hex(f)
+    #hexdump(static.memory(f, 0x20))
 
 

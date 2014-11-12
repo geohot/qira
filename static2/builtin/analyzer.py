@@ -1,11 +1,15 @@
 import Queue
 from model import Function, Block, DESTTYPE
+import byteweight
 
 def analyze_functions(static):
   make_function_at(static, static['entry'])
   main = static.get_address_by_name("main")
   if main != None:
     make_function_at(static, main)
+  bw_functions = byteweight.fsi(static)
+  for f in bw_functions:
+    make_function_at(static, f)
 
 # things to actually drive the static analyzer
 # runs the recursive descent parser at address

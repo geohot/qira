@@ -18,11 +18,11 @@ def get_arch(fb):
     return 'mips'
 
 
-def load_binary(static, path):
-  elf = ELFFile(open(path))
+def load_binary(static):
+  elf = ELFFile(open(static.path))
 
   # TODO: replace with elf['e_machine']
-  progdat = open(path).read(0x20)
+  progdat = open(static.path).read(0x20)
   fb = struct.unpack("H", progdat[0x12:0x14])[0]   # e_machine
   static['arch'] = get_arch(fb)
   static['entry'] = elf['e_entry']
