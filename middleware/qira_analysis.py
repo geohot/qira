@@ -278,7 +278,7 @@ def convert_reg(trace,ins,cap_reg,arch,tregs,clnum):
 #capstone register values to our register values
 def process_regs(trace,program,ins,clnum):
   arch = program.static['arch']
-  indirect_target = ins.get_indirect_targets()[0] #only one right?
+  indirect_target = ins.get_unresolved_indirect_targets()[0] #only one right?
   base_reg_cap = indirect_target[0]
   base_reg_val = convert_reg(trace,ins,base_reg_cap,arch,program.tregs[0],clnum)
   index_reg_cap = indirect_target[1]

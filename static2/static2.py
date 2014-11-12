@@ -235,7 +235,7 @@ class Static:
   #thanks to tracing, we can get any edges from an address to a target address
   def add_indirect_jump_edges(self, indirect_targets):
     for ins_addr,ins_target in indirect_targets.iteritems():
-      self[ins_addr]['instruction'].succ.add(ins_target,disasm.TTYPE.indirect)
+      self[ins_addr]['instruction'].succ.add(ins_target,disasm.TTYPE.indirect_trace)
 
   # run the analysis, not required for use of static
   def process(self):

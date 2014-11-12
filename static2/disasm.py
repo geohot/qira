@@ -19,11 +19,11 @@ class ITYPE(object):
 # Hmm. What I really want is a sum type here:
 # type ttype = seq of addresss | immediate of address | other
 class TTYPE(object):
-  seq = 0          # the target is the next seq. instruction
-  immediate = 1    # the target is an immediate value.
-  ret = 2          # ret target (on stack?, bl? these are questions we could answer with BAP!)
-  indirect = 3     # explicit indirect jump target
-  other = 5        # Any other target type, e.g., an indirect jump target
+  seq = 0            # the target is the next seq. instruction
+  immediate = 1      # the target is an immediate value.
+  ret = 2            # ret target (on stack?, bl? these are questions we could answer with BAP!)
+  indirect_trace = 3 # explicit indirect jump target from trace
+  other = 5          # Any other target type, e.g., an indirect jump target
 
 
 
@@ -159,9 +159,9 @@ class disasm(object):
     if not self.decoded:
       return False
     #check if any target types are indirect
-    return any(succ[1] == TTYPE.indirect for succ in self.succ)
+    return any(succ[1] == TTYPE.indirect_trace for succ in self.succ)
 
-  def get_indirect_targets(self):
+  def get_unresolved_indirect_targets(self):
     if not self.decoded:
       return []
     return list(self.unresolved_indirect)
