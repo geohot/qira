@@ -1,6 +1,6 @@
-
-# capstone is a requirement now
 from capstone import *
+
+__all__ = ["Tags", "Function", "Block", "Instruction", "DESTTYPE"]
 
 class DESTTYPE(object):
   none = 0
@@ -9,8 +9,8 @@ class DESTTYPE(object):
   call = 3
   implicit = 4
 
-
-class disasm(object):
+# Instruction class
+class Instruction(object):
   """one disassembled instruction"""
   def __init__(self, raw, address, arch="i386"):
     self.raw = raw
@@ -106,7 +106,7 @@ class disasm(object):
     dl = []
     if self.code_follows():
       #this piece of code leads implicitly to the next instruction
-      dl.append((self.address+self.size(),DESTTYPE.implicit)) 
+      dl.append((self.address+self.size(),DESTTYPE.implicit))
 
     if self.is_jump() or self.is_call():
       #if we take a PTR and not a MEM or REG operand (TODO: better support for MEM operands)
@@ -116,3 +116,70 @@ class disasm(object):
 
     return dl
 
+class Function:
+  def __init__(self, start):
+    self.start = start
+    self.blocks = set()
+
+  def __repr__(self):
+    return hex(self.start) + " " + str(self.blocks)
+
+  def add_block(self, block):
+    self.blocks.add(block)
+
+
+class Block:
+  def __init__(self, start):
+    self.__start__ = start
+    self.addresses = set([start])
+
+  def __repr__(self):
+    return hex(self.start())+"-"+hex(self.end())
+
+  def start(self):
+    return self.__start__
+
+  def end(self):
+    return max(self.addresses)
+
+  def add(self, address):
+    self.addresses.add(address)
+
+
+class Tags:
+  def __init__(self, static, address):
+    self.backing = {}
+    self.static = static
+    self.address = address
+
+
+  def __contains__(self, tag):
+    return tag in self.backing
+
+  def __getitem__(self, tag):
+    if tag in self.backing:
+      return self.backing[tag]
+    else:
+      # should reading the instruction tag trigger disasm?
+      # and should dests be a seperate tag?
+      if tag == "instruction":
+        dat = self.static.memory(self.address, 0x10)
+        # arch should probably come from the address with fallthrough
+        self.backing['instruction'] = Instruction(dat, self.address, self.static['arch'])
+        self.backing['len'] = self.backing['instruction'].size()
+        return self.backing[tag]
+      if tag == "crefs" or tag == "xrefs":
+        # crefs has a default value of a new array
+        self.backing[tag] = set()
+        return self.backing[tag]
+      if tag in self.static.global_tags:
+        return self.static.global_tags[tag]
+      return None
+
+  def __setitem__(self, tag, val):
+    if tag == "instruction" and type(val) == str:
+      raise Exception("instructions shouldn't be strings")
+    if tag == "name":
+      # name can change by adding underscores
+      val = self.static.set_name(self.address, val)
+    self.backing[tag] = val
