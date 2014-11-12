@@ -31,12 +31,20 @@
 import collections
 import os, sys
 
+import linear
 import recursive
 import loader
 import disasm
 import byteweight
 
+
 import re
+
+sys.path.insert(0, '../middleware')
+import qira_config
+
+#so we can initialize one Cs class for one static
+from capstone import *
 
 # debugging
 try:
@@ -51,7 +59,6 @@ class Tags:
     self.static = static
     self.address = address
 
-
   def __contains__(self, tag):
     return tag in self.backing
 
@@ -64,7 +71,7 @@ class Tags:
       if tag == "instruction":
         dat = self.static.memory(self.address, 0x10)
         # arch should probably come from the address with fallthrough
-        self.backing['instruction'] = disasm.disasm(dat, self.address, self.static['arch'])
+        self.backing['instruction'] = disasm.disasm(dat, self.address, self.static['arch'], self.static.md)
         self.backing['len'] = self.backing['instruction'].size()
         return self.backing[tag]
       if tag == "crefs" or tag == "xrefs":
@@ -105,13 +112,35 @@ class Static:
     # concept from qira_program
     self.base_memory = {}
 
+    if debug:
+      self['debug_functions'] = set()
+
     # run the elf loader
-    loader.load_binary(self, path)
+    loader.load_binary(self, path, debug=debug)
+
+    #initialize disasm class here so we don't init one per instruction
+    if self['arch'] == "i386":
+      md = Cs(CS_ARCH_X86, CS_MODE_32)
+      #x86 and x86_64 are the same thing for capstone :(
+      #self.arch = CS_ARCH_X86.i386
+    elif self['arch'] == "x86-64":
+      md = Cs(CS_ARCH_X86, CS_MODE_64)
+    elif self['arch'] == "thumb":
+      md = Cs(CS_ARCH_ARM, CS_MODE_THUMB)
+    elif self['arch'] == "arm":
+      md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
+    elif self['arch'] == "aarch64":
+      md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
+    elif self['arch'] == "ppc":
+      md = Cs(CS_ARCH_PPC, CS_MODE_32)
+    else:
+      raise Exception('arch not supported by capstone (raised in linear.py)')
+    self.md = md
 
     self.debug = debug
-    print "*** elf loaded"
+    #print "*** elf loaded"
 
-  # this should be replaced with a 
+  # this should be replaced with a
   def set_name(self, address, name):
     if name not in self.rnames:
       self.rnames[name] = address
@@ -166,7 +195,7 @@ class Static:
       if rret != {}:
         ret[a] = rret
     return ret
-  
+
   def __setitem__(self, address, dat):
     if type(address) is str:
       self.global_tags[address] = dat
@@ -177,6 +206,7 @@ class Static:
       if address in self.global_tags:
         return self.global_tags[address]
       else:
+        print "returning None for",address
         return None
     if address not in self.tags:
       self.tags[address] = Tags(self, address)
@@ -184,15 +214,15 @@ class Static:
 
   # return the memory at address:ln
   # replaces get_static_bytes
-  # TODO: refactor this! 
+  # TODO: refactor this!
   def memory(self, address, ln):
     dat = []
     for i in range(ln):
       ri = address+i
-      for (ss, se) in self.base_memory:
+      for (ss, se),mem in self.base_memory.iteritems():
         if ss <= ri and ri < se:
           try:
-            dat.append(self.base_memory[(ss,se)][ri-ss])
+            dat.append(mem[ri-ss])
           except:
             return ''.join(dat)
     return ''.join(dat)
@@ -204,47 +234,14 @@ class Static:
 
   # run the analysis, not required for use of static
   def process(self):
-    recursive.make_function_at(self, self['entry'])
-    """
-    main = self.get_address_by_name("main")
-    if main != None:
-      recursive.make_function_at(self, main)
-    """
-    bw_functions = byteweight.fsi(self)
-    for f in bw_functions:
-      recursive.make_function_at(self, f)
+    if qira_config.USE_LINEAR:
+      function_starts = linear.get_function_starts(self)
+      function_starts.add(self['entry'])
+      recursive.make_functions_from_starts(self,function_starts)
+    else: #original recursive descent
+      recursive.make_function_at(self, self['entry'])
+      bw_functions = byteweight.fsi(self)
+      for f in bw_functions:
+        recursive.make_function_at(self, f)
     print "*** found %d functions" % len(self['functions'])
-
-
-# *** STATIC TEST STUFF ***
-
-if __name__ == "__main__":
-  static = Static(sys.argv[1],debug=True)
-  print "arch:",static['arch']
-
-  # find main
-  main = static.get_address_by_name("main")
-  print "main is at", hex(main)
-  recursive.make_function_at(static, static['entry'])
-  print "found %d functions" % len(static['functions'])
-  recursive.make_function_at(static, main)
-  print "found %d functions" % len(static['functions'])
-
-  # function printer
-  for f in sorted(static['functions']):
-    print static[f.start]['name'] or hex(f.start), f
-    for b in sorted(f.blocks):
-      print "  ",b
-      for a in sorted(b.addresses):
-        print "    ",hex(a),static._insert_names(static[a]['instruction'])
-
-  #print static['functions']
-
-  #print static[main]['instruction'], map(hex, static[main]['crefs'])
-  #print static.get_tags(['name'])
-  bw_functions = byteweight.fsi(static)
-  for f in bw_functions:
-    print hex(f)
-    hexdump(static.memory(f, 0x20))
-
 

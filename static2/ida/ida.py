@@ -23,10 +23,6 @@ os.environ['LD_LIBRARY_PATH'] = IDAPATH
 os.environ['IDADIR'] = IDAPATH
 
 if sys.maxsize > 2**32:
-  if __name__ == "__main__":
-    print "relaunching as 32-bit python"
-    os.system("python32/Python/python "+__file__+" "+" ".join(sys.argv[1:]))
-    exit(0)
   from remotectypes32 import *
 else:
   from ctypes import *
@@ -67,12 +63,12 @@ def uicallback(a,b,c,d,e,f,g,h,i):
       print cast(f, c_char_p).value.strip()
     """
     #print cast(f, c_char_p).value
-    libc.vprintf(d, e)
+    #libc.vprintf(d, e)
     return 0
   elif c == 21:
     # MBOX
-    libc.vprintf(e, f)
-    print ""
+    #libc.vprintf(e, f)
+    #print ""
     return 0
 
   elif c == 50:
@@ -110,21 +106,21 @@ def uicallback(a,b,c,d,e,f,g,h,i):
     #print cast(b, POINTER(c_int)).contents
     return 1
 
-  print "callback", ui_msgs[c], c,d,e,f,g,h,i
+  #print "callback", ui_msgs[c], c,d,e,f,g,h,i
 
   if c == 43:
-    print "load_file:",cast(d, c_char_p).value.strip(), hex(e), hex(f)
+    #print "load_file:",cast(d, c_char_p).value.strip(), hex(e), hex(f)
     b_ptr[0] = 1
     lst = ida.build_loaders_list(e)
-    print "loaders_list", hex(lst)
+    #print "loaders_list", hex(lst)
     ret = ida.load_nonbinary_file(FILE, e, ".", NEF_FIRST, lst)
-    print ret
+    #print ret
     #ida.init_loader_options(e, lst)
   if c == 18:
-    print "got set idle",d
+    #print "got set idle",d
     set_idle_fxn(CFUNCTYPE(c_int)(d))
   if c == 25:
-    print "ask_file:",cast(e, c_char_p).value.strip(),cast(f, c_char_p).value.strip()
+    #print "ask_file:",cast(e, c_char_p).value.strip(),cast(f, c_char_p).value.strip()
     global buf   # OMG GC
     buf = create_string_buffer(FILE)
     b_ptr[0] = addressof(buf)
@@ -136,7 +132,7 @@ def run_ida():
   done = False
   while not done:
     idle_fxn()
-  print "*** run_ida finished"
+  #print "*** run_ida finished"
 
 def fetch_tags():
   import collections
@@ -244,11 +240,23 @@ def init_with_binary(filename):
   rsc = "\xB9"+struct.pack("I", cast(fxn, c_void_p).value)+"\xFF\xD1\x59\x83\xC4\x04\xFF\xE1"
   sc = create_string_buffer(rsc)
   libc.mprotect(addressof(sc) & 0xFFFFF000, 0x1000, 7)
-  print "*** ida.init_kernel", ida.init_kernel(sc, argc, argv)
+  ida.init_kernel(sc, argc, argv)
+  #print "*** ida.init_kernel", ida.init_kernel(sc, argc, argv)
   newfile = c_int(0)
-  print "*** ida.init_database", ida.init_database(argc, argv, pointer(newfile))
+  ida.init_database(argc, argv, pointer(newfile))
+  #print "*** ida.init_database", ida.init_database(argc, argv, pointer(newfile))
   run_ida()
 
 if __name__ == "__main__":
-  init_with_binary(sys.argv[1])
-
+  if len(sys.argv) != 2:
+    print "Need to provide a file for ida.py!"
+    sys.exit()
+  else:
+    init_with_binary(sys.argv[1])
+    tags = fetch_tags()
+    ks = sorted(tags)
+    for tag_addr in ks:
+      addr_data = tags[tag_addr]
+      print "address",hex(tag_addr)
+      #print "name_test:",get_name(tag_addr)
+      print "instruction",addr_data
