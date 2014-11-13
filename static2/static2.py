@@ -31,6 +31,8 @@
 import collections
 import os, sys
 import re
+
+sys.path.append("../middleware")
 import qira_config
 
 from model import Tags
@@ -66,17 +68,17 @@ class Static:
     self.base_memory = {}
 
     if qira_config.STATIC_ENGINE == "r2":
-        sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "r2"))
-        import r2pipe 
-        import loader 
-        self.r2core = r2pipe.r2pipe(path)
-        # capstone is not working ok yet, so using udis for now
-        self.r2core.cmd("e asm.arch=x86.udis")
-        self.r2core.cmd("aa;af @ main")
+      sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "r2"))
+      import r2pipe 
+      import loader 
+      self.r2core = r2pipe.r2pipe(path)
+      # capstone is not working ok yet, so using udis for now
+      self.r2core.cmd("e asm.arch=x86.udis")
+      self.r2core.cmd("aa;af @ main")
     else:
-        # run the elf loader
-        sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "builtin"))
-        import loader
+      # run the elf loader
+      sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "builtin"))
+      import loader
     loader.load_binary(self)
 
     self.debug = debug
@@ -175,11 +177,11 @@ class Static:
 
   def process(self):
     if qira_config.STATIC_ENGINE == "r2" and self.r2core is not None:
-        sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "r2"))
-        import analyzer
+      sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "r2"))
+      import analyzer
     else:
-        sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "builtin"))
-        import analyzer
+      sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "builtin"))
+      import analyzer
     analyzer.analyze_functions(self)
     print "*** found %d functions" % len(self['functions'])
 
@@ -191,12 +193,16 @@ if __name__ == "__main__":
   print "arch:",static['arch']
 
   # find main
+  static.process()
+  """
   main = static.get_address_by_name("main")
-  print "main is at", hex(main)
+  print "main is at", main
   recursive.make_function_at(static, static['entry'])
   print "found %d functions" % len(static['functions'])
   recursive.make_function_at(static, main)
   print "found %d functions" % len(static['functions'])
+  """
+
 
   # function printer
   for f in sorted(static['functions']):
