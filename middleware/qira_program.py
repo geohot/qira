@@ -122,7 +122,7 @@ class Program:
     # init static
     if qira_config.WITH_STATIC:
       self.static.process()
-
+    
     # no traces yet
     self.traces = {}
     self.runnable = False
