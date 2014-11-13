@@ -18,6 +18,9 @@ def make_function_at(static, address, recurse = True):
   if static['arch'] != "i386" and static['arch'] != "x86-64":
     print "*** static only works with x86(_64), someone should fix it"
     return
+  if static[address]['function'] != None:
+    # already function
+    return
   block_starts = set([address])
   function_starts = set()
   this_function = Function(address)

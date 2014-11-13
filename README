@@ -87,8 +87,7 @@ shift-; -- add comment at data
 
 g -- go to change, address, or name
 
-c -- analyze code at iaddr
-p -- analyze function at iaddr
+p -- analyze function at iaddr, currently no way to do this outside a function
 
 == Installation on Windows (experimental) ==
 

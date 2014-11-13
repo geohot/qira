@@ -116,6 +116,13 @@ def gotoname(name):
   if addr != None:
     emit('setiaddr', ghex(addr))
 
+@socketio.on('makefunction', namespace='/qira')
+@socket_method
+def makefunction(iaddr):
+  iaddr = fhex(iaddr)
+  print "*** run analysis at",ghex(iaddr)
+  program.static.analyzer.make_function_at(program.static, iaddr)
+
 @socketio.on('settags', namespace='/qira')
 @socket_method
 def settags(tags):

@@ -71,6 +71,7 @@ class Static:
       sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "r2"))
       import r2pipe 
       import loader 
+      import analyzer
       self.r2core = r2pipe.r2pipe(path)
       # capstone is not working ok yet, so using udis for now
       self.r2core.cmd("e asm.arch=x86.udis")
@@ -79,6 +80,8 @@ class Static:
       # run the elf loader
       sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "builtin"))
       import loader
+      import analyzer
+    self.analyzer = analyzer
     loader.load_binary(self)
 
     self.debug = debug
@@ -176,13 +179,7 @@ class Static:
     self.base_memory[(address, address+len(dat))] = dat
 
   def process(self):
-    if qira_config.STATIC_ENGINE == "r2" and self.r2core is not None:
-      sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "r2"))
-      import analyzer
-    else:
-      sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "builtin"))
-      import analyzer
-    analyzer.analyze_functions(self)
+    self.analyzer.analyze_functions(self)
     print "*** found %d functions" % len(self['functions'])
 
 

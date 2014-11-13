@@ -149,6 +149,8 @@ window.onkeydown = function(e) {
         Session.set("forknum", arr[idx+1]);
       }
     }
+  } else if (e.keyCode == 80) {  // p, make function
+    stream.emit('makefunction', Session.get("iaddr"));
   } else if (e.keyCode == 38) {
     Session.set("clnum", Session.get("clnum")-1);
   } else if (e.keyCode == 40) {
