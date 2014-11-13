@@ -64,6 +64,9 @@ def load(sig_file):
 
 # main function start identification function
 def fsi(static):
+  # only i386 is supported for now, need other training data
+  if static['arch'] != 'i386':
+    return []
   trie = load(os.path.join(qira_config.BASEDIR,"static2","builtin","bw_x86"))
   functions = set()
   (addr, lenn) = static['sections'][-3]
@@ -76,3 +79,4 @@ def fsi(static):
         functions.add(addr + i)
     # print repr(strr)
   return list(functions)
+
