@@ -17,6 +17,9 @@ def analyze_functions(static):
       pass
 
 def make_function_at(static, addr):
+  if static[addr]['function'] != None:
+    # already function
+    return
   rc = static.r2core
   this_function = Function(addr)
   static['functions'].add(this_function)
