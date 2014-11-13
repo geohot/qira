@@ -21,6 +21,7 @@ def make_function_at(static, addr):
     # already function
     return
   rc = static.r2core
+  rc.cmd("af @ %d" % (addr,))
   this_function = Function(addr)
   static['functions'].add(this_function)
       
