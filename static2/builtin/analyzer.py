@@ -1,66 +1,50 @@
 import Queue
-import disasm
+from model import Function, Block, DESTTYPE
+import byteweight
 
-class Function:
-  def __init__(self, start):
-    self.start = start
-    self.blocks = set()
-
-  def __repr__(self):
-    return hex(self.start) + " " + str(self.blocks)
-
-  def add_block(self, block):
-    self.blocks.add(block)
-
-class Block:
-  def __init__(self, start):
-    self.__start__ = start
-    self.addresses = set([start])
-
-  def __repr__(self):
-    return hex(self.start())+"-"+hex(self.end())
-
-  def start(self):
-    return self.__start__
-
-  def end(self):
-    return max(self.addresses)
-
-  def add(self, address):
-    self.addresses.add(address)
+def analyze_functions(static):
+  make_function_at(static, static['entry'])
+  main = static.get_address_by_name("main")
+  if main != None:
+    make_function_at(static, main)
+  bw_functions = byteweight.fsi(static)
+  for f in bw_functions:
+    make_function_at(static, f)
 
 # things to actually drive the static analyzer
 # runs the recursive descent parser at address
 # how to deal with block groupings?
-def make_function_at(self, address, recurse = True):
-  if self['arch'] != "i386" and self['arch'] != "x86-64":
+def make_function_at(static, address, recurse = True):
+  if static['arch'] != "i386" and static['arch'] != "x86-64":
     print "*** static only works with x86(_64), someone should fix it"
     return
   block_starts = set([address])
   function_starts = set()
   this_function = Function(address)
-  self['functions'].add(this_function)
+  static['functions'].add(this_function)
 
   def disassemble(address):
-    raw = self.memory(address, 0x10)
-    d = self[address]['instruction']
-    self[address]['function'] = this_function
+    raw = static.memory(address, 0x10)
+    d = static[address]['instruction']
+    static[address]['function'] = this_function
     for (c,flag) in d.dests():
-      if flag == disasm.DESTTYPE.call:
-        self._auto_update_name(c,"sub_%x"%(c))
+      if flag == DESTTYPE.call:
+        static._auto_update_name(c,"sub_%x"%(c))
         function_starts.add(c)
-        self[c]['xrefs'].add(address)
+        #print "%s %x is in %x xrefs" % (d,address, c)
+        static[c]['xrefs'].add(address)
         # add this to the potential function boundary starts
         continue
       if c != address + d.size():
-        self[c]['crefs'].add(address)
-        self._auto_update_name(c,"loc_%x"%(c))
+        #print "%s %x is in %x crefs" % (d,address, c)
+        static[c]['crefs'].add(address)
+        static._auto_update_name(c,"loc_%x"%(c))
         block_starts.add(c)
 
       #if we come after a jump and are an implicit xref, we are the start
       #of a new block
       elif d.is_jump():
-        self._auto_update_name(c,"loc_%x"%(c))
+        static._auto_update_name(c,"loc_%x"%(c))
         block_starts.add(c)
     return d.dests()
 
@@ -71,7 +55,7 @@ def make_function_at(self, address, recurse = True):
   while not pending.empty():
     dests = disassemble(pending.get())
     for (d,flag) in dests:
-      if flag == disasm.DESTTYPE.call:
+      if flag == DESTTYPE.call:
         #this will get handled in the function pass
         continue
       if d not in done:
@@ -85,18 +69,18 @@ def make_function_at(self, address, recurse = True):
     this_block = Block(b)
     this_function.add_block(this_block)
     address = b
-    i = self[address]['instruction']
+    i = static[address]['instruction']
     while not i.is_ending() and i.size() != 0:
       if address + i.size() in block_starts:
         break
       address += i.size()
-      i = self[address]['instruction']
+      i = static[address]['instruction']
       this_block.add(address)
-      self[address]['block'] = this_block
-    self['blocks'].add(this_block)
+      static[address]['block'] = this_block
+    static['blocks'].add(this_block)
 
    # find more functions
   for f in function_starts:
-    if self[f]['function'] == None:
-      make_function_at(self, f)
+    if static[f]['function'] == None:
+      make_function_at(static, f)
 

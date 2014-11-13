@@ -30,13 +30,10 @@
 
 import collections
 import os, sys
-
-import recursive
-import loader
-import disasm
-import byteweight
-
 import re
+import qira_config
+
+from model import Tags
 
 # debugging
 try:
@@ -44,44 +41,6 @@ try:
 except:
   pass
 
-# allow for special casing certain tags
-class Tags:
-  def __init__(self, static, address):
-    self.backing = {}
-    self.static = static
-    self.address = address
-
-
-  def __contains__(self, tag):
-    return tag in self.backing
-
-  def __getitem__(self, tag):
-    if tag in self.backing:
-      return self.backing[tag]
-    else:
-      # should reading the instruction tag trigger disasm?
-      # and should dests be a seperate tag?
-      if tag == "instruction":
-        dat = self.static.memory(self.address, 0x10)
-        # arch should probably come from the address with fallthrough
-        self.backing['instruction'] = disasm.disasm(dat, self.address, self.static['arch'])
-        self.backing['len'] = self.backing['instruction'].size()
-        return self.backing[tag]
-      if tag == "crefs" or tag == "xrefs":
-        # crefs has a default value of a new array
-        self.backing[tag] = set()
-        return self.backing[tag]
-      if tag in self.static.global_tags:
-        return self.static.global_tags[tag]
-      return None
-
-  def __setitem__(self, tag, val):
-    if tag == "instruction" and type(val) == str:
-      raise Exception("instructions shouldn't be strings")
-    if tag == "name":
-      # name can change by adding underscores
-      val = self.static.set_name(self.address, val)
-    self.backing[tag] = val
 
 # the new interface for all things static
 # will only support radare2 for now
@@ -90,6 +49,7 @@ class Static:
   def __init__(self, path, debug=False):
     self.tags = {}
     self.path = path
+    self.r2core = None
 
     # radare doesn't seem to have a concept of names
     # doesn't matter if this is in the python
@@ -105,8 +65,19 @@ class Static:
     # concept from qira_program
     self.base_memory = {}
 
-    # run the elf loader
-    loader.load_binary(self, path)
+    if qira_config.STATIC_ENGINE == "r2":
+        sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "r2"))
+        import r2pipe 
+        import loader 
+        self.r2core = r2pipe.r2pipe(path)
+        # capstone is not working ok yet, so using udis for now
+        self.r2core.cmd("e asm.arch=x86.udis")
+        self.r2core.cmd("aa;af @ main")
+    else:
+        # run the elf loader
+        sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "builtin"))
+        import loader
+    loader.load_binary(self)
 
     self.debug = debug
     print "*** elf loaded"
@@ -115,7 +86,7 @@ class Static:
   def set_name(self, address, name):
     if name not in self.rnames:
       self.rnames[name] = address
-    else:
+    elif address != self.rnames[name]:
       # add underscore if name already exists
       return self.set_name(address, name+"_")
     return name
@@ -202,17 +173,14 @@ class Static:
     self['sections'].append((address, len(dat)))
     self.base_memory[(address, address+len(dat))] = dat
 
-  # run the analysis, not required for use of static
   def process(self):
-    recursive.make_function_at(self, self['entry'])
-    """
-    main = self.get_address_by_name("main")
-    if main != None:
-      recursive.make_function_at(self, main)
-    """
-    bw_functions = byteweight.fsi(self)
-    for f in bw_functions:
-      recursive.make_function_at(self, f)
+    if qira_config.STATIC_ENGINE == "r2" and self.r2core is not None:
+        sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "r2"))
+        import analyzer
+    else:
+        sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "builtin"))
+        import analyzer
+    analyzer.analyze_functions(self)
     print "*** found %d functions" % len(self['functions'])
 
 
@@ -242,9 +210,9 @@ if __name__ == "__main__":
 
   #print static[main]['instruction'], map(hex, static[main]['crefs'])
   #print static.get_tags(['name'])
-  bw_functions = byteweight.fsi(static)
-  for f in bw_functions:
-    print hex(f)
-    hexdump(static.memory(f, 0x20))
+  #bw_functions = byteweight.fsi(static)
+  #for f in bw_functions:
+    #print hex(f)
+    #hexdump(static.memory(f, 0x20))
 
 
