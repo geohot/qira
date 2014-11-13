@@ -394,10 +394,10 @@ def run_server(largs, lprogram):
   global static
   args = largs
   program = lprogram
-  if qira_config.WITH_STATIC:
-    # web static moved to external file
-    import qira_webstatic
-    qira_webstatic.init(lprogram)
+
+  # web static moved to external file
+  import qira_webstatic
+  qira_webstatic.init(lprogram)
 
   if qira_config.WITH_CDA:
     import cacheserver

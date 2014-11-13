@@ -2,6 +2,8 @@
 # or we can break the boundary at static2
 # these calls don't have to be included for qira to work
 
+import qira_config
+
 from qira_webserver import socketio
 from qira_webserver import socket_method
 from qira_webserver import app
@@ -46,6 +48,8 @@ def gettagsa():
 @socketio.on('getstaticview', namespace='/qira')
 @socket_method
 def getstaticview(haddr, flat, flatrange):
+  if qira_config.WITH_STATIC == False:
+    return
   fxn = program.static[fhex(haddr)]['function']
   if fxn == None or flat == True:
     addr = fhex(haddr)
