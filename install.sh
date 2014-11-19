@@ -36,11 +36,11 @@ if [[ "$unamestr" == 'Linux' ]]; then
   fi
 fi
 
-echo "installing pip packages"
 # we install more than we strictly need here, because pip is so easy
+# should this use sudo?
+# can ./qiradb go in requirements?
+echo "installing pip packages"
 sudo $PIP install --upgrade -r requirements.txt 
-
-# can this go in requirements?
 sudo $PIP install --upgrade ./qiradb
 
 echo "making symlink"
