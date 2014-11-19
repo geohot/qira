@@ -109,7 +109,7 @@ cp -av cda_build.sh distrib/qira/
 # then you run qira-i386 <binary>, we need to hack in the -singlestep arg
 
 echo "copying binaries"
-cp -av install.sh qira fetchlibs.sh distrib/qira/
+cp -av requirements.txt install.sh qira fetchlibs.sh distrib/qira/
 
 echo "making archive"
 cd distrib/

@@ -1,0 +1,10 @@
+six
+html
+flask-socketio
+pillow
+pyelftools
+socketIO-client
+pydot
+ipaddr
+capstone
+hexdump
