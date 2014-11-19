@@ -23,6 +23,23 @@
 .change {
   color: blue;
 }
+#footer {
+  background-color: #f5f5f5;
+  border-top: 1px #808080 solid;
+}
+.timeless {
+  color: #A04040;
+}
+.r1 { color: #60AE3F }
+.r2 { color: #723160 }
+.r3 { color: #2a80a2 }
+.r4 { color: #9e66bd }
+.r5 { color: #bc8d6b }
+.r6 { color: #3f3eac }
+.r7 { color: #bc48b8 }
+.r8 { color: #6b7c76 }
+.r9 { color: #5fac7f }
+.r10 { color: #BCAEAA }
 </style>
 
     <title>qira</title>
@@ -59,6 +76,8 @@
         <h1>qira ./a.out</h1>
         <br/>
         <img class="img-responsive" src="img/first_splash.png"></img>
+        <h2>QIRA is a <span class="timeless">timeless</span> debugger.</h2>
+        <p>All state is tracked while a program is running, so you can debug in the past.</p>
         <h2>Install it now.</h2>
         <p>Linux required, 64-bit Ubuntu recommended.</p>
         <kbd>cd ~/ && wget -qO- qira.me/dl | unxz | tar x && cd qira && ./install.sh</kbd>
@@ -69,7 +88,9 @@ Would you like to see the memory at those times? Just click.
 Or navigate between them with j and k</pre>
         <h2>info registers; x/32wx 0xf6ffee80</h2>
         <img class="img-responsive" src="img/hexdump.png"></img>
-        <h4>Instructions are <span class="instruction">red</span>. Data is <span class="data">yellow</span>. And registers are colorful.</h4>
+        <h4>Instructions are <span class="instruction">red</span>. Data is <span class="data">yellow</span>. And registers are
+        <span class="r1">c</span><span class="r3">o</span><span class="r4">l</span><span class="r5">o</span><span class="r7">r</span><span class="r8">f</span><span class="r9">u</span><span class="r10">l</span>.
+        </h4>
         <h2>cat /proc/self/maps</h2>
         <img class="img-responsive" src="img/haddrbar.png"></img>
         <h2>watch *($esp+0x1c)</h2>
@@ -88,7 +109,16 @@ Or navigate between them with j and k</pre>
         <kbd>socat tcp-l:4000,reuseaddr,fork exec:"qira ./a.out"</kbd>
       </div>
     </div>
-
+    <div id="footer">
+    <div class="container text-center">
+    <p class="text-muted credit">
+    <br/>
+    QIRA was initially developed at Google by George Hotz. Work continues at CMU.<br/>
+    So much thanks to everyone who has and continues to contribute.<br/>
+    And thanks to QEMU and all the other open source projects we depend on.<br/>
+    </p>
+    </div>
+    </div>
 
     <script src="js/jquery.min.js"></script>
     <script src="js/bootstrap.min.js"></script>
