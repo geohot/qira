@@ -39,7 +39,7 @@ def which(prog):
 
 # things that don't cross the fork
 class Program:
-  def __init__(self, prog, args, qemu_args):
+  def __init__(self, prog, args=[], qemu_args=[]):
     # create the logs dir
     try:
       os.mkdir(qira_config.TRACE_FILE_BASE)
