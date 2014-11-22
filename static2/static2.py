@@ -35,7 +35,7 @@ import re
 sys.path.append("../middleware")
 import qira_config
 
-from model import Tags
+from model import *
 
 # debugging
 try:
