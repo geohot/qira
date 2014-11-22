@@ -52,6 +52,7 @@ class Static:
     self.tags = {}
     self.path = path
     self.r2core = None
+    self.debug = debug
 
     # radare doesn't seem to have a concept of names
     # doesn't matter if this is in the python
@@ -84,7 +85,6 @@ class Static:
     self.analyzer = analyzer
     loader.load_binary(self)
 
-    self.debug = debug
     print "*** elf loaded"
 
   # this should be replaced with a 
