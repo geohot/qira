@@ -22,8 +22,6 @@ if __name__ == '__main__':
   parser.add_argument('args', nargs='*', help="arguments to the binary")
   parser.add_argument("--gate-trace", metavar="ADDRESS", help="don't start tracing until this address is hit")
   parser.add_argument("--flush-cache", help="flush all QIRA caches", action="store_true")
-  parser.add_argument("--dwarf", help="parse program dwarf data", action="store_true")
-  parser.add_argument("--cda", help="use CDA to view source, requires ./cda_build.sh", action="store_true")
   parser.add_argument("--pin", help="use pin as the backend, requires ./pin_build.sh", action="store_true")
   parser.add_argument("--host", metavar="HOST", help="listen address for web interface and socat. 127.0.0.1 by default", default=qira_config.HOST)
   parser.add_argument("--web-port", metavar="PORT", help="listen port for web interface. 3002 by default", type=int, default=qira_config.WEB_PORT)
@@ -51,11 +49,6 @@ if __name__ == '__main__':
     raise Exception("--web-host must be a valid IPv4/IPv6 address")
 
   # handle arguments
-  if sys.argv[0][-3:] == "cda":
-    print "*** called as cda, not running QIRA"
-    args.cda = True
-    qira_config.CALLED_AS_CDA = True
-
   if sys.platform == "darwin":
     print "*** running on darwin, defaulting to --pin"
     qira_config.USE_PIN = True
@@ -77,11 +70,6 @@ if __name__ == '__main__':
       qira_config.WITH_CAPSTONE = False
   if args.tracelibraries:
     qira_config.TRACE_LIBRARIES = True
-  if args.dwarf:
-    qira_config.WITH_DWARF = True
-  if args.cda:
-    qira_config.WITH_CDA = True
-    qira_config.WITH_DWARF = True
   if args.static:
     print "*** enabling static with engine", args.static
     qira_config.WITH_STATIC = True
@@ -110,12 +98,11 @@ if __name__ == '__main__':
     program.clear()
 
   # start the binary runner
-  if not qira_config.CALLED_AS_CDA:
-    if args.server:
-      qira_socat.start_bindserver(program, qira_config.SOCAT_PORT, -1, 1, True)
-    else:
-      print "**** running "+program.program
-      program.execqira(shouldfork=not is_qira_running)
+  if args.server:
+    qira_socat.start_bindserver(program, qira_config.SOCAT_PORT, -1, 1, True)
+  else:
+    print "**** running "+program.program
+    program.execqira(shouldfork=not is_qira_running)
 
   if not is_qira_running:
     # start the http server

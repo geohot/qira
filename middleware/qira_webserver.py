@@ -5,7 +5,6 @@ import sys
 import time
 import base64
 import json
-sys.path.append(qira_config.BASEDIR+"/cda")
 
 sys.path.append(qira_config.BASEDIR+"/static2")
 import model
@@ -378,8 +377,6 @@ def do_search(b64search):
 @app.route('/', defaults={'path': 'index.html'})
 @app.route('/<path:path>')
 def serve(path):
-  if qira_config.CALLED_AS_CDA and path=="index.html":
-    return redirect('/cda')
   # best security?
   if ".." in path:
     return
@@ -411,11 +408,6 @@ def run_server(largs, lprogram):
   # web static moved to external file
   import qira_webstatic
   qira_webstatic.init(lprogram)
-
-  if qira_config.WITH_CDA:
-    import cacheserver
-    app.register_blueprint(cacheserver.app)
-    cacheserver.set_cache(program.cda)
 
   print "****** starting WEB SERVER on %s:%d" % (qira_config.HOST, qira_config.WEB_PORT)
   threading.Thread(target=mwpoller).start()

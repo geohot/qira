@@ -10,7 +10,6 @@ import threading
 import time
 import collections
 from hashlib import sha1
-sys.path.append(qira_config.BASEDIR+"/cda")
 
 from subprocess import (Popen, PIPE)
 import json
@@ -200,7 +199,6 @@ class Program:
       self.qirabinary = os.path.realpath(self.qirabinary)
       print "**** using",self.qirabinary,"for",hex(self.fb)
 
-      self.getdwarf()
       self.runnable = True
 
     # Windows binaries
@@ -230,7 +228,6 @@ class Program:
         self.pintool = pin_dir + "obj-ia32/qirapin.dylib"
       else:
         raise Exception("osx binary not supported")
-      #self.getdwarf()
       self.runnable = True
     else:
       raise Exception("unknown binary type")
@@ -367,109 +364,6 @@ class Program:
     except Exception, e:
       print "ERROR: csearch issue",e
       return []
-
-  def getdwarf(self):
-    if not qira_config.WITH_DWARF:
-      return
-
-    # DWARF IS STUPIDLY COMPLICATED
-    def parse_dwarf():
-      files = set()
-      dirs = set()
-      dwarves = {}
-      rdwarves = {}
-
-      from elftools.elf.elffile import ELFFile
-      elf = ELFFile(open(self.program))
-      if elf.has_dwarf_info():
-        fn = None
-        di = elf.get_dwarf_info()
-        for cu in di.iter_CUs():
-          try:
-            basedir = None
-            # get the base directory
-            for die in cu.iter_DIEs():
-              if die.tag == "DW_TAG_compile_unit":
-                basedir = die.attributes['DW_AT_comp_dir'].value + "/"
-            if basedir == None:
-              continue
-            dirs.add(basedir)
-            # get the line program?
-            fns = []
-            lines = []
-            lp = di.line_program_for_CU(cu)
-            print "DWARF: CU", basedir, lp['file_entry'][0]
-            for f in lp['file_entry']:
-              if f == "<built-in>":
-                continue
-              if f.dir_index > 0 and lp['include_directory'][f.dir_index-1][0] == '/':
-                fn = ""
-              else:
-                fn = basedir
-              if f.dir_index > 0:
-                fn += lp['include_directory'][f.dir_index-1]+"/"
-              # now we have the filename
-              fn += f.name
-              files.add(fn)
-              fns.append(fn)
-              lines.append(open(fn).read().split("\n"))
-              #print "  DWARF: parsing",fn
-              # add all include dirs
-
-            for entry in lp.get_entries():
-              s = entry.state
-              #print s
-              if s != None:
-                #print filename, s.line, len(lines)
-                dwarves[s.address] = (fns[s.file-1], s.line, lines[s.file-1][s.line-1])
-                rd = fns[s.file-1]+"#"+str(s.line)
-                if rd not in rdwarves:
-                  rdwarves[rd] = s.address
-          except Exception as e:
-            print "DWARF: error on",fn,"got",e
-
-          # parse in CDA
-          if qira_config.WITH_CDA:
-            import cachegen
-            cfiles = filter(lambda x: x[-2:] != ".h", fns)
-            hfiles = filter(lambda x: x[-2:] == ".h", fns)
-            ldirs = set()
-            for fn in hfiles:
-              ep = fn[len(basedir):].split("/")
-              for i in range(len(ep)):
-                ldirs.add(basedir + "/" + '/'.join(ep[0:i]))
-            tmp = []
-            for ld in ldirs:
-              tmp.append("-I")
-              tmp.append(ld)
-            #print tmp
-            cachegen.parse_files(cfiles, tmp)
-
-      return (list(files), dwarves, rdwarves, list(dirs))
-
-    (files, self.dwarves, self.rdwarves, dirs) = cachewrap("/tmp/qira_dwarfcaches", self.proghash, parse_dwarf)
-
-    self.cindexname = get_cachename("/tmp/qira_cindexcaches", self.proghash)
-    if not os.path.isfile(self.cindexname):
-      if os.fork() == 0:
-        try:
-          cindex = qira_config.CODESEARCHDIR + "/cindex"
-          os.execve(cindex, [cindex,"--"]+files, {"CSEARCHINDEX": self.cindexname})
-        except:
-          print "ERROR: cindex not found"
-        exit(0)
-          
-      # no need to wait
-
-    # cda
-    if not qira_config.WITH_CDA:
-      return
-
-    def parse_cda():
-      import cachegen
-      return cachegen.parse_files([], [])
-
-    self.cda = cachewrap("/tmp/qira_cdacaches", self.proghash, parse_cda)
 
 class Trace:
   def __init__(self, fn, forknum, program, r1, r2, r3):

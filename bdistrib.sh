@@ -84,12 +84,12 @@ cp -av pin/makefile pin/qirapin.cpp distrib/qira/pin/
 mkdir -p distrib/qira/pin/strace
 cp -av pin/strace/*.h distrib/qira/pin/strace/
 
-echo "copying cda"
-mkdir -p distrib/qira/cda distrib/qira/cda/clang
-cp -av cda/*.py distrib/qira/cda/
-cp -av cda/clang/*.py distrib/qira/cda/clang/
-cp -Rav cda/static distrib/qira/cda/
-cp -av cda_build.sh distrib/qira/
+#echo "copying cda"
+#mkdir -p distrib/qira/cda distrib/qira/cda/clang
+#cp -av cda/*.py distrib/qira/cda/
+#cp -av cda/clang/*.py distrib/qira/cda/clang/
+#cp -Rav cda/static distrib/qira/cda/
+#cp -av cda_build.sh distrib/qira/
 
 # package up the python, hopefully this includes pymongo driver
 # hmm, it doesn't, user will need to install

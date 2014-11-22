@@ -1,7 +1,5 @@
 import os,sys
 
-WITH_CDA = False
-WITH_DWARF = False
 TRACE_LIBRARIES = False
 HOST = '127.0.0.1'
 WEB_PORT = 3002
@@ -15,10 +13,6 @@ else:
 
 BASEDIR = os.path.realpath(os.path.dirname(os.path.realpath(__file__))+"/../")
 sys.path.append(BASEDIR)
-CODESEARCHDIR = BASEDIR+"/cda/codesearch-latest/"
-#CODESEARCHDIR = "/usr/bin/"
-
-CALLED_AS_CDA = False
 
 # capstone is now a requirement
 WITH_CAPSTONE = True
