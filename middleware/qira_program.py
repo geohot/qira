@@ -352,9 +352,7 @@ class Trace:
               print st,
               dat = alldat[off:off+sz]
 
-              # call to static should replace base_memory here?
-              #self.program.static.add_memory_chunk(return_code, dat)
-              self.base_memory[(return_code, return_code+len(dat))] = dat
+              self.program.static.add_memory_chunk(return_code, dat)
               print "done"
             except Exception, e:
               print e
@@ -399,13 +397,10 @@ class Trace:
       if mem[i] & 0x100:
         dat[i] = mem[i]&0xFF
       else:
-        # move this loop outside the address loop, so slow
-        for (ss, se) in self.base_memory:
-          if ss <= ri and ri < se:
-            try:
-              dat[i] = ord(self.base_memory[(ss,se)][ri-ss])
-            except:
-              pass
+        try:
+          dat[i] = ord(self.program.static.memory(ri, 1)[0])
+        except:
+          pass
     return dat
 
   def load_base_memory(self):
@@ -416,7 +411,6 @@ class Trace:
       else:
         return get_forkbase_from_log(ret)
 
-    self.base_memory = {}
     try:
       forkbase = get_forkbase_from_log(self.forknum) 
       print "*** using base %d for %d" % (forkbase, self.forknum)
@@ -452,6 +446,6 @@ class Trace:
         continue
       f.seek(offset)
       dat = f.read(se-ss)
-      self.base_memory[(ss, se)] = dat
+      self.program.static.add_memory_chunk(ss, dat)
       f.close()
 

@@ -165,15 +165,29 @@ class Static:
     dat = []
     for i in range(ln):
       ri = address+i
-      for (ss, se) in self.base_memory:
-        if ss <= ri and ri < se:
-          try:
-            dat.append(self.base_memory[(ss,se)][ri-ss])
-          except:
-            return ''.join(dat)
+
+      # hack for "RuntimeError: dictionary changed size during iteration"
+      while 1:
+        try:
+          for (ss, se) in self.base_memory:
+            if ss <= ri and ri < se:
+              try:
+                dat.append(self.base_memory[(ss,se)][ri-ss])
+              except:
+                return ''.join(dat)
+        except: 
+          continue
+        break
     return ''.join(dat)
 
   def add_memory_chunk(self, address, dat):
+    # check for dups
+    for (laddress, llength) in self.base_memory:
+      if address == laddress:
+        if self.base_memory[(laddress, llength)] != dat:
+          print "*** WARNING, changing section",hex(laddress),llength
+        return
+    
     # sections should have an idea of section permission
     self['sections'].append((address, len(dat)))
     self.base_memory[(address, address+len(dat))] = dat
