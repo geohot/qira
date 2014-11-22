@@ -1,6 +1,6 @@
 from capstone import *
 
-__all__ = ["Tags", "Function", "Block", "Instruction", "DESTTYPE"]
+__all__ = ["Tags", "Function", "Block", "Instruction", "DESTTYPE","ABITYPE"]
 
 class DESTTYPE(object):
   none = 0
@@ -116,10 +116,17 @@ class Instruction(object):
 
     return dl
 
+class ABITYPE(object):
+  UNKNOWN      = -1
+  X86_CDECL    =  0
+  X86_FASTCALL =  1
+
 class Function:
   def __init__(self, start):
     self.start = start
     self.blocks = set()
+    self.abi = ABITYPE.UNKNOWN
+    self.nargs = 0
 
   def __repr__(self):
     return hex(self.start) + " " + str(self.blocks)
@@ -127,6 +134,8 @@ class Function:
   def add_block(self, block):
     self.blocks.add(block)
 
+  def update_abi(self, abi):
+    self.abi = abi
 
 class Block:
   def __init__(self, start):

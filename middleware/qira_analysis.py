@@ -3,6 +3,9 @@ import qira_config
 import qira_program
 import time
 import math
+import sys
+sys.path.append(qira_config.BASEDIR+"/static2")
+import static2
 
 def ghex(a):
   if a == None:
@@ -273,12 +276,45 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
       continue
     
     # this will trigger the disassembly
-    ins = str(program.static[r[0]['address']]['instruction'])
+    instr = program.static[r[0]['address']]['instruction']
+    if instr.i.mnemonic == 'call':
+      analyse_call(instr,trace,program)
+    ins = str(instr)
     ret.append((r[0]['address'], r[0]['data'], r[0]['clnum'], ins))
     if (time.time() - start) > 0.01:
       time.sleep(0.01)
       start = time.time()
+
   return ret
+
+def analyse_call(instr,trace,program):
+  #we know the target is a function, it was being called
+  call_dest = filter(lambda x:x[1]==static2.DESTTYPE.call, instr.dests())[0][0]
+  program.static.analyzer.make_function_at(program.static,call_dest)
+  #TODO: try to infer function arguments
+
+def display_call_args(instr,program,trace,clnum):
+  call_dest = filter(lambda x:x[1]==static2.DESTTYPE.call, instr.dests())[0][0]
+  func = program.static[call_dest]['function']
+  if func.abi == static2.ABITYPE.UNKNOWN:
+    return ""
+  if func.nargs == 0:
+    return ""
+  if func.abi == static2.ABITYPE.X86_CDECL:
+    regs = trace.db.fetch_registers(clnum)
+    esp = regs[qira_program.X86REGS[0].index("ESP")]
+    import IPython
+    IPython.embed()
+    return " ".join(map(ghex,trace.fetch_memory(clnum, esp, func.nargs)))
+  elif func.abi == static2.ABITYPE.X86_FASTCALL:
+    regs = trace.db.fetch_registers(clnum)
+    esp = regs[qira_program.X86REGS[0].index("ESP")]
+    ecx = regs[qira_program.X86REGS[0].index("ECX")]
+    edx = regs[qira_program.X86REGS[0].index("EDX")]
+    return " ".join(map(ghex, [ecx,edx]+trace.fetch_memory(clnum, esp, min(func.nargs-2,0)))[:func.nargs])
+  else:
+    return ""
+
 
 def get_hacked_depth_map(flow, program):
   start = time.time()

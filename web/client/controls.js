@@ -149,6 +149,10 @@ window.onkeydown = function(e) {
         Session.set("forknum", arr[idx+1]);
       }
     }
+  } else if (e.keyCode == 65) {
+    var nargs = prompt("number of args for func at " + Session.get("iaddr"));
+    var abi = prompt("abi for func ");
+    stream.emit('setfunctionargs',Session.get("iaddr"),nargs,abi);
   } else if (e.keyCode == 80) {  // p, make function
     stream.emit('makefunction', Session.get("iaddr"));
   } else if (e.keyCode == 38) {

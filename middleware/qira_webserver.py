@@ -5,7 +5,6 @@ import sys
 import time
 import base64
 import json
-sys.path.append(qira_config.BASEDIR+"/cda")
 
 sys.path.append(qira_config.BASEDIR+"/static2")
 import model
@@ -108,25 +107,6 @@ def mwpoller():
     mwpoll()
 
 # ***** after this line is the new server stuff *****
-
-@socketio.on('navigateline', namespace='/cda')
-def navigateline(fn, ln):
-  #print 'navigateline',fn,ln
-  try:
-    iaddr = program.rdwarves[fn+"#"+str(ln)]
-  except:
-    return
-  #print 'navigateline',fn,ln,iaddr
-  socketio.emit('setiaddr', ghex(iaddr), namespace='/qira')
-
-@socketio.on('navigateiaddr', namespace='/qira')
-@socket_method
-def navigateiaddr(iaddr):
-  iaddr = fhex(iaddr)
-  if iaddr in program.dwarves:
-    (filename, line, linedat) = program.dwarves[iaddr]
-    #print 'navigateiaddr', hex(iaddr), filename, line
-    socketio.emit('setline', filename, line, namespace='/cda')
 
 @socketio.on('forkat', namespace='/qira')
 @socket_method
@@ -290,8 +270,7 @@ def getinstructions(forknum, clnum, clstart, clend):
       arch = program.static[rret['address']]['arch']
 
       # we have the address and raw bytes, disassemble
-      raw = trace.fetch_memory(i, rret['address'], rret['data'])
-      raw = ''.join(map(chr, raw.values()))
+      raw = trace.fetch_raw_memory(i, rret['address'], rret['data'])
       rret['instruction'] = str(model.Instruction(raw, rret['address'], arch))
 
     if 'name' in program.static[rret['address']]:
@@ -299,8 +278,6 @@ def getinstructions(forknum, clnum, clstart, clend):
       rret['name'] = program.static[rret['address']]['name']
     if 'comment' in program.static[rret['address']]:
       rret['comment'] = program.static[rret['address']]['comment']
-    elif rret['address'] in program.dwarves:
-      rret['comment'] = program.dwarves[rret['address']][2]
 
     if instr.i.mnemonic == "call":
       args = qira_analysis.display_call_args(instr,program,trace,clnum)
@@ -392,8 +369,6 @@ def do_search(b64search):
 @app.route('/', defaults={'path': 'index.html'})
 @app.route('/<path:path>')
 def serve(path):
-  if qira_config.CALLED_AS_CDA and path=="index.html":
-    return redirect('/cda')
   # best security?
   if ".." in path:
     return
@@ -425,11 +400,6 @@ def run_server(largs, lprogram):
   # web static moved to external file
   import qira_webstatic
   qira_webstatic.init(lprogram)
-
-  if qira_config.WITH_CDA:
-    import cacheserver
-    app.register_blueprint(cacheserver.app)
-    cacheserver.set_cache(program.cda)
 
   print "****** starting WEB SERVER on %s:%d" % (qira_config.HOST, qira_config.WEB_PORT)
   threading.Thread(target=mwpoller).start()

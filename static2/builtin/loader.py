@@ -38,7 +38,8 @@ def load_binary(static):
       symtable = elf.get_section(section['sh_link'])
       for rel in section.iter_relocations():
         symbol = symtable.get_symbol(rel['r_info_sym'])
-        #print rel, symbol.name
+        if static.debug:
+          print "Relocation",rel, symbol.name
         if rel['r_offset'] != 0 and symbol.name != "":
           static[rel['r_offset']]['name'] = "__"+symbol.name
           ncount += 1
@@ -46,7 +47,8 @@ def load_binary(static):
     if isinstance(section, SymbolTableSection):
       for nsym, symbol in enumerate(section.iter_symbols()):
         if symbol['st_value'] != 0 and symbol.name != "" and symbol['st_info']['type'] == "STT_FUNC":
-          #print symbol['st_value'], symbol.name
+          if static.debug:
+            print "Symbol",symbol['st_value'], symbol.name
           static[symbol['st_value']]['name'] = symbol.name
           ncount += 1
   print "** found %d names" % ncount

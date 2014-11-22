@@ -52,6 +52,7 @@ class Static:
     self.tags = {}
     self.path = path
     self.r2core = None
+    self.debug = debug
 
     # radare doesn't seem to have a concept of names
     # doesn't matter if this is in the python
@@ -84,7 +85,6 @@ class Static:
     self.analyzer = analyzer
     loader.load_binary(self)
 
-    self.debug = debug
     print "*** elf loaded"
 
   # this should be replaced with a 
@@ -165,15 +165,26 @@ class Static:
     dat = []
     for i in range(ln):
       ri = address+i
-      for (ss, se) in self.base_memory:
+
+      # hack for "RuntimeError: dictionary changed size during iteration"
+      for (ss, se) in self.base_memory.keys():
         if ss <= ri and ri < se:
           try:
             dat.append(self.base_memory[(ss,se)][ri-ss])
+            break
           except:
             return ''.join(dat)
     return ''.join(dat)
 
   def add_memory_chunk(self, address, dat):
+    #print "add section",hex(address),len(dat)
+    # check for dups
+    for (laddress, llength) in self.base_memory:
+      if address == laddress:
+        if self.base_memory[(laddress, llength)] != dat:
+          print "*** WARNING, changing section",hex(laddress),llength
+        return
+    
     # sections should have an idea of section permission
     self['sections'].append((address, len(dat)))
     self.base_memory[(address, address+len(dat))] = dat
