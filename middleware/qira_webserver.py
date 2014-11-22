@@ -108,25 +108,6 @@ def mwpoller():
 
 # ***** after this line is the new server stuff *****
 
-@socketio.on('navigateline', namespace='/cda')
-def navigateline(fn, ln):
-  #print 'navigateline',fn,ln
-  try:
-    iaddr = program.rdwarves[fn+"#"+str(ln)]
-  except:
-    return
-  #print 'navigateline',fn,ln,iaddr
-  socketio.emit('setiaddr', ghex(iaddr), namespace='/qira')
-
-@socketio.on('navigateiaddr', namespace='/qira')
-@socket_method
-def navigateiaddr(iaddr):
-  iaddr = fhex(iaddr)
-  if iaddr in program.dwarves:
-    (filename, line, linedat) = program.dwarves[iaddr]
-    #print 'navigateiaddr', hex(iaddr), filename, line
-    socketio.emit('setline', filename, line, namespace='/cda')
-
 @socketio.on('forkat', namespace='/qira')
 @socket_method
 def forkat(forknum, clnum, pending):
@@ -288,8 +269,7 @@ def getinstructions(forknum, clnum, clstart, clend):
       arch = program.static[rret['address']]['arch']
 
       # we have the address and raw bytes, disassemble
-      raw = trace.fetch_memory(i, rret['address'], rret['data'])
-      raw = ''.join(map(chr, raw.values()))
+      raw = trace.fetch_raw_memory(i, rret['address'], rret['data'])
       rret['instruction'] = str(model.Instruction(raw, rret['address'], arch))
 
     if 'name' in program.static[rret['address']]:
@@ -297,8 +277,6 @@ def getinstructions(forknum, clnum, clstart, clend):
       rret['name'] = program.static[rret['address']]['name']
     if 'comment' in program.static[rret['address']]:
       rret['comment'] = program.static[rret['address']]['comment']
-    elif rret['address'] in program.dwarves:
-      rret['comment'] = program.dwarves[rret['address']][2]
     if i in slce:
       rret['slice'] = True
     else:

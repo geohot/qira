@@ -79,18 +79,14 @@ class Program:
     if qira_config.TRACE_LIBRARIES:
       self.defaultargs.append("-tracelibraries")
 
+    self.identify_program()
+
+  def identify_program(self):
     qemu_dir = os.path.dirname(os.path.realpath(__file__))+"/../qemu/"
     pin_dir = os.path.dirname(os.path.realpath(__file__))+"/../pin/"
     self.pinbinary = pin_dir+"pin-latest/pin"
 
-    # this is the key value store for static information about the address
-    # it replaces self.instructions with self.kv[addr]['instruction']
-    # tags is a term from eda-3
-    # moved to qira_static2
-    # it should also replace dwarves
-
     # pmaps is global, but updated by the traces
-    (self.dwarves, self.rdwarves) = ({}, {})
     progdat = open(self.program, "rb").read(0x800)
 
     # Linux binaries
@@ -276,15 +272,6 @@ class Program:
     #print "***",' '.join(eargs)
     os.execvp(eargs[0], eargs)
   
-  def research(self, re):
-    try:
-      csearch = qira_config.CODESEARCHDIR + "/csearch"
-      out = subprocess.Popen([csearch, "-n", "--", re], stdout=subprocess.PIPE, env={"CSEARCHINDEX": self.cindexname})
-      dat = out.communicate()
-      return dat[0].split("\n")[:-1]
-    except Exception, e:
-      print "ERROR: csearch issue",e
-      return []
 
 class Trace:
   def __init__(self, fn, forknum, program, r1, r2, r3):
@@ -306,6 +293,25 @@ class Trace:
     self.mapped = []
 
     threading.Thread(target=self.analysis_thread).start()
+
+  def fetch_raw_memory(self, clnum, address, ln):
+    return ''.join(map(chr, self.fetch_memory(clnum, address, ln).values()))
+    
+  # proxy the db call and fill in base memory
+  def fetch_memory(self, clnum, address, ln):
+    mem = self.db.fetch_memory(clnum, address, ln)
+    dat = {}
+    for i in range(ln):
+      # we don't rebase the memory anymore, important for numberless
+      ri = address+i
+      if mem[i] & 0x100:
+        dat[i] = mem[i]&0xFF
+      else:
+        try:
+          dat[i] = ord(self.program.static.memory(ri, 1)[0])
+        except:
+          pass
+    return dat
 
   def read_strace_file(self):
     try:
@@ -386,22 +392,6 @@ class Trace:
         self.maxclnum = maxclnum
         self.needs_update = True
         #print "analysis is ready"
-
-  # proxy the db call and fill in base memory
-  def fetch_memory(self, clnum, address, ln):
-    mem = self.db.fetch_memory(clnum, address, ln)
-    dat = {}
-    for i in range(ln):
-      # we don't rebase the memory anymore, important for numberless
-      ri = address+i
-      if mem[i] & 0x100:
-        dat[i] = mem[i]&0xFF
-      else:
-        try:
-          dat[i] = ord(self.program.static.memory(ri, 1)[0])
-        except:
-          pass
-    return dat
 
   def load_base_memory(self):
     def get_forkbase_from_log(n):
