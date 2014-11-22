@@ -167,20 +167,17 @@ class Static:
       ri = address+i
 
       # hack for "RuntimeError: dictionary changed size during iteration"
-      while 1:
-        try:
-          for (ss, se) in self.base_memory:
-            if ss <= ri and ri < se:
-              try:
-                dat.append(self.base_memory[(ss,se)][ri-ss])
-              except:
-                return ''.join(dat)
-        except: 
-          continue
-        break
+      for (ss, se) in self.base_memory.keys():
+        if ss <= ri and ri < se:
+          try:
+            dat.append(self.base_memory[(ss,se)][ri-ss])
+            break
+          except:
+            return ''.join(dat)
     return ''.join(dat)
 
   def add_memory_chunk(self, address, dat):
+    #print "add section",hex(address),len(dat)
     # check for dups
     for (laddress, llength) in self.base_memory:
       if address == laddress:
