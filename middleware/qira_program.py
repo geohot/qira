@@ -17,74 +17,11 @@ import json
 import struct
 import qiradb
 
+import arch
+
 # new home of static2
 sys.path.append(qira_config.BASEDIR+"/static2")
 import static2
-
-# (regname, regsize, is_big_endian, arch_name, branches)
-PPCREGS = ([], 4, True, "ppc", ["bl "])
-for i in range(32):
-  PPCREGS[0].append("r"+str(i))
-for i in range(32):
-  PPCREGS[0].append(None)
-PPCREGS[0].append("lr")
-PPCREGS[0].append("ctr")
-
-for i in range(8):
-  PPCREGS[0].append("cr"+str(i))
-
-AARCH64REGS = ([], 8, False, "aarch64", ["bl ", "blx "])
-for i in range(8):
-  AARCH64REGS[0].append(None)
-for i in range(32):
-  AARCH64REGS[0].append("x"+str(i))
-#AARCH64REGS[0][8+29] = "fp"
-AARCH64REGS[0][8+31] = "sp"
-AARCH64REGS[0].append("pc")
-
-MIPSREGS = (['$zero', '$at', '$v0', '$v1', '$a0', '$a1', '$a2', '$a3'], 4, True, "mips", ["jal\t","jr\t","jal","jr"])
-for i in range(8):
-  MIPSREGS[0].append('$t'+str(i))
-for i in range(8):
-  MIPSREGS[0].append('$s'+str(i))
-MIPSREGS[0].append('$t8')
-MIPSREGS[0].append('$t9')
-MIPSREGS[0].append('$k0')
-MIPSREGS[0].append('$k1')
-MIPSREGS[0].append('$gp')
-MIPSREGS[0].append('$sp')
-MIPSREGS[0].append('$fp')
-MIPSREGS[0].append('$ra')
-
-ARMREGS = (['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','SP','LR','PC'], 4, False, "arm", ["bl\t", "blx\t"])
-X86REGS = (['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, False, "i386", ["call ", "call\t"])
-X64REGS = (['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15", 'RIP'], 8, False, "x86-64", ["call ", "callq ", "call\t"])
-
-def get_cachename(cachedir, cachename):
-  try:
-    os.mkdir(cachedir)
-  except:
-    pass
-  return cachedir + "/" + cachename
-
-def cachewrap(cachedir, cachename, cachegen):
-  cachename = get_cachename(cachedir, cachename)
-  #import json
-  import pickle as json
-  if os.path.isfile(cachename):
-    dat = json.load(open(cachename))
-    print "read cache",cachename
-  else:
-    print "cache",cachename,"not found, generating"
-    dat = cachegen()
-    if dat == None:
-      return None
-    f = open(cachename, "wb")
-    json.dump(dat, f)
-    f.close()
-    print "wrote cache",cachename
-  return dat
-
 def which(prog):
   try:
     cmd = ["which", prog]
@@ -172,26 +109,26 @@ class Program:
           use_lib('armel')
         elif '/lib/ld-linux-armhf.so.3' in progdat:
           use_lib('armhf')
-        self.tregs = ARMREGS
+        self.tregs = arch.ARMREGS
         self.qirabinary = qemu_dir + "qira-arm"
       elif self.fb == 0xb7:
         use_lib('arm64')
-        self.tregs = AARCH64REGS
+        self.tregs = arch.AARCH64REGS
         self.qirabinary = qemu_dir + "qira-aarch64"
       elif self.fb == 0x3e:
-        self.tregs = X64REGS
+        self.tregs = arch.X64REGS
         self.qirabinary = qemu_dir + "qira-x86_64"
         self.pintool = pin_dir + "obj-intel64/qirapin.so"
       elif self.fb == 0x03:
-        self.tregs = X86REGS
+        self.tregs = arch.X86REGS
         self.qirabinary = qemu_dir + "qira-i386"
         self.pintool = pin_dir + "obj-ia32/qirapin.so"
       elif self.fb == 0x1400:   # big endian...
         use_lib('powerpc')
-        self.tregs = PPCREGS
+        self.tregs = arch.PPCREGS
         self.qirabinary = qemu_dir + "qira-ppc"
       elif self.fb == 0x800:
-        self.tregs = MIPSREGS
+        self.tregs = arch.MIPSREGS
         self.qirabinary = qemu_dir + 'qira-mips'
       else:
         raise Exception("binary type "+hex(self.fb)+" not supported")
@@ -208,11 +145,11 @@ class Program:
       wh = struct.unpack("H", progdat[pe+4:pe+6])[0]
       if wh == 0x14c:
         print "*** 32-bit windows"
-        self.tregs = X86REGS
+        self.tregs = arch.X86REGS
         self.fb = 0x03
       elif wh == 0x8664:
         print "*** 64-bit windows"
-        self.tregs = X64REGS
+        self.tregs = arch.X64REGS
         self.fb = 0x3e
       else:
         raise Exception("windows binary with machine "+hex(wh)+" not supported")
@@ -221,32 +158,16 @@ class Program:
     elif progdat[0:4] in ("\xCF\xFA\xED\xFE", "\xCE\xFA\xED\xFE"):
       print "**** osx binary detected"
       if progdat[0:4] == "\xCF\xFA\xED\xFE":
-        self.tregs = X64REGS
+        self.tregs = arch.X64REGS
         self.pintool = pin_dir + "obj-intel64/qirapin.dylib"
       elif progdat[0:4] == "\xCE\xFA\xED\xFE":
-        self.tregs = X86REGS
+        self.tregs = arch.X86REGS
         self.pintool = pin_dir + "obj-ia32/qirapin.dylib"
       else:
         raise Exception("osx binary not supported")
       self.runnable = True
     else:
       raise Exception("unknown binary type")
-
-  def genbap(self, raw, addr):
-    toil = qira_config.BASEDIR+"/bap/bap-lifter/toil.native"
-    arch = self.tregs[3]
-    if arch == "i386":
-      arch = "x86"
-    toilProc = Popen([toil, '--arch', arch, '--addr', str(addr),'--format' , 'json', '--dump-asm', '--dump-fallthrough'], stdout=PIPE, stderr=PIPE, stdin=PIPE)
-    toilProc.stdin.write(raw)
-    toilProc.stdin.close()
-    s = toilProc.stdout.read().decode()
-    try:
-      out,pos = json.JSONDecoder().raw_decode(s)
-      return out
-    except:
-      return None
-
 
   def clear(self):
     # probably always good to do except in development of middleware
