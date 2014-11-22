@@ -203,7 +203,7 @@ class Program:
       self.getdwarf()
       self.runnable = True
 
-    # Windows binaires
+    # Windows binaries
     elif progdat[0:2] == "MZ":
       print "**** windows binary detected, only running the server"
       pe = struct.unpack("I", progdat[0x3c:0x40])[0]
@@ -219,7 +219,7 @@ class Program:
       else:
         raise Exception("windows binary with machine "+hex(wh)+" not supported")
 
-    # OS X binaires
+    # OS X binaries
     elif progdat[0:4] in ("\xCF\xFA\xED\xFE", "\xCE\xFA\xED\xFE"):
       print "**** osx binary detected"
       if progdat[0:4] == "\xCF\xFA\xED\xFE":
@@ -230,12 +230,10 @@ class Program:
         self.pintool = pin_dir + "obj-ia32/qirapin.dylib"
       else:
         raise Exception("osx binary not supported")
-
       #self.getdwarf()
       self.runnable = True
-
     else:
-        raise Exception("unknown binary type")
+      raise Exception("unknown binary type")
 
   def genbap(self, raw, addr):
     toil = qira_config.BASEDIR+"/bap/bap-lifter/toil.native"
@@ -309,10 +307,9 @@ class Program:
         inst = d[d.find(":")+3:]
       cnt += 1
 
-      #self.static[addr]['instruction'] = inst
-
       # trigger disasm
       d = self.static[addr]['instruction']
+
       #print addr, inst
     #sys.stdout.write("%d..." % cnt); sys.stdout.flush()
 
@@ -539,6 +536,9 @@ class Trace:
               st = "*** mapping %s %s sz:0x%x off:0x%x @ 0x%X" % (sha1(alldat).hexdigest(), files[fil], sz, off, return_code)
               print st,
               dat = alldat[off:off+sz]
+
+              # call to static should replace base_memory here?
+              #self.program.static.add_memory_chunk(return_code, dat)
               self.base_memory[(return_code, return_code+len(dat))] = dat
               print "done"
             except Exception, e:

@@ -183,3 +183,4 @@ class Tags:
       # name can change by adding underscores
       val = self.static.set_name(self.address, val)
     self.backing[tag] = val
+

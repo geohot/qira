@@ -7,6 +7,9 @@ import base64
 import json
 sys.path.append(qira_config.BASEDIR+"/cda")
 
+sys.path.append(qira_config.BASEDIR+"/static2")
+import model
+
 def socket_method(func):
   def func_wrapper(*args, **kwargs):
     # before things are initted in the js, we get this
@@ -279,6 +282,16 @@ def getinstructions(forknum, clnum, clstart, clend):
       rret = rret[0]
 
     rret['instruction'] = str(program.static[rret['address']]['instruction'])
+
+    # check if static fails at this
+    if rret['instruction'] == "":
+      # TODO: wrong place to get the arch
+      arch = program.static[rret['address']]['arch']
+
+      # we have the address and raw bytes, disassemble
+      raw = trace.fetch_memory(i, rret['address'], rret['data'])
+      raw = ''.join(map(chr, raw.values()))
+      rret['instruction'] = str(model.Instruction(raw, rret['address'], arch))
 
     if 'name' in program.static[rret['address']]:
       #print "setting name"

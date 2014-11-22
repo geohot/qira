@@ -6,5 +6,5 @@ pyelftools
 socketIO-client
 pydot
 ipaddr
-capstone
+capstone==2.1
 hexdump
