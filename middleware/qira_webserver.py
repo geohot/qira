@@ -355,6 +355,9 @@ def do_search(b64search):
 @app.route('/', defaults={'path': 'index.html'})
 @app.route('/<path:path>')
 def serve(path):
+  if 'Firefox' in request.headers.get('User-Agent'):
+    return "<pre>WTF you use Firefox?!?\n\nGo download a real web browser, like Chrome, and try this again"
+
   # best security?
   if ".." in path:
     return
