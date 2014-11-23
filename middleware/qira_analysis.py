@@ -343,9 +343,9 @@ def display_call_args(instr,trace,clnum):
   endclnum = get_last_instr(trace.dmap,clnum)
 
   if func.abi == static2.ABITYPE.UNKNOWN:
-    return ""
+    ret = ""
   if func.nargs == 0:
-    return ""
+    ret = ""
   if func.abi == static2.ABITYPE.X86_CDECL:
     regs = trace.db.fetch_registers(clnum)
     esp = regs[arch.X86REGS[0].index("ESP")]
@@ -353,10 +353,7 @@ def display_call_args(instr,trace,clnum):
     for arg in xrange(func.nargs):
       ret += [ghex(struct.unpack("<I",trace.fetch_raw_memory(clnum, esp+4, arch.X86REGS[1]))[0])]
       esp += arch.X86REGS[1]
-
-    endregs = trace.db.fetch_registers(endclnum)
-    ret += ["-> " + ghex(endregs[arch.X86REGS[0].index("EAX")])]
-    return " ".join(ret)
+    ret = " ".join(ret)
   elif func.abi == static2.ABITYPE.X86_FASTCALL:
     regs = trace.db.fetch_registers(clnum)
     esp = regs[arch.X86REGS[0].index("ESP")]
@@ -368,9 +365,14 @@ def display_call_args(instr,trace,clnum):
     for arg in xrange(func.nargs-2):
       ret += [ghex(struct.unpack("<I",trace.fetch_raw_memory(clnum, esp+4, arch.X86REGS[1]))[0])]
       esp += arch.X86REGS[1]
-    return " ".join(ret)
-  else:
-    return ""
+    ret = " ".join(ret)
+
+
+  if program.static['arch'] == 'i386':
+    if endclnum:
+      endregs = trace.db.fetch_registers(endclnum)
+      ret += "-> " + ghex(endregs[arch.X86REGS[0].index("EAX")])
+  return ret
 
 
 def get_hacked_depth_map(flow, program):
