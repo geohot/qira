@@ -88,6 +88,9 @@ shift-; -- add comment at data
 g -- go to change, address, or name
 
 p -- analyze function at iaddr, currently no way to do this outside a function
+c -- make code at iaddr, one instruction
+a -- make ascii at iaddr
+d -- make data at iaddr
 
 == Installation on Windows (experimental) ==
 

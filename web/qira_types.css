@@ -141,6 +141,16 @@
   display: inline-block;
 }
 
+.bytesdesc {
+  color: green;
+  display: inline-block;
+}
+
+.datadesc {
+  color: blue;
+  display: inline-block;
+}
+
 .data {
   text-align: right;
   min-width: 18px;

@@ -149,8 +149,18 @@ window.onkeydown = function(e) {
         Session.set("forknum", arr[idx+1]);
       }
     }
-  } else if (e.keyCode == 80) {  // p, make function
-    stream.emit('makefunction', Session.get("iaddr"));
+  } else if (e.keyCode == 'P'.charCodeAt(0)) {  // p, make function
+    stream.emit('make', 'function', Session.get("iaddr"));
+    Session.set("flat", Session.get("flat"));
+  } else if (e.keyCode == 'C'.charCodeAt(0)) {  // c, make code
+    stream.emit('make', 'code', Session.get("iaddr"));
+    Session.set("flat", Session.get("flat"));
+  } else if (e.keyCode == 'A'.charCodeAt(0)) {  // a, make string
+    stream.emit('make', 'string', Session.get("iaddr"));
+    Session.set("flat", Session.get("flat"));
+  } else if (e.keyCode == 'D'.charCodeAt(0)) {  // d, make data
+    stream.emit('make', 'data', Session.get("iaddr"));
+    Session.set("flat", Session.get("flat"));
   } else if (e.keyCode == 38) {
     Session.set("clnum", Session.get("clnum")-1);
   } else if (e.keyCode == 40) {
