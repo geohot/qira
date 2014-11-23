@@ -177,5 +177,9 @@ if qira_config.WITH_STATIC:
       except:
         pass
       program.static[iaddr]['len'] = eaddr-iaddr
+    elif typ == 'undefined':
+      del program.static[iaddr]['len']
+      del program.static[iaddr]['type']
+      del program.static[iaddr]['instruction']
 
 

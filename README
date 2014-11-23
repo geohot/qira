@@ -61,8 +61,8 @@ Right click on instruction address to follow in instruction
 j -- next invocation of instruction
 k -- prev invocation of instruction
 
-u -- next toucher of data
-i -- prev toucher of data
+shift-j -- next toucher of data
+shift-k -- prev toucher of data
 
 m -- go to return from current function
 , -- go to start of current function

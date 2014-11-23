@@ -151,6 +151,11 @@
   display: inline-block;
 }
 
+.stringdesc {
+  color: #e06060;
+  display: inline-block;
+}
+
 .data {
   text-align: right;
   min-width: 18px;

@@ -21,15 +21,26 @@ function instruction_html_from_tags(ins) {
   if (ins.instruction !== undefined) {
     idump += '<div class="instructiondesc">'+highlight_instruction(ins.instruction)+'</div> ';
   } else {
-    if (ins.type == "data") {
-      idump += '<div class="datadesc">';
+    if (ins.type == "string") {
+      idump += '<div class="stringdesc">';
+      idump += "'";
+      // TODO: escaping?
+      ins.bytes.forEach(function(x) {
+        idump += String.fromCharCode(x);
+      });
+      idump += "'";
+      idump += '</div>';
     } else {
-      idump += '<div class="bytesdesc">';
+      if (ins.type == "data") {
+        idump += '<div class="datadesc">';
+      } else {
+        idump += '<div class="bytesdesc">';
+      }
+      ins.bytes.forEach(function(x) {
+        idump += hex2(x)+" ";
+      });
+      idump += '</div>';
     }
-    ins.bytes.forEach(function(x) {
-      idump += hex2(x)+" ";
-    });
-    idump += '</div>';
   }
 
   idump += '<span class="comment comment_'+ins.address+'">'+(ins.comment != undefined ? "; "+ins.comment : "")+'</span>';

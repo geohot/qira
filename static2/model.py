@@ -176,6 +176,12 @@ class Tags:
         return self.static.global_tags[tag]
       return None
 
+  def __delitem__(self, tag):
+    try:
+      del self.backing[tag]
+    except:
+      pass
+
   def __setitem__(self, tag, val):
     if tag == "instruction" and type(val) == str:
       raise Exception("instructions shouldn't be strings")
