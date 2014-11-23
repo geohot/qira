@@ -45,6 +45,9 @@ def gettagsa():
     rret = {}
     for tags in ['name', 'comment']:
       rret[tags] = program.static[i][tags]
+    if 'function' in program.static[i] and (program.static[i]['function'].start == i):
+      rret['function'] = True
+      rret['nargs'] = program.static[i]['function'].nargs
     rret['address'] = ghex(i)
     ret.append(rret)
   return json.dumps(ret)

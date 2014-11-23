@@ -331,13 +331,29 @@ def getmemory(forknum, clnum, address, ln):
   ret = {'address': ghex(address), 'len': ln, 'dat': dat, 'is_big_endian': program.tregs[2], 'ptrsize': program.tregs[1]}
   emit('memory', ret)
 
+@socketio.on('setfunctionargswrap', namespace='/qira')
+#@socket_method
+def setfunctionargswrap(func, args):
+  if len(args.split()) == 1:
+    setfunctionargs(func,int(args),None)
+  if len(args.split()) == 2:
+    abi = None
+    try:
+      abi = int(args.split()[0])
+    except:
+      for m in dir(model.ABITYPE):
+        if m == args.split()[0].upper():
+          abi = model.ABITYPE.__dict__[m]
+    setfunctionargs(func,int(args.split()[1]),abi)
+
 @socketio.on('setfunctionargs', namespace='/qira')
-@socket_method
+#@socket_method
 def setfunctionargs(func, nargs, abi):
   function = program.static[fhex(func)]['function']
-  print function,nargs,abi
+
   function.nargs = int(nargs)
-  function.abi = int(abi)
+  if abi:
+    function.abi = int(abi)
 
 @socketio.on('getregisters', namespace='/qira')
 @socket_method
