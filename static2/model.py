@@ -161,7 +161,6 @@ class Tags:
     self.static = static
     self.address = address
 
-
   def __contains__(self, tag):
     return tag in self.backing
 
@@ -176,6 +175,7 @@ class Tags:
         # arch should probably come from the address with fallthrough
         self.backing['instruction'] = Instruction(dat, self.address, self.static['arch'])
         self.backing['len'] = self.backing['instruction'].size()
+        self.backing['type'] = 'instruction'
         return self.backing[tag]
       if tag == "crefs" or tag == "xrefs":
         # crefs has a default value of a new array
@@ -184,6 +184,12 @@ class Tags:
       if tag in self.static.global_tags:
         return self.static.global_tags[tag]
       return None
+
+  def __delitem__(self, tag):
+    try:
+      del self.backing[tag]
+    except:
+      pass
 
   def __setitem__(self, tag, val):
     if tag == "instruction" and type(val) == str:

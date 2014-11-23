@@ -9,3 +9,4 @@ ipaddr
 capstone==2.1
 hexdump
 nose
+./qiradb

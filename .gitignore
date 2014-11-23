@@ -30,4 +30,5 @@ bap/
 static/python32
 testvm/.vagrant
 radare
+venv
 

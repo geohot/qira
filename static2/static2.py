@@ -20,6 +20,7 @@
 # instruction -- string of this instruction
 # arch -- arch of this instruction
 # crefs -- code xrefs
+# type -- type of instruction
 
 
 # objects are allowed in the key-value store,

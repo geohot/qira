@@ -47,8 +47,7 @@ $(document).ready(function() {
     if (e.target.value == "") {
       Session.set("iaddr", undefined);
     } else {
-      Session.set("iaddr", e.target.value);
-      Session.set("dirtyiaddr", true);
+      update_iaddr(e.target.value, true);
     }
   });
   $('#control_daddr').on('change', function(e) {
@@ -132,6 +131,7 @@ Session.setDefault("flat", false);
 window.onkeydown = function(e) {
   //p(e.keyCode);
   //p(e);
+  if (e.ctrlKey == true) return;
   if (e.keyCode == 32) {
     // space bar
     Session.set("flat", !Session.get("flat"));
@@ -149,12 +149,33 @@ window.onkeydown = function(e) {
         Session.set("forknum", arr[idx+1]);
       }
     }
+<<<<<<< HEAD
   } else if (e.keyCode == 89) {
     var nargs = prompt("number of args for func at " + Session.get("iaddr"));
     var abi = prompt("abi for func ");
     stream.emit('setfunctionargs',Session.get("iaddr"),nargs,abi);
   } else if (e.keyCode == 80) {  // p, make function
     stream.emit('makefunction', Session.get("iaddr"));
+=======
+  } else if (e.keyCode == 67 && e.shiftKey == true) {
+    // shift-C = clear all forks
+    delete_all_forks();
+  } else if (e.keyCode == 'P'.charCodeAt(0)) {  // p, make function
+    stream.emit('make', 'function', Session.get("iaddr"));
+    Session.set("flat", Session.get("flat"));
+  } else if (e.keyCode == 'C'.charCodeAt(0)) {  // c, make code
+    stream.emit('make', 'code', Session.get("iaddr"));
+    Session.set("flat", Session.get("flat"));
+  } else if (e.keyCode == 'A'.charCodeAt(0)) {  // a, make string
+    stream.emit('make', 'string', Session.get("iaddr"));
+    Session.set("flat", Session.get("flat"));
+  } else if (e.keyCode == 'D'.charCodeAt(0)) {  // d, make data
+    stream.emit('make', 'data', Session.get("iaddr"));
+    Session.set("flat", Session.get("flat"));
+  } else if (e.keyCode == 'U'.charCodeAt(0)) {  // u, make undefined
+    stream.emit('make', 'undefined', Session.get("iaddr"));
+    Session.set("flat", Session.get("flat"));
+>>>>>>> 4671570b023f52d86576a07d1bf7fcde20162981
   } else if (e.keyCode == 38) {
     Session.set("clnum", Session.get("clnum")-1);
   } else if (e.keyCode == 40) {
@@ -166,18 +187,11 @@ window.onkeydown = function(e) {
   } else if (e.keyCode == 90) {  // z
     zoom_out_max();
   } else if (e.keyCode == 74) {  // vim down, j
-    go_to_flag(true, false);
+    go_to_flag(true, e.shiftKey);
   } else if (e.keyCode == 75) {  // vim up, k
-    go_to_flag(false, false);
-  } else if (e.keyCode == 85) {  // vim down, row up, data, u
-    go_to_flag(true, true);
-  } else if (e.keyCode == 73) {  // vim up, row up, data, i
-    go_to_flag(false, true);
+    go_to_flag(false, e.shiftKey);
   } else if (e.keyCode == 27) {  // esc
     history.back();
-  } else if (e.keyCode == 67 && e.shiftKey == true) {
-    // shift-C = clear all forks
-    delete_all_forks();
   } else if (e.keyCode == 78 || e.keyCode == 186) {
     // 186 is comment
     if (e.shiftKey) {
