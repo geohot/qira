@@ -1,4 +1,14 @@
 #!/bin/bash -e
+
+# test distribution
+if [ "$1" == "distrib" ] ; then
+  echo "*** testing distrib"
+  ./bdistrib.sh
+  cd distrib/qira
+  ./install.sh
+  cd ../../
+fi
+
 source venv/bin/activate
 nosetests
 
@@ -12,5 +22,4 @@ sleep 2
 phantomjs qira_tests/load_page.js
 
 kill $QIRA_PID
-
 

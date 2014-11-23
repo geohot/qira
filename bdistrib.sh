@@ -115,3 +115,5 @@ tar cvf qira-$VERSION.tar qira
 xz qira-$VERSION.tar
 cd ../
 
+sha1sum distrib/qira-$VERSION.tar.xz
+
