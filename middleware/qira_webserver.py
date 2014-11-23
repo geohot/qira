@@ -254,10 +254,11 @@ def getinstructions(forknum, clnum, clstart, clend):
   trace = program.traces[forknum]
   slce = qira_analysis.slice(trace, clnum)
   ret = []
-  for i in range(clstart, clend):
+
+  def get_instruction(i):
     rret = trace.db.fetch_changes_by_clnum(i, 1)
     if len(rret) == 0:
-      continue
+      return None
     else:
       rret = rret[0]
 
@@ -295,7 +296,30 @@ def getinstructions(forknum, clnum, clstart, clend):
       rret['depth'] = trace.dmap[i - trace.minclnum]
     except:
       rret['depth'] = 0
-    ret.append(rret)
+
+    # hack to only display calls
+    #if True or instr.is_call():
+    if instr.is_call():
+      return rret
+    else:
+      return None
+
+  top = []
+  clcurr = clnum-1
+  while len(top) != (clnum - clstart) and clcurr >= 0:
+    rret = get_instruction(clcurr)
+    if rret != None:
+      top.append(rret)
+    clcurr -= 1
+
+  clcurr = clnum
+  while len(ret) != (clend - clnum) and clcurr <= trace.maxclnum:
+    rret = get_instruction(clcurr)
+    if rret != None:
+      ret.append(rret)
+    clcurr += 1
+
+  ret = top[::-1] + ret
   emit('instructions', ret)
 
 @socketio.on('getmemory', namespace='/qira')
