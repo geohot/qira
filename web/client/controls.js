@@ -150,9 +150,12 @@ window.onkeydown = function(e) {
       }
     }
   } else if (e.keyCode == 89) {
-    var nargs = prompt("number of args for func at " + Session.get("iaddr"));
-    var abi = prompt("abi for func ");
-    stream.emit('setfunctionargs',Session.get("iaddr"),nargs,abi);
+    var addr = Session.get("iaddr");
+    var func = sync_tags_request([addr])[0]['function'];
+    if (func !== undefined) {
+      var args = prompt("#args for function",sync_tags_request([addr])[0]['nargs']);
+      stream.emit('setfunctionargswrap',addr,args);
+    }
   } else if (e.keyCode == 67 && e.shiftKey == true) {
     // shift-C = clear all forks
     delete_all_forks();
