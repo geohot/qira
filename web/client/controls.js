@@ -153,8 +153,6 @@ window.onkeydown = function(e) {
     var nargs = prompt("number of args for func at " + Session.get("iaddr"));
     var abi = prompt("abi for func ");
     stream.emit('setfunctionargs',Session.get("iaddr"),nargs,abi);
-  } else if (e.keyCode == 80) {  // p, make function
-    stream.emit('makefunction', Session.get("iaddr"));
   } else if (e.keyCode == 67 && e.shiftKey == true) {
     // shift-C = clear all forks
     delete_all_forks();
