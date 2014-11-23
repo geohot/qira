@@ -298,8 +298,8 @@ def getinstructions(forknum, clnum, clstart, clend):
       rret['depth'] = 0
 
     # hack to only display calls
-    #if True or instr.is_call():
-    if instr.is_call():
+    if True or instr.is_call():
+    #if instr.is_call():
       return rret
     else:
       return None
