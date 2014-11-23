@@ -1,1 +1,4 @@
-middleware/qira.py
+#!/bin/bash -e
+source venv/bin/activate
+python middleware/qira.py $*
+

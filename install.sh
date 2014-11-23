@@ -20,6 +20,7 @@ if [[ "$unamestr" == 'Linux' ]]; then
       sudo dpkg -i /tmp/cs.deb
       rm /tmp/cs.deb
     fi
+    sudo $PIP install virtualenv
   elif [ $(which pacman) ]; then
     echo "installing pip"
     sudo pacman -S base-devel python2-pip
@@ -40,8 +41,11 @@ fi
 # should this use sudo?
 # can ./qiradb go in requirements?
 echo "installing pip packages"
-sudo $PIP install --upgrade -r requirements.txt 
-sudo $PIP install --upgrade ./qiradb
+virtualenv venv
+source venv/bin/activate
+$PIP install --upgrade -r requirements.txt 
+$PIP install --upgrade ./qiradb
+deactivate
 
 echo "making symlink"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira

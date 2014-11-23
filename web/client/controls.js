@@ -149,6 +149,9 @@ window.onkeydown = function(e) {
         Session.set("forknum", arr[idx+1]);
       }
     }
+  } else if (e.keyCode == 67 && e.shiftKey == true) {
+    // shift-C = clear all forks
+    delete_all_forks();
   } else if (e.keyCode == 'P'.charCodeAt(0)) {  // p, make function
     stream.emit('make', 'function', Session.get("iaddr"));
     Session.set("flat", Session.get("flat"));
@@ -180,9 +183,6 @@ window.onkeydown = function(e) {
     go_to_flag(false, e.shiftKey);
   } else if (e.keyCode == 27) {  // esc
     history.back();
-  } else if (e.keyCode == 67 && e.shiftKey == true) {
-    // shift-C = clear all forks
-    delete_all_forks();
   } else if (e.keyCode == 78 || e.keyCode == 186) {
     // 186 is comment
     if (e.shiftKey) {
