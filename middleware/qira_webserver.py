@@ -274,8 +274,8 @@ def getinstructions(forknum, clnum, clstart, clend):
       rret['instruction'] = str(model.Instruction(raw, rret['address'], arch))
 
 
-    if instr.i.mnemonic == "call":
-      args = qira_analysis.display_call_args(instr,program,trace,i)
+    if instr.is_call():
+      args = qira_analysis.display_call_args(instr,trace,i)
       if args != "":
         rret['instruction'] += " {"+args+"}"
 

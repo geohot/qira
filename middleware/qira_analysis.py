@@ -287,56 +287,60 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
 
   return ret
 
+def get_last_instr(dmap,clnum):
+  myd = dmap[clnum]+1
+  clnum += 1
+  ret = clnum
+  while 0 <= clnum < len(dmap):
+    if dmap[clnum] == myd-1:
+      break
+    ret = clnum
+    clnum += 1
+  if not (0 <= clnum < len(dmap)):
+    return None
+  return ret
+
 def analyse_calls(program,flow):
   for i in xrange(len(program.traces)):
     trace = program.traces[i]
     for (addr,data,clnum,ins) in flow:
       instr = program.static[addr]['instruction']
-      if instr.i.mnemonic != "call":
+      if not instr.is_call():
         continue
     
-      start = clnum
-      myd = trace.dmap[clnum]+1
-      clnum += 1
-      ret = clnum
-      while 0 <= clnum < len(trace.dmap):
-        if trace.dmap[clnum] == myd-1:
-          break
-        ret = clnum
-        clnum += 1
-        if clnum == trace.minclnum or clnum == trace.maxclnum:
-          ret = clnum
-          break
-      if not (0 <= clnum < len(trace.dmap)):
+      endclnum = get_last_instr(trace.dmap,clnum)
+      if endclnum is None:
         continue
 
       #the function ran from start to ret... analyze what happened in there
-      regs = trace.db.fetch_registers(start)
-      eip = regs[arch.X86REGS[0].index("EIP")]
-      program.static.analyzer.make_function_at(program.static,eip)
-      func = program.static[eip]['function']
-      esp = regs[arch.X86REGS[0].index("ESP")]
+      regs = trace.db.fetch_registers(clnum)
+      iptr = trace.db.fetch_changes_by_clnum(clnum+1, 1)[0]['address']
 
-      argrange = [esp+4,esp+44]
-      seen = func.nargs
-      print start,ret,ghex(eip)
-      for cl in xrange(start,ret):
-        changes = filter(lambda x:x['type'] in "LS",trace.db.fetch_changes_by_clnum(cl, -1))
-        argchanges = filter(lambda x:argrange[0] <= x['address'] <= argrange[1], changes)
-        if len(argchanges) > 0:
-          seen = max(max(map(lambda x:x['address'],argchanges)),seen)
-      if seen > 0:
-        print hex(seen),hex(esp),(seen-esp)/4
-        func.nargs = (seen-esp)/4
-        func.abi = static2.ABITYPE.X86_CDECL
+      program.static.analyzer.make_function_at(program.static,iptr)
+      func = program.static[iptr]['function']
+      if program.static['arch'] == "i386":
+        esp = regs[arch.X86REGS[0].index("ESP")]
+
+        argrange = [esp+arch.X86REGS[1],esp+arch.X86REGS[1]*11]
+        seen = func.nargs
+        for cl in xrange(clnum,endclnum):
+          changes = filter(lambda x:x['type'] in "LS",trace.db.fetch_changes_by_clnum(cl, -1))
+          argchanges = filter(lambda x:argrange[0] <= x['address'] <= argrange[1], changes)
+          if len(argchanges) > 0:
+            seen = max(max(map(lambda x:x['address'],argchanges)),seen)
+        if seen > 0:
+          func.nargs = (seen-esp)/arch.X86REGS[1]
+          func.abi = static2.ABITYPE.X86_CDECL
 
 
-def display_call_args(instr,program,trace,clnum):
+def display_call_args(instr,trace,clnum):
+  program = trace.program
   regs = trace.db.fetch_registers(clnum)
-  eip = regs[arch.X86REGS[0].index("EIP")]
-  program.static.analyzer.make_function_at(program.static,eip)
+  iptr = trace.db.fetch_changes_by_clnum(clnum+1, 1)[0]['address']
+  program.static.analyzer.make_function_at(program.static,iptr)
 
-  func = program.static[eip]['function']
+  func = program.static[iptr]['function']
+  endclnum = get_last_instr(trace.dmap,clnum)
 
   if func.abi == static2.ABITYPE.UNKNOWN:
     return ""
@@ -349,6 +353,9 @@ def display_call_args(instr,program,trace,clnum):
     for arg in xrange(func.nargs):
       ret += [ghex(struct.unpack("<I",trace.fetch_raw_memory(clnum, esp+4, arch.X86REGS[1]))[0])]
       esp += arch.X86REGS[1]
+
+    endregs = trace.db.fetch_registers(endclnum)
+    ret += ["-> " + ghex(endregs[arch.X86REGS[0].index("EAX")])]
     return " ".join(ret)
   elif func.abi == static2.ABITYPE.X86_FASTCALL:
     regs = trace.db.fetch_registers(clnum)
