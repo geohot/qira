@@ -261,7 +261,8 @@ def getinstructions(forknum, clnum, clstart, clend):
     else:
       rret = rret[0]
 
-    rret['instruction'] = str(program.static[rret['address']]['instruction'])
+    instr = program.static[rret['address']]['instruction']
+    rret['instruction'] = str(instr)
 
     # check if static fails at this
     if rret['instruction'] == "":
@@ -272,11 +273,18 @@ def getinstructions(forknum, clnum, clstart, clend):
       raw = trace.fetch_raw_memory(i, rret['address'], rret['data'])
       rret['instruction'] = str(model.Instruction(raw, rret['address'], arch))
 
+
+    if instr.is_call():
+      args = qira_analysis.display_call_args(instr,trace,i)
+      if args != "":
+        rret['instruction'] += " {"+args+"}"
+
     if 'name' in program.static[rret['address']]:
       #print "setting name"
       rret['name'] = program.static[rret['address']]['name']
     if 'comment' in program.static[rret['address']]:
       rret['comment'] = program.static[rret['address']]['comment']
+
     if i in slce:
       rret['slice'] = True
     else:
@@ -299,6 +307,13 @@ def getmemory(forknum, clnum, address, ln):
   ret = {'address': ghex(address), 'len': ln, 'dat': dat, 'is_big_endian': program.tregs[2], 'ptrsize': program.tregs[1]}
   emit('memory', ret)
 
+@socketio.on('setfunctionargs', namespace='/qira')
+@socket_method
+def setfunctionargs(func, nargs, abi):
+  function = program.static[fhex(func)]['function']
+  print function,nargs,abi
+  function.nargs = int(nargs)
+  function.abi = int(abi)
 
 @socketio.on('getregisters', namespace='/qira')
 @socket_method

@@ -149,6 +149,14 @@ window.onkeydown = function(e) {
         Session.set("forknum", arr[idx+1]);
       }
     }
+<<<<<<< HEAD
+  } else if (e.keyCode == 89) {
+    var nargs = prompt("number of args for func at " + Session.get("iaddr"));
+    var abi = prompt("abi for func ");
+    stream.emit('setfunctionargs',Session.get("iaddr"),nargs,abi);
+  } else if (e.keyCode == 80) {  // p, make function
+    stream.emit('makefunction', Session.get("iaddr"));
+=======
   } else if (e.keyCode == 67 && e.shiftKey == true) {
     // shift-C = clear all forks
     delete_all_forks();
@@ -167,6 +175,7 @@ window.onkeydown = function(e) {
   } else if (e.keyCode == 'U'.charCodeAt(0)) {  // u, make undefined
     stream.emit('make', 'undefined', Session.get("iaddr"));
     Session.set("flat", Session.get("flat"));
+>>>>>>> 4671570b023f52d86576a07d1bf7fcde20162981
   } else if (e.keyCode == 38) {
     Session.set("clnum", Session.get("clnum")-1);
   } else if (e.keyCode == 40) {
