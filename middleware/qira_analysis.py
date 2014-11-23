@@ -343,7 +343,8 @@ def display_call_args(instr,trace,clnum):
   endclnum = get_last_instr(trace.dmap,clnum)
 
   if func.abi == static2.ABITYPE.UNKNOWN:
-    ret = ""
+    if program.static['arch'] == 'i386':
+      func.abi = static2.ABITYPE.X86_CDECL #default for x86
   if func.nargs == 0:
     ret = ""
   if func.abi == static2.ABITYPE.X86_CDECL:
