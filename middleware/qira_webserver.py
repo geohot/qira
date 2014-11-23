@@ -332,10 +332,14 @@ def getmemory(forknum, clnum, address, ln):
   emit('memory', ret)
 
 @socketio.on('setfunctionargswrap', namespace='/qira')
-#@socket_method
+@socket_method
 def setfunctionargswrap(func, args):
+  function = program.static[fhex(func)]['function']
   if len(args.split()) == 1:
-    setfunctionargs(func,int(args),None)
+    try:
+      function.nargs = int(args)
+    except:
+      pass
   if len(args.split()) == 2:
     abi = None
     try:
@@ -344,16 +348,9 @@ def setfunctionargswrap(func, args):
       for m in dir(model.ABITYPE):
         if m == args.split()[0].upper():
           abi = model.ABITYPE.__dict__[m]
-    setfunctionargs(func,int(args.split()[1]),abi)
-
-@socketio.on('setfunctionargs', namespace='/qira')
-#@socket_method
-def setfunctionargs(func, nargs, abi):
-  function = program.static[fhex(func)]['function']
-
-  function.nargs = int(nargs)
-  if abi:
-    function.abi = int(abi)
+    function.nargs = int(args.split()[1])
+    if abi != None:
+      function.abi = abi
 
 @socketio.on('getregisters', namespace='/qira')
 @socket_method
