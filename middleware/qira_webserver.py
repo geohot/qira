@@ -273,16 +273,17 @@ def getinstructions(forknum, clnum, clstart, clend):
       raw = trace.fetch_raw_memory(i, rret['address'], rret['data'])
       rret['instruction'] = str(model.Instruction(raw, rret['address'], arch))
 
+
+    if instr.i.mnemonic == "call":
+      args = qira_analysis.display_call_args(instr,program,trace,i)
+      if args != "":
+        rret['instruction'] += " {"+args+"}"
+
     if 'name' in program.static[rret['address']]:
       #print "setting name"
       rret['name'] = program.static[rret['address']]['name']
     if 'comment' in program.static[rret['address']]:
       rret['comment'] = program.static[rret['address']]['comment']
-
-    if instr.i.mnemonic == "call":
-      args = qira_analysis.display_call_args(instr,program,trace,clnum)
-      if args != "":
-        rret['comment'] = "Args: " + args + ((" ;" + rret['comment']) if 'comment' in rret else "")
 
     if i in slce:
       rret['slice'] = True

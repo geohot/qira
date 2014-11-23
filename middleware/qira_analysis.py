@@ -1,9 +1,11 @@
 #!/usr/bin/env python2.7
 import qira_config
 import qira_program
+import arch
 import time
 import math
 import sys
+import struct
 sys.path.append(qira_config.BASEDIR+"/static2")
 import static2
 
@@ -277,8 +279,6 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
     
     # this will trigger the disassembly
     instr = program.static[r[0]['address']]['instruction']
-    if instr.i.mnemonic == 'call':
-      analyse_call(instr,trace,program)
     ins = str(instr)
     ret.append((r[0]['address'], r[0]['data'], r[0]['clnum'], ins))
     if (time.time() - start) > 0.01:
@@ -287,31 +287,81 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
 
   return ret
 
-def analyse_call(instr,trace,program):
-  #we know the target is a function, it was being called
-  call_dest = filter(lambda x:x[1]==static2.DESTTYPE.call, instr.dests())[0][0]
-  program.static.analyzer.make_function_at(program.static,call_dest)
-  #TODO: try to infer function arguments
+def analyse_calls(program,flow):
+  for i in xrange(len(program.traces)):
+    trace = program.traces[i]
+    for (addr,data,clnum,ins) in flow:
+      instr = program.static[addr]['instruction']
+      if instr.i.mnemonic != "call":
+        continue
+    
+      start = clnum
+      myd = trace.dmap[clnum]+1
+      clnum += 1
+      ret = clnum
+      while 0 <= clnum < len(trace.dmap):
+        if trace.dmap[clnum] == myd-1:
+          break
+        ret = clnum
+        clnum += 1
+        if clnum == trace.minclnum or clnum == trace.maxclnum:
+          ret = clnum
+          break
+      if not (0 <= clnum < len(trace.dmap)):
+        continue
+
+      #the function ran from start to ret... analyze what happened in there
+      regs = trace.db.fetch_registers(start)
+      eip = regs[arch.X86REGS[0].index("EIP")]
+      program.static.analyzer.make_function_at(program.static,eip)
+      func = program.static[eip]['function']
+      esp = regs[arch.X86REGS[0].index("ESP")]
+
+      argrange = [esp+4,esp+44]
+      seen = func.nargs
+      print start,ret,ghex(eip)
+      for cl in xrange(start,ret):
+        changes = filter(lambda x:x['type'] in "LS",trace.db.fetch_changes_by_clnum(cl, -1))
+        argchanges = filter(lambda x:argrange[0] <= x['address'] <= argrange[1], changes)
+        if len(argchanges) > 0:
+          seen = max(max(map(lambda x:x['address'],argchanges)),seen)
+      if seen > 0:
+        print hex(seen),hex(esp),(seen-esp)/4
+        func.nargs = (seen-esp)/4
+        func.abi = static2.ABITYPE.X86_CDECL
+
 
 def display_call_args(instr,program,trace,clnum):
-  call_dest = filter(lambda x:x[1]==static2.DESTTYPE.call, instr.dests())[0][0]
-  func = program.static[call_dest]['function']
+  regs = trace.db.fetch_registers(clnum)
+  eip = regs[arch.X86REGS[0].index("EIP")]
+  program.static.analyzer.make_function_at(program.static,eip)
+
+  func = program.static[eip]['function']
+
   if func.abi == static2.ABITYPE.UNKNOWN:
     return ""
   if func.nargs == 0:
     return ""
   if func.abi == static2.ABITYPE.X86_CDECL:
     regs = trace.db.fetch_registers(clnum)
-    esp = regs[qira_program.X86REGS[0].index("ESP")]
-    import IPython
-    IPython.embed()
-    return " ".join(map(ghex,trace.fetch_memory(clnum, esp, func.nargs)))
+    esp = regs[arch.X86REGS[0].index("ESP")]
+    ret = []
+    for arg in xrange(func.nargs):
+      ret += [ghex(struct.unpack("<I",trace.fetch_raw_memory(clnum, esp+4, arch.X86REGS[1]))[0])]
+      esp += arch.X86REGS[1]
+    return " ".join(ret)
   elif func.abi == static2.ABITYPE.X86_FASTCALL:
     regs = trace.db.fetch_registers(clnum)
-    esp = regs[qira_program.X86REGS[0].index("ESP")]
-    ecx = regs[qira_program.X86REGS[0].index("ECX")]
-    edx = regs[qira_program.X86REGS[0].index("EDX")]
-    return " ".join(map(ghex, [ecx,edx]+trace.fetch_memory(clnum, esp, min(func.nargs-2,0)))[:func.nargs])
+    esp = regs[arch.X86REGS[0].index("ESP")]
+    ecx = regs[arch.X86REGS[0].index("ECX")]
+    edx = regs[arch.X86REGS[0].index("EDX")]
+    ret = []
+    ret += [ghex(ecx)]
+    ret += [(ghex(edx) + " ")] if nargs > 1 else []
+    for arg in xrange(func.nargs-2):
+      ret += [ghex(struct.unpack("<I",trace.fetch_raw_memory(clnum, esp+4, arch.X86REGS[1]))[0])]
+      esp += arch.X86REGS[1]
+    return " ".join(ret)
   else:
     return ""
 
@@ -396,6 +446,7 @@ def analyze(trace, program):
   #dmap = get_depth_map(fxns, maxclnum)
   dmap = get_hacked_depth_map(flow)
   
+  analyze_calls(flow)
   #loops = do_loop_analysis(blocks)
   #print loops
 
