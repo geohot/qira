@@ -353,18 +353,6 @@ def getregisters(forknum, clnum):
 
   emit('registers', ret)
 
-@app.route("/s/<b64search>")
-def do_search(b64search):
-  results = program.research(base64.b64decode(b64search))
-  ret = []
-  for r in results:
-    swag = r.split(":")
-    ln = str(int(swag[1])+1)
-    s = '<a class="filelink" onclick=go_to_filename_line("'+swag[0]+'",'+ln+')>' + swag[0]+"#"+ln+"</a>"+":".join(swag[2:])
-    ret.append(s)
-  return '<br/>'.join(ret)
-
-
 # ***** generic webserver stuff *****
   
 @app.route('/', defaults={'path': 'index.html'})
