@@ -1,8 +1,13 @@
 #!/usr/bin/env python2.7
 import qira_config
 import qira_program
+import arch
 import time
 import math
+import sys
+import struct
+sys.path.append(qira_config.BASEDIR+"/static2")
+import static2
 
 def ghex(a):
   if a == None:
@@ -273,12 +278,103 @@ def get_instruction_flow(trace, program, minclnum, maxclnum):
       continue
     
     # this will trigger the disassembly
-    ins = str(program.static[r[0]['address']]['instruction'])
+    instr = program.static[r[0]['address']]['instruction']
+    ins = str(instr)
     ret.append((r[0]['address'], r[0]['data'], r[0]['clnum'], ins))
     if (time.time() - start) > 0.01:
       time.sleep(0.01)
       start = time.time()
+
   return ret
+
+def get_last_instr(dmap,clnum):
+  myd = dmap[clnum]+1
+  clnum += 1
+  ret = clnum
+  while 0 <= clnum < len(dmap):
+    if dmap[clnum] == myd-1:
+      break
+    ret = clnum
+    clnum += 1
+  if not (0 <= clnum < len(dmap)):
+    return None
+  return ret
+
+def analyse_calls(program,flow):
+  for i in xrange(len(program.traces)):
+    trace = program.traces[i]
+    for (addr,data,clnum,ins) in flow:
+      instr = program.static[addr]['instruction']
+      if not instr.is_call():
+        continue
+    
+      endclnum = get_last_instr(trace.dmap,clnum)
+      if endclnum is None:
+        continue
+
+      #the function ran from start to ret... analyze what happened in there
+      regs = trace.db.fetch_registers(clnum)
+      iptr = trace.db.fetch_changes_by_clnum(clnum+1, 1)[0]['address']
+
+      program.static.analyzer.make_function_at(program.static,iptr)
+      func = program.static[iptr]['function']
+      if program.static['arch'] == "i386":
+        esp = regs[arch.X86REGS[0].index("ESP")]
+
+        argrange = [esp+arch.X86REGS[1],esp+arch.X86REGS[1]*11]
+        seen = func.nargs
+        for cl in xrange(clnum,endclnum):
+          changes = filter(lambda x:x['type'] in "LS",trace.db.fetch_changes_by_clnum(cl, -1))
+          argchanges = filter(lambda x:argrange[0] <= x['address'] <= argrange[1], changes)
+          if len(argchanges) > 0:
+            seen = max(max(map(lambda x:x['address'],argchanges)),seen)
+        if seen > 0:
+          func.nargs = (seen-esp)/arch.X86REGS[1]
+          func.abi = static2.ABITYPE.X86_CDECL
+
+
+def display_call_args(instr,trace,clnum):
+  program = trace.program
+  regs = trace.db.fetch_registers(clnum)
+  iptr = trace.db.fetch_changes_by_clnum(clnum+1, 1)[0]['address']
+  program.static.analyzer.make_function_at(program.static,iptr)
+
+  func = program.static[iptr]['function']
+  endclnum = get_last_instr(trace.dmap,clnum)
+
+  if func.abi == static2.ABITYPE.UNKNOWN:
+    if program.static['arch'] == 'i386':
+      func.abi = static2.ABITYPE.X86_CDECL #default for x86
+  if func.nargs == 0:
+    ret = ""
+  if func.abi == static2.ABITYPE.X86_CDECL:
+    regs = trace.db.fetch_registers(clnum)
+    esp = regs[arch.X86REGS[0].index("ESP")]
+    ret = []
+    for arg in xrange(func.nargs):
+      ret += [ghex(struct.unpack("<I",trace.fetch_raw_memory(clnum, esp+4, arch.X86REGS[1]))[0])]
+      esp += arch.X86REGS[1]
+    ret = " ".join(ret)
+  elif func.abi == static2.ABITYPE.X86_FASTCALL:
+    regs = trace.db.fetch_registers(clnum)
+    esp = regs[arch.X86REGS[0].index("ESP")]
+    ecx = regs[arch.X86REGS[0].index("ECX")]
+    edx = regs[arch.X86REGS[0].index("EDX")]
+    ret = []
+    ret += [ghex(ecx)]
+    ret += [(ghex(edx) + " ")] if nargs > 1 else []
+    for arg in xrange(func.nargs-2):
+      ret += [ghex(struct.unpack("<I",trace.fetch_raw_memory(clnum, esp+4, arch.X86REGS[1]))[0])]
+      esp += arch.X86REGS[1]
+    ret = " ".join(ret)
+
+
+  if program.static['arch'] == 'i386':
+    if endclnum:
+      endregs = trace.db.fetch_registers(endclnum)
+      ret += "-> " + ghex(endregs[arch.X86REGS[0].index("EAX")])
+  return ret
+
 
 def get_hacked_depth_map(flow, program):
   start = time.time()
@@ -360,6 +456,7 @@ def analyze(trace, program):
   #dmap = get_depth_map(fxns, maxclnum)
   dmap = get_hacked_depth_map(flow)
   
+  analyze_calls(flow)
   #loops = do_loop_analysis(blocks)
   #print loops
 

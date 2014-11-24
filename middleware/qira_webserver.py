@@ -5,7 +5,9 @@ import sys
 import time
 import base64
 import json
-sys.path.append(qira_config.BASEDIR+"/cda")
+
+sys.path.append(qira_config.BASEDIR+"/static2")
+import model
 
 def socket_method(func):
   def func_wrapper(*args, **kwargs):
@@ -105,25 +107,6 @@ def mwpoller():
     mwpoll()
 
 # ***** after this line is the new server stuff *****
-
-@socketio.on('navigateline', namespace='/cda')
-def navigateline(fn, ln):
-  #print 'navigateline',fn,ln
-  try:
-    iaddr = program.rdwarves[fn+"#"+str(ln)]
-  except:
-    return
-  #print 'navigateline',fn,ln,iaddr
-  socketio.emit('setiaddr', ghex(iaddr), namespace='/qira')
-
-@socketio.on('navigateiaddr', namespace='/qira')
-@socket_method
-def navigateiaddr(iaddr):
-  iaddr = fhex(iaddr)
-  if iaddr in program.dwarves:
-    (filename, line, linedat) = program.dwarves[iaddr]
-    #print 'navigateiaddr', hex(iaddr), filename, line
-    socketio.emit('setline', filename, line, namespace='/cda')
 
 @socketio.on('forkat', namespace='/qira')
 @socket_method
@@ -271,22 +254,38 @@ def getinstructions(forknum, clnum, clstart, clend):
   trace = program.traces[forknum]
   slce = qira_analysis.slice(trace, clnum)
   ret = []
-  for i in range(clstart, clend):
+
+  def get_instruction(i):
     rret = trace.db.fetch_changes_by_clnum(i, 1)
     if len(rret) == 0:
-      continue
+      return None
     else:
       rret = rret[0]
 
-    rret['instruction'] = str(program.static[rret['address']]['instruction'])
+    instr = program.static[rret['address']]['instruction']
+    rret['instruction'] = str(instr)
+
+    # check if static fails at this
+    if rret['instruction'] == "":
+      # TODO: wrong place to get the arch
+      arch = program.static[rret['address']]['arch']
+
+      # we have the address and raw bytes, disassemble
+      raw = trace.fetch_raw_memory(i, rret['address'], rret['data'])
+      rret['instruction'] = str(model.Instruction(raw, rret['address'], arch))
+
+
+    if instr.is_call():
+      args = qira_analysis.display_call_args(instr,trace,i)
+      if args != "":
+        rret['instruction'] += " {"+args+"}"
 
     if 'name' in program.static[rret['address']]:
       #print "setting name"
       rret['name'] = program.static[rret['address']]['name']
     if 'comment' in program.static[rret['address']]:
       rret['comment'] = program.static[rret['address']]['comment']
-    elif rret['address'] in program.dwarves:
-      rret['comment'] = program.dwarves[rret['address']][2]
+
     if i in slce:
       rret['slice'] = True
     else:
@@ -297,7 +296,30 @@ def getinstructions(forknum, clnum, clstart, clend):
       rret['depth'] = trace.dmap[i - trace.minclnum]
     except:
       rret['depth'] = 0
-    ret.append(rret)
+
+    # hack to only display calls
+    if True or instr.is_call():
+    #if instr.is_call():
+      return rret
+    else:
+      return None
+
+  top = []
+  clcurr = clnum-1
+  while len(top) != (clnum - clstart) and clcurr >= 0:
+    rret = get_instruction(clcurr)
+    if rret != None:
+      top.append(rret)
+    clcurr -= 1
+
+  clcurr = clnum
+  while len(ret) != (clend - clnum) and clcurr <= trace.maxclnum:
+    rret = get_instruction(clcurr)
+    if rret != None:
+      ret.append(rret)
+    clcurr += 1
+
+  ret = top[::-1] + ret
   emit('instructions', ret)
 
 @socketio.on('getmemory', namespace='/qira')
@@ -309,6 +331,26 @@ def getmemory(forknum, clnum, address, ln):
   ret = {'address': ghex(address), 'len': ln, 'dat': dat, 'is_big_endian': program.tregs[2], 'ptrsize': program.tregs[1]}
   emit('memory', ret)
 
+@socketio.on('setfunctionargswrap', namespace='/qira')
+@socket_method
+def setfunctionargswrap(func, args):
+  function = program.static[fhex(func)]['function']
+  if len(args.split()) == 1:
+    try:
+      function.nargs = int(args)
+    except:
+      pass
+  if len(args.split()) == 2:
+    abi = None
+    try:
+      abi = int(args.split()[0])
+    except:
+      for m in dir(model.ABITYPE):
+        if m == args.split()[0].upper():
+          abi = model.ABITYPE.__dict__[m]
+    function.nargs = int(args.split()[1])
+    if abi != None:
+      function.abi = abi
 
 @socketio.on('getregisters', namespace='/qira')
 @socket_method
@@ -348,25 +390,14 @@ def getregisters(forknum, clnum):
 
   emit('registers', ret)
 
-@app.route("/s/<b64search>")
-def do_search(b64search):
-  results = program.research(base64.b64decode(b64search))
-  ret = []
-  for r in results:
-    swag = r.split(":")
-    ln = str(int(swag[1])+1)
-    s = '<a class="filelink" onclick=go_to_filename_line("'+swag[0]+'",'+ln+')>' + swag[0]+"#"+ln+"</a>"+":".join(swag[2:])
-    ret.append(s)
-  return '<br/>'.join(ret)
-
-
 # ***** generic webserver stuff *****
   
 @app.route('/', defaults={'path': 'index.html'})
 @app.route('/<path:path>')
 def serve(path):
-  if qira_config.CALLED_AS_CDA and path=="index.html":
-    return redirect('/cda')
+  if 'Firefox' in request.headers.get('User-Agent'):
+    return "<pre>WTF you use Firefox?!?\n\nGo download a real web browser, like Chrome, and try this again"
+
   # best security?
   if ".." in path:
     return
@@ -398,11 +429,6 @@ def run_server(largs, lprogram):
   # web static moved to external file
   import qira_webstatic
   qira_webstatic.init(lprogram)
-
-  if qira_config.WITH_CDA:
-    import cacheserver
-    app.register_blueprint(cacheserver.app)
-    cacheserver.set_cache(program.cda)
 
   print "****** starting WEB SERVER on %s:%d" % (qira_config.HOST, qira_config.WEB_PORT)
   threading.Thread(target=mwpoller).start()

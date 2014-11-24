@@ -42,10 +42,8 @@ cp -av middleware/*.py distrib/qira/middleware/
 # static2
 echo "copying static2"
 mkdir -p distrib/qira/static2
-cp -av static2/*.py distrib/qira/static2/
-
-# is this worth it?
-cp -av static2/bw_* distrib/qira/static2/
+pyclean static2/
+cp -av static2/* distrib/qira/static2/
 
 # built for ida 6.6
 # perhaps build for older IDA as well, ie 6.1
@@ -84,12 +82,12 @@ cp -av pin/makefile pin/qirapin.cpp distrib/qira/pin/
 mkdir -p distrib/qira/pin/strace
 cp -av pin/strace/*.h distrib/qira/pin/strace/
 
-echo "copying cda"
-mkdir -p distrib/qira/cda distrib/qira/cda/clang
-cp -av cda/*.py distrib/qira/cda/
-cp -av cda/clang/*.py distrib/qira/cda/clang/
-cp -Rav cda/static distrib/qira/cda/
-cp -av cda_build.sh distrib/qira/
+#echo "copying cda"
+#mkdir -p distrib/qira/cda distrib/qira/cda/clang
+#cp -av cda/*.py distrib/qira/cda/
+#cp -av cda/clang/*.py distrib/qira/cda/clang/
+#cp -Rav cda/static distrib/qira/cda/
+#cp -av cda_build.sh distrib/qira/
 
 # package up the python, hopefully this includes pymongo driver
 # hmm, it doesn't, user will need to install
@@ -109,11 +107,13 @@ cp -av cda_build.sh distrib/qira/
 # then you run qira-i386 <binary>, we need to hack in the -singlestep arg
 
 echo "copying binaries"
-cp -av install.sh qira fetchlibs.sh distrib/qira/
+cp -av requirements.txt install.sh qira fetchlibs.sh distrib/qira/
 
 echo "making archive"
 cd distrib/
 tar cvf qira-$VERSION.tar qira
 xz qira-$VERSION.tar
 cd ../
+
+sha1sum distrib/qira-$VERSION.tar.xz
 

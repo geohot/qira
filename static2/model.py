@@ -1,6 +1,6 @@
 from capstone import *
 
-__all__ = ["Tags", "Function", "Block", "Instruction", "DESTTYPE"]
+__all__ = ["Tags", "Function", "Block", "Instruction", "DESTTYPE","ABITYPE"]
 
 class DESTTYPE(object):
   none = 0
@@ -116,10 +116,17 @@ class Instruction(object):
 
     return dl
 
+class ABITYPE(object):
+  UNKNOWN      = -1
+  X86_CDECL    =  0
+  X86_FASTCALL =  1
+
 class Function:
   def __init__(self, start):
     self.start = start
     self.blocks = set()
+    self.abi = ABITYPE.UNKNOWN
+    self.nargs = 0
 
   def __repr__(self):
     return hex(self.start) + " " + str(self.blocks)
@@ -127,6 +134,8 @@ class Function:
   def add_block(self, block):
     self.blocks.add(block)
 
+  def update_abi(self, abi):
+    self.abi = abi
 
 class Block:
   def __init__(self, start):
@@ -152,7 +161,6 @@ class Tags:
     self.static = static
     self.address = address
 
-
   def __contains__(self, tag):
     return tag in self.backing
 
@@ -167,6 +175,7 @@ class Tags:
         # arch should probably come from the address with fallthrough
         self.backing['instruction'] = Instruction(dat, self.address, self.static['arch'])
         self.backing['len'] = self.backing['instruction'].size()
+        self.backing['type'] = 'instruction'
         return self.backing[tag]
       if tag == "crefs" or tag == "xrefs":
         # crefs has a default value of a new array
@@ -176,6 +185,12 @@ class Tags:
         return self.static.global_tags[tag]
       return None
 
+  def __delitem__(self, tag):
+    try:
+      del self.backing[tag]
+    except:
+      pass
+
   def __setitem__(self, tag, val):
     if tag == "instruction" and type(val) == str:
       raise Exception("instructions shouldn't be strings")
@@ -183,3 +198,4 @@ class Tags:
       # name can change by adding underscores
       val = self.static.set_name(self.address, val)
     self.backing[tag] = val
+

@@ -45,6 +45,9 @@ def gettagsa():
     rret = {}
     for tags in ['name', 'comment']:
       rret[tags] = program.static[i][tags]
+    if 'function' in program.static[i] and (program.static[i]['function'].start == i):
+      rret['function'] = True
+      rret['nargs'] = program.static[i]['function'].nargs
     rret['address'] = ghex(i)
     ret.append(rret)
   return json.dumps(ret)
@@ -84,6 +87,12 @@ if qira_config.WITH_STATIC:
   @socketio.on('getstaticview', namespace='/qira')
   @socket_method
   def getstaticview(haddr, flat, flatrange):
+    def copy_fields(bbb, stat):
+      bbb['type'] = stat['type']
+      bbb['comment'] = stat['comment']
+      if 'instruction' in stat:
+        bbb['instruction'] = str(stat['instruction'])
+
     fxn = program.static[fhex(haddr)]['function']
     if fxn == None or flat == True:
       addr = fhex(haddr)
@@ -127,9 +136,7 @@ if qira_config.WITH_STATIC:
 
       for bbb in ret:
         a = fhex(bbb['address'])
-        bbb['comment'] = program.static[a]['comment']
-        if 'instruction' in program.static[a]:
-          bbb['instruction'] = str(program.static[a]['instruction'])
+        copy_fields(bbb, program.static[a])
         # dests?
 
       emit('flat', ret)
@@ -139,18 +146,43 @@ if qira_config.WITH_STATIC:
         bb = []
         for i in sorted(b.addresses):
           bbb = {'address': ghex(i)}
-          bbb['comment'] = program.static[i]['comment']
-          bbb['instruction'] = str(program.static[i]['instruction'])
+          copy_fields(bbb, program.static[i])
           bbb['dests'] = map(lambda (x,y): (ghex(x), y), program.static[i]['instruction'].dests())
           bb.append(bbb)
         blocks.append(bb)
 
       emit('function', {'blocks': blocks})
 
-  @socketio.on('makefunction', namespace='/qira')
+  @socketio.on('make', namespace='/qira')
   @socket_method
-  def makefunction(iaddr):
+  def make(typ, iaddr):
     iaddr = fhex(iaddr)
-    print "*** run analysis at",ghex(iaddr)
-    program.static.analyzer.make_function_at(program.static, iaddr)
+    print "*** make",typ,"at",ghex(iaddr)
+    if typ == 'function':
+      program.static.analyzer.make_function_at(program.static, iaddr)
+    elif typ == 'code':
+      junk = program.static[iaddr]['instruction']
+    elif typ == 'data':
+      program.static[iaddr]['type'] = 'data'
+      if program.static[iaddr]['len'] == 1:
+        program.static[iaddr]['len'] = 2
+      elif program.static[iaddr]['len'] == 2:
+        program.static[iaddr]['len'] = 4
+      else:
+        program.static[iaddr]['len'] = 1
+    elif typ == 'string':
+      program.static[iaddr]['type'] = 'string'
+      # get length of string
+      eaddr = iaddr
+      try:
+        while program.static.memory(eaddr, 1)[0] != '\x00':
+          eaddr += 1
+      except:
+        pass
+      program.static[iaddr]['len'] = eaddr-iaddr
+    elif typ == 'undefined':
+      del program.static[iaddr]['len']
+      del program.static[iaddr]['type']
+      del program.static[iaddr]['instruction']
+
 
