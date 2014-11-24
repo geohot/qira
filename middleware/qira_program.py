@@ -311,6 +311,7 @@ class Trace:
           dat[i] = ord(self.program.static.memory(ri, 1)[0])
         except:
           pass
+          #dat[i] = 0 #XXX is this correct behavior?
     return dat
 
   def read_strace_file(self):

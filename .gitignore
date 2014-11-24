@@ -31,4 +31,6 @@ static/python32
 testvm/.vagrant
 radare
 venv
+tests_new/binary-autogen
+capstone
 

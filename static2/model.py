@@ -1,4 +1,5 @@
 from capstone import *
+import capstone # for some unexported (yet) symbols in Capstone 3.0
 
 __all__ = ["Tags", "Function", "Block", "Instruction", "DESTTYPE","ABITYPE"]
 
@@ -38,12 +39,11 @@ class Instruction(object):
       self.regs_write = self.i.regs_write
 
       self.dtype = DESTTYPE.none
-      if self.i.mnemonic == "call":
+      if self.i.mnemonic == "call":  # TODO: this is x86 specific
         self.dtype = DESTTYPE.call
-      elif self.i.mnemonic == "jmp":
+      elif self.i.mnemonic == "jmp": # TODO: this is x86 specific
         self.dtype = DESTTYPE.jump
-      #TODO: what about not x86?
-      elif x86.X86_GRP_JUMP in self.i.groups:
+      elif capstone.CS_GRP_JUMP in self.i.groups:
         self.dtype = DESTTYPE.cjump
 
     #if capstone can't decode it, we're screwed
@@ -68,7 +68,7 @@ class Instruction(object):
       return False
     return self.i.mnemonic == "ret"
     #TODO: what about iret? and RET isn't in the apt version of capstone
-    return x86.X86_GRP_RET in self.i.groups
+    return capstone.CS_GRP_RET in self.i.groups
 
   def is_call(self):
     if not self.decoded:
@@ -79,13 +79,13 @@ class Instruction(object):
     '''is this something which should end a basic block'''
     if not self.decoded:
       return False
-    return self.is_jump() or self.is_ret() or self.i.mnemonic == "hlt"
+    return self.is_jump() or self.is_ret() or self.i.mnemonic == "hlt"  # TODO: this is x86 specific
 
   def is_conditional(self):
     if not self.decoded:
       return False
     #TODO shouldn't be x86 specific
-    return x86.X86_REG_EFLAGS in self.regs_read
+    return x86.X86_REG_EFLAGS in self.regs_read  # TODO: this is x86 specific
 
   def code_follows(self):
     '''should the data after this instructino be treated as code
@@ -111,21 +111,25 @@ class Instruction(object):
     if self.is_jump() or self.is_call():
       #if we take a PTR and not a MEM or REG operand (TODO: better support for MEM operands)
       #TODO: shouldn't be x86 specific
-      if (self.i.operands[0].type == x86.X86_OP_IMM):
+      if (self.i.operands[0].type == capstone.CS_OP_IMM):
         dl.append((self.i.operands[0].value.imm,self.dtype)) #the target of the jump/call
 
     return dl
 
 class ABITYPE(object):
-  UNKNOWN      = -1
-  X86_CDECL    =  0
-  X86_FASTCALL =  1
+  UNKNOWN       = ([],None)
+  X86_CDECL     = ([],'EAX')
+  X86_FASTCALL  = (['ECX','EDX'],'EAX')
+  X86_BFASTCALL = (['EAX','EDX','ECX'],'EAX')
+  X64_WIN       = (['RCX','RDX','R8', 'R9'],'RAX')
+  X64_SYSV      = (['RDI','RSI','RDX','RCX','R8', 'R9'],'RAX')
+  ARM_STD       = (['r0', 'r1', 'r2', 'r3'],'r0')
 
 class Function:
   def __init__(self, start):
     self.start = start
     self.blocks = set()
-    self.abi = ABITYPE.UNKNOWN
+    self.abi = 'UNKNOWN'
     self.nargs = 0
 
   def __repr__(self):

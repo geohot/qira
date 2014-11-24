@@ -300,6 +300,33 @@ def get_last_instr(dmap,clnum):
     return None
   return ret
 
+def guess_calling_conv(program,readregs,readstack):
+  if not (readregs or readstack):
+    return ('UNKNOWN',0) #we can't guess the ABI with 0 information
+
+  regs = program.tregs[0]
+  readregs = map(lambda x: regs[x], readregs) #convert read regs into strings
+
+  for abi in filter(lambda x:x[0] != "_",static2.ABITYPE.__dict__):
+    if abi == 'UNKNOWN':
+      continue
+
+    regs_cpy = [r for r in readregs]
+
+    consistent = len(regs_cpy) <= len(static2.ABITYPE.__dict__[abi][0]) #we are consistent with this ABI
+    for reg in static2.ABITYPE.__dict__[abi][0]:
+      if regs_cpy and reg in regs_cpy:
+        regs_cpy.remove(reg)
+      else:
+        if readstack or regs_cpy:
+          consistent = False
+        break
+
+    if consistent:
+      return (abi,readstack+len(readregs))
+
+  return ('UNKNOWN',0)
+
 def analyse_calls(program,flow):
   for i in xrange(len(program.traces)):
     trace = program.traces[i]
@@ -318,19 +345,38 @@ def analyse_calls(program,flow):
 
       program.static.analyzer.make_function_at(program.static,iptr)
       func = program.static[iptr]['function']
-      if program.static['arch'] == "i386":
-        esp = regs[arch.X86REGS[0].index("ESP")]
 
-        argrange = [esp+arch.X86REGS[1],esp+arch.X86REGS[1]*11]
-        seen = func.nargs
-        for cl in xrange(clnum,endclnum):
+      if program.static['arch'] in ["i386","x86-64","arm"]:
+        stack_reg = ["ESP","RSP","SP"][["i386","x86-64","arm"].index(program.static['arch'])]
+        esp = regs[program.tregs[0].index(stack_reg)]
+
+        nregs = len(regs)
+        rsize = program.tregs[1]
+
+        argrange = [esp+rsize,esp+rsize*11]
+        seen = 0
+        init_regs = set()
+        uninit_regs = set()
+        for cl in xrange(clnum+1,endclnum):
           changes = filter(lambda x:x['type'] in "LS",trace.db.fetch_changes_by_clnum(cl, -1))
           argchanges = filter(lambda x:argrange[0] <= x['address'] <= argrange[1], changes)
           if len(argchanges) > 0:
             seen = max(max(map(lambda x:x['address'],argchanges)),seen)
-        if seen > 0:
-          func.nargs = (seen-esp)/arch.X86REGS[1]
-          func.abi = static2.ABITYPE.X86_CDECL
+          rchanges = filter(lambda x:x['type'] in "RW",trace.db.fetch_changes_by_clnum(cl, -1))
+          for rchange in rchanges:
+            regnum = rchange['address']/rsize
+            if rchange['type'] is 'W' and regnum < nregs:
+              init_regs.add(regnum)
+              if ((regnum) in uninit_regs) and (rchange['data'] == regs[regnum]):
+                #if we thought they did an uninitialized read and they just clobbered it and wrote it later,
+                #don't consider this a possible argument
+                uninit_regs.remove(regnum)
+            elif (rchange['type'] is 'R' and regnum < nregs) and (regnum not in init_regs):
+              uninit_regs.add(regnum)
+        abi,nargs = guess_calling_conv(program,uninit_regs,((seen-esp)/rsize) if (seen > 0) else 0)
+        if func.abi is 'UNKNOWN':
+          func.abi = abi
+        func.nargs = max(nargs,func.nargs)
 
 
 def display_call_args(instr,trace,clnum):
@@ -340,40 +386,34 @@ def display_call_args(instr,trace,clnum):
   program.static.analyzer.make_function_at(program.static,iptr)
 
   func = program.static[iptr]['function']
+  if func.abi is 'UNKNOWN':
+    return ""
+
   endclnum = get_last_instr(trace.dmap,clnum)
 
-  if func.abi == static2.ABITYPE.UNKNOWN:
-    if program.static['arch'] == 'i386':
-      func.abi = static2.ABITYPE.X86_CDECL #default for x86
-  if func.nargs == 0:
-    ret = ""
-  if func.abi == static2.ABITYPE.X86_CDECL:
-    regs = trace.db.fetch_registers(clnum)
-    esp = regs[arch.X86REGS[0].index("ESP")]
-    ret = []
-    for arg in xrange(func.nargs):
-      ret += [ghex(struct.unpack("<I",trace.fetch_raw_memory(clnum, esp+4, arch.X86REGS[1]))[0])]
-      esp += arch.X86REGS[1]
-    ret = " ".join(ret)
-  elif func.abi == static2.ABITYPE.X86_FASTCALL:
-    regs = trace.db.fetch_registers(clnum)
-    esp = regs[arch.X86REGS[0].index("ESP")]
-    ecx = regs[arch.X86REGS[0].index("ECX")]
-    edx = regs[arch.X86REGS[0].index("EDX")]
-    ret = []
-    ret += [ghex(ecx)]
-    ret += [(ghex(edx) + " ")] if nargs > 1 else []
-    for arg in xrange(func.nargs-2):
-      ret += [ghex(struct.unpack("<I",trace.fetch_raw_memory(clnum, esp+4, arch.X86REGS[1]))[0])]
-      esp += arch.X86REGS[1]
-    ret = " ".join(ret)
+  args,outp = static2.ABITYPE.__dict__[func.abi]
+  nargs = func.nargs
 
+  ret = []
+  i = 0
+  for i in xrange(min(nargs,len(args))):
+    ret += [ghex(regs[program.tregs[0].index(args[i])])]
 
-  if program.static['arch'] == 'i386':
-    if endclnum:
-      endregs = trace.db.fetch_registers(endclnum)
-      ret += "-> " + ghex(endregs[arch.X86REGS[0].index("EAX")])
-  return ret
+  if len(args) > 0:
+    i += 1
+
+  if i < nargs:
+    stack_reg = ["ESP","RSP","SP"][["i386","x86-64","arm"].index(program.static['arch'])]
+    esp = regs[program.tregs[0].index(stack_reg)]
+    for j in xrange(i,nargs):
+      ret += [ghex(struct.unpack("<Q" if program.tregs[1] == 8 else "<I", \
+       trace.fetch_raw_memory(clnum, esp+program.tregs[1], program.tregs[1]))[0])]
+      esp += program.tregs[1]
+
+  if endclnum:
+    endregs = trace.db.fetch_registers(endclnum)
+    ret += ["-> " + ghex(endregs[program.tregs[0].index(outp)])]
+  return " ".join(ret)
 
 
 def get_hacked_depth_map(flow, program):
@@ -456,7 +496,7 @@ def analyze(trace, program):
   #dmap = get_depth_map(fxns, maxclnum)
   dmap = get_hacked_depth_map(flow)
   
-  analyze_calls(flow)
+  analyse_calls(program,flow)
   #loops = do_loop_analysis(blocks)
   #print loops
 
