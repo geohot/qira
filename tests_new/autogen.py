@@ -37,7 +37,12 @@ class arch(object):
   ppc     = 4
   ppc64   = 5
 
-def compiler_command(arch_f,path,filename,strip,dwarf,clang):
+def compiler_command(arch_f,path,filename,args):
+  strip = args.strip #refactor this
+  dwarf = args.dwarf
+  static = args.static
+  clang = args.clang
+
   command = []
   raw_filename = ".".join(filename.split(".")[:-1])
 
@@ -69,6 +74,10 @@ def compiler_command(arch_f,path,filename,strip,dwarf,clang):
     print "Invalid archicture"
     return []
 
+  if static:
+    command += ["-static"]
+    raw_filename += "_static"
+
   if strip:
     command += ["-s"]
     raw_filename += "_stripped"
@@ -86,6 +95,8 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Autogenerate test binaries.")
   parser.add_argument("files", metavar="file", nargs="*",
                       help="use user-specified source files")
+  parser.add_argument("--static",dest="static",action="store_true",
+                      help="statically compile all generated binaries")
   parser.add_argument("--strip",dest="strip",action="store_true",
                       help="strip all generated binaries")
   parser.add_argument("--dwarf",dest="dwarf",action="store_true",
@@ -170,7 +181,7 @@ if __name__ == "__main__":
 
   for arch_f in arches:
     for path,fn in fns:
-      cmd = compiler_command(arch_f,path,fn,args.strip,args.dwarf,args.clang)
+      cmd = compiler_command(arch_f,path,fn,args)
       if args.print_only:
         print " ".join(cmd)
       else:
