@@ -186,7 +186,7 @@ def process_files(archs,files,args):
     print "Install ./autogen-extras.sh if necessary."
     print "Otherwise, it's a bug and we're working on it."
 
-if __name__ == "__main__":
+def generate_binaries():
   args = argument_parse()
 
   if args.clean:
@@ -205,3 +205,6 @@ if __name__ == "__main__":
     subprocess.call(["mkdir","-p",DEST_DIRECTORY])
 
   process_files(archs,files,args)
+
+if __name__ == "__main__":
+  generate_binaries()
