@@ -7,6 +7,7 @@ TODO: think of a good way to deal with programs that need a library import
 
 import argparse
 import os
+import sys
 import subprocess
 
 SOURCE_DIRECTORY = "source-autogen/"
@@ -93,6 +94,8 @@ if __name__ == "__main__":
                       help="don't run commands, just print them")
   parser.add_argument("--clang",dest="clang",action="store_true",
                       help="Use clang instead of gcc (x86, x86-64 only).")
+  parser.add_argument("--clean",dest="clean",action="store_true",
+                      help="Clean generated binaries.")
   parser.add_argument("--all",dest="all_arches",action="store_true",
                       help="generate binaries for all supported arches")
   parser.add_argument("--x86",dest="x86",action="store_true",
@@ -109,6 +112,10 @@ if __name__ == "__main__":
                       help="generate ppc64 binaries")
 
   args = parser.parse_args()
+
+  if args.clean:
+    subprocess.call(["rm","-r",DEST_DIRECTORY])
+    sys.exit()
 
   if args.strip and args.dwarf:
     print "Both --strip and --dwarf seleted. Was that intended?"
