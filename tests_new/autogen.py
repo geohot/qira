@@ -90,18 +90,6 @@ def argument_parse():
   parser = argparse.ArgumentParser(description="Autogenerate test binaries.")
   parser.add_argument("files", metavar="file", nargs="*",
                       help="use user-specified source files")
-  parser.add_argument("--static",dest="static",action="store_true",
-                      help="statically compile all generated binaries")
-  parser.add_argument("--strip",dest="strip",action="store_true",
-                      help="strip all generated binaries")
-  parser.add_argument("--dwarf",dest="dwarf",action="store_true",
-                      help="generate DWARF info with binaries")
-  parser.add_argument("--print-only",dest="print_only",action="store_true",
-                      help="don't run commands, just print them")
-  parser.add_argument("--clang",dest="clang",action="store_true",
-                      help="Use clang instead of gcc (x86, x86-64 only).")
-  parser.add_argument("--clean",dest="clean",action="store_true",
-                      help="Clean generated binaries.")
   parser.add_argument("--all",dest="all_archs",action="store_true",
                       help="generate binaries for all supported archs")
   parser.add_argument("--x86",dest="x86",action="store_true",
@@ -116,6 +104,18 @@ def argument_parse():
                       help="generate ppc binaries")
   parser.add_argument("--ppc64",dest="ppc64",action="store_true",
                       help="generate ppc64 binaries")
+  parser.add_argument("--static",dest="static",action="store_true",
+                      help="static linking")
+  parser.add_argument("--strip",dest="strip",action="store_true",
+                      help="strip binaries")
+  parser.add_argument("--dwarf",dest="dwarf",action="store_true",
+                      help="generate DWARF info")
+  parser.add_argument("--print-only",dest="print_only",action="store_true",
+                      help="don't run commands, just print them")
+  parser.add_argument("--clang",dest="clang",action="store_true",
+                      help="Use clang instead of gcc (x86, x86-64 only).")
+  parser.add_argument("--clean",dest="clean",action="store_true",
+                      help="cleanup {}".format(DEST_DIRECTORY))
 
   return parser.parse_args()
 
