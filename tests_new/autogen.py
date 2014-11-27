@@ -160,24 +160,27 @@ if __name__ == "__main__":
   if not args.print_only:
     subprocess.call(["mkdir","-p",DEST_DIRECTORY])
 
-  green_plus = bcolors.OKGREEN + "[+]" + bcolors.ENDC + " "
-  fail_minus = bcolors.FAIL + "[-]" + bcolors.ENDC + " "
+  green_plus = bcolors.OKGREEN + "[+]" + bcolors.ENDC
+  fail_minus = bcolors.FAIL + "[-]" + bcolors.ENDC
+
+  to_compile = len(arches)*len(fns)
 
   any_failed = False
+  progress = 1
   for arch_f in arches:
     for path,fn in fns:
       cmd = compiler_command(arch_f,path,fn,args.strip,args.dwarf,args.clang)
       if args.print_only:
         print " ".join(cmd)
       else:
-        print green_plus + " ".join(cmd)
+        print "{} [{}/{}] {}".format(green_plus,
+          progress,to_compile," ".join(cmd))
         status = subprocess.call(cmd)
-        if status == 0:
-          print green_plus + "Compilation succeeded."
-        else:
+        if status != 0:
           any_failed = True
-          print fail_minus + "Compilation failed."
-        print ""
+          fail_path = os.path.join(path,fn)
+          print "{} Compilation failed for {}.".format(fail_minus,fail_path)
+      progress += 1
   if any_failed:
     print "At least one test failed."
     print "Install ./autogen-extras.sh if necessary."
