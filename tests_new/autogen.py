@@ -83,7 +83,7 @@ def compiler_command(arch_f,path,filename,strip,dwarf,clang):
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Autogenerate test binaries.")
-  parser.add_argument("files", metavar="files", nargs="*",
+  parser.add_argument("files", metavar="file", nargs="*",
                       help="use user-specified source files")
   parser.add_argument("--strip",dest="strip",action="store_true",
                       help="strip all generated binaries")
