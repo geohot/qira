@@ -164,9 +164,10 @@ if __name__ == "__main__":
   fail_minus = bcolors.FAIL + "[-]" + bcolors.ENDC
 
   to_compile = len(arches)*len(fns)
-
   any_failed = False
   progress = 1
+  FNULL = open(os.devnull, 'w')
+
   for arch_f in arches:
     for path,fn in fns:
       cmd = compiler_command(arch_f,path,fn,args.strip,args.dwarf,args.clang)
@@ -175,7 +176,8 @@ if __name__ == "__main__":
       else:
         print "{} [{}/{}] {}".format(green_plus,
           progress,to_compile," ".join(cmd))
-        status = subprocess.call(cmd)
+        #don't show warnings
+        status = subprocess.call(cmd,stdout=FNULL,stderr=FNULL)
         if status != 0:
           any_failed = True
           fail_path = os.path.join(path,fn)
