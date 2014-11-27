@@ -1,18 +1,32 @@
 """
 I wanted MIPS support but I couldn't find a GCC with MIPS support in the
 standard Ubuntu repos.
+
+TODO: think of a good way to deal with programs that need a library import
 """
+
+import argparse
+import os
+import subprocess
 
 SOURCE_DIRECTORY = "source-autogen/"
 DEST_DIRECTORY = "binary-autogen/"
+
+#If you're not on Ubuntu 14.04, these are up to you.
 ARM_GCC = "arm-linux-gnueabihf-gcc-4.8"
 AARCH64_GCC = "aarch64-linux-gnu-gcc-4.8"
 PPC_GCC = "powerpc-linux-gnu-gcc-4.8"
 PPC64_GCC = "powerpc64le-linux-gnu-gcc-4.8"
 
-import argparse
-import os
-import subprocess
+#http://stackoverflow.com/questions/287871/
+#print-in-terminal-with-colors-using-python
+class bcolors(object):
+  HEADER = '\033[95m'
+  OKBLUE = '\033[94m'
+  OKGREEN = '\033[92m'
+  WARNING = '\033[93m'
+  FAIL = '\033[91m'
+  ENDC = '\033[0m'
 
 class arch(object):
   x86     = 0
@@ -22,14 +36,21 @@ class arch(object):
   ppc     = 4
   ppc64   = 5
 
-def compiler_command(arch_f,path,filename,strip,dwarf):
+def compiler_command(arch_f,path,filename,strip,dwarf,clang):
   command = []
   raw_filename = ".".join(filename.split(".")[:-1])
+
+  if clang:
+    compiler = "clang"
+    raw_filename += "_clang"
+  else:
+    compiler = "gcc"
+
   if arch_f == arch.x86:
-    command += ["gcc","-m32"]
+    command += [compiler,"-m32"]
     raw_filename += "_x86"
   elif arch_f == arch.x86_64:
-    command += ["gcc","-m64"]
+    command += [compiler,"-m64"]
     raw_filename += "_x86-64"
   elif arch_f == arch.arm:
     command += [ARM_GCC]
@@ -42,16 +63,19 @@ def compiler_command(arch_f,path,filename,strip,dwarf):
     raw_filename += "_ppc"
   elif arch_f == arch.ppc64:
     command += [PPC64_GCC]
-    raw_filename += "_ppc"
+    raw_filename += "_ppc64"
   else:
     print "Invalid archicture"
     return []
+
   if strip:
     command += ["-s"]
     raw_filename += "_stripped"
+
   if dwarf:
     command += ["-g"]
     raw_filename += "_dwarf"
+
   input_fn = os.path.join(path,filename)
   output_fn = os.path.join(DEST_DIRECTORY,raw_filename)
   command += [input_fn,"-o",output_fn]
@@ -67,6 +91,8 @@ if __name__ == "__main__":
                       help="generate DWARF info with binaries")
   parser.add_argument("--print-only",dest="print_only",action="store_true",
                       help="don't run commands, just print them")
+  parser.add_argument("--clang",dest="clang",action="store_true",
+                      help="Use clang instead of gcc (x86, x86-64 only).")
   parser.add_argument("--all",dest="all_arches",action="store_true",
                       help="generate binaries for all supported arches")
   parser.add_argument("--x86",dest="x86",action="store_true",
@@ -103,8 +129,8 @@ if __name__ == "__main__":
       arches.append(arch.ppc)
     if args.ppc64:
       arches.append(arch.ppc64)
-    if arches == []: #if nothing selected, default to x86 and x86_64
-      arches = [arch.x86,arch.x86_64]
+    if arches == []: #if nothing selected, default to x86_64
+      arches = [arch.x86_64]
 
   if len(args.files) != 0:
     fns = []
@@ -127,10 +153,25 @@ if __name__ == "__main__":
   if not args.print_only:
     subprocess.call(["mkdir","-p",DEST_DIRECTORY])
 
+  green_plus = bcolors.OKGREEN + "[+]" + bcolors.ENDC + " "
+  fail_minus = bcolors.FAIL + "[-]" + bcolors.ENDC + " "
+
+  any_failed = False
   for arch_f in arches:
     for path,fn in fns:
-      cmd = compiler_command(arch_f,path,fn,args.strip,args.dwarf)
+      cmd = compiler_command(arch_f,path,fn,args.strip,args.dwarf,args.clang)
       if args.print_only:
         print " ".join(cmd)
       else:
-        subprocess.call(cmd)
+        print green_plus + " ".join(cmd)
+        status = subprocess.call(cmd)
+        if status == 0:
+          print green_plus + "Compilation succeeded."
+        else:
+          any_failed = True
+          print fail_minus + "Compilation failed."
+        print ""
+  if any_failed:
+    print "At least one test failed."
+    print "Install ./autogen-extras.sh if necessary."
+    print "Otherwise, it's a bug and we're working on it."
