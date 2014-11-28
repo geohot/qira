@@ -86,11 +86,13 @@ shift-n -- rename data
 shift-; -- add comment at data
 
 g -- go to change, address, or name
+space -- toggle flat/function view
 
-p -- analyze function at iaddr, currently no way to do this outside a function
+p -- analyze function at iaddr, currently no way to run analyzer outside a function
 c -- make code at iaddr, one instruction
 a -- make ascii at iaddr
 d -- make data at iaddr
+u -- make undefined at iaddr
 
 == Installation on Windows (experimental) ==
 
