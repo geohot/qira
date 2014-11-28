@@ -42,6 +42,9 @@ def compiler_command(path,filename,this_arch,args):
   raw_filename = ".".join(filename.split(".")[:-1])
 
   if args.clang:
+    if this_arch not in [arch.x86,arch.x86_64]:
+      print "clang doesn't support arch"
+      return []
     compiler = "clang"
     raw_filename += "_clang"
   else:
@@ -121,7 +124,7 @@ def argument_parse():
 
 def get_archs(args):
   archs = []
-  if args.all_archs:
+  if args.all_archs and not args.clang:
     archs = [arch.x86,arch.x86_64,arch.arm,arch.aarch64,arch.ppc,arch.ppc64]
   else:
     if args.x86:
@@ -169,6 +172,8 @@ def process_files(archs,files,args):
   for this_arch in archs:
     for path,fn in files:
       cmd = compiler_command(path,fn,this_arch,args)
+      if cmd == []:
+        continue #failed to get command
       if args.print_only:
         print " ".join(cmd)
       else:
