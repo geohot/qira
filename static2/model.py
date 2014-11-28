@@ -117,15 +117,19 @@ class Instruction(object):
     return dl
 
 class ABITYPE(object):
-  UNKNOWN      = -1
-  X86_CDECL    =  0
-  X86_FASTCALL =  1
+  UNKNOWN       = ([],None)
+  X86_CDECL     = ([],'EAX')
+  X86_FASTCALL  = (['ECX','EDX'],'EAX')
+  X86_BFASTCALL = (['EAX','EDX','ECX'],'EAX')
+  X64_WIN       = (['RCX','RDX','R8', 'R9'],'RAX')
+  X64_SYSV      = (['RDI','RSI','RDX','RCX','R8', 'R9'],'RAX')
+  ARM_STD       = (['r0', 'r1', 'r2', 'r3'],'r0')
 
 class Function:
   def __init__(self, start):
     self.start = start
     self.blocks = set()
-    self.abi = ABITYPE.UNKNOWN
+    self.abi = 'UNKNOWN'
     self.nargs = 0
 
   def __repr__(self):
