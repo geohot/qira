@@ -43,6 +43,7 @@ def compiler_command(path,filename,this_arch,args):
 
   if args.clang:
     if this_arch not in [arch.x86,arch.x86_64]:
+      #todo: fix this, clang should support all archs pretty easily
       print "clang doesn't support arch"
       return []
     compiler = "clang"
