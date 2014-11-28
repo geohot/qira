@@ -374,7 +374,6 @@ def analyse_calls(program,flow):
             elif (rchange['type'] is 'R' and regnum < nregs) and (regnum not in init_regs):
               uninit_regs.add(regnum)
         abi,nargs = guess_calling_conv(program,uninit_regs,((seen-esp)/rsize) if (seen > 0) else 0)
-        print clnum+1,abi,nargs
         if func.abi is 'UNKNOWN':
           func.abi = abi
         func.nargs = max(nargs,func.nargs)
@@ -399,7 +398,7 @@ def display_call_args(instr,trace,clnum):
   i = 0
   for i in xrange(min(nargs,len(args))):
     ret += [ghex(regs[program.tregs[0].index(args[i])])]
-    
+
   if len(args) > 0:
     i += 1
 
