@@ -300,15 +300,6 @@ def get_last_instr(dmap,clnum):
     return None
   return ret
 
-# recall, the calling convention types from static2/model
-'''
-  X86_CDECL      stack
-  X86_FASTCALL   ecx, edx, stack
-  X86_BFASTCALL  eax, edx, ecx, stack
-  X64_WIN        rcx, rdx, r8, r9, stack
-  X64_SYSV       rdi, rsi, rdx, rcx, r8, r9, stack
-  ARM_STD        r0, r1, r2, r3, stack
-'''
 def guess_calling_conv(program,readregs,readstack):
   if not (readregs or readstack):
     return ('UNKNOWN',0) #we can't guess the ABI with 0 information
@@ -383,6 +374,7 @@ def analyse_calls(program,flow):
             elif (rchange['type'] is 'R' and regnum < nregs) and (regnum not in init_regs):
               uninit_regs.add(regnum)
         abi,nargs = guess_calling_conv(program,uninit_regs,((seen-esp)/rsize) if (seen > 0) else 0)
+        print clnum+1,abi,nargs
         if func.abi is 'UNKNOWN':
           func.abi = abi
         func.nargs = max(nargs,func.nargs)
@@ -407,11 +399,14 @@ def display_call_args(instr,trace,clnum):
   i = 0
   for i in xrange(min(nargs,len(args))):
     ret += [ghex(regs[program.tregs[0].index(args[i])])]
+    
+  if len(args) > 0:
+    i += 1
 
-  if i+1 < nargs:
+  if i < nargs:
     stack_reg = ["ESP","RSP","SP"][["i386","x86-64","arm"].index(program.static['arch'])]
     esp = regs[program.tregs[0].index(stack_reg)]
-    for j in xrange(i+1,nargs):
+    for j in xrange(i,nargs):
       ret += [ghex(struct.unpack("<Q" if program.tregs[1] == 8 else "<I", \
        trace.fetch_raw_memory(clnum, esp+program.tregs[1], program.tregs[1]))[0])]
       esp += program.tregs[1]
