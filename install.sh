@@ -30,7 +30,7 @@ if [[ "$unamestr" == 'Linux' ]]; then
     sudo pacman -S base-devel python2-pip
     PIP="pip2"
   elif [ $(which yum) ]; then
-    sudo yum install python-pip python-devel gcc gcc-c++
+    sudo yum install python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
   fi
 
   if [ $(qemu/qira-i386 > /dev/null; echo $?) == 1 ]; then
