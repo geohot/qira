@@ -16,6 +16,17 @@ TEST_PATH = "/vagrant/qira/tests_new/binary-autogen/*"
 #ENGINES = ["r2","builtin"]
 ENGINES = ["builtin"]
 
+class bcolors(object):
+  HEADER = '\033[95m'
+  OKBLUE = '\033[94m'
+  OKGREEN = '\033[92m'
+  WARNING = '\033[93m'
+  FAIL = '\033[91m'
+  ENDC = '\033[0m'
+
+ok_green = bcolors.OKGREEN + "[+]" + bcolors.ENDC
+warn = bcolors.WARNING + "[-]" + bcolors.ENDC
+
 def get_functions(dwarfinfo):
     function_starts = set()
     for cu in dwarfinfo.iter_CUs():
@@ -43,7 +54,13 @@ if __name__ == "__main__":
             engine_functions[engine] = {x.start for x in this_engine['functions']}
 
         for engine,functions in engine_functions.iteritems():
-            print "For file {}, {} missed these functions: {}.".format(fn, engine, ", ".join(str(x) for x in dwarf_functions-functions))
+            missed = dwarf_functions - functions
+            short_fn = fn.split("/")[-1] if "/" in fn else fn
+            if len(missed) == 0:
+                print "{} {}: {} found all functions.".format(ok_green, short_fn, engine)
+            else:
+                fmt = "{} {}: {} missed these functions: {}."
+                print fmt.format(warn, short_fn, engine, ", ".join(hex(fxn) for fxn in missed))
 
 #todo: use static backends
 
