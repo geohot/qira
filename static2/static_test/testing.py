@@ -63,8 +63,9 @@ if __name__ == "__main__":
   for fn in fns:
     elf = ELFFile(open(fn))
 
-    if not elf.has_dwarf_info() and not args.quiet:
-      print "No dwarf info for {}.".format(fn)
+    if not elf.has_dwarf_info():
+      if not args.quiet:
+        print "No dwarf info for {}.".format(fn)
       continue
 
     dwarfinfo = elf.get_dwarf_info()
@@ -83,6 +84,6 @@ if __name__ == "__main__":
       if len(missed) == 0:
         print "{} {}: {} found all {} function(s).".format(ok_green, short_fn, engine, total_fxns)
       else:
-        fmt = "{} {}: {} found {}/{} functions: {}."
+        fmt = "{} {}: {} missed {}/{} functions: {}."
         print fmt.format(warn, short_fn, engine,
-                total_fxns-len(missed), total_fxns, ", ".join(hex(fxn) for fxn in missed))
+                len(missed), total_fxns, ", ".join(hex(fxn) for fxn in missed))
