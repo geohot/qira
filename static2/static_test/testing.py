@@ -47,7 +47,7 @@ def argument_parse():
   return parser.parse_args()
 
 if __name__ == "__main__":
-  #todo: radare and summary screen comparing total performance
+  #todo: radare and summary screen comparing total performance by engine/arch
   args = argument_parse()
 
   if args.files != []:
@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
 
   if len(fns) == 0:
-    print "No files found in {}. Try running python autogen.py --dwarf there."
+    print "No files found in {}. Try running python autogen.py --dwarf in the tests directory.".format(TEST_PATH)
 
   for fn in fns:
     elf = ELFFile(open(fn))
@@ -85,6 +85,3 @@ if __name__ == "__main__":
         fmt = "{} {}: {} found {}/{} functions: {}."
         print fmt.format(warn, short_fn, engine,
                 total_fxns-len(missed), total_fxns, ", ".join(hex(fxn) for fxn in missed))
-
-#todo: use static backends
-
