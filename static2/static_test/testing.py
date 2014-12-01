@@ -28,39 +28,39 @@ ok_green = bcolors.OKGREEN + "[+]" + bcolors.ENDC
 warn = bcolors.WARNING + "[-]" + bcolors.ENDC
 
 def get_functions(dwarfinfo):
-    function_starts = set()
-    for cu in dwarfinfo.iter_CUs():
-        for die in cu.iter_DIEs():
-            if die.tag == "DW_TAG_subprogram":
-                if 'DW_AT_low_pc' in die.attributes:
-                    function_starts.add(die.attributes['DW_AT_low_pc'].raw_value)
-    return function_starts
+  function_starts = set()
+  for cu in dwarfinfo.iter_CUs():
+    for die in cu.iter_DIEs():
+      if die.tag == "DW_TAG_subprogram":
+        if 'DW_AT_low_pc' in die.attributes:
+          function_starts.add(die.attributes['DW_AT_low_pc'].raw_value)
+  return function_starts
 
 if __name__ == "__main__":
-    for fn in glob(TEST_PATH):
-        elf = ELFFile(open(fn))
+  for fn in glob(TEST_PATH):
+    elf = ELFFile(open(fn))
 
-        if not elf.has_dwarf_info():
-            print "No dwarf info for {}.".format(fn)
-            continue
+    if not elf.has_dwarf_info():
+      print "No dwarf info for {}.".format(fn)
+      continue
 
-        dwarfinfo = elf.get_dwarf_info()
-        dwarf_functions = get_functions(dwarfinfo)
+    dwarfinfo = elf.get_dwarf_info()
+    dwarf_functions = get_functions(dwarfinfo)
 
-        engine_functions = {}
-        for engine in ENGINES:
-            this_engine = Static(fn, debug=True, static_engine=engine)
-            this_engine.process()
-            engine_functions[engine] = {x.start for x in this_engine['functions']}
+    engine_functions = {}
+    for engine in ENGINES:
+      this_engine = Static(fn, debug=True, static_engine=engine)
+      this_engine.process()
+      engine_functions[engine] = {x.start for x in this_engine['functions']}
 
-        for engine,functions in engine_functions.iteritems():
-            missed = dwarf_functions - functions
-            short_fn = fn.split("/")[-1] if "/" in fn else fn
-            if len(missed) == 0:
-                print "{} {}: {} found all functions.".format(ok_green, short_fn, engine)
-            else:
-                fmt = "{} {}: {} missed these functions: {}."
-                print fmt.format(warn, short_fn, engine, ", ".join(hex(fxn) for fxn in missed))
+    for engine,functions in engine_functions.iteritems():
+      missed = dwarf_functions - functions
+      short_fn = fn.split("/")[-1] if "/" in fn else fn
+      if len(missed) == 0:
+        print "{} {}: {} found all functions.".format(ok_green, short_fn, engine)
+      else:
+        fmt = "{} {}: {} missed these functions: {}."
+        print fmt.format(warn, short_fn, engine, ", ".join(hex(fxn) for fxn in missed))
 
 #todo: use static backends
 
