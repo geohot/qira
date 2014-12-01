@@ -37,7 +37,12 @@ def get_functions(dwarfinfo):
   return function_starts
 
 if __name__ == "__main__":
-  for fn in glob(TEST_PATH):
+  #add option to make quiet for files that don't have dwarf info
+  fns = glob(TEST_PATH)
+  if len(fns) == 0:
+    print "No files found in {}. Try running python autogen.py --dwarf there."
+
+  for fn in fns:
     elf = ELFFile(open(fn))
 
     if not elf.has_dwarf_info():
@@ -55,12 +60,13 @@ if __name__ == "__main__":
 
     for engine,functions in engine_functions.iteritems():
       missed = dwarf_functions - functions
+      total_fxns = len(dwarf_functions)
       short_fn = fn.split("/")[-1] if "/" in fn else fn
       if len(missed) == 0:
-        print "{} {}: {} found all functions.".format(ok_green, short_fn, engine)
+        print "{} {}: {} found {}/{} functions.".format(ok_green, short_fn, engine, total_fxns, total_fxns)
       else:
-        fmt = "{} {}: {} missed these functions: {}."
-        print fmt.format(warn, short_fn, engine, ", ".join(hex(fxn) for fxn in missed))
+        fmt = "{} {}: {} found {}/{} functions: {}."
+        print fmt.format(warn, short_fn, engine, total_fxns-len(missed), total_fxns, ", ".join(hex(fxn) for fxn in missed))
 
 #todo: use static backends
 
