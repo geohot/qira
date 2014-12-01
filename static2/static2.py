@@ -54,6 +54,7 @@ class Static:
     self.path = path
     self.r2core = None
     self.debug = debug
+    self.testing = static_engine is not None
 
     # radare doesn't seem to have a concept of names
     # doesn't matter if this is in the python
@@ -90,7 +91,8 @@ class Static:
     self.analyzer = analyzer
     loader.load_binary(self)
 
-    print "*** elf loaded"
+    if not self.testing:
+      print "*** elf loaded"
 
   # this should be replaced with a
   def set_name(self, address, name):
@@ -196,7 +198,8 @@ class Static:
 
   def process(self):
     self.analyzer.analyze_functions(self)
-    print "*** found %d functions" % len(self['functions'])
+    if not self.testing:
+      print "*** found %d functions" % len(self['functions'])
 
 
 # *** STATIC TEST STUFF ***
