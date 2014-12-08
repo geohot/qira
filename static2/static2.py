@@ -76,8 +76,8 @@ class Static:
 
     if static_engine == "r2":
       sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "r2"))
-      import r2pipe
-      import loader
+      import r2pipe 
+      import loader 
       import analyzer
       self.r2core = r2pipe.r2pipe(path)
       # capstone is not working ok yet, so using udis for now
@@ -94,7 +94,7 @@ class Static:
     if not self.testing:
       print "*** elf loaded"
 
-  # this should be replaced with a
+  # this should be replaced with a 
   def set_name(self, address, name):
     if name not in self.rnames:
       self.rnames[name] = address
@@ -149,7 +149,7 @@ class Static:
       if rret != {}:
         ret[a] = rret
     return ret
-
+  
   def __setitem__(self, address, dat):
     if type(address) is str:
       self.global_tags[address] = dat
@@ -167,7 +167,7 @@ class Static:
 
   # return the memory at address:ln
   # replaces get_static_bytes
-  # TODO: refactor this!
+  # TODO: refactor this! 
   def memory(self, address, ln):
     dat = []
     for i in range(ln):
@@ -191,7 +191,7 @@ class Static:
         if self.base_memory[(laddress, llength)] != dat:
           print "*** WARNING, changing section",hex(laddress),llength
         return
-
+    
     # sections should have an idea of section permission
     self['sections'].append((address, len(dat)))
     self.base_memory[(address, address+len(dat))] = dat
