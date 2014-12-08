@@ -1,6 +1,5 @@
 #!/usr/bin/env python2.7
 
-#radare2 must be installed.. do we want this in install.sh or travis ci test.sh?
 import sys
 sys.path.insert(0, '../middleware')
 
