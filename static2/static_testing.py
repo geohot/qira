@@ -1,17 +1,19 @@
 #!/usr/bin/env python2.7
 
+#needed for qira_config
 import sys
-sys.path.insert(0, '../middleware')
+import os
+sys.path.insert(0, os.path.join('..','middleware'))
+import qira_config
 
 from static2 import *
-import os
 import subprocess
 import argparse
 
 from elftools.elf.elffile import ELFFile
 from glob import glob
 
-TEST_PATH = "/vagrant/qira/tests_new/binary-autogen/*"
+TEST_PATH = os.path.join(qira_config.BASEDIR,"tests_new","binary-autogen","*")
 ENGINES = ["builtin"]
 
 class bcolors(object):
