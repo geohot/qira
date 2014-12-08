@@ -2,8 +2,7 @@
 
 #radare2 must be installed.. do we want this in install.sh or travis ci test.sh?
 import sys
-sys.path.insert(0, '../')
-sys.path.insert(0, '../../middleware')
+sys.path.insert(0, '../middleware')
 
 from static2 import *
 import os
