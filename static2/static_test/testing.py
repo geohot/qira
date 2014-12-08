@@ -14,7 +14,6 @@ from elftools.elf.elffile import ELFFile
 from glob import glob
 
 TEST_PATH = "/vagrant/qira/tests_new/binary-autogen/*"
-#ENGINES = ["r2","builtin"]
 ENGINES = ["builtin"]
 
 class bcolors(object):
@@ -37,34 +36,11 @@ def get_functions(dwarfinfo):
           function_starts.add(die.attributes['DW_AT_low_pc'].raw_value)
   return function_starts
 
-def argument_parse():
-  parser = argparse.ArgumentParser(description="Test performance of static"
-    "engines, requires dwarf test cases.")
-  parser.add_argument("files", metavar="file", nargs="*",
-                      help="use user-specified binaries")
-  parser.add_argument("--quiet",dest="quiet",action="store_true",
-                      help="don't warn about missing dwarf information")
-
-  return parser.parse_args()
-
-if __name__ == "__main__":
-  #todo: radare and summary screen comparing total performance by engine/arch
-  args = argument_parse()
-
-  if args.files != []:
-    fns = args.files
-  else:
-    fns = glob(TEST_PATH)
-
-
-  if len(fns) == 0:
-    print "No files found in {}. Try running python autogen.py --dwarf in the tests directory.".format(TEST_PATH)
-
+def test_files(fns,quiet=False,profile=False):
   for fn in fns:
     elf = ELFFile(open(fn))
-
     if not elf.has_dwarf_info():
-      if not args.quiet:
+      if not quiet:
         print "No dwarf info for {}.".format(fn)
       continue
 
@@ -74,7 +50,16 @@ if __name__ == "__main__":
     engine_functions = {}
     for engine in ENGINES:
       this_engine = Static(fn, debug=True, static_engine=engine)
-      this_engine.process()
+      if args.profile:
+        #needs pycallgraph
+        from pycallgraph import PyCallGraph
+        from pycallgraph.output import GraphvizOutput
+        graphviz = GraphvizOutput()
+        graphviz.output_file = 'prof.png'
+        with PyCallGraph(output=graphviz):
+          this_engine.process()
+      else:
+        this_engine.process()
       engine_functions[engine] = {x.start for x in this_engine['functions']}
 
     for engine,functions in engine_functions.iteritems():
@@ -87,3 +72,26 @@ if __name__ == "__main__":
         fmt = "{} {}: {} missed {}/{} functions: {}."
         print fmt.format(warn, short_fn, engine,
                 len(missed), total_fxns, ", ".join(hex(fxn) for fxn in missed))
+
+if __name__ == "__main__":
+  #todo: radare and summary screen comparing total performance by engine/arch
+  parser = argparse.ArgumentParser(description="Test performance of static"
+    "engines, requires dwarf test cases.")
+  parser.add_argument("files", metavar="file", nargs="*",
+                      help="use user-specified binaries")
+  parser.add_argument("--quiet",dest="quiet",action="store_true",
+                      help="don't warn about missing dwarf information")
+  parser.add_argument('--profile',dest="profile",action='store_true',
+                      help='use internal profiling, output to prof.png')
+  args = parser.parse_args()
+
+  if args.files != []:
+    fns = args.files
+  else:
+    if args.profile:
+      print "Profiling over entire test suite. Are you sure that's what you wanted?"
+    fns = glob(TEST_PATH)
+    if len(fns) == 0:
+      print "No files found in {}. Try running python autogen.py --dwarf in the tests directory.".format(TEST_PATH)
+
+  test_files(fns,args.quiet,args.profile)
