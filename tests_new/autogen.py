@@ -1,3 +1,4 @@
+#!/usr/bin/env python2.7
 """
 I wanted MIPS support but I couldn't find a GCC with MIPS support in the
 standard Ubuntu repos.
