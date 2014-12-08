@@ -11,6 +11,7 @@ import subprocess
 import argparse
 
 from elftools.elf.elffile import ELFFile
+from elftools.common.exceptions import ELFError
 from glob import glob
 
 TEST_PATH = os.path.join(qira_config.BASEDIR,"tests_new","binary-autogen","*")
@@ -38,7 +39,13 @@ def get_functions(dwarfinfo):
 
 def test_files(fns,quiet=False,profile=False):
   for fn in fns:
-    elf = ELFFile(open(fn))
+    try:
+      elf = ELFFile(open(fn))
+    except ELFError:
+      if not quiet:
+        print "Skipping non-ELF file:",fn
+      continue
+
     if not elf.has_dwarf_info():
       if not quiet:
         print "No dwarf info for {}.".format(fn)
