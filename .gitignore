@@ -32,4 +32,5 @@ testvm/.vagrant
 radare
 venv
 tests_new/binary-autogen
+capstone
 
