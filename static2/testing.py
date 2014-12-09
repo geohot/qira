@@ -56,7 +56,7 @@ def test_files(fns,quiet=False,profile=False):
 
     engine_functions = {}
     for engine in ENGINES:
-      this_engine = Static(fn, debug=True, static_engine=engine)
+      this_engine = Static(fn, debug=0, static_engine=engine) #no debug output
       if args.profile:
         #needs pycallgraph
         from pycallgraph import PyCallGraph

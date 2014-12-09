@@ -49,12 +49,11 @@ except:
 # will only support radare2 for now
 # mostly tags, except for names and functions
 class Static:
-  def __init__(self, path, debug=False, static_engine=None):
+  def __init__(self, path, debug=0, static_engine=None):
     self.tags = {}
     self.path = path
     self.r2core = None
     self.debug = debug
-    self.testing = static_engine is not None
 
     # radare doesn't seem to have a concept of names
     # doesn't matter if this is in the python
@@ -91,7 +90,7 @@ class Static:
     self.analyzer = analyzer
     loader.load_binary(self)
 
-    if not self.testing:
+    if self.debug >= 1:
       print "*** elf loaded"
 
   # this should be replaced with a 
@@ -198,14 +197,14 @@ class Static:
 
   def process(self):
     self.analyzer.analyze_functions(self)
-    if not self.testing:
+    if self.debug >= 1:
       print "*** found %d functions" % len(self['functions'])
 
 
 # *** STATIC TEST STUFF ***
 
 if __name__ == "__main__":
-  static = Static(sys.argv[1],debug=True)
+  static = Static(sys.argv[1],debug=1)
   print "arch:",static['arch']
 
   # find main
