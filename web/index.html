@@ -4,6 +4,7 @@
 <link rel="stylesheet" href="/qira_layout.css">
 <link rel="stylesheet" href="/qira_types.css">
 <link rel="stylesheet" href="/qira_new.css">
+<link rel="stylesheet" href="/qira_graph.css">
 
 <!--<script type="text/javascript" src="/package.js"></script>-->
 <script type="text/javascript" src="/client/compatibility/jquery-2.1.1.min.js"></script>
@@ -20,7 +21,12 @@
 <script type="text/javascript" src="/client/strace.js"></script>
 <script type="text/javascript" src="/client/haddrline.js"></script>
 <script type="text/javascript" src="/client/static/static.js"></script>
+
 <script type="text/javascript" src="/client/static/graph.js"></script>
+<script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
+<script type="text/javascript" src="http://cpettitt.github.io/project/graphlib-dot/latest/graphlib-dot.js"></script>
+<script type="text/javascript" src="http://cpettitt.github.io/project/dagre-d3/latest/dagre-d3.js"></script>
+
 <script> console.log("welcome to qira"); </script>
 
 <title>qira</title>
@@ -52,7 +58,11 @@
     <div class="panelthing" id="strace"></div>
 
   </div>
-  <div class="col" id="staticpanel"></div>
+  <div class="col" id="staticpanel">
+<svg width=800 height=600>
+  <g/>
+</svg>
+  </div>
 </body>
 </html>
 
