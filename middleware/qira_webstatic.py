@@ -67,8 +67,22 @@ def settags(tags):
     for i in tags[addr]:
       program.static[naddr][i] = tags[addr][i]
 
+# dot as a service
+@app.route('/dot', methods=["POST"])
+def graph_dot():
+  req = request.data
+  #print "DOT REQUEST", req
+  f = open("/tmp/in.dot", "w")
+  f.write(req)
+  f.close()
+  os.system("dot /tmp/in.dot > /tmp/out.dot")
+  ret = open("/tmp/out.dot").read()
+  #print "DOT RESPONSE", ret
+  return ret 
+
 # currently if we aren't using static, we don't want to draw the staticview
 # or be able to makefunction
+
 if qira_config.WITH_STATIC:
   @socketio.on('getstaticview', namespace='/qira')
   @socket_method

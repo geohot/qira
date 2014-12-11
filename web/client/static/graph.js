@@ -89,17 +89,36 @@ Graph.prototype.inLineage = function(addr, qaddr, seen) {
 
 var gPos = {};
 
+// this runs sugiyama...
 Graph.prototype.render = function() {
   var name = Object.keys(this.vertices).toString();
   var send = "digraph graphname {\n";
 
-  document.getElementById("staticpanel").innerHTML = "<svg id='staticgraph' ><g/></svg>";
-  document.getElementById("staticgraph").style.width = ($(window).width() - document.getElementById("staticpanel").offsetLeft);
+  // record the old gbox position
+  var oldgbox = $("#gbox");
+  if (oldgbox.length > 0) {
+    gPos[oldgbox[0].className] = [fdec(oldgbox.css("margin-left")), fdec(oldgbox.css("margin-top"))];
+  }
+
+  var outergbox = $('<div id="outergbox"></div>');
+  $("#staticpanel").html("");
+  gbox = document.createElement('div');
+  outergbox[0].appendChild(gbox);
+  document.getElementById("staticpanel").appendChild(outergbox[0]);
+  gbox.id = 'gbox';
+  gbox.className = name;
+  if (name in gPos) {
+    $("#gbox").css("margin-left", gPos[name][0]);
+    $("#gbox").css("margin-top", gPos[name][1]);
+  }
 
   for (addr in this.vertices) {
     var r = this.vertices[addr].rendered;
     if (r !== undefined) {
-      send += 'N' + addr + ' [labelType="html", shape="rect", label="'+r.replace(/"/g,"'")+'"];'+"\n";
+      gbox.appendChild(r);
+      var width = (r.offsetWidth * 1.0) / 72.;
+      var height = (r.offsetHeight * 1.0) / 72.;
+      send += 'N' + addr + ' [width="'+width+'", height="'+height+'", shape="box"];'+"\n";
     }
   }
   for (var i = 0; i < this.edges.length; i++) {
@@ -107,34 +126,89 @@ Graph.prototype.render = function() {
   }
   send += "}\n";
 
+  var req = new XMLHttpRequest();
+  req.open('POST', '/dot', false);
+  req.send(send);
 
-  var svg = d3.select("svg"),
-    inner = d3.select("svg g"),
-    zoom = d3.behavior.zoom().on("zoom", function() {
-      inner.attr("transform", "translate(" + d3.event.translate + ")" +
-                                  "scale(" + d3.event.scale + ")");
-    });
-  svg.call(zoom);
+  //p(send);
 
-  // Create and configure the renderer
-  var render = dagreD3.render();
+  var i;
+  var resp = req.response.split('\n').join("").split(";");
 
-  function tryDraw() {
-    var g;
-  
-    g = graphlibDot.read(send);
+  var gdata = resp[0].split('"')[1].split(',');
+  //p(gdata);
 
-      // Set margins, if not present
-      if (!g.graph().hasOwnProperty("marginx") &&
-          !g.graph().hasOwnProperty("marginy")) {
-        g.graph().marginx = 20;
-        g.graph().marginy = 20;
+  gbox.style.width = fnum(gdata[2])+10;
+  gbox.style.height = fnum(gdata[3])+10;
+
+  var canvas = document.createElement("canvas");
+  canvas.width = fnum(gdata[2])+10;
+  canvas.height = fnum(gdata[3])+10;
+  canvas.id = "gcanvas";
+  gbox.appendChild(canvas);
+  var ctx = canvas.getContext("2d");
+
+  for (i = 2; true; i++) {
+    if (resp[i].indexOf('}') != -1) break;
+    else if (resp[i].indexOf('->') != -1) {
+      // this is an edge
+      var color = resp[i].substr(resp[i].indexOf('color=')+6).split(',')[0];
+      var posstr = resp[i].substr(resp[i].indexOf('pos="')+7).split('"')[0].split(' ');
+      var pos = [];
+      for (var j=0; j<(posstr.length); j++) {
+        var to = posstr[j].split(',');
+        pos.push({x:parseFloat(to[0]), y:fnum(gdata[3]) - parseFloat(to[1])});
       }
 
-      d3.select("svg g").call(render, g);
-  }
+      // draw spline
+      ctx.beginPath();
+      // pos[0] is end
+      // pos[1] is start
+      ctx.moveTo(pos[1].x, pos[1].y);
+      for (var j=2; j<pos.length; j+=3) {
+        ctx.bezierCurveTo(pos[j].x, pos[j].y, pos[j+1].x, pos[j+1].y, pos[j+2].x, pos[j+2].y);
+      }
+      ctx.lineTo(pos[0].x, pos[0].y);
 
-  tryDraw();
+      if (pos[1].y < pos[0].y) {
+        ctx.lineWidth = 1;
+      } else {
+        ctx.lineWidth = 2;
+      }
+
+      ctx.strokeStyle = color;
+      ctx.stroke();
+
+      // draw arrow
+      ctx.beginPath();
+      ctx.moveTo(pos[0].x, pos[0].y);
+      ctx.lineTo(pos[0].x-5, pos[0].y-10);
+      ctx.lineTo(pos[0].x+5, pos[0].y-10);
+      ctx.lineWidth = 1;
+      ctx.fillStyle = color;
+      ctx.fill();
+
+    } else {
+      // this is a vertex
+      var addr = resp[i].split(' ')[0].split('N')[1].trim();
+      var pos = resp[i].slice(resp[i].indexOf('pos=')).split('"')[1].split(',');
+
+      //p(addr);
+      var r = this.vertices[addr].rendered;
+
+      if (r !== undefined) {
+        var left = fnum(pos[0]) - (r.offsetWidth/2);
+        var top = fnum(gdata[3]) - (fnum(pos[1]) + (r.offsetHeight/2));
+
+        //r.style.position = "absolute";
+        r.style.left = left + "px";
+        r.style.top = top + "px";
+
+        //r.style.opacity = ".3";
+        //r.style.visibility = "hidden";
+      }
+    }
+  }
 
   return;
 };
