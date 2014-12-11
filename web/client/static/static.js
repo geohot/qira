@@ -81,7 +81,7 @@ function on_function(fxn) { DS("function");
     var dom = $('<div class="basicblock" id="bb_'+addr+'">');
 
     dom.html(idump);
-    graph.addVertex(addr, cnt, dom[0]);
+    graph.addVertex(addr, cnt, dom.html());
 
     // add edges
     for (var i = 0; i < bb[cnt-1].dests.length; i++) {

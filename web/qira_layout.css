@@ -60,7 +60,6 @@ body {
 }
 
 /* everything in the right panel */
-
 #onlypanel {
   width: 620px;
   height: 100%;
@@ -71,6 +70,11 @@ body {
   box-sizing: border-box;
   z-index: 1;
   position: relative;
+}
+
+#staticpanel {
+  height: 100% ;
+  width: 600px;
 }
 
 .panelthing {
