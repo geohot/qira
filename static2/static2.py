@@ -49,7 +49,7 @@ except:
 # will only support radare2 for now
 # mostly tags, except for names and functions
 class Static:
-  def __init__(self, path, debug=False):
+  def __init__(self, path, debug=0, static_engine=None):
     self.tags = {}
     self.path = path
     self.r2core = None
@@ -69,7 +69,11 @@ class Static:
     # concept from qira_program
     self.base_memory = {}
 
-    if qira_config.STATIC_ENGINE == "r2":
+    #pass static engine as an argument for testing
+    if static_engine is None:
+      static_engine = qira_config.STATIC_ENGINE
+
+    if static_engine == "r2":
       sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "r2"))
       import r2pipe 
       import loader 
@@ -86,7 +90,8 @@ class Static:
     self.analyzer = analyzer
     loader.load_binary(self)
 
-    print "*** elf loaded"
+    if self.debug >= 1:
+      print "*** elf loaded"
 
   # this should be replaced with a 
   def set_name(self, address, name):
@@ -192,13 +197,14 @@ class Static:
 
   def process(self):
     self.analyzer.analyze_functions(self)
-    print "*** found %d functions" % len(self['functions'])
+    if self.debug >= 1:
+      print "*** found %d functions" % len(self['functions'])
 
 
 # *** STATIC TEST STUFF ***
 
 if __name__ == "__main__":
-  static = Static(sys.argv[1],debug=True)
+  static = Static(sys.argv[1],debug=1)
   print "arch:",static['arch']
 
   # find main
