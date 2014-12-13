@@ -11,18 +11,6 @@ if [[ "$unamestr" == 'Linux' ]]; then
     echo "installing apt packages"
     sudo apt-get -y install build-essential python-dev python-pip debootstrap libjpeg-dev zlib1g-dev unzip wget graphviz
 
-    # grr, capstone should be a ubuntu package
-    if [ ! -f /usr/lib/libcapstone.so ]; then
-      # now we need capstone so the user can see assembly
-      if [[ $(uname -m) == 'i386' ]]; then
-        wget -O /tmp/cs.deb http://www.capstone-engine.org/download/2.1.2/capstone-2.1.2_i386.deb
-      else
-        wget -O /tmp/cs.deb http://www.capstone-engine.org/download/2.1.2/capstone-2.1.2_amd64.deb
-      fi
-      sudo dpkg -i /tmp/cs.deb
-      rm /tmp/cs.deb
-    fi
-    
     # only python package we install globally
     sudo $PIP install virtualenv
   elif [ $(which pacman) ]; then
@@ -48,6 +36,13 @@ echo "installing pip packages"
 virtualenv venv
 source venv/bin/activate
 $PIP install --upgrade -r requirements.txt 
+
+# build capstone if we don't have it
+if [ $(python -c "import capstone; exit(69 if (capstone.cs_version() == capstone.version_bind() and capstone.cs_version()[0] == 3) else 0)"; echo $?) == 69 ]; then
+  echo "capstone already installed, skipping"
+else
+  ./capstone_build.sh
+fi
 
 echo "making symlink"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira

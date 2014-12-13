@@ -6,7 +6,7 @@ pyelftools
 socketIO-client
 pydot
 ipaddr
-capstone==2.1
+capstone==3.0
 hexdump
 nose
 ./qiradb
