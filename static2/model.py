@@ -1,6 +1,12 @@
 from capstone import *
 import capstone # for some unexported (yet) symbols in Capstone 3.0
 
+try:
+     import bap
+     from bap import arm, asm, bil
+except ImportError:
+    pass
+
 __all__ = ["Tags", "Function", "Block", "Instruction", "DESTTYPE","ABITYPE"]
 
 class DESTTYPE(object):
@@ -10,10 +16,109 @@ class DESTTYPE(object):
   call = 3
   implicit = 4
 
+
+def exists(cont,f):
+    try:
+        r = (x for x in cont if f(x)).next()
+        return True
+    except StopIteration:
+        return False
+
+class BapInsn(object):
+    def __init__(self, raw, address, arch):
+        addr_size = 32
+        if arch in ['aarch64', 'x86-64']:
+            addr_size = 64
+
+        insns = list(bap.disasm(raw,
+                           address=bil.Int(long(address), addr_size),
+                           arch=arch,
+                           server='http://127.0.0.1:8080',
+                           stop_conditions=[asm.Valid()]))
+
+        if len(insns) == 0:
+            raise ValueError("Invalid instruction:\n{0}".
+                             format(raw.encode('hex')))
+        elif len(insns) > 1:
+            raise ValueError("Code fragment {0} contains {1} insns:\n{2}".
+                             format(raw.encode('hex'), len(insns),
+                                    "\n".join(i.asm for i in insns)))
+
+        self.insn = insns[0]
+
+        self.regs_read = None
+        self.regs_write = None
+
+        self.dtype = None
+        if self.is_call():
+            self.dtype = DESTTYPE.call
+        elif self.is_conditional():
+            self.dtype = DESTTYPE.cjump
+        elif self.is_jump():
+            self.dtype = DESTTYPE.jump
+
+    def __str__(self):
+        return self.insn.asm
+
+    # all jumps, including conditional
+    def is_jump(self):
+        if self.insn.bil is None:
+            return self.insn.has_kind(asm.Branch)
+        else:
+            return exists(self.insn.bil,
+                          lambda x: isinstance(x, bil.Jmp))
+
+    def is_ret(self):
+        return self.insn.has_kind(asm.Return)
+
+    def is_call(self):
+        return self.insn.has_kind(asm.Call)
+
+    def is_ending(self):
+        return self.insn.has_kind(asm.Terminator)
+
+    def is_conditional(self):
+        return self.insn.has_kind(asm.Conditional_branch)
+
+    def is_unconditional(self):
+        return self.insn.has_kind(asm.Unconditional_branch)
+
+    def code_follows(self):
+        return not (self.is_ret() or self.is_unconditional())
+
+    def size(self):
+        return self.insn.size
+
+    def dests(self):
+        if self.is_ret():
+            return []
+
+        dests = []
+
+        if self.code_follows():
+            dests.append((self.insn.addr + self.insn.size,
+                          DESTTYPE.implicit))
+        if self.is_jump() or self.is_call():
+            if self.insn.bil is None:
+                dst = self.insn.operands[0]
+                if isinstance(dst, asm.Imm):
+                    dests.append((dst.val, self.dtype))
+            else:
+                try:
+                    jmp = (s for s in self.insn.bil
+                           if isinstance(s, bil.Jmp)).next()
+                    if isinstance(jmp.val, bil.Int):
+                        dests.append((jmp.val.val[0], self.dtype))
+                except StopIteration:
+                    # in ARM we're failing with special(svc) here
+                    pass
+        return dests
+
+
 # Instruction class
-class Instruction(object):
+class CsInsn(object):
   """one disassembled instruction"""
-  def __init__(self, raw, address, arch="i386"):
+  def __init__(self, raw, address, arch):
     self.raw = raw
     self.address = address
     if arch == "i386":
@@ -116,6 +221,13 @@ class Instruction(object):
 
     return dl
 
+def Instruction(raw, address, arch='i386'):
+    try:
+        return BapInsn(raw, address, arch)
+    except Exception as exn:
+        print "bap failed", type(exn).__name__, exn
+        return CsInsn(raw, address, arch)
+
 class ABITYPE(object):
   UNKNOWN       = ([],None)
   X86_CDECL     = ([],'EAX')
@@ -202,4 +314,3 @@ class Tags:
       # name can change by adding underscores
       val = self.static.set_name(self.address, val)
     self.backing[tag] = val
-
