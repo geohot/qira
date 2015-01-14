@@ -2,11 +2,11 @@ from capstone import *
 import capstone # for some unexported (yet) symbols in Capstone 3.0
 
 try:
-     import bap
-     from bap import adt, arm, asm, bil
-     from adt import Visitor, visit
+  import bap
+  from bap import adt, arm, asm, bil
+  from adt import Visitor, visit
 except ImportError:
-    pass
+  pass
 
 __all__ = ["Tags", "Function", "Block", "Instruction", "DESTTYPE","ABITYPE"]
 
@@ -19,127 +19,128 @@ class DESTTYPE(object):
 
 
 def exists(cont,f):
-    try:
-        r = (x for x in cont if f(x)).next()
-        return True
-    except StopIteration:
-        return False
+  try:
+    r = (x for x in cont if f(x)).next()
+    return True
+  except StopIteration:
+    return False
 
 class Jmp_visitor(Visitor):
-    def __init__(self):
-        self.in_condition = False
-        self.jumps = []
+  def __init__(self):
+    self.in_condition = False
+    self.jumps = []
 
-    def visit_If(self, exp):
-        was = self.in_condition
-        self.in_condition = True
-        self.run(exp.true)
-        self.run(exp.false)
-        self.in_condition = was
+  def visit_If(self, exp):
+    was = self.in_condition
+    self.in_condition = True
+    self.run(exp.true)
+    self.run(exp.false)
+    self.in_condition = was
 
-    def visit_Jmp(self, exp):
-        self.jumps.append((exp,
-                           DESTTYPE.cjump if self.in_condition else
-                           DESTTYPE.jump))
+  def visit_Jmp(self, exp):
+    self.jumps.append((exp,
+                       DESTTYPE.cjump if self.in_condition else
+                       DESTTYPE.jump))
 
 class Access_visitor(Visitor):
-    def __init__(self):
-        self.reads = []
-        self.writes = []
+  def __init__(self):
+      self.reads = []
+      self.writes = []
 
-    def visit_Move(self, stmt):
-        self.writes.append(stmt.var.name)
-        self.run(stmt.expr)
+  def visit_Move(self, stmt):
+      self.writes.append(stmt.var.name)
+      self.run(stmt.expr)
 
-    def visit_Var(self, var):
-        self.reads.append(var.name)
+  def visit_Var(self, var):
+      self.reads.append(var.name)
 
 def jumps(bil):
-    return visit(Jmp_visitor(), bil).jumps
+  return visit(Jmp_visitor(), bil).jumps
 
 def accesses(bil):
-    r = visit(Access_visitor(), bil)
-    return (r.reads, r.writes)
+  r = visit(Access_visitor(), bil)
+  return (r.reads, r.writes)
 
 class BapInsn(object):
-    def __init__(self, raw, address, arch):
-        arch = 'armv7' if arch == 'arm' else arch
-        insns = list(bap.disasm(raw,
-                           addr=address,
-                           arch=arch,
-                           server='http://127.0.0.1:8080',
-                           stop_conditions=[asm.Valid()]))
+  def __init__(self, raw, address, arch):
+    arch = 'armv7' if arch == 'arm' else arch
+    insns = list(bap.disasm(raw,
+                            addr=address,
+                            arch=arch,
+                            server='http://127.0.0.1:8080',
+                            stop_conditions=[asm.Valid()]))
+    if len(insns) == 0:
+      raise ValueError("Invalid instruction:\n{0}".
+                       format(raw.encode('hex')))
+    elif len(insns) > 1:
+      raise ValueError("Code fragment {0} contains {1} insns:\n{2}".
+                       format(raw.encode('hex'), len(insns),
+                              "\n".join(i.asm for i in insns)))
+    self.insn = insns[0]
 
-        if len(insns) == 0:
-            raise ValueError("Invalid instruction:\n{0}".
-                             format(raw.encode('hex')))
-        elif len(insns) > 1:
-            raise ValueError("Code fragment {0} contains {1} insns:\n{2}".
-                             format(raw.encode('hex'), len(insns),
-                                    "\n".join(i.asm for i in insns)))
-        self.insn = insns[0]
+    self.regs_read, self.regs_write = accesses(self.insn.bil)
+    self.jumps = jumps(self.insn.bil)
 
-        self.regs_read, self.regs_write = accesses(self.insn.bil)
-        self.jumps = jumps(self.insn.bil)
+    self.dtype = None
+    if self.is_call():
+      self.dtype = DESTTYPE.call
+    elif self.is_conditional():
+      self.dtype = DESTTYPE.cjump
+    elif self.is_jump():
+      self.dtype = DESTTYPE.jump
 
-        self.dtype = None
-        if self.is_call():
-            self.dtype = DESTTYPE.call
-        elif self.is_conditional():
-            self.dtype = DESTTYPE.cjump
-        elif self.is_jump():
-            self.dtype = DESTTYPE.jump
+    dests = []
 
-        dests = []
+    if self.code_follows():
+      dests.append((self.insn.addr + self.insn.size,
+                    DESTTYPE.implicit))
+    if self.insn.bil is not None:
+      for (jmp,dtype) in self.jumps:
+        if isinstance(jmp.arg, bil.Int):
+            dests.append((jmp.arg.value, dtype))
 
-        if self.code_follows():
-            dests.append((self.insn.addr + self.insn.size,
-                          DESTTYPE.implicit))
-        if self.insn.bil is not None:
-            for (jmp,dtype) in self.jumps:
-                if isinstance(jmp.arg, bil.Int):
-                    dests.append((jmp.arg.value, dtype))
-        elif self.is_jump() or self.is_call():
-                dst = self.insn.operands[0]
-                if isinstance(dst, asm.Imm):
-                    dests.append((dst.arg, self.dtype))
-        if self.is_ret():
-            self._dests = []
-        else:
-            self._dests = dests
+    elif self.is_jump() or self.is_call():
+      dst = self.insn.operands[0]
+      if isinstance(dst, asm.Imm):
+        dests.append((dst.arg, self.dtype))
 
-    def __str__(self):
-        return self.insn.asm
+    if self.is_ret():
+      self._dests = []
+    else:
+      self._dests = dests
 
-    def is_jump(self):
-        if self.insn.bil is None:
-            return self.insn.has_kind(asm.Branch)
-        else:
-            return len(self.jumps) <> 0
+  def __str__(self):
+    return self.insn.asm
 
-    def is_ret(self):
-        return self.insn.has_kind(asm.Return)
+  def is_jump(self):
+    if self.insn.bil is None:
+      return self.insn.has_kind(asm.Branch)
+    else:
+      return len(self.jumps) <> 0
 
-    def is_call(self):
-        return self.insn.has_kind(asm.Call)
+  def is_ret(self):
+    return self.insn.has_kind(asm.Return)
 
-    def is_ending(self):
-        return self.insn.has_kind(asm.Terminator)
+  def is_call(self):
+    return self.insn.has_kind(asm.Call)
 
-    def is_conditional(self):
-        return self.insn.has_kind(asm.Conditional_branch)
+  def is_ending(self):
+    return self.insn.has_kind(asm.Terminator)
 
-    def is_unconditional(self):
-        return self.insn.has_kind(asm.Unconditional_branch)
+  def is_conditional(self):
+    return self.insn.has_kind(asm.Conditional_branch)
 
-    def code_follows(self):
-        return not (self.is_ret() or self.is_unconditional())
+  def is_unconditional(self):
+    return self.insn.has_kind(asm.Unconditional_branch)
 
-    def size(self):
-        return self.insn.size
+  def code_follows(self):
+    return not (self.is_ret() or self.is_unconditional())
 
-    def dests(self):
-        return self._dests
+  def size(self):
+    return self.insn.size
+
+  def dests(self):
+    return self._dests
 
 
 # Instruction class
@@ -248,12 +249,13 @@ class CsInsn(object):
 
     return dl
 
-def Instruction(raw, address, arch='i386'):
+class Instruction(object):
+  def __new__(cls, *args, **kwargs):
     try:
-        return BapInsn(raw, address, arch)
+      return BapInsn(*args, **kwargs)
     except Exception as exn:
-        print "bap failed", type(exn).__name__, exn
-        return CsInsn(raw, address, arch)
+      print "bap failed", type(exn).__name__, exn
+      return CsInsn(*args, **kwargs)
 
 class ABITYPE(object):
   UNKNOWN       = ([],None)
