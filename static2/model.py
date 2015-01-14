@@ -3,7 +3,8 @@ import capstone # for some unexported (yet) symbols in Capstone 3.0
 
 try:
      import bap
-     from bap import arm, asm, bil
+     from bap import adt, arm, asm, bil
+     from adt import Visitor, visit
 except ImportError:
     pass
 
@@ -24,14 +25,47 @@ def exists(cont,f):
     except StopIteration:
         return False
 
+class Jmp_visitor(Visitor):
+    def __init__(self):
+        self.in_condition = False
+        self.jumps = []
+
+    def visit_If(self, exp):
+        was = self.in_condition
+        self.in_condition = True
+        self.run(exp.true)
+        self.run(exp.false)
+        self.in_condition = was
+
+    def visit_Jmp(self, exp):
+        self.jumps.append((exp,
+                           DESTTYPE.cjump if self.in_condition else
+                           DESTTYPE.jump))
+
+class Access_visitor(Visitor):
+    def __init__(self):
+        self.reads = []
+        self.writes = []
+
+    def visit_Move(self, stmt):
+        self.writes.append(stmt.var.name)
+        self.run(stmt.expr)
+
+    def visit_Var(self, var):
+        self.reads.append(var.name)
+
+def jumps(bil):
+    return visit(Jmp_visitor(), bil).jumps
+
+def accesses(bil):
+    r = visit(Access_visitor(), bil)
+    return (r.reads, r.writes)
+
 class BapInsn(object):
     def __init__(self, raw, address, arch):
-        addr_size = 32
-        if arch in ['aarch64', 'x86-64']:
-            addr_size = 64
-
+        arch = 'armv7' if arch == 'arm' else arch
         insns = list(bap.disasm(raw,
-                           address=bil.Int(long(address), addr_size),
+                           addr=address,
                            arch=arch,
                            server='http://127.0.0.1:8080',
                            stop_conditions=[asm.Valid()]))
@@ -43,11 +77,10 @@ class BapInsn(object):
             raise ValueError("Code fragment {0} contains {1} insns:\n{2}".
                              format(raw.encode('hex'), len(insns),
                                     "\n".join(i.asm for i in insns)))
-
         self.insn = insns[0]
 
-        self.regs_read = None
-        self.regs_write = None
+        self.regs_read, self.regs_write = accesses(self.insn.bil)
+        self.jumps = jumps(self.insn.bil)
 
         self.dtype = None
         if self.is_call():
@@ -57,16 +90,32 @@ class BapInsn(object):
         elif self.is_jump():
             self.dtype = DESTTYPE.jump
 
+        dests = []
+
+        if self.code_follows():
+            dests.append((self.insn.addr + self.insn.size,
+                          DESTTYPE.implicit))
+        if self.insn.bil is not None:
+            for (jmp,dtype) in self.jumps:
+                if isinstance(jmp.arg, bil.Int):
+                    dests.append((jmp.arg.value, dtype))
+        elif self.is_jump() or self.is_call():
+                dst = self.insn.operands[0]
+                if isinstance(dst, asm.Imm):
+                    dests.append((dst.arg, self.dtype))
+        if self.is_ret():
+            self._dests = []
+        else:
+            self._dests = dests
+
     def __str__(self):
         return self.insn.asm
 
-    # all jumps, including conditional
     def is_jump(self):
         if self.insn.bil is None:
             return self.insn.has_kind(asm.Branch)
         else:
-            return exists(self.insn.bil,
-                          lambda x: isinstance(x, bil.Jmp))
+            return len(self.jumps) <> 0
 
     def is_ret(self):
         return self.insn.has_kind(asm.Return)
@@ -90,29 +139,7 @@ class BapInsn(object):
         return self.insn.size
 
     def dests(self):
-        if self.is_ret():
-            return []
-
-        dests = []
-
-        if self.code_follows():
-            dests.append((self.insn.addr + self.insn.size,
-                          DESTTYPE.implicit))
-        if self.is_jump() or self.is_call():
-            if self.insn.bil is None:
-                dst = self.insn.operands[0]
-                if isinstance(dst, asm.Imm):
-                    dests.append((dst.val, self.dtype))
-            else:
-                try:
-                    jmp = (s for s in self.insn.bil
-                           if isinstance(s, bil.Jmp)).next()
-                    if isinstance(jmp.val, bil.Int):
-                        dests.append((jmp.val.val[0], self.dtype))
-                except StopIteration:
-                    # in ARM we're failing with special(svc) here
-                    pass
-        return dests
+        return self._dests
 
 
 # Instruction class
