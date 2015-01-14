@@ -7,8 +7,8 @@ git clone --depth=1 --branch $BAP_TAG $BAP_URL
 
 pushd bap
 
-SYS_DEPENDS=`cat apt.deps`
-OPAM_DEPENDS=`cat opam.deps`
+OPAM_DEPENDS=`cat opam.deps opam.opt.deps`
+SYS_DEPENDS=`cat apt.deps apt.opt.deps`
 ppa=avsm/ocaml42+opam12
 export OPAMYES=1
 export OPAMVERBOSE=1
