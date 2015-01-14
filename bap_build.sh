@@ -9,6 +9,7 @@ pushd bap
 
 SYS_DEPENDS=`cat apt.deps`
 OPAM_DEPENDS=`cat opam.deps`
+ppa=avsm/ocaml42+opam12
 export OPAMYES=1
 export OPAMVERBOSE=1
 export OPAMJOBS=4
