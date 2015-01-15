@@ -9,6 +9,8 @@ if [ "$1" == "distrib" ] ; then
   cd ../../
 fi
 
+bap-server &
+
 source venv/bin/activate
 nosetests
 
@@ -21,5 +23,5 @@ sleep 2
 # phantomjs
 phantomjs qira_tests/load_page.js
 
+killall bap-server
 kill $QIRA_PID
-

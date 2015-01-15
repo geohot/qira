@@ -4,7 +4,7 @@ import capstone # for some unexported (yet) symbols in Capstone 3.0
 try:
   import bap
   from bap import adt, arm, asm, bil
-  from adt import Visitor, visit
+  from bap.adt import Visitor, visit
 except ImportError:
   pass
 
