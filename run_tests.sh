@@ -9,6 +9,7 @@ if [ "$1" == "distrib" ] ; then
   cd ../../
 fi
 
+eval `opam config env`
 bap-server &
 
 source venv/bin/activate
