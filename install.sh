@@ -44,8 +44,8 @@ else
   ./capstone_build.sh
 fi
 
-if [ -d "bap" ]; then
-    echo "using existing BAP"
+if [ -d bap -o "x$BAP" = "xdisable" ]; then
+    echo "skipping BAP"
 else
     echo "building BAP"
     ./bap_build.sh
