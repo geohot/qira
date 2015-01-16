@@ -16,10 +16,10 @@ sys.path.append(BASEDIR)
 
 # capstone is now a requirement
 WITH_CAPSTONE = True
+WITH_BAP = True
 
 # turn this off for now on releases
 WITH_STATIC = False
 STATIC_ENGINE = "builtin"
 
 WEBSOCKET_DEBUG = False
-

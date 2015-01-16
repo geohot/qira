@@ -15,9 +15,6 @@ def analyze_functions(static):
 # runs the recursive descent parser at address
 # how to deal with block groupings?
 def make_function_at(static, address, recurse = True):
-  if static['arch'] != "i386" and static['arch'] != "x86-64":
-    print "*** static only works with x86(_64), someone should fix it"
-    return
   if static[address]['function'] != None:
     # already function
     return
@@ -86,4 +83,3 @@ def make_function_at(static, address, recurse = True):
   for f in function_starts:
     if static[f]['function'] == None:
       make_function_at(static, f)
-

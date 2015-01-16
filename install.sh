@@ -35,13 +35,21 @@ fi
 echo "installing pip packages"
 virtualenv venv
 source venv/bin/activate
-$PIP install --upgrade -r requirements.txt 
+$PIP install --upgrade -r requirements.txt
 
 # build capstone if we don't have it
 if [ $(python -c "import capstone; exit(69 if (capstone.cs_version() == capstone.version_bind() and capstone.cs_version()[0] == 3) else 0)"; echo $?) == 69 ]; then
   echo "capstone already installed, skipping"
 else
   ./capstone_build.sh
+fi
+
+if [ -d bap -o "x$BAP" = "xdisable" ]; then
+    echo "skipping BAP"
+else
+    echo "building BAP"
+    ./bap_build.sh
+    $PIP install ./bap/python
 fi
 
 echo "making symlink"
@@ -52,5 +60,4 @@ echo "  Thanks for installing QIRA"
 echo "  Check out README for more info"
 echo "  Or just dive in with 'qira /bin/ls'"
 echo "  And point Chrome to localhost:3002"
-echo "    ~geohot" 
-
+echo "    ~geohot"
