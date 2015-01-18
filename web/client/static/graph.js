@@ -129,7 +129,7 @@ Graph.prototype.render = function() {
   var req = new XMLHttpRequest();
   req.open('POST', '/dot', false);
   req.send(send);
-
+ 
   //p(send);
 
   var i;

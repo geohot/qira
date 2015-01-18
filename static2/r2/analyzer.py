@@ -44,9 +44,8 @@ def make_function_at(static, addr):
   for block in blocks:
     this_block = Block(block['offset'])
     this_function.add_block(this_block)
-    addresses = addr_re.findall(block['code']) 
-    for address in addresses:
-      address = int(address[2:],16)
+    for op in block['ops']:
+      address = op['offset']
       this_block.add(address)
       static[address]['block'] = this_block
     static['blocks'].add(this_block)
