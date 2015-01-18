@@ -26,16 +26,17 @@ class bcolors(object):
   ENDC = '\033[0m'
 
 ok_green = bcolors.OKGREEN + "[+]" + bcolors.ENDC
-warn = bcolors.WARNING + "[-]" + bcolors.ENDC
+ok_blue  = bcolors.OKBLUE  + "[+]" + bcolors.ENDC
+warn = bcolors.WARNING     + "[-]" + bcolors.ENDC
 
 def get_functions(dwarfinfo):
   function_starts = set()
   for cu in dwarfinfo.iter_CUs():
     try:
       for die in cu.iter_DIEs():
-          if die.tag == "DW_TAG_subprogram":
-            if 'DW_AT_low_pc' in die.attributes:
-              function_starts.add(die.attributes['DW_AT_low_pc'].raw_value)
+        if die.tag == "DW_TAG_subprogram":
+          if 'DW_AT_low_pc' in die.attributes:
+            function_starts.add(die.attributes['DW_AT_low_pc'].raw_value)
     except:
       continue
   return function_starts
@@ -53,13 +54,11 @@ def test_files(fns,quiet=False,profile=False):
         print "{} Skipping non-ELF file `{}'".format(warn, fn)
       continue
 
+    has_dwarf = True
     if not elf.has_dwarf_info():
       if not quiet:
-        print "{} No dwarf info for `{}'".format(warn, fn)
-      continue
-
-    dwarfinfo = elf.get_dwarf_info()
-    dwarf_functions = get_functions(dwarfinfo)
+        print "{} No dwarf info for `{}', only checking runtime errors".format(warn, fn)
+      has_dwarf = False
 
     engine_functions = {}
     for engine in ENGINES:
@@ -76,22 +75,29 @@ def test_files(fns,quiet=False,profile=False):
         this_engine.process()
       engine_functions[engine] = {x.start for x in this_engine['functions']}
 
-    for engine,functions in engine_functions.iteritems():
-      missed = dwarf_functions - functions
-      total_fxns = len(dwarf_functions)
-      short_fn = fn.split("/")[-1] if "/" in fn else fn
-      if len(missed) == 0:
-        print "{} {}: {} found all {} function(s).".format(ok_green, short_fn, engine, total_fxns)
-      else:
-        if args.verbose:
-          fmt = "{} {}: {} missed {}/{} function(s): {}."
-          missed_s = ", ".join(hex(fxn) for fxn in missed)
-          print fmt.format(warn, short_fn, engine,
-                  len(missed), total_fxns, missed_s)
+    short_fn = fn.split("/")[-1] if "/" in fn else fn
+    if has_dwarf:
+      dwarfinfo = elf.get_dwarf_info()
+      dwarf_functions = get_functions(dwarfinfo)
+      for engine,functions in engine_functions.iteritems():
+        missed = dwarf_functions - functions
+        total_fxns = len(dwarf_functions)
+        if len(missed) == 0:
+          print "{} {}: {} found all {} function(s).".format(ok_green, short_fn, engine, total_fxns)
         else:
-          fmt = "{} {}: {} missed {}/{} function(s)."
-          print fmt.format(warn, short_fn, engine,
-                  len(missed), total_fxns)
+          if args.verbose:
+            fmt = "{} {}: {} missed {}/{} function(s): {}."
+            missed_s = ", ".join(hex(fxn) for fxn in missed)
+            print fmt.format(warn, short_fn, engine,
+                    len(missed), total_fxns, missed_s)
+          else:
+            fmt = "{} {}: {} missed {}/{} function(s)."
+            print fmt.format(warn, short_fn, engine,
+                    len(missed), total_fxns)
+    else:
+      for engine,functions in engine_functions.iteritems():
+        print "{} {}: {} found {} function(s).".format(ok_blue, short_fn, engine, len(functions))
+
 
 
 if __name__ == "__main__":
