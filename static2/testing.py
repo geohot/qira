@@ -42,16 +42,20 @@ def get_functions(dwarfinfo):
 
 def test_files(fns,quiet=False,profile=False):
   for fn in fns:
+    if os.path.isdir(fn):
+      if not quiet:
+        print "{} Skipping directory `{}'".format(warn, fn)
+      continue
     try:
       elf = ELFFile(open(fn))
     except ELFError:
       if not quiet:
-        print "Skipping non-ELF file:",fn
+        print "{} Skipping non-ELF file `{}'".format(warn, fn)
       continue
 
     if not elf.has_dwarf_info():
       if not quiet:
-        print "No dwarf info for {}.".format(fn)
+        print "{} No dwarf info for `{}'".format(warn, fn)
       continue
 
     dwarfinfo = elf.get_dwarf_info()
@@ -97,7 +101,7 @@ if __name__ == "__main__":
   parser.add_argument("files", metavar="file", nargs="*",
                       help="use user-specified binaries")
   parser.add_argument("--quiet",dest="quiet",action="store_true",
-                      help="don't warn about missing dwarf information")
+                      help="don't warn about skipped cases")
   parser.add_argument('--profile',dest="profile",action='store_true',
                       help='use internal profiling, output to prof.png')
   parser.add_argument('--verbose',dest="verbose",action="store_true",
