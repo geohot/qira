@@ -34,9 +34,10 @@ class arch(object):
   x86     = 0
   x86_64  = 1
   arm     = 2
-  aarch64 = 3
-  ppc     = 4
-  ppc64   = 5
+  thumb   = 3
+  aarch64 = 4
+  ppc     = 5
+  ppc64   = 6
 
 def compiler_command(path,filename,this_arch,args):
   command = []
@@ -59,8 +60,11 @@ def compiler_command(path,filename,this_arch,args):
     command += [compiler,"-m64"]
     raw_filename += "_x86-64"
   elif this_arch == arch.arm:
-    command += [ARM_GCC]
+    command += [ARM_GCC, "-marm"]
     raw_filename += "_arm"
+  elif this_arch == arch.thumb:
+    command += [ARM_GCC, "-mthumb"]
+    raw_filename += "_thumb"
   elif this_arch == arch.aarch64:
     command += [AARCH64_GCC]
     raw_filename += "_aarch64"
@@ -103,6 +107,8 @@ def argument_parse():
                       help="generate x86_64 binaries")
   parser.add_argument("--arm",dest="arm",action="store_true",
                       help="generate arm binaries")
+  parser.add_argument("--thumb",dest="thumb",action="store_true",
+                      help="generate thumb binaries")
   parser.add_argument("--aarch64",dest="aarch64",action="store_true",
                       help="generate aarch64 binaries")
   parser.add_argument("--ppc",dest="ppc",action="store_true",
@@ -127,7 +133,7 @@ def argument_parse():
 def get_archs(args):
   archs = []
   if args.all_archs and not args.clang:
-    archs = [arch.x86,arch.x86_64,arch.arm,arch.aarch64,arch.ppc,arch.ppc64]
+    archs = [arch.x86,arch.x86_64,arch.arm,arch.thumb,arch.aarch64,arch.ppc,arch.ppc64]
   else:
     if args.x86:
       archs.append(arch.x86)
@@ -135,6 +141,8 @@ def get_archs(args):
       archs.append(arch.x86_64)
     if args.arm:
       archs.append(arch.arm)
+    if args.thumb:
+      archs.append(arch.thumb)
     if args.aarch64:
       archs.append(arch.aarch64)
     if args.ppc:
