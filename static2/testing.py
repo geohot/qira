@@ -54,12 +54,6 @@ def test_files(fns,quiet=False,profile=False):
         print "{} Skipping non-ELF file `{}'".format(warn, fn)
       continue
 
-    has_dwarf = True
-    if not elf.has_dwarf_info():
-      if not quiet:
-        print "{} No dwarf info for `{}', only checking runtime errors".format(warn, fn)
-      has_dwarf = False
-
     engine_functions = {}
     for engine in ENGINES:
       this_engine = Static(fn, debug=0, static_engine=engine) #no debug output
@@ -76,7 +70,7 @@ def test_files(fns,quiet=False,profile=False):
       engine_functions[engine] = {x.start for x in this_engine['functions']}
 
     short_fn = fn.split("/")[-1] if "/" in fn else fn
-    if has_dwarf:
+    if elf.has_dwarf_info():
       dwarfinfo = elf.get_dwarf_info()
       dwarf_functions = get_functions(dwarfinfo)
       for engine,functions in engine_functions.iteritems():
@@ -96,7 +90,7 @@ def test_files(fns,quiet=False,profile=False):
                     len(missed), total_fxns)
     else:
       for engine,functions in engine_functions.iteritems():
-        print "{} {}: {} found {} function(s).".format(ok_blue, short_fn, engine, len(functions))
+        print "{} {}: {} found {} function(s). (dwarf info unavailable)".format(ok_blue, short_fn, engine, len(functions))
 
 
 
