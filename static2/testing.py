@@ -103,21 +103,20 @@ def test_files(fns,quiet=False,profile=False):
         print "{} {}: {} engine found {} function(s). (dwarf info unavailable)".format(status, short_fn, engine, len(functions))
 
 def get_file_list(location, recursive=False):
-  if not recursive:
-    fns = []
+  fns = []
+  if recursive:
+    for loc in location:
+      for fn in glob(loc):
+        if os.path.isdir(fn):
+          for root, dirnames, filenames in os.walk(fn):
+            fns += [os.path.join(root, f) for f in filenames]
+        else:
+          fns.append(fn)
+  else:
     for loc in location:
       for fn in glob(loc):
         if not os.path.isdir(fn):
           fns.append(fn)
-    return fns
-  fns = []
-  for loc in location:
-    for fn in glob(loc):
-      if os.path.isdir(fn):
-        for root, dirnames, filenames in os.walk(fn):
-          fns += [os.path.join(root, f) for f in filenames]
-      else:
-        fns.append(fn)
   return fns
 
 if __name__ == "__main__":
