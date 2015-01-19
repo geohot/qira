@@ -96,7 +96,8 @@ def test_files(fns,quiet=False,profile=False):
                     len(missed), total_fxns)
     else:
       for engine,functions in engine_functions.iteritems():
-        print "{} {}: {} engine found {} function(s). (dwarf info unavailable)".format(ok_blue, short_fn, engine, len(functions))
+        status = fail if len(functions) == 0 else ok_blue
+        print "{} {}: {} engine found {} function(s). (dwarf info unavailable)".format(status, short_fn, engine, len(functions))
 
 
 
