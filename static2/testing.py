@@ -60,20 +60,20 @@ def test_files(fns,quiet=False,profile=False):
     for engine in ENGINES:
       try:
         this_engine = Static(fn, debug=0, static_engine=engine) #no debug output
+        if args.profile:
+          #needs pycallgraph
+          from pycallgraph import PyCallGraph
+          from pycallgraph.output import GraphvizOutput
+          graphviz = GraphvizOutput()
+          graphviz.output_file = 'prof.png'
+          with PyCallGraph(output=graphviz):
+            this_engine.process()
+        else:
+          this_engine.process()
+        engine_functions[engine] = {x.start for x in this_engine['functions']}
       except:
         print "{} {}: {} engine failed to process file".format(fail, short_fn, engine)
         continue
-      if args.profile:
-        #needs pycallgraph
-        from pycallgraph import PyCallGraph
-        from pycallgraph.output import GraphvizOutput
-        graphviz = GraphvizOutput()
-        graphviz.output_file = 'prof.png'
-        with PyCallGraph(output=graphviz):
-          this_engine.process()
-      else:
-        this_engine.process()
-      engine_functions[engine] = {x.start for x in this_engine['functions']}
 
     if elf.has_dwarf_info():
       dwarfinfo = elf.get_dwarf_info()
