@@ -75,7 +75,8 @@ def test_files(fns,quiet=False,profile=False):
         print "User stopped processing test cases."
         sys.exit()
       except:
-        print "{} {}: {} engine failed to process file".format(fail, short_fn, engine)
+        print "{} {}: {} engine failed to process file".format(fail, short_fn,
+                                                               engine)
         continue
 
     if elf.has_dwarf_info():
@@ -85,7 +86,10 @@ def test_files(fns,quiet=False,profile=False):
         missed = dwarf_functions - functions
         total_fxns = len(dwarf_functions)
         if len(missed) == 0:
-          print "{} {}: {} engine found all {} function(s)".format(ok_green, short_fn, engine, total_fxns)
+          print "{} {}: {} engine found all {} function(s)".format(ok_green,
+                                                                   short_fn,
+                                                                   engine,
+                                                                   total_fxns)
         else:
           status = fail if len(missed) == total_fxns else warn
           if args.verbose:
