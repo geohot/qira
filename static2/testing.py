@@ -84,14 +84,15 @@ def test_files(fns,quiet=False,profile=False):
         if len(missed) == 0:
           print "{} {}: {} engine found all {} function(s).".format(ok_green, short_fn, engine, total_fxns)
         else:
+          status = fail if len(missed) == total_fxns else warn
           if args.verbose:
             fmt = "{} {}: {} engine missed {}/{} function(s): {}."
             missed_s = ", ".join(hex(fxn) for fxn in missed)
-            print fmt.format(warn, short_fn, engine,
+            print fmt.format(status, short_fn, engine,
                     len(missed), total_fxns, missed_s)
           else:
             fmt = "{} {}: {} engine missed {}/{} function(s)."
-            print fmt.format(warn, short_fn, engine,
+            print fmt.format(status, short_fn, engine,
                     len(missed), total_fxns)
     else:
       for engine,functions in engine_functions.iteritems():
