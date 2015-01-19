@@ -82,16 +82,16 @@ def test_files(fns,quiet=False,profile=False):
         missed = dwarf_functions - functions
         total_fxns = len(dwarf_functions)
         if len(missed) == 0:
-          print "{} {}: {} engine found all {} function(s).".format(ok_green, short_fn, engine, total_fxns)
+          print "{} {}: {} engine found all {} function(s)".format(ok_green, short_fn, engine, total_fxns)
         else:
           status = fail if len(missed) == total_fxns else warn
           if args.verbose:
-            fmt = "{} {}: {} engine missed {}/{} function(s): {}."
+            fmt = "{} {}: {} engine missed {}/{} function(s): {}"
             missed_s = ", ".join(hex(fxn) for fxn in missed)
             print fmt.format(status, short_fn, engine,
                     len(missed), total_fxns, missed_s)
           else:
-            fmt = "{} {}: {} engine missed {}/{} function(s)."
+            fmt = "{} {}: {} engine missed {}/{} function(s)"
             print fmt.format(status, short_fn, engine,
                     len(missed), total_fxns)
     else:
@@ -103,7 +103,7 @@ def test_files(fns,quiet=False,profile=False):
 if __name__ == "__main__":
   #todo: radare and summary screen comparing total performance by engine/arch
   parser = argparse.ArgumentParser(description="Test performance of static"
-    "engines, requires dwarf test cases.")
+    "engines, takes advantage of DWARF information if present.")
   parser.add_argument("files", metavar="file", nargs="*",
                       help="use user-specified binaries")
   parser.add_argument("--quiet",dest="quiet",action="store_true",
