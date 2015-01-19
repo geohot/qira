@@ -14,7 +14,7 @@ from elftools.elf.elffile import ELFFile
 from elftools.common.exceptions import ELFError
 from glob import glob
 
-TEST_PATH = os.path.join(qira_config.BASEDIR,"tests_new","binary-autogen","*")
+TEST_PATH = os.path.join(qira_config.BASEDIR,"tests_source","binary-autogen","*")
 ENGINES = ["builtin"]
 
 class bcolors(object):
