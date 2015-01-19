@@ -27,7 +27,8 @@ class bcolors(object):
 
 ok_green = bcolors.OKGREEN + "[+]" + bcolors.ENDC
 ok_blue  = bcolors.OKBLUE  + "[+]" + bcolors.ENDC
-warn = bcolors.WARNING     + "[-]" + bcolors.ENDC
+warn     = bcolors.WARNING + "[-]" + bcolors.ENDC
+fail     = bcolors.FAIL    + "[!]" + bcolors.ENDC
 
 def get_functions(dwarfinfo):
   function_starts = set()
@@ -57,7 +58,11 @@ def test_files(fns,quiet=False,profile=False):
 
     engine_functions = {}
     for engine in ENGINES:
-      this_engine = Static(fn, debug=0, static_engine=engine) #no debug output
+      try:
+        this_engine = Static(fn, debug=0, static_engine=engine) #no debug output
+      except:
+        print "{} {}: {} engine failed to process file".format(fail, short_fn, engine)
+        continue
       if args.profile:
         #needs pycallgraph
         from pycallgraph import PyCallGraph
@@ -77,20 +82,20 @@ def test_files(fns,quiet=False,profile=False):
         missed = dwarf_functions - functions
         total_fxns = len(dwarf_functions)
         if len(missed) == 0:
-          print "{} {}: {} found all {} function(s).".format(ok_green, short_fn, engine, total_fxns)
+          print "{} {}: {} engine found all {} function(s).".format(ok_green, short_fn, engine, total_fxns)
         else:
           if args.verbose:
-            fmt = "{} {}: {} missed {}/{} function(s): {}."
+            fmt = "{} {}: {} engine missed {}/{} function(s): {}."
             missed_s = ", ".join(hex(fxn) for fxn in missed)
             print fmt.format(warn, short_fn, engine,
                     len(missed), total_fxns, missed_s)
           else:
-            fmt = "{} {}: {} missed {}/{} function(s)."
+            fmt = "{} {}: {} engine missed {}/{} function(s)."
             print fmt.format(warn, short_fn, engine,
                     len(missed), total_fxns)
     else:
       for engine,functions in engine_functions.iteritems():
-        print "{} {}: {} found {} function(s). (dwarf info unavailable)".format(ok_blue, short_fn, engine, len(functions))
+        print "{} {}: {} engine found {} function(s). (dwarf info unavailable)".format(ok_blue, short_fn, engine, len(functions))
 
 
 
