@@ -71,6 +71,9 @@ def test_files(fns,quiet=False,profile=False):
         else:
           this_engine.process()
         engine_functions[engine] = {x.start for x in this_engine['functions']}
+      except KeyboardInterrupt:
+        print "User stopped processing test cases."
+        sys.exit()
       except:
         print "{} {}: {} engine failed to process file".format(fail, short_fn, engine)
         continue
