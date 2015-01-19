@@ -43,15 +43,16 @@ def get_functions(dwarfinfo):
 
 def test_files(fns,quiet=False,profile=False):
   for fn in fns:
+    short_fn = fn.split("/")[-1] if "/" in fn else fn
     if os.path.isdir(fn):
       if not quiet:
-        print "{} Skipping directory `{}'".format(warn, fn)
+        print "{} {}: skipping directory".format(warn, short_fn)
       continue
     try:
       elf = ELFFile(open(fn))
     except ELFError:
       if not quiet:
-        print "{} Skipping non-ELF file `{}'".format(warn, fn)
+        print "{} {}: skipping non-ELF file".format(warn, short_fn)
       continue
 
     engine_functions = {}
@@ -69,7 +70,6 @@ def test_files(fns,quiet=False,profile=False):
         this_engine.process()
       engine_functions[engine] = {x.start for x in this_engine['functions']}
 
-    short_fn = fn.split("/")[-1] if "/" in fn else fn
     if elf.has_dwarf_info():
       dwarfinfo = elf.get_dwarf_info()
       dwarf_functions = get_functions(dwarfinfo)
