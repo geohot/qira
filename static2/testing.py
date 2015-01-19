@@ -138,7 +138,7 @@ if __name__ == "__main__":
   else:
     if args.profile:
       print "Profiling over entire test suite. Are you sure that's what you wanted?"
-    fns = get_file_list(TEST_PATH, args.recursive)
+    fns = get_file_list([TEST_PATH], args.recursive)
     if len(fns) == 0:
       print "No files found in {}. Try running python autogen.py --dwarf in the tests directory.".format(TEST_PATH)
 
