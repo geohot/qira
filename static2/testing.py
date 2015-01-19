@@ -99,7 +99,23 @@ def test_files(fns,quiet=False,profile=False):
         status = fail if len(functions) == 0 else ok_blue
         print "{} {}: {} engine found {} function(s). (dwarf info unavailable)".format(status, short_fn, engine, len(functions))
 
-
+def get_file_list(location, recursive=False):
+  if not recursive:
+    fns = []
+    for loc in location:
+      for fn in glob(loc):
+        if not os.path.isdir(fn):
+          fns.append(fn)
+    return fns
+  fns = []
+  for loc in location:
+    for fn in glob(loc):
+      if os.path.isdir(fn):
+        for root, dirnames, filenames in os.walk(fn):
+          fns += [os.path.join(root, f) for f in filenames]
+      else:
+        fns.append(fn)
+  return fns
 
 if __name__ == "__main__":
   #todo: radare and summary screen comparing total performance by engine/arch
@@ -107,6 +123,8 @@ if __name__ == "__main__":
     "engines, takes advantage of DWARF information if present.")
   parser.add_argument("files", metavar="file", nargs="*",
                       help="use user-specified binaries")
+  parser.add_argument("--recursive","-r",dest="recursive",action="store_true",
+                      help="recurse into directories when checking")
   parser.add_argument("--quiet",dest="quiet",action="store_true",
                       help="don't warn about skipped cases")
   parser.add_argument('--profile',dest="profile",action='store_true',
@@ -116,12 +134,12 @@ if __name__ == "__main__":
   args = parser.parse_args()
 
   if args.files != []:
-    fns = args.files
+    fns = get_file_list(args.files, args.recursive)
   else:
     if args.profile:
       print "Profiling over entire test suite. Are you sure that's what you wanted?"
-    fns = glob(TEST_PATH)
+    fns = get_file_list(TEST_PATH, args.recursive)
     if len(fns) == 0:
       print "No files found in {}. Try running python autogen.py --dwarf in the tests directory.".format(TEST_PATH)
 
-  test_files(fns,args.quiet,args.profile)
+  test_files(fns,args.quiet, args.profile)
