@@ -36,6 +36,8 @@ def load_binary(static):
 
     if isinstance(section, RelocationSection):
       symtable = elf.get_section(section['sh_link'])
+      if symtable.is_null():
+        continue
       for rel in section.iter_relocations():
         symbol = symtable.get_symbol(rel['r_info_sym'])
         if static.debug >= 1: #suppress output for testing
