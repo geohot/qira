@@ -9,6 +9,7 @@ if [ "$1" == "distrib" ] ; then
   cd ../../
 fi
 
+eval `opam config env`
 source venv/bin/activate
 nosetests
 
@@ -22,4 +23,3 @@ sleep 2
 phantomjs qira_tests/load_page.js
 
 kill $QIRA_PID
-
