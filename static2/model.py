@@ -115,7 +115,7 @@ class BapInsn(object):
       return not self.is_conditional()
 
   def code_follows(self):
-    return not (self.is_ret() or self.is_unconditional())
+    return self.is_call() or not (self.is_ret() or self.is_unconditional())
 
   def size(self):
     return self.insn.size
