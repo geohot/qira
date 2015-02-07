@@ -95,7 +95,7 @@ class BapInsn(object):
     if self.insn.bil is None:
       return self.insn.has_kind(asm.Terminator)
     else:
-      return self.is_jump and self.is_unconditional()
+      return self.is_jump() and self.is_unconditional() and not self.is_call()
 
   def is_conditional(self):
     if self.insn.bil is None:

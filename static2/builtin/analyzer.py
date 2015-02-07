@@ -43,7 +43,7 @@ def make_function_at(static, address, recurse = True):
 
       #if we come after a jump and are an implicit xref, we are the start
       #of a new block
-      elif d.is_jump():
+      elif d.is_jump() and not d.is_call():
         static._auto_update_name(c,"loc_%x"%(c))
         block_starts.add(c)
     return d.dests()
