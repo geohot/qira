@@ -59,7 +59,7 @@ else
     sudo apt-get install libgmp-dev llvm-3.4-dev time
 
     opam init
-    opam install bap
+    llvm_version=3.4 opam install bap
 
     $PIP install --upgrade git+git://github.com/BinaryAnalysisPlatform/bap.git
 fi
