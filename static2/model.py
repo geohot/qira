@@ -1,5 +1,12 @@
 from capstone import *
 import capstone # for some unexported (yet) symbols in Capstone 3.0
+import qira_config
+
+if qira_config.WITH_BAP:
+  import bap
+  from bap import adt, arm, asm, bil
+  from bap.adt import Visitor, visit
+  from binascii import hexlify
 
 __all__ = ["Tags", "Function", "Block", "Instruction", "DESTTYPE","ABITYPE"]
 
@@ -10,10 +17,146 @@ class DESTTYPE(object):
   call = 3
   implicit = 4
 
-# Instruction class
 class Instruction(object):
+  def __new__(cls, *args, **kwargs):
+    if qira_config.WITH_BAP:
+      try:
+        return BapInsn(*args, **kwargs)
+      except Exception as exn:
+        print "bap failed", type(exn).__name__, exn
+        return CsInsn(*args, **kwargs)
+    else:
+      return CsInsn(*args, **kwargs)
+
+class BapInsn(object):
+  def __init__(self, raw, address, arch):
+    if len(raw) == 0:
+      raise ValueError("Empty memory at {0:#x}".format(address))
+    arch = 'armv7' if arch == 'arm' else arch
+    insns = list(bap.disasm(raw,
+                            addr=address,
+                            arch=arch,
+                            stop_conditions=[asm.Valid()]))
+    if len(insns) == 0:
+      raise ValueError("Invalid instruction for {1} at {2:#x}[{3}]:\n{0}".
+                       format(hexlify(raw), arch, address, len(raw)))
+    self.insn = insns[0]
+
+    self.regs_read, self.regs_write = accesses(self.insn.bil)
+    self.jumps = jumps(self.insn.bil)
+
+    self.dtype = None
+    if self.is_call():
+      self.dtype = DESTTYPE.call
+    elif self.is_conditional():
+      self.dtype = DESTTYPE.cjump
+    elif self.is_jump():
+      self.dtype = DESTTYPE.jump
+
+    dests = []
+
+    if self.code_follows():
+      dests.append((self.insn.addr + self.insn.size,
+                    DESTTYPE.implicit))
+    if self.insn.bil is not None:
+      for (jmp,dtype) in self.jumps:
+        if isinstance(jmp.arg, bil.Int):
+            dests.append((jmp.arg.value, dtype))
+
+    elif self.is_jump() or self.is_call():
+      dst = self.insn.operands[0]
+      if isinstance(dst, asm.Imm):
+        dests.append((dst.arg + address, self.dtype))
+
+    if self.is_ret():
+      self._dests = []
+    else:
+      self._dests = dests
+
+  def __str__(self):
+    return self.insn.asm
+
+  def is_jump(self):
+    if self.insn.bil is None:
+      return self.insn.has_kind(asm.Branch)
+    else:
+      return len(self.jumps) <> 0
+
+  def is_ret(self):
+    return self.insn.has_kind(asm.Return)
+
+  def is_call(self):
+    return self.insn.has_kind(asm.Call)
+
+  def is_ending(self):
+    return self.insn.has_kind(asm.Terminator)
+
+  def is_conditional(self):
+    return self.insn.has_kind(asm.Conditional_branch)
+
+  def is_unconditional(self):
+    return self.insn.has_kind(asm.Unconditional_branch)
+
+  def code_follows(self):
+    return not (self.is_ret() or self.is_unconditional())
+
+  def size(self):
+    return self.insn.size
+
+  def dests(self):
+    return self._dests
+
+
+def exists(cont,f):
+  try:
+    r = (x for x in cont if f(x)).next()
+    return True
+  except StopIteration:
+    return False
+
+
+if qira_config.WITH_BAP:
+  class Jmp_visitor(Visitor):
+    def __init__(self):
+      self.in_condition = False
+      self.jumps = []
+
+    def visit_If(self, exp):
+      was = self.in_condition
+      self.in_condition = True
+      self.run(exp.true)
+      self.run(exp.false)
+      self.in_condition = was
+
+    def visit_Jmp(self, exp):
+      self.jumps.append((exp,
+                         DESTTYPE.cjump if self.in_condition else
+                         DESTTYPE.jump))
+
+  class Access_visitor(Visitor):
+    def __init__(self):
+        self.reads = []
+        self.writes = []
+
+    def visit_Move(self, stmt):
+        self.writes.append(stmt.var.name)
+        self.run(stmt.expr)
+
+    def visit_Var(self, var):
+        self.reads.append(var.name)
+
+  def jumps(bil):
+    return visit(Jmp_visitor(), bil).jumps
+
+  def accesses(bil):
+    r = visit(Access_visitor(), bil)
+    return (r.reads, r.writes)
+
+
+# Instruction class
+class CsInsn(object):
   """one disassembled instruction"""
-  def __init__(self, raw, address, arch="i386"):
+  def __init__(self, raw, address, arch):
     self.raw = raw
     self.address = address
     if arch == "i386":
@@ -34,7 +177,6 @@ class Instruction(object):
     try:
       self.i = self.md.disasm(self.raw, self.address).next()
       self.decoded = True
-
       self.regs_read = self.i.regs_read
       self.regs_write = self.i.regs_write
 
@@ -115,6 +257,7 @@ class Instruction(object):
         dl.append((self.i.operands[0].value.imm,self.dtype)) #the target of the jump/call
 
     return dl
+
 
 class ABITYPE(object):
   UNKNOWN       = ([],None)
@@ -202,4 +345,3 @@ class Tags:
       # name can change by adding underscores
       val = self.static.set_name(self.address, val)
     self.backing[tag] = val
-

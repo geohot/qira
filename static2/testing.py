@@ -71,8 +71,12 @@ def test_files(fns,quiet=False,profile=False):
         else:
           this_engine.process()
         engine_functions[engine] = {x.start for x in this_engine['functions']}
+      except KeyboardInterrupt:
+        print "User stopped processing test cases."
+        sys.exit()
       except:
-        print "{} {}: {} engine failed to process file".format(fail, short_fn, engine)
+        print "{} {}: {} engine failed to process file".format(fail, short_fn,
+                                                               engine)
         continue
 
     if elf.has_dwarf_info():
@@ -82,7 +86,10 @@ def test_files(fns,quiet=False,profile=False):
         missed = dwarf_functions - functions
         total_fxns = len(dwarf_functions)
         if len(missed) == 0:
-          print "{} {}: {} engine found all {} function(s)".format(ok_green, short_fn, engine, total_fxns)
+          print "{} {}: {} engine found all {} function(s)".format(ok_green,
+                                                                   short_fn,
+                                                                   engine,
+                                                                   total_fxns)
         else:
           status = fail if len(missed) == total_fxns else warn
           if args.verbose:
@@ -100,21 +107,20 @@ def test_files(fns,quiet=False,profile=False):
         print "{} {}: {} engine found {} function(s). (dwarf info unavailable)".format(status, short_fn, engine, len(functions))
 
 def get_file_list(location, recursive=False):
-  if not recursive:
-    fns = []
+  fns = []
+  if recursive:
+    for loc in location:
+      for fn in glob(loc):
+        if os.path.isdir(fn):
+          for root, dirnames, filenames in os.walk(fn):
+            fns += [os.path.join(root, f) for f in filenames]
+        else:
+          fns.append(fn)
+  else:
     for loc in location:
       for fn in glob(loc):
         if not os.path.isdir(fn):
           fns.append(fn)
-    return fns
-  fns = []
-  for loc in location:
-    for fn in glob(loc):
-      if os.path.isdir(fn):
-        for root, dirnames, filenames in os.walk(fn):
-          fns += [os.path.join(root, f) for f in filenames]
-      else:
-        fns.append(fn)
   return fns
 
 if __name__ == "__main__":

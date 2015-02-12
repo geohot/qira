@@ -9,6 +9,7 @@ if [[ "$unamestr" == 'Linux' ]]; then
   # build for building qiradb and stuff for flask like gevent
   if [ $(which apt-get) ]; then
     echo "installing apt packages"
+    sudo apt-get update -qq
     sudo apt-get -y install build-essential python-dev python-pip debootstrap libjpeg-dev zlib1g-dev unzip wget graphviz
 
     # only python package we install globally
@@ -35,13 +36,32 @@ fi
 echo "installing pip packages"
 virtualenv venv
 source venv/bin/activate
-$PIP install --upgrade -r requirements.txt 
+$PIP install --upgrade -r requirements.txt
 
 # build capstone if we don't have it
 if [ $(python -c "import capstone; exit(69 if (capstone.cs_version() == capstone.version_bind() and capstone.cs_version()[0] == 3) else 0)"; echo $?) == 69 ]; then
   echo "capstone already installed, skipping"
 else
   ./capstone_build.sh
+fi
+
+if [ -d bap -o "x$BAP" = "xdisable" ]; then
+    echo "Skipping BAP"
+else
+    echo "Installing BAP"
+    export OPAMYES=1
+    export OPAMVERBOSE=1
+    export OPAMJOBS=4
+
+    echo 'yes' | sudo add-apt-repository ppa:avsm/ocaml42+opam12
+    sudo apt-get update -qq
+    sudo apt-get install -qq ocaml ocaml-native-compilers camlp4-extra opam
+    sudo apt-get install libgmp-dev llvm-3.4-dev time
+
+    opam init
+    llvm_version=3.4 opam install bap
+
+    $PIP install --upgrade git+git://github.com/BinaryAnalysisPlatform/bap.git
 fi
 
 echo "making symlink"
@@ -52,5 +72,4 @@ echo "  Thanks for installing QIRA"
 echo "  Check out README for more info"
 echo "  Or just dive in with 'qira /bin/ls'"
 echo "  And point Chrome to localhost:3002"
-echo "    ~geohot" 
-
+echo "    ~geohot"
