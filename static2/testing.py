@@ -6,7 +6,11 @@ import os
 sys.path.insert(0, os.path.join('..','middleware'))
 import qira_config
 
-from static2 import *
+try:
+  from static2 import *
+except ImportError as e:
+  print "Couldn't import static2 with error `{}'. Are you in the virtualenv?".format(e)
+  sys.exit()
 import subprocess
 import argparse
 
