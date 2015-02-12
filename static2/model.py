@@ -72,8 +72,8 @@ class BapInsn(object):
       #we want to check here if this is a relative or absolute jump
       #once we have BIL on x86 and x86-64 this won't matter
       if isinstance(dst, asm.Imm):
-        dst_tmp = address + calc_offset(dst.arg, arch)
-        if arch in ["x86","x86-64"]: #jump after instruction on x86, bap should tell us this
+        dst_tmp = calc_offset(dst.arg, arch)
+        if arch in ["i386","x86-64"]: #jump after instruction on x86, bap should tell us this
           dst_tmp += self.insn.size
         dests.append((dst_tmp + address, self.dtype))
 
