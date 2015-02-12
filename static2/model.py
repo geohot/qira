@@ -188,9 +188,7 @@ if qira_config.WITH_BAP:
       else:
         offset_fixed = offset
     else:
-      #this is bad; we seem to get 64bit offsets sometimes from bap
-      #use an assert here to catch errors instead
-      offset = offset & 0xFFFFFFFF
+      assert offset == offset & 0xFFFFFFFF #it's actually 32 bits
       if (offset >> 31) & 1 == 1:
         offset_fixed = -(0xFFFFFFFF-offset+1)
       else:
