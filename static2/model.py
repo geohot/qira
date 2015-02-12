@@ -68,8 +68,11 @@ class BapInsn(object):
 
     elif self.is_jump() or self.is_call():
       dst = self.insn.operands[0]
+      dst_tmp = address + calc_offset(dst.arg, arch)
       if isinstance(dst, asm.Imm):
-        dests.append((dst.arg + address, self.dtype))
+        if arch in ["x86","x86-64"]: #jump after instruction on x86, bap should tell us this
+          dst_tmp += self.insn.size
+        dests.append((dst_tmp + address, self.dtype))
 
     if self.is_ret():
       self._dests = []
@@ -83,7 +86,7 @@ class BapInsn(object):
     if self.insn.bil is None:
       return self.insn.has_kind(asm.Branch)
     else:
-      return len(self.jumps) <> 0
+      return len(self.jumps) != 0
 
   def is_ret(self):
     return self.insn.has_kind(asm.Return)
@@ -168,6 +171,44 @@ if qira_config.WITH_BAP:
   def accesses(bil):
     r = visit(Access_visitor(), bil)
     return (r.reads, r.writes)
+
+  #we could use ctypes here, but then we'd need an import
+  def calc_offset(offset, arch):
+    """
+    Takes a 2's complement offset and, depending on the architecture,
+    makes a Python value. See test_calc_offset for examples.
+
+    Note: We may want to take the size of the int here, as x86-64 for
+          example may use 32-bit ints when it uses x86 instructions.
+    """
+    if arch in ['aarch64', 'x86-64']:
+      if (offset >> 63) & 1 == 1:
+        #negative
+        offset_fixed = -(0xFFFFFFFFFFFFFFFF-offset+1)
+      else:
+        offset_fixed = offset
+    else:
+      #this is bad; we seem to get 64bit offsets sometimes from bap
+      #use an assert here to catch errors instead
+      offset = offset & 0xFFFFFFFF
+      if (offset >> 31) & 1 == 1:
+        offset_fixed = -(0xFFFFFFFF-offset+1)
+      else:
+        offset_fixed = offset
+    return offset_fixed
+
+  def test_calc_offset():
+    expected = {(0xFFFFFFFF, "x86"): -1,
+                (0xFFFFFFFE, "x86"): -2,
+                (0xFFFFFFFF, "x86-64"): 0xFFFFFFFF,
+                (0xFFFFFFFF, "aarch64"): 0xFFFFFFFF,
+                (0xFFFFFFFFFFFFFFFF, "x86-64"): -1,
+                (0xFFFFFFFFFFFFFFFE, "x86-64"): -2}
+    for k,v in expected.iteritems():
+      v_prime = calc_offset(*k)
+      if v_prime != v:
+        k_fmt = (k[0],hex(k[1]),k[2])
+        print "{0} -> {1:x} expected, got {0} -> {2:x}".format(k_fmt,v,v_prime)
 
 
 # Instruction class
