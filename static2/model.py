@@ -91,6 +91,9 @@ class BapInsn(object):
     else:
       return len(self.jumps) != 0
 
+  def is_hlt(self):
+    return self.insn.asm == "\thlt" #x86 specific. BAP should be identifying this as an ending
+
   def is_ret(self):
     return self.insn.has_kind(asm.Return)
 
@@ -98,10 +101,14 @@ class BapInsn(object):
     return self.insn.has_kind(asm.Call)
 
   def is_ending(self):
+    if self.is_hlt() or self.is_ret():
+      return True
+
     if self.insn.bil is None:
       return self.insn.has_kind(asm.Terminator)
     else:
-      return self.is_jump() and self.is_unconditional() and not self.is_call()
+      return self.insn.has_kind(asm.Terminator) or \
+            (self.is_jump() and not self.is_call())
 
   def is_conditional(self):
     if self.insn.bil is None:
