@@ -7,6 +7,7 @@ if qira_config.WITH_BAP:
   from bap import adt, arm, asm, bil
   from bap.adt import Visitor, visit
   from binascii import hexlify
+  debug_level = 0
 
 __all__ = ["Tags", "Function", "Block", "Instruction", "DESTTYPE","ABITYPE"]
 
@@ -58,15 +59,23 @@ class BapInsn(object):
     if self.code_follows():
       dests.append((self.insn.addr + self.insn.size,
                     DESTTYPE.implicit))
+
     if self.insn.bil is not None:
       for (jmp,dtype) in self.jumps:
         if isinstance(jmp.arg, bil.Int):
-            dests.append((jmp.arg.value, dtype))
+          if self.is_call():
+            dtype = DESTTYPE.call
+          dests.append((jmp.arg.value, dtype))
 
     elif self.is_jump() or self.is_call():
       dst = self.insn.operands[0]
+      #we want to check here if this is a relative or absolute jump
+      #once we have BIL on x86 and x86-64 this won't matter
       if isinstance(dst, asm.Imm):
-        dests.append((dst.arg + address, self.dtype))
+        dst_tmp = calc_offset(dst.arg, arch)
+        if arch in ["i386","x86-64"]: #jump after instruction on x86, bap should tell us this
+          dst_tmp += self.insn.size
+        dests.append((dst_tmp + address, self.dtype))
 
     if self.is_ret():
       self._dests = []
@@ -80,7 +89,10 @@ class BapInsn(object):
     if self.insn.bil is None:
       return self.insn.has_kind(asm.Branch)
     else:
-      return len(self.jumps) <> 0
+      return len(self.jumps) != 0
+
+  def is_hlt(self):
+    return self.insn.asm == "\thlt" #x86 specific. BAP should be identifying this as an ending
 
   def is_ret(self):
     return self.insn.has_kind(asm.Return)
@@ -89,16 +101,34 @@ class BapInsn(object):
     return self.insn.has_kind(asm.Call)
 
   def is_ending(self):
-    return self.insn.has_kind(asm.Terminator)
+    if self.is_hlt() or self.is_ret():
+      return True
+
+    if self.insn.bil is None:
+      return self.insn.has_kind(asm.Terminator)
+    else:
+      return self.insn.has_kind(asm.Terminator) or \
+            (self.is_jump() and not self.is_call())
 
   def is_conditional(self):
-    return self.insn.has_kind(asm.Conditional_branch)
+    if self.insn.bil is None:
+      return self.insn.has_kind(asm.Conditional_branch)
+    else:
+      for (_, dtype) in self.jumps:
+        if dtype == DESTTYPE.cjump:
+          return True
+      return False
 
   def is_unconditional(self):
-    return self.insn.has_kind(asm.Unconditional_branch)
+    if self.insn.bil is None:
+      return self.insn.has_kind(asm.Unconditional_branch)
+    else:
+      if len(self.jumps) == 0:
+        return False
+      return not self.is_conditional()
 
   def code_follows(self):
-    return not (self.is_ret() or self.is_unconditional())
+    return self.is_call() or not (self.is_ret() or self.is_unconditional())
 
   def size(self):
     return self.insn.size
@@ -151,6 +181,45 @@ if qira_config.WITH_BAP:
   def accesses(bil):
     r = visit(Access_visitor(), bil)
     return (r.reads, r.writes)
+
+  #we could use ctypes here, but then we'd need an import
+  def calc_offset(offset, arch):
+    """
+    Takes a 2's complement offset and, depending on the architecture,
+    makes a Python value. See test_calc_offset for examples.
+
+    Note: We may want to take the size of the int here, as x86-64 for
+          example may use 32-bit ints when it uses x86 instructions.
+    """
+    if arch in ['aarch64', 'x86-64']:
+      if (offset >> 63) & 1 == 1:
+        #negative
+        offset_fixed = -(0xFFFFFFFFFFFFFFFF-offset+1)
+      else:
+        offset_fixed = offset
+    else:
+      if offset != offset & 0xFFFFFFFF:
+        if debug_level >= 1:
+          print "[!] Warning: supplied offset 0x{:x} is not 32 bits.".format(offset)
+      offset = offset & 0xFFFFFFFF
+      if (offset >> 31) & 1 == 1:
+        offset_fixed = -(0xFFFFFFFF-offset+1)
+      else:
+        offset_fixed = offset
+    return offset_fixed
+
+  def test_calc_offset():
+    expected = {(0xFFFFFFFF, "x86"): -1,
+                (0xFFFFFFFE, "x86"): -2,
+                (0xFFFFFFFF, "x86-64"): 0xFFFFFFFF,
+                (0xFFFFFFFF, "aarch64"): 0xFFFFFFFF,
+                (0xFFFFFFFFFFFFFFFF, "x86-64"): -1,
+                (0xFFFFFFFFFFFFFFFE, "x86-64"): -2}
+    for k,v in expected.iteritems():
+      v_prime = calc_offset(*k)
+      if v_prime != v:
+        k_fmt = (k[0],hex(k[1]),k[2])
+        print "{0} -> {1:x} expected, got {0} -> {2:x}".format(k_fmt,v,v_prime)
 
 
 # Instruction class
