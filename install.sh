@@ -53,6 +53,9 @@ else
     export OPAMVERBOSE=1
     export OPAMJOBS=4
 
+    # install add-apt-repository
+    sudo apt-get install -qq software-properties-common
+
     echo 'yes' | sudo add-apt-repository ppa:avsm/ocaml42+opam12
     sudo apt-get update -qq
     sudo apt-get install -qq ocaml ocaml-native-compilers camlp4-extra opam
