@@ -6,7 +6,11 @@ import os
 sys.path.insert(0, os.path.join('..','middleware'))
 import qira_config
 
-from static2 import *
+try:
+  from static2 import *
+except ImportError as e:
+  print "Couldn't import static2 with error `{}'. Are you in the virtualenv?".format(e)
+  sys.exit()
 import subprocess
 import argparse
 
@@ -14,7 +18,7 @@ from elftools.elf.elffile import ELFFile
 from elftools.common.exceptions import ELFError
 from glob import glob
 
-TEST_PATH = os.path.join(qira_config.BASEDIR,"tests_new","binary-autogen","*")
+TEST_PATH = os.path.join(qira_config.BASEDIR,"tests_auto","binary-autogen","*")
 ENGINES = ["builtin"]
 
 class bcolors(object):
