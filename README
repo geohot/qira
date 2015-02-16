@@ -1,11 +1,14 @@
 QIRA is a competitor to strace and gdb
-See http://qira.me/ for high level usage information
+See http://qira.me/ for high level usage information and releases
 All QIRA code is released under GPLv2 or BSD
 Other code in this repo released under it's respective license
 
-== Installing latest release ==
+== Installing trunk ==
 
-wget -qO- https://github.com/BinaryAnalysisPlatform/qira/raw/master/releases/qira-1.1.tar.xz | unxz | tar x && cd qira && ./install.sh
+cd ~/
+git clone https://github.com/BinaryAnalysisPlatform/qira.git
+cd qira/
+./install.sh
 
 
 == Installation Extras ==
