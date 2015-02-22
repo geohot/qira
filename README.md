@@ -107,6 +107,7 @@ a -- make ascii at iaddr
 d -- make data at iaddr
 u -- make undefined at iaddr
 
+
 == Installation on Windows (experimental) ==
 
 Install git
@@ -114,16 +115,6 @@ Install python 2.7.8
 Install pip
 
 Run install.bat
-
-
-== Using CDA ==
-
-Pass either --cda to QIRA, or just call "cda binary"
-
-The binary must have DWARF data, and the source files must exist on the system
-
-If you used --cda, you have to go to localhost:3002/cda
-Everything should be intuitive, except press '/' to regex search
 
 
 == Session state ==
