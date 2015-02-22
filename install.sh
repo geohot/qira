@@ -59,7 +59,7 @@ else
     echo 'yes' | sudo add-apt-repository ppa:avsm/ocaml42+opam12
     sudo apt-get update -qq
     sudo apt-get install -qq ocaml ocaml-native-compilers camlp4-extra opam
-    sudo apt-get install libgmp-dev llvm-3.4-dev time
+    sudo apt-get install -qq libgmp-dev llvm-3.4-dev time
 
     opam init
     llvm_version=3.4 opam install bap
