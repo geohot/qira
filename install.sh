@@ -38,13 +38,6 @@ virtualenv venv
 source venv/bin/activate
 $PIP install --upgrade -r requirements.txt
 
-# build capstone if we don't have it
-if [ $(python -c "import capstone; exit(69 if (capstone.cs_version() == capstone.version_bind() and capstone.cs_version()[0] == 3) else 0)"; echo $?) == 69 ]; then
-  echo "capstone already installed, skipping"
-else
-  ./capstone_build.sh
-fi
-
 if [ -d bap -o "x$BAP" = "xdisable" ]; then
     echo "Skipping BAP"
 else
