@@ -1,3 +1,8 @@
+# QIRA
+
+[![Build Status](https://travis-ci.org/BinaryAnalysisPlatform/qira.svg?branch=master)](https://travis-ci.org/BinaryAnalysisPlatform/qira)
+
+<pre>
 QIRA is a competitor to strace and gdb
 See http://qira.me/ for high level usage information
 All QIRA code is released under GPLv2 or BSD
@@ -137,5 +142,5 @@ max_clnum -- Max changelist number for each fork
 dirtyiaddr -- Whether we should update the clnum based on the iaddr or not
 
 flat -- if we are in flat view
-
+</pre>
 
