@@ -83,6 +83,13 @@ class BapInsn(object):
       self._dests = dests
 
   def __str__(self):
+    # fix relative jumps to absolute address
+    for d in self._dests:
+      if d[1] is not DESTTYPE.implicit:
+        mnemonic = self.insn.asm.split("\t")[:-1] #ignore last operand
+        mnemonic.append(hex(d[0]).strip("L")) #add destination to end
+        newasm = "\t".join(mnemonic)
+        return newasm
     return self.insn.asm
 
   def is_jump(self):
