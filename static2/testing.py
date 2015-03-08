@@ -31,6 +31,7 @@ class bcolors(object):
 
 ok_green = bcolors.OKGREEN + "[+]" + bcolors.ENDC
 ok_blue  = bcolors.OKBLUE  + "[+]" + bcolors.ENDC
+notice   = bcolors.OKBLUE  + "[*]" + bcolors.ENDC
 warn     = bcolors.WARNING + "[-]" + bcolors.ENDC
 fail     = bcolors.FAIL    + "[!]" + bcolors.ENDC
 
@@ -51,13 +52,13 @@ def test_files(fns,quiet=False,profile=False,runtime=False):
     short_fn = fn.split("/")[-1] if "/" in fn else fn
     if os.path.isdir(fn):
       if not quiet:
-        print "{} {}: skipping directory".format(warn, short_fn)
+        print "{} {}: skipping directory".format(notice, short_fn)
       continue
     try:
       elf = ELFFile(open(fn))
     except ELFError:
       if not quiet:
-        print "{} {}: skipping non-ELF file".format(warn, short_fn)
+        print "{} {}: skipping non-ELF file".format(notice, short_fn)
       continue
 
     engine_functions = {}
@@ -76,7 +77,7 @@ def test_files(fns,quiet=False,profile=False,runtime=False):
           this_engine.process()
         engine_functions[engine] = {x.start for x in this_engine['functions']}
       except KeyboardInterrupt:
-        print "User stopped processing test cases."
+        print "{} User stopped processing test cases.".format(notice)
         sys.exit()
       except MemoryError:
         #print "{} {}: bap encountered a memory error.".format(fail, short_fn, engine)
