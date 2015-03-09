@@ -80,6 +80,7 @@ def make_function_at(static, address, recurse = True):
     static['blocks'].add(this_block)
 
    # find more functions
-  for f in function_starts:
-    if static[f]['function'] == None:
-      make_function_at(static, f)
+  if recurse:
+    for f in function_starts:
+      if static[f]['function'] == None:
+        make_function_at(static, f)
