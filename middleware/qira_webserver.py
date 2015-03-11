@@ -274,11 +274,12 @@ def getinstructions(forknum, clnum, clstart, clend):
       raw = trace.fetch_raw_memory(i, rret['address'], rret['data'])
       rret['instruction'] = str(model.Instruction(raw, rret['address'], arch))
 
-
-    if instr.is_call():
-      args = qira_analysis.display_call_args(instr,trace,i)
-      if args != "":
-        rret['instruction'] += " {"+args+"}"
+    #display_call_args calls make_function_at
+    if qira_config.WITH_STATIC:
+      if instr.is_call():
+        args = qira_analysis.display_call_args(instr,trace,i)
+        if args != "":
+          rret['instruction'] += " {"+args+"}"
 
     if 'name' in program.static[rret['address']]:
       #print "setting name"
