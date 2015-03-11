@@ -167,7 +167,7 @@ def analysis(forknum):
   data = qira_analysis.get_vtimeline_picture(trace)
   if data != None:
     emit('setpicture', {"forknum":forknum, "data":data})
-  
+
 @socketio.on('connect', namespace='/qira')
 @socket_method
 def connect():
@@ -274,11 +274,12 @@ def getinstructions(forknum, clnum, clstart, clend):
       raw = trace.fetch_raw_memory(i, rret['address'], rret['data'])
       rret['instruction'] = str(model.Instruction(raw, rret['address'], arch))
 
-
-    if instr.is_call():
-      args = qira_analysis.display_call_args(instr,trace,i)
-      if args != "":
-        rret['instruction'] += " {"+args+"}"
+    #display_call_args calls make_function_at
+    if qira_config.WITH_STATIC:
+      if instr.is_call():
+        args = qira_analysis.display_call_args(instr,trace,i)
+        if args != "":
+          rret['instruction'] += " {"+args+"}"
 
     if 'name' in program.static[rret['address']]:
       #print "setting name"
@@ -313,7 +314,7 @@ def getinstructions(forknum, clnum, clstart, clend):
     clcurr -= 1
 
   clcurr = clnum
-  while len(ret) != (clend - clnum) and clcurr <= trace.maxclnum:
+  while len(ret) != (clend - clnum) and clcurr <= clend:
     rret = get_instruction(clcurr)
     if rret != None:
       ret.append(rret)
@@ -370,7 +371,7 @@ def getregisters(forknum, clnum):
     if REGS[i] == None:
       continue
     rret = {"name": REGS[i], "address": i*REGSIZE, "value": ghex(regs[i]), "size": REGSIZE, "regactions": ""}
-      
+
     act = set()
     for c in cls:
       if c['address'] == i*REGSIZE:
@@ -391,7 +392,7 @@ def getregisters(forknum, clnum):
   emit('registers', ret)
 
 # ***** generic webserver stuff *****
-  
+
 @app.route('/', defaults={'path': 'index.html'})
 @app.route('/<path:path>')
 def serve(path):

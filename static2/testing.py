@@ -15,7 +15,7 @@ import subprocess
 import argparse
 
 from elftools.elf.elffile import ELFFile
-from elftools.common.exceptions import ELFError
+from elftools.common.exceptions import ELFError, ELFParseError
 from glob import glob
 
 TEST_PATH = os.path.join(qira_config.BASEDIR,"tests_auto","binary-autogen","*")
@@ -31,6 +31,7 @@ class bcolors(object):
 
 ok_green = bcolors.OKGREEN + "[+]" + bcolors.ENDC
 ok_blue  = bcolors.OKBLUE  + "[+]" + bcolors.ENDC
+notice   = bcolors.OKBLUE  + "[*]" + bcolors.ENDC
 warn     = bcolors.WARNING + "[-]" + bcolors.ENDC
 fail     = bcolors.FAIL    + "[!]" + bcolors.ENDC
 
@@ -46,18 +47,18 @@ def get_functions(dwarfinfo):
       continue
   return function_starts
 
-def test_files(fns,quiet=False,profile=False):
+def test_files(fns,quiet=False,profile=False,runtime=False):
   for fn in fns:
     short_fn = fn.split("/")[-1] if "/" in fn else fn
     if os.path.isdir(fn):
       if not quiet:
-        print "{} {}: skipping directory".format(warn, short_fn)
+        print "{} {}: skipping directory".format(notice, short_fn)
       continue
     try:
       elf = ELFFile(open(fn))
     except ELFError:
       if not quiet:
-        print "{} {}: skipping non-ELF file".format(warn, short_fn)
+        print "{} {}: skipping non-ELF file".format(notice, short_fn)
       continue
 
     engine_functions = {}
@@ -76,12 +77,18 @@ def test_files(fns,quiet=False,profile=False):
           this_engine.process()
         engine_functions[engine] = {x.start for x in this_engine['functions']}
       except KeyboardInterrupt:
-        print "User stopped processing test cases."
+        print "{} User stopped processing test cases.".format(notice)
         sys.exit()
-      except:
-        print "{} {}: {} engine failed to process file".format(fail, short_fn,
-                                                               engine)
+      except MemoryError:
+        #print "{} {}: bap encountered a memory error.".format(fail, short_fn, engine)
         continue
+      except Exception as e:
+        print "{} {}: {} engine failed to process file with `{}'".format(fail, short_fn, engine, e)
+        continue
+    if runtime:
+      if not quiet:
+        print "{} {}: {} ran without exceptions".format(ok_green, short_fn, engine)
+      continue
 
     if elf.has_dwarf_info():
       dwarfinfo = elf.get_dwarf_info()
@@ -125,6 +132,8 @@ def get_file_list(location, recursive=False):
       for fn in glob(loc):
         if not os.path.isdir(fn):
           fns.append(fn)
+  if fns == []:
+    print "No files found. Try running with -r."
   return fns
 
 if __name__ == "__main__":
@@ -137,6 +146,8 @@ if __name__ == "__main__":
                       help="recurse into directories when checking")
   parser.add_argument("--quiet",dest="quiet",action="store_true",
                       help="don't warn about skipped cases")
+  parser.add_argument("--runtime",dest="runtime",action="store_true",
+                      help="only check for runtime errors")
   parser.add_argument('--profile',dest="profile",action='store_true',
                       help='use internal profiling, output to prof.png')
   parser.add_argument('--verbose',dest="verbose",action="store_true",
@@ -152,4 +163,4 @@ if __name__ == "__main__":
     if len(fns) == 0:
       print "No files found in {}. Try running python autogen.py --dwarf in the tests directory.".format(TEST_PATH)
 
-  test_files(fns,args.quiet, args.profile)
+  test_files(fns, args.quiet, args.profile, args.runtime)

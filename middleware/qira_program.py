@@ -53,12 +53,12 @@ class Program:
     print "*** program is",self.program,"with hash",self.proghash
 
     # this is always initted, as it's the tag repo
-    self.static = static2.Static(self.program) 
+    self.static = static2.Static(self.program)
 
     # init static
     if qira_config.WITH_STATIC:
-      self.static.process()
-    
+      threading.Thread(target=self.static.process).start()
+
     # no traces yet
     self.traces = {}
     self.runnable = False
@@ -231,7 +231,7 @@ class Program:
     # delete the logs
     shutil.rmtree(qira_config.TRACE_FILE_BASE)
     os.mkdir(qira_config.TRACE_FILE_BASE)
-  
+
   def get_maxclnum(self):
     ret = {}
     for t in self.traces:
@@ -271,7 +271,7 @@ class Program:
       eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
     #print "***",' '.join(eargs)
     os.execvp(eargs[0], eargs)
-  
+
 
 class Trace:
   def __init__(self, fn, forknum, program, r1, r2, r3):
@@ -296,7 +296,7 @@ class Trace:
 
   def fetch_raw_memory(self, clnum, address, ln):
     return ''.join(map(chr, self.fetch_memory(clnum, address, ln).values()))
-    
+
   # proxy the db call and fill in base memory
   def fetch_memory(self, clnum, address, ln):
     mem = self.db.fetch_memory(clnum, address, ln)
@@ -404,7 +404,7 @@ class Trace:
         return get_forkbase_from_log(ret)
 
     try:
-      forkbase = get_forkbase_from_log(self.forknum) 
+      forkbase = get_forkbase_from_log(self.forknum)
       print "*** using base %d for %d" % (forkbase, self.forknum)
       f = open(qira_config.TRACE_FILE_BASE+str(forkbase)+"_base")
     except Exception, e:

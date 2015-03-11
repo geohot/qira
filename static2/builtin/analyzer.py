@@ -1,6 +1,7 @@
 import Queue
 from model import Function, Block, DESTTYPE
 import byteweight
+import time
 
 def analyze_functions(static):
   make_function_at(static, static['entry'])
@@ -18,6 +19,7 @@ def make_function_at(static, address, recurse = True):
   if static[address]['function'] != None:
     # already function
     return
+  start = time.time()
   block_starts = set([address])
   function_starts = set()
   this_function = Function(address)
@@ -61,6 +63,9 @@ def make_function_at(static, address, recurse = True):
       if d not in done:
         pending.put(d)
         done.add(d)
+    if (time.time() - start) > 0.01:
+      time.sleep(0.01)
+      start = time.time()
 
   #print map(hex, done)
 
@@ -77,9 +82,13 @@ def make_function_at(static, address, recurse = True):
       i = static[address]['instruction']
       this_block.add(address)
       static[address]['block'] = this_block
+      if (time.time() - start) > 0.01:
+        time.sleep(0.01)
+        start = time.time()
     static['blocks'].add(this_block)
 
    # find more functions
-  for f in function_starts:
-    if static[f]['function'] == None:
-      make_function_at(static, f)
+  if recurse:
+    for f in function_starts:
+      if static[f]['function'] == None:
+        make_function_at(static, f)
