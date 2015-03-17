@@ -18,8 +18,9 @@ sys.path.append(BASEDIR)
 WITH_CAPSTONE = True
 WITH_BAP = True
 
-# turn this off for now on releases
-WITH_STATIC = False
+# it's time for this to be true
+# required for the next release
+WITH_STATIC = True
 STATIC_ENGINE = "builtin"
 
 WEBSOCKET_DEBUG = False
