@@ -432,10 +432,11 @@ def get_hacked_depth_map(flow, program):
       return_stack = return_stack[0:return_stack.index(address)]
     # ugh, so gross
     ret.append(len(return_stack))
-    for test in program.tregs[4]:
-      if ins[0:len(test)] == test:
-        return_stack.append(address+length)
-        break
+
+    instr = program.static[address]['instruction']
+    if instr.is_call():
+      return_stack.append(address+length)
+
     if (time.time() - start) > 0.01:
       time.sleep(0.01)
       start = time.time()

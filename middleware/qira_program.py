@@ -393,6 +393,7 @@ class Trace:
         self.minclnum = minclnum
         self.maxclnum = maxclnum
         self.needs_update = True
+
         #print "analysis is ready"
 
   def load_base_memory(self):
