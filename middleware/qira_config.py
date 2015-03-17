@@ -1,7 +1,7 @@
 import os,sys
 
 TRACE_LIBRARIES = False
-HOST = '127.0.0.1'
+HOST = '0.0.0.0'
 WEB_PORT = 3002
 SOCAT_PORT = 4000
 FORK_PORT = SOCAT_PORT + 1

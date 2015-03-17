@@ -23,7 +23,7 @@ if __name__ == '__main__':
   parser.add_argument("--gate-trace", metavar="ADDRESS", help="don't start tracing until this address is hit")
   parser.add_argument("--flush-cache", help="flush all QIRA caches", action="store_true")
   parser.add_argument("--pin", help="use pin as the backend, requires ./pin_build.sh", action="store_true")
-  parser.add_argument("--host", metavar="HOST", help="listen address for web interface and socat. 127.0.0.1 by default", default=qira_config.HOST)
+  parser.add_argument("--host", metavar="HOST", help="listen address for web interface and socat. "+qira_config.HOST+" by default", default=qira_config.HOST)
   parser.add_argument("--web-port", metavar="PORT", help="listen port for web interface. 3002 by default", type=int, default=qira_config.WEB_PORT)
   parser.add_argument("--socat-port", metavar="PORT", help="listen port for socat. 4000 by default", type=int, default=qira_config.SOCAT_PORT)
   parser.add_argument("--static", metavar="STATIC_ENGINE", help="static engine to use with static2 (builtin or r2)", nargs="?")
