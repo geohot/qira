@@ -1,8 +1,9 @@
 import sys
 sys.path.append("static2/")
+sys.path.append("middleware/")
 import static2
+import testing
 
 def test():
-  static = static2.Static('qira_tests/bin/loop', debug=1)
-  static.process()
-
+  fns = testing.get_file_list([testing.TEST_PATH], recursive=True)
+  testing.test_files(fns, quiet=True, profile=False, runtime=True)
