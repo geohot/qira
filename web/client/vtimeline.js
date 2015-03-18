@@ -376,3 +376,6 @@ function on_changes(msg) { DS("changes");
   redraw_flags();
 } stream.on('changes', on_changes);
 
+// fix the resize problem
+window.onresize = redraw_flags;
+
