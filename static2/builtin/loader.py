@@ -34,10 +34,15 @@ def load_binary(static):
     if addr != 0 and slen > 0:
       static.add_memory_chunk(addr, section.data())
 
+    if static.debug >= 1:
+      print "** found section", section.name, type(section)
+
+
     if isinstance(section, RelocationSection):
       symtable = elf.get_section(section['sh_link'])
       if symtable.is_null():
         continue
+
       for rel in section.iter_relocations():
         symbol = symtable.get_symbol(rel['r_info_sym'])
         if static.debug >= 1: #suppress output for testing
@@ -46,13 +51,39 @@ def load_binary(static):
           static[rel['r_offset']]['name'] = "__"+symbol.name
           ncount += 1
 
+      # hacks for PLT
+      # TODO: this is fucking terrible
+      if section.name == '.rel.plt':
+        # first symbol is blank
+        plt_symbols = []
+        for rel in section.iter_relocations():
+          symbol = symtable.get_symbol(rel['r_info_sym'])
+          plt_symbols.append(symbol.name)
+
+        # does this change?
+        PLT_ENTRY_SIZE = 0x10
+
+        for section in elf.iter_sections():
+          if section.name == ".plt":
+            for name, addr in zip(plt_symbols,
+                     range(section['sh_addr'] + PLT_ENTRY_SIZE,
+                           section['sh_addr'] + PLT_ENTRY_SIZE + PLT_ENTRY_SIZE*len(plt_symbols),
+                           PLT_ENTRY_SIZE)):
+              static[addr]['name'] = name
+            print plt_symbols, section['sh_addr']
+
+
     if isinstance(section, SymbolTableSection):
       for nsym, symbol in enumerate(section.iter_symbols()):
+        #print symbol['st_info'], symbol.name, hex(symbol['st_value'])
         if symbol['st_value'] != 0 and symbol.name != "" and symbol['st_info']['type'] == "STT_FUNC":
           if static.debug >= 1:
-            print "Symbol",symbol['st_value'], symbol.name
+            print "Symbol",hex(symbol['st_value']), symbol.name
           static[symbol['st_value']]['name'] = symbol.name
           ncount += 1
+
+    # parse the DynamicSection to get the libraries
+    #if isinstance(section, DynamicSection):
   if static.debug >= 1:
     print "** found %d names" % ncount
 

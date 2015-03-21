@@ -227,6 +227,13 @@ if __name__ == "__main__":
       for a in sorted(b.addresses):
         print "    ",hex(a),static._insert_names(static[a]['instruction'])
 
+
+  # print symbols
+  print "symbols"
+  names = static.get_tags(['name'])
+  for addr in names:
+    print "%8x: %s" % (addr, names[addr]['name'])
+
   #print static['functions']
 
   #print static[main]['instruction'], map(hex, static[main]['crefs'])
