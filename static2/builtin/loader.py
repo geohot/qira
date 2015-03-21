@@ -53,7 +53,7 @@ def load_binary(static):
 
       # hacks for PLT
       # TODO: this is fucking terrible
-      if section.name == '.rel.plt':
+      if section.name == '.rel.plt' or section.name == '.rela.plt':
         # first symbol is blank
         plt_symbols = []
         for rel in section.iter_relocations():
