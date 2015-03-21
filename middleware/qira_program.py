@@ -384,6 +384,7 @@ class Trace:
         self.analysisready = False
         minclnum = self.db.get_minclnum()
         maxclnum = self.db.get_maxclnum()
+        self.program.read_asm_file()
         self.flow = qira_analysis.get_instruction_flow(self, self.program, minclnum, maxclnum)
         self.dmap = qira_analysis.get_hacked_depth_map(self.flow, self.program)
         qira_analysis.analyse_calls(self.program, self.flow)
