@@ -396,7 +396,7 @@ class Tags:
       if tag == "instruction":
         dat = self.static.memory(self.address, 0x10)
         # arch should probably come from the address with fallthrough
-        self.backing['instruction'] = Instruction(dat, self.address, self.static['arch'])
+        self.backing['instruction'] = Instruction(dat, self.address, self.static[self.address]['arch'])
         self.backing['len'] = self.backing['instruction'].size()
         self.backing['type'] = 'instruction'
         return self.backing[tag]
