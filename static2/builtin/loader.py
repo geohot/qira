@@ -28,15 +28,15 @@ def load_binary(static):
   static['entry'] = elf['e_entry']
 
   ncount = 0
-  for section in elf.iter_sections():
-    addr = section['sh_addr']
-    slen = section['sh_size']
-    if addr != 0 and slen > 0:
-      static.add_memory_chunk(addr, section.data())
+  for segment in elf.iter_segments():
+    addr = segment['p_vaddr']
+    if segment['p_type'] == 'PT_LOAD':
+      memsize = segment['p_memsz']
+      static.add_memory_chunk(addr, segment.data().ljust(memsize, "\x00"))
 
+  for section in elf.iter_sections():
     if static.debug >= 1:
       print "** found section", section.name, type(section)
-
 
     if isinstance(section, RelocationSection):
       symtable = elf.get_section(section['sh_link'])
