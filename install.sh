@@ -13,7 +13,7 @@ if [[ "$unamestr" == 'Linux' ]]; then
     sudo apt-get -qq -y install build-essential python-dev python-pip debootstrap libjpeg-dev zlib1g-dev unzip wget graphviz
 
     # only python package we install globally
-    sudo $PIP install virtualenv
+    sudo -H $PIP install virtualenv
   elif [ $(which pacman) ]; then
     echo "installing pip"
     sudo pacman -S base-devel python2-pip
