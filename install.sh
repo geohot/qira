@@ -10,7 +10,7 @@ if [[ "$unamestr" == 'Linux' ]]; then
   if [ $(which apt-get) ]; then
     echo "installing apt packages"
     sudo apt-get update -qq
-    sudo apt-get -y install build-essential python-dev python-pip debootstrap libjpeg-dev zlib1g-dev unzip wget graphviz
+    sudo apt-get -qq -y install build-essential python-dev python-pip debootstrap libjpeg-dev zlib1g-dev unzip wget graphviz
 
     # only python package we install globally
     sudo $PIP install virtualenv
@@ -43,16 +43,16 @@ if [ -d bap -o "x$BAP" = "xdisable" ]; then
 else
     echo "Installing BAP"
     export OPAMYES=1
-    export OPAMVERBOSE=1
+    #export OPAMVERBOSE=1
     export OPAMJOBS=4
 
     # install add-apt-repository
-    sudo apt-get install -qq software-properties-common
+    sudo apt-get install -qq -y software-properties-common
 
     echo 'yes' | sudo add-apt-repository ppa:avsm/ocaml42+opam12
     sudo apt-get update -qq
-    sudo apt-get install -qq ocaml ocaml-native-compilers camlp4-extra opam
-    sudo apt-get install -qq libgmp-dev llvm-3.4-dev time clang-3.4
+    sudo apt-get install -qq -y ocaml ocaml-native-compilers camlp4-extra opam
+    sudo apt-get install -qq -y libgmp-dev llvm-3.4-dev time clang-3.4
 
     opam init
     llvm_version=3.4 opam install bap
