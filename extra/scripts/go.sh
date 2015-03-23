@@ -34,18 +34,17 @@ ls -l /tmp/qira*
 
 : <<'END'
 echo "*** build the Program database"
-time python db_commit_asm.py $BIN $SRC
+time python2 db_commit_asm.py $BIN $SRC
 #echo "*** filter the Change database"
-#time python db_filter_log.py
+#time python2 db_filter_log.py
 echo "*** build the Change database"
-time python db_commit_log.py
+time python2 db_commit_log.py
 echo "*** build the memory json"
-time python mem_json_extract.py
+time python2 mem_json_extract.py
 echo "*** build the pmaps database"
-time python segment_extract.py
+time python2 segment_extract.py
 END
 
 #python db_commit_blocks.py
 #python memory_server.py
 #python build_multigraph.py
-

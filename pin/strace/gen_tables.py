@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 # modified from https://github.com/nelhage/ministrace by @nelhage
 
@@ -111,4 +111,3 @@ def main(args):
 
 if __name__ == '__main__':
   sys.exit(main(sys.argv[1:]))
-

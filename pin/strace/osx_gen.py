@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
+
 from urllib import urlopen
 syscalls_master = urlopen("http://www.opensource.apple.com/source/xnu/xnu-2422.110.17/bsd/kern/syscalls.master?txt").read()
 x = (i.strip().split(None, 3) for i in syscalls_master.splitlines() if i.strip() and i[0] not in '#;')

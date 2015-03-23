@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#/usr/bin/env python2
 
 import re
 import json
@@ -91,4 +91,3 @@ if __name__ == "__main__":
         print "Error with remote http conection"
     else:
         print disas
-
