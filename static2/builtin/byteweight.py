@@ -69,8 +69,7 @@ def fsi(static):
     return []
   trie = load(os.path.join(qira_config.BASEDIR,"static2","builtin","bw_x86"))
   functions = set()
-  (addr, lenn) = static['sections'][-3]
-  for (addr, lenn) in static['sections']:
+  for (addr, lenn) in static['segments']:
     strr = static.memory(addr, lenn)
     for i in range(lenn):
       s = score(strr[i:i+sig_len], trie)
