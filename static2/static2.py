@@ -64,7 +64,7 @@ class Static:
     self.global_tags = {}
     self.global_tags['functions'] = set()
     self.global_tags['blocks'] = set()
-    self.global_tags['sections'] = []
+    self.global_tags['segments'] = []
 
     # concept from qira_program
     self.base_memory = {}
@@ -183,16 +183,16 @@ class Static:
     return ''.join(dat)
 
   def add_memory_chunk(self, address, dat):
-    #print "add section",hex(address),len(dat)
+    #print "add segment",hex(address),len(dat)
     # check for dups
     for (laddress, llength) in self.base_memory:
       if address == laddress:
         if self.base_memory[(laddress, llength)] != dat:
-          print "*** WARNING, changing section",hex(laddress),llength
+          print "*** WARNING, changing segment",hex(laddress),llength
         return
-    
-    # sections should have an idea of section permission
-    self['sections'].append((address, len(dat)))
+
+    # segments should have an idea of segment permission
+    self['segments'].append((address, len(dat)))
     self.base_memory[(address, address+len(dat))] = dat
 
   def process(self):
