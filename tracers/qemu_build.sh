@@ -1,6 +1,6 @@
 #!/bin/bash
 
-QEMU_VERSION=2.1.0-rc0
+QEMU_VERSION=2.1.3
 
 # if you don't have ubuntu you are on your own here
 if [ $(which apt-get) ]; then
