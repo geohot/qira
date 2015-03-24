@@ -43,7 +43,7 @@ if [ -d bap -o "x$BAP" = "xdisable" ]; then
 else
     echo "Installing BAP"
     export OPAMYES=1
-    #export OPAMVERBOSE=1
+    export OPAMVERBOSE=1
     export OPAMJOBS=4
 
     # install add-apt-repository
