@@ -22,11 +22,13 @@ if [[ "$unamestr" == 'Linux' ]]; then
     sudo yum install python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
   fi
 
-  if [ $(qemu/qira-i386 > /dev/null; echo $?) == 1 ]; then
+  if [ $(tracers/qemu/qira-i386 > /dev/null; echo $?) == 1 ]; then
     echo "QIRA QEMU appears to run okay"
   else
     echo "building QEMU"
+    cd tracers
     ./qemu_build.sh
+    cd ../
   fi
 fi
 

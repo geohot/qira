@@ -82,7 +82,7 @@ class Program:
     self.identify_program()
 
   def identify_program(self):
-    qemu_dir = os.path.dirname(os.path.realpath(__file__))+"/../qemu/"
+    qemu_dir = os.path.dirname(os.path.realpath(__file__))+"/../tracers/qemu/"
     pin_dir = os.path.dirname(os.path.realpath(__file__))+"/../pin/"
     self.pinbinary = pin_dir+"pin-latest/pin"
 

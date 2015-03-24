@@ -70,7 +70,7 @@ def load_binary(static):
                            section['sh_addr'] + PLT_ENTRY_SIZE + PLT_ENTRY_SIZE*len(plt_symbols),
                            PLT_ENTRY_SIZE)):
               static[addr]['name'] = name
-            print plt_symbols, section['sh_addr']
+            #print plt_symbols, section['sh_addr']
 
 
     if isinstance(section, SymbolTableSection):
