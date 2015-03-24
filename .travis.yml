@@ -1,5 +1,5 @@
 language: python
 python: 2.7
-install: ./install.sh
+install: travis_wait ./install.sh
 script: ./run_tests.sh
 

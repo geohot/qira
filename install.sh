@@ -32,35 +32,26 @@ if [[ "$unamestr" == 'Linux' ]]; then
   fi
 fi
 
-# we install more than we strictly need here, because pip is so easy
-# should this use sudo?
-# can ./qiradb go in requirements?
+echo "fetching BAP deps"
+sudo apt-get install -qq -y software-properties-common libgmp-dev llvm-3.4-dev time clang-3.4
+
+echo "installing ocaml and opam"
+export OPAMYES=1
+export OPAMJOBS=$(grep processor < /proc/cpuinfo | wc -l)
+echo 'yes' | sudo add-apt-repository ppa:avsm/ocaml42+opam12
+sudo apt-get update -qq
+sudo apt-get install -qq -y ocaml ocaml-native-compilers camlp4-extra opam
+opam init
+opam update
+
+echo "installing BAP"
+#export OPAMVERBOSE=1   # needed so travis doesn't give up on us after 10 minutes of no output
+llvm_version=3.4 opam install bap
+
 echo "installing pip packages"
 virtualenv venv
 source venv/bin/activate
 $PIP install --upgrade -r requirements.txt
-
-if [ -d bap -o "x$BAP" = "xdisable" ]; then
-    echo "Skipping BAP"
-else
-    echo "Installing BAP"
-    export OPAMYES=1
-    export OPAMVERBOSE=1
-    export OPAMJOBS=4
-
-    # install add-apt-repository
-    sudo apt-get install -qq -y software-properties-common
-
-    echo 'yes' | sudo add-apt-repository ppa:avsm/ocaml42+opam12
-    sudo apt-get update -qq
-    sudo apt-get install -qq -y ocaml ocaml-native-compilers camlp4-extra opam
-    sudo apt-get install -qq -y libgmp-dev llvm-3.4-dev time clang-3.4
-
-    opam init
-    llvm_version=3.4 opam install bap
-
-    $PIP install --upgrade git+git://github.com/BinaryAnalysisPlatform/bap.git
-fi
 
 echo "making symlink"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira

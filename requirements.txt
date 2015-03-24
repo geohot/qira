@@ -10,3 +10,5 @@ capstone
 hexdump
 nose
 ./qiradb
+git+git://github.com/BinaryAnalysisPlatform/bap.git
+
