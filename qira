@@ -2,5 +2,5 @@
 DIR=$(dirname $(readlink -f $0))
 source $DIR/venv/bin/activate
 eval $(opam config env)
-exec python $DIR/middleware/qira.py $*
+exec /usr/bin/env python2.7 $DIR/middleware/qira.py $*
 
