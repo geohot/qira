@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # remoteobj v0.4, best yet!
 # TODO: This will get wrecked by recursive sets/lists/dicts; need a more picklish method.
 # TODO: Dict/sets/lists should get unpacked to wrappers that are local for read-only access,
@@ -364,7 +364,7 @@ if __name__ == "__main__":
     print >> sys.stderr, "In the client python shell, the server's module is available as 'proxy'"
     print >> sys.stderr, "A good demo is `proxy.__builtins__.__import__('ctypes').memset(0,0,1)`"
     exit(64)
-  
+
   hostport = (argv[2], int(argv[3]))
   password = argv[4] if len(argv) > 4 else 'lol, python'
   if argv[1] == 'server':
