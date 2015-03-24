@@ -47,8 +47,12 @@ opam init
 opam update
 
 echo "installing BAP"
-export OPAMVERBOSE=1   # needed so travis doesn't give up on us after 10 minutes of no output
+#export OPAMVERBOSE=1
+# needed so travis doesn't give up on us after 10 minutes of no output
+python -mtimeit "import time; start=time.time()" \
+  "while 1: time.sleep(30); print 'still building BAP: %5.2fm elapsed' % ((time.time()-start)/60)" &
 llvm_version=3.4 opam install bap
+kill %%
 
 echo "installing pip packages"
 virtualenv venv
