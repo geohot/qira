@@ -84,6 +84,7 @@ class Program:
   def identify_program(self):
     qemu_dir = os.path.dirname(os.path.realpath(__file__))+"/../tracers/qemu/"
     pin_dir = os.path.dirname(os.path.realpath(__file__))+"/../tracers/pin/"
+    lib_dir = os.path.dirname(os.path.realpath(__file__))+"/../libs/"
     self.pinbinary = pin_dir+"pin-latest/pin"
 
     # pmaps is global, but updated by the traces
@@ -95,7 +96,7 @@ class Program:
       self.fb = struct.unpack("H", progdat[0x12:0x14])[0]   # e_machine
 
       def use_lib(arch):
-        maybe_path = qemu_dir+"/../libs/"+arch+"/"
+        maybe_path = lib_dir+arch+"/"
         if 'QEMU_LD_PREFIX' not in os.environ and os.path.exists(maybe_path):
           os.environ['QEMU_LD_PREFIX'] = os.path.realpath(maybe_path)
           print "**** set QEMU_LD_PREFIX to",os.environ['QEMU_LD_PREFIX']
