@@ -1,7 +1,8 @@
-diff -rupN qemu-2.1.0-rc0/disas.c qemu-2.1.0-rc0-patch/disas.c
---- qemu-2.1.0-rc0/disas.c	2014-07-01 20:40:08.000000000 +0000
-+++ qemu-2.1.0-rc0-patch/disas.c	2015-03-24 15:15:38.342544597 +0000
-@@ -187,6 +187,7 @@ static int print_insn_od_target(bfd_vma
+diff --git a/disas.c b/disas.c
+index 44a019a..f4272ab 100644
+--- a/disas.c
++++ b/disas.c
+@@ -187,6 +187,7 @@ static int print_insn_od_target(bfd_vma pc, disassemble_info *info)
      return print_insn_objdump(pc, info, "OBJD-T");
  }
  
@@ -9,7 +10,7 @@ diff -rupN qemu-2.1.0-rc0/disas.c qemu-2.1.0-rc0-patch/disas.c
  /* Disassemble this for me please... (debugging). 'flags' has the following
     values:
      i386 - 1 means 16 bit code, 2 means 64 bit code
-@@ -195,7 +196,7 @@ static int print_insn_od_target(bfd_vma
+@@ -195,7 +196,7 @@ static int print_insn_od_target(bfd_vma pc, disassemble_info *info)
             bit 16 indicates little endian.
      other targets - unused
   */
@@ -18,7 +19,7 @@ diff -rupN qemu-2.1.0-rc0/disas.c qemu-2.1.0-rc0-patch/disas.c
                    target_ulong size, int flags)
  {
      target_ulong pc;
-@@ -225,6 +226,7 @@ void target_disas(FILE *out, CPUArchStat
+@@ -225,6 +226,7 @@ void target_disas(FILE *out, CPUArchState *env, target_ulong code,
          s.info.mach = bfd_mach_i386_i386;
      }
      print_insn = print_insn_i386;
@@ -26,7 +27,7 @@ diff -rupN qemu-2.1.0-rc0/disas.c qemu-2.1.0-rc0-patch/disas.c
  #elif defined(TARGET_ARM)
      if (flags & 4) {
          /* We might not be compiled with the A64 disassembler
-@@ -307,6 +309,10 @@ void target_disas(FILE *out, CPUArchStat
+@@ -307,6 +309,10 @@ void target_disas(FILE *out, CPUArchState *env, target_ulong code,
      }
  
      for (pc = code; size > 0; pc += count, size -= count) {
@@ -37,9 +38,10 @@ diff -rupN qemu-2.1.0-rc0/disas.c qemu-2.1.0-rc0-patch/disas.c
  	fprintf(out, "0x" TARGET_FMT_lx ":  ", pc);
  	count = print_insn(pc, &s.info);
  #if 0
-diff -rupN qemu-2.1.0-rc0/linux-user/main.c qemu-2.1.0-rc0-patch/linux-user/main.c
---- qemu-2.1.0-rc0/linux-user/main.c	2014-07-01 20:40:09.000000000 +0000
-+++ qemu-2.1.0-rc0-patch/linux-user/main.c	2015-03-24 15:15:38.346544575 +0000
+diff --git a/linux-user/main.c b/linux-user/main.c
+index b453a39..a678575 100644
+--- a/linux-user/main.c
++++ b/linux-user/main.c
 @@ -281,6 +281,7 @@ void cpu_loop(CPUX86State *env)
      int trapnr;
      abi_ulong pc;
@@ -77,7 +79,7 @@ diff -rupN qemu-2.1.0-rc0/linux-user/main.c qemu-2.1.0-rc0-patch/linux-user/main
  static const struct qemu_argument arg_table[] = {
      {"h",          "",                 false, handle_arg_help,
       "",           "print this help"},
-@@ -3674,6 +3697,12 @@ static const struct qemu_argument arg_ta
+@@ -3674,6 +3697,12 @@ static const struct qemu_argument arg_table[] = {
       "pagesize",   "set the host page size to 'pagesize'"},
      {"singlestep", "QEMU_SINGLESTEP",  false, handle_arg_singlestep,
       "",           "run in singlestep mode"},
@@ -90,9 +92,10 @@ diff -rupN qemu-2.1.0-rc0/linux-user/main.c qemu-2.1.0-rc0-patch/linux-user/main
      {"strace",     "QEMU_STRACE",      false, handle_arg_strace,
       "",           "log system calls"},
      {"version",    "QEMU_VERSION",     false, handle_arg_version,
-diff -rupN qemu-2.1.0-rc0/linux-user/qemu.h qemu-2.1.0-rc0-patch/linux-user/qemu.h
---- qemu-2.1.0-rc0/linux-user/qemu.h	2014-07-01 20:40:09.000000000 +0000
-+++ qemu-2.1.0-rc0-patch/linux-user/qemu.h	2015-03-24 15:15:38.342544597 +0000
+diff --git a/linux-user/qemu.h b/linux-user/qemu.h
+index 8012cc2..85934e3 100644
+--- a/linux-user/qemu.h
++++ b/linux-user/qemu.h
 @@ -22,6 +22,8 @@
  
  #define THREAD __thread
@@ -102,7 +105,7 @@ diff -rupN qemu-2.1.0-rc0/linux-user/qemu.h qemu-2.1.0-rc0-patch/linux-user/qemu
  /* This struct is used to hold certain information about the image.
   * Basically, it replicates in user space what would be certain
   * task_struct fields in the kernel
-@@ -373,6 +375,7 @@ static inline int access_ok(int type, ab
+@@ -373,6 +375,7 @@ static inline int access_ok(int type, abi_ulong addr, abi_ulong size)
  #define get_user_u8(x, gaddr)  get_user((x), (gaddr), uint8_t)
  #define get_user_s8(x, gaddr)  get_user((x), (gaddr), int8_t)
  
@@ -110,7 +113,7 @@ diff -rupN qemu-2.1.0-rc0/linux-user/qemu.h qemu-2.1.0-rc0-patch/linux-user/qemu
  /* copy_from_user() and copy_to_user() are usually used to copy data
   * buffers between the target and host.  These internally perform
   * locking/unlocking of the memory.
-@@ -386,10 +389,17 @@ abi_long copy_to_user(abi_ulong gaddr, v
+@@ -386,10 +389,17 @@ abi_long copy_to_user(abi_ulong gaddr, void *hptr, size_t len);
     any byteswapping.  lock_user may return either a pointer to the guest
     memory, or a temporary buffer.  */
  
@@ -128,7 +131,7 @@ diff -rupN qemu-2.1.0-rc0/linux-user/qemu.h qemu-2.1.0-rc0-patch/linux-user/qemu
      if (!access_ok(type, guest_addr, len))
          return NULL;
  #ifdef DEBUG_REMAP
-@@ -400,11 +410,18 @@ static inline void *lock_user(int type,
+@@ -400,11 +410,18 @@ static inline void *lock_user(int type, abi_ulong guest_addr, long len, int copy
              memcpy(addr, g2h(guest_addr), len);
          else
              memset(addr, 0, len);
@@ -149,7 +152,7 @@ diff -rupN qemu-2.1.0-rc0/linux-user/qemu.h qemu-2.1.0-rc0-patch/linux-user/qemu
  }
  
  /* Unlock an area of guest memory.  The first LEN bytes must be
-@@ -413,6 +430,11 @@ static inline void *lock_user(int type,
+@@ -413,6 +430,11 @@ static inline void *lock_user(int type, abi_ulong guest_addr, long len, int copy
  static inline void unlock_user(void *host_ptr, abi_ulong guest_addr,
                                 long len)
  {
@@ -161,9 +164,10 @@ diff -rupN qemu-2.1.0-rc0/linux-user/qemu.h qemu-2.1.0-rc0-patch/linux-user/qemu
  
  #ifdef DEBUG_REMAP
      if (!host_ptr)
-diff -rupN qemu-2.1.0-rc0/linux-user/strace.c qemu-2.1.0-rc0-patch/linux-user/strace.c
---- qemu-2.1.0-rc0/linux-user/strace.c	2014-07-01 20:40:09.000000000 +0000
-+++ qemu-2.1.0-rc0-patch/linux-user/strace.c	2015-03-24 15:15:38.350544557 +0000
+diff --git a/linux-user/strace.c b/linux-user/strace.c
+index ea6c1d2..99fe9c5 100644
+--- a/linux-user/strace.c
++++ b/linux-user/strace.c
 @@ -11,6 +11,16 @@
  #include <sched.h>
  #include "qemu.h"
@@ -181,7 +185,7 @@ diff -rupN qemu-2.1.0-rc0/linux-user/strace.c qemu-2.1.0-rc0-patch/linux-user/st
  int do_strace=0;
  
  struct syscallname {
-@@ -637,10 +647,11 @@ print_raw_param(const char *fmt, abi_lon
+@@ -637,10 +647,11 @@ print_raw_param(const char *fmt, abi_long param, int last)
  static void
  print_pointer(abi_long p, int last)
  {
@@ -195,7 +199,7 @@ diff -rupN qemu-2.1.0-rc0/linux-user/strace.c qemu-2.1.0-rc0-patch/linux-user/st
  }
  
  /*
-@@ -1562,6 +1573,8 @@ static const struct syscallname scnames[
+@@ -1562,6 +1573,8 @@ static const struct syscallname scnames[] = {
  
  static int nsyscalls = ARRAY_SIZE(scnames);
  
@@ -212,9 +216,10 @@ diff -rupN qemu-2.1.0-rc0/linux-user/strace.c qemu-2.1.0-rc0-patch/linux-user/st
      gemu_log("%d ", getpid() );
  
      for(i=0;i<nsyscalls;i++)
-diff -rupN qemu-2.1.0-rc0/linux-user/strace.list qemu-2.1.0-rc0-patch/linux-user/strace.list
---- qemu-2.1.0-rc0/linux-user/strace.list	2014-07-01 20:40:09.000000000 +0000
-+++ qemu-2.1.0-rc0-patch/linux-user/strace.list	2015-03-24 15:15:38.350544557 +0000
+diff --git a/linux-user/strace.list b/linux-user/strace.list
+index fcb258d..cb2f1b2 100644
+--- a/linux-user/strace.list
++++ b/linux-user/strace.list
 @@ -1000,7 +1000,7 @@
  { TARGET_NR_quotactl, "quotactl" , NULL, NULL, NULL },
  #endif
@@ -233,10 +238,11 @@ diff -rupN qemu-2.1.0-rc0/linux-user/strace.list qemu-2.1.0-rc0-patch/linux-user
  #endif
  #ifdef TARGET_NR_writev
  { TARGET_NR_writev, "writev" , "%s(%d,%p,%#x)", NULL, NULL },
-diff -rupN qemu-2.1.0-rc0/tci.c qemu-2.1.0-rc0-patch/tci.c
---- qemu-2.1.0-rc0/tci.c	2014-07-01 20:40:09.000000000 +0000
-+++ qemu-2.1.0-rc0-patch/tci.c	2015-03-24 15:15:38.098544744 +0000
-@@ -419,6 +419,265 @@ static bool tci_compare64(uint64_t u0, u
+diff --git a/tci.c b/tci.c
+index 4711ee4..ef25edc 100644
+--- a/tci.c
++++ b/tci.c
+@@ -419,6 +419,265 @@ static bool tci_compare64(uint64_t u0, uint64_t u1, TCGCond condition)
      return result;
  }
  
@@ -502,7 +508,7 @@ diff -rupN qemu-2.1.0-rc0/tci.c qemu-2.1.0-rc0-patch/tci.c
  #ifdef CONFIG_SOFTMMU
  # define mmuidx          tci_read_i(&tb_ptr)
  # define qemu_ld_ub \
-@@ -450,25 +709,292 @@ static bool tci_compare64(uint64_t u0, u
+@@ -450,25 +709,296 @@ static bool tci_compare64(uint64_t u0, uint64_t u1, TCGCond condition)
  # define qemu_st_beq(X) \
      helper_be_stq_mmu(env, taddr, X, mmuidx, (uintptr_t)tb_ptr)
  #else
@@ -788,6 +794,10 @@ diff -rupN qemu-2.1.0-rc0/tci.c qemu-2.1.0-rc0-patch/tci.c
 +      #ifdef R_EAX
 +        add_change((void *)&env->regs[R_EAX] - (void *)env, env->regs[R_EAX], IS_WRITE | (sizeof(target_ulong)<<3));
 +      #endif
++      #ifdef TARGET_ARM
++        //first register is 0 from enum
++        add_change((void *)&env->regs[0] - (void *)env, env->regs[0], IS_WRITE | (sizeof(target_ulong)<<3));
++      #endif
 +      GLOBAL_last_was_syscall = 0;
 +    }
 +
@@ -809,7 +819,7 @@ diff -rupN qemu-2.1.0-rc0/tci.c qemu-2.1.0-rc0-patch/tci.c
      long tcg_temps[CPU_TEMP_BUF_NLONGS];
      uintptr_t sp_value = (uintptr_t)(tcg_temps + CPU_TEMP_BUF_NLONGS);
      uintptr_t next_tb = 0;
-@@ -479,6 +1005,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState
+@@ -479,6 +1009,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
  
      for (;;) {
          TCGOpcode opc = tb_ptr[0];
@@ -817,7 +827,7 @@ diff -rupN qemu-2.1.0-rc0/tci.c qemu-2.1.0-rc0-patch/tci.c
  #if !defined(NDEBUG)
          uint8_t op_size = tb_ptr[1];
          uint8_t *old_code_ptr = tb_ptr;
-@@ -486,6 +1013,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState
+@@ -486,6 +1017,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
          tcg_target_ulong t0;
          tcg_target_ulong t1;
          tcg_target_ulong t2;
@@ -825,7 +835,7 @@ diff -rupN qemu-2.1.0-rc0/tci.c qemu-2.1.0-rc0-patch/tci.c
          tcg_target_ulong label;
          TCGCond condition;
          target_ulong taddr;
-@@ -521,11 +1049,36 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState
+@@ -521,11 +1053,46 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
              break;
          case INDEX_op_call:
              t0 = tci_read_ri(&tb_ptr);
@@ -856,6 +866,16 @@ diff -rupN qemu-2.1.0-rc0/tci.c qemu-2.1.0-rc0-patch/tci.c
 +              GLOBAL_last_was_syscall = 1;
 +            }
 +#endif
++#ifdef TARGET_ARM
++            struct change *a = NULL;
++            if ((void*)t0 == helper_exception_with_syndrome) {
++              if (GLOBAL_logstate->is_filtered == 1) {
++                commit_pending_changes();
++              }
++              a = track_syscall_begin(env, env->regs[0]);
++              GLOBAL_last_was_syscall = 1;
++            }
++#endif
 +
  #if TCG_TARGET_REG_BITS == 32
 -            tmp64 = ((helper_function)t0)(tci_read_reg(TCG_REG_R0),
@@ -866,7 +886,7 @@ diff -rupN qemu-2.1.0-rc0/tci.c qemu-2.1.0-rc0-patch/tci.c
                                            tci_read_reg(TCG_REG_R5),
                                            tci_read_reg(TCG_REG_R6),
                                            tci_read_reg(TCG_REG_R7),
-@@ -535,10 +1088,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState
+@@ -535,10 +1102,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
              tci_write_reg(TCG_REG_R0, tmp64);
              tci_write_reg(TCG_REG_R1, tmp64 >> 32);
  #else
@@ -878,7 +898,7 @@ diff -rupN qemu-2.1.0-rc0/tci.c qemu-2.1.0-rc0-patch/tci.c
                                            tci_read_reg(TCG_REG_R5));
              tci_write_reg(TCG_REG_R0, tmp64);
  #endif
-@@ -589,6 +1139,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState
+@@ -589,6 +1153,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
              t0 = *tb_ptr++;
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
@@ -886,7 +906,7 @@ diff -rupN qemu-2.1.0-rc0/tci.c qemu-2.1.0-rc0-patch/tci.c
              tci_write_reg8(t0, *(uint8_t *)(t1 + t2));
              break;
          case INDEX_op_ld8s_i32:
-@@ -602,18 +1153,21 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState
+@@ -602,18 +1167,21 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
              t0 = *tb_ptr++;
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
@@ -908,7 +928,7 @@ diff -rupN qemu-2.1.0-rc0/tci.c qemu-2.1.0-rc0-patch/tci.c
              *(uint16_t *)(t1 + t2) = t0;
              break;
          case INDEX_op_st_i32:
-@@ -621,6 +1175,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState
+@@ -621,6 +1189,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
              assert(t1 != sp_value || (int32_t)t2 < 0);
@@ -916,7 +936,7 @@ diff -rupN qemu-2.1.0-rc0/tci.c qemu-2.1.0-rc0-patch/tci.c
              *(uint32_t *)(t1 + t2) = t0;
              break;
  
-@@ -858,6 +1413,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState
+@@ -858,6 +1427,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
              t0 = *tb_ptr++;
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
@@ -924,7 +944,7 @@ diff -rupN qemu-2.1.0-rc0/tci.c qemu-2.1.0-rc0-patch/tci.c
              tci_write_reg8(t0, *(uint8_t *)(t1 + t2));
              break;
          case INDEX_op_ld8s_i64:
-@@ -869,36 +1425,42 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState
+@@ -869,36 +1439,42 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
              t0 = *tb_ptr++;
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
@@ -967,7 +987,7 @@ diff -rupN qemu-2.1.0-rc0/tci.c qemu-2.1.0-rc0-patch/tci.c
              *(uint32_t *)(t1 + t2) = t0;
              break;
          case INDEX_op_st_i64:
-@@ -906,6 +1468,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState
+@@ -906,6 +1482,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
              assert(t1 != sp_value || (int32_t)t2 < 0);
@@ -975,7 +995,7 @@ diff -rupN qemu-2.1.0-rc0/tci.c qemu-2.1.0-rc0-patch/tci.c
              *(uint64_t *)(t1 + t2) = t0;
              break;
  
-@@ -1115,6 +1678,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState
+@@ -1115,6 +1692,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
          case INDEX_op_goto_tb:
              t0 = tci_read_i32(&tb_ptr);
              assert(tb_ptr == old_code_ptr + op_size);
@@ -983,7 +1003,7 @@ diff -rupN qemu-2.1.0-rc0/tci.c qemu-2.1.0-rc0-patch/tci.c
              tb_ptr += (int32_t)t0;
              continue;
          case INDEX_op_qemu_ld_i32:
-@@ -1264,5 +1828,14 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState
+@@ -1264,5 +1842,14 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
          assert(tb_ptr == old_code_ptr + op_size);
      }
  exit:
