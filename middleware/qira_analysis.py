@@ -327,56 +327,55 @@ def guess_calling_conv(program,readregs,readstack):
 
   return ('UNKNOWN',0)
 
-def analyse_calls(program,flow):
-  for i in xrange(len(program.traces)):
-    trace = program.traces[i]
-    for (addr,data,clnum,ins) in flow:
-      instr = program.static[addr]['instruction']
-      if not instr.is_call():
-        continue
-    
-      endclnum = get_last_instr(trace.dmap,clnum)
-      if endclnum is None:
-        continue
+def analyse_calls(trace):
+  program = trace.program
+  for (addr,data,clnum,ins) in trace.flow:
+    instr = program.static[addr]['instruction']
+    if not instr.is_call():
+      continue
 
-      #the function ran from start to ret... analyze what happened in there
-      regs = trace.db.fetch_registers(clnum)
-      iptr = trace.db.fetch_changes_by_clnum(clnum+1, 1)[0]['address']
+    endclnum = get_last_instr(trace.dmap,clnum)
+    if endclnum is None:
+      continue
 
-      program.static.analyzer.make_function_at(program.static,iptr)
-      func = program.static[iptr]['function']
+    #the function ran from start to ret... analyze what happened in there
+    regs = trace.db.fetch_registers(clnum)
+    iptr = trace.db.fetch_changes_by_clnum(clnum+1, 1)[0]['address']
 
-      if program.static['arch'] in ["i386","x86-64","arm"]:
-        stack_reg = ["ESP","RSP","SP"][["i386","x86-64","arm"].index(program.static['arch'])]
-        esp = regs[program.tregs[0].index(stack_reg)]
+    program.static.analyzer.make_function_at(program.static,iptr)
+    func = program.static[iptr]['function']
 
-        nregs = len(regs)
-        rsize = program.tregs[1]
+    if program.static['arch'] in ["i386","x86-64","arm"]:
+      stack_reg = ["ESP","RSP","SP"][["i386","x86-64","arm"].index(program.static['arch'])]
+      esp = regs[program.tregs[0].index(stack_reg)]
 
-        argrange = [esp+rsize,esp+rsize*11]
-        seen = 0
-        init_regs = set()
-        uninit_regs = set()
-        for cl in xrange(clnum+1,endclnum):
-          changes = filter(lambda x:x['type'] in "LS",trace.db.fetch_changes_by_clnum(cl, -1))
-          argchanges = filter(lambda x:argrange[0] <= x['address'] <= argrange[1], changes)
-          if len(argchanges) > 0:
-            seen = max(max(map(lambda x:x['address'],argchanges)),seen)
-          rchanges = filter(lambda x:x['type'] in "RW",trace.db.fetch_changes_by_clnum(cl, -1))
-          for rchange in rchanges:
-            regnum = rchange['address']/rsize
-            if rchange['type'] is 'W' and regnum < nregs:
-              init_regs.add(regnum)
-              if ((regnum) in uninit_regs) and (rchange['data'] == regs[regnum]):
-                #if we thought they did an uninitialized read and they just clobbered it and wrote it later,
-                #don't consider this a possible argument
-                uninit_regs.remove(regnum)
-            elif (rchange['type'] is 'R' and regnum < nregs) and (regnum not in init_regs):
-              uninit_regs.add(regnum)
-        abi,nargs = guess_calling_conv(program,uninit_regs,((seen-esp)/rsize) if (seen > 0) else 0)
-        if func.abi is 'UNKNOWN':
-          func.abi = abi
-        func.nargs = max(nargs,func.nargs)
+      nregs = len(regs)
+      rsize = program.tregs[1]
+
+      argrange = [esp+rsize,esp+rsize*11]
+      seen = 0
+      init_regs = set()
+      uninit_regs = set()
+      for cl in xrange(clnum+1,endclnum):
+        changes = filter(lambda x:x['type'] in "LS",trace.db.fetch_changes_by_clnum(cl, -1))
+        argchanges = filter(lambda x:argrange[0] <= x['address'] <= argrange[1], changes)
+        if len(argchanges) > 0:
+          seen = max(max(map(lambda x:x['address'],argchanges)),seen)
+        rchanges = filter(lambda x:x['type'] in "RW",trace.db.fetch_changes_by_clnum(cl, -1))
+        for rchange in rchanges:
+          regnum = rchange['address']/rsize
+          if rchange['type'] is 'W' and regnum < nregs:
+            init_regs.add(regnum)
+            if ((regnum) in uninit_regs) and (rchange['data'] == regs[regnum]):
+              #if we thought they did an uninitialized read and they just clobbered it and wrote it later,
+              #don't consider this a possible argument
+              uninit_regs.remove(regnum)
+          elif (rchange['type'] is 'R' and regnum < nregs) and (regnum not in init_regs):
+            uninit_regs.add(regnum)
+      abi,nargs = guess_calling_conv(program,uninit_regs,((seen-esp)/rsize) if (seen > 0) else 0)
+      if func.abi is 'UNKNOWN':
+        func.abi = abi
+      func.nargs = max(nargs,func.nargs)
 
 
 def display_call_args(instr,trace,clnum):
@@ -501,7 +500,7 @@ def analyze(trace, program):
   #dmap = get_depth_map(fxns, maxclnum)
   dmap = get_hacked_depth_map(flow)
   
-  analyse_calls(program,flow)
+  #analyse_calls(program,flow)
   #loops = do_loop_analysis(blocks)
   #print loops
 

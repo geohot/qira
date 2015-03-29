@@ -388,7 +388,7 @@ class Trace:
         self.program.read_asm_file()
         self.flow = qira_analysis.get_instruction_flow(self, self.program, minclnum, maxclnum)
         self.dmap = qira_analysis.get_hacked_depth_map(self.flow, self.program)
-        qira_analysis.analyse_calls(self.program, self.flow)
+        qira_analysis.analyse_calls(self)
 
         # hacky pin offset problem fix
         hpo = len(self.dmap)-(maxclnum-minclnum)
