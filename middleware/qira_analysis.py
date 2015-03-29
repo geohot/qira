@@ -415,6 +415,10 @@ def display_call_args(instr,trace,clnum):
     ret += ["-> " + ghex(endregs[program.tregs[0].index(outp)])]
   return " ".join(ret)
 
+#finds first occurence of a in l from the right
+#assumes a in l
+def rindex(l, a):
+  return len(l) - l[::-1].index(a) - 1
 
 def get_hacked_depth_map(flow, program):
   start = time.time()
@@ -429,7 +433,7 @@ def get_hacked_depth_map(flow, program):
     last_clnum = clnum
 
     if address in return_stack:
-      return_stack = return_stack[0:return_stack.index(address)]
+      return_stack = return_stack[:rindex(return_stack, address)]
     # ugh, so gross
     ret.append(len(return_stack))
 
