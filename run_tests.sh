@@ -9,6 +9,11 @@ if [ "$1" == "distrib" ] ; then
   cd ../../
 fi
 
+# generate test cases
+cd tests_auto
+./autogen.py --dwarf
+cd ..
+
 eval `opam config env`
 source venv/bin/activate
 nosetests
