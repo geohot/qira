@@ -35,7 +35,7 @@ Deps.autorun(function() { DA("update controls");
   $("#control_iaddr").val(Session.get("iaddr"));
   $("#control_daddr").val(Session.get("daddr"));
 });
-  
+
 $(document).ready(function() {
   $('#control_clnum').on('change', function(e) {
     Session.set("clnum", fdec(e.target.value));
@@ -76,24 +76,24 @@ $(document).ready(function() {
     }
     if (isend) is_dragging = false;
   }
-  $('#staticpanel').on('mousewheel', '#outergbox', function(e) {
+  $('#cfg-static').on('mousewheel', '#outergbox', function(e) {
     var wdx = e.originalEvent.wheelDeltaX;
     var wdy = e.originalEvent.wheelDeltaY;
     $("#gbox").css("margin-left", fdec($("#gbox").css("margin-left")) + wdx);
     $("#gbox").css("margin-top", fdec($("#gbox").css("margin-top")) + wdy);
   });
-  $('#staticpanel').on('mousedown', '#outergbox', function(e) {
+  $('#cfg-static').on('mousedown', '#outergbox', function(e) {
     //p("mousedown");
     startDrag(e.screenX, e.screenY);
     return false;
   });
-  $('#staticpanel').on('mousemove', '#outergbox', function(e) {
+  $('#cfg-static').on('mousemove', '#outergbox', function(e) {
     endDrag(e.screenX, e.screenY, false);
   });
-  $('#staticpanel').on('mouseup', '#outergbox', function(e) {
+  $('#cfg-static').on('mouseup', '#outergbox', function(e) {
     endDrag(e.screenX, e.screenY, true);
   });
-  $('#staticpanel').on('mouseout', '#outergbox', function(e) {
+  $('#cfg-static').on('mouseout', '#outergbox', function(e) {
     // TODO: FIX THIS!
     /*p(e.target);
     p(e.target.id);*/
@@ -316,4 +316,3 @@ $(document).ready(function() {
     push_history("click flag");
   });
 });
-
