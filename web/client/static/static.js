@@ -51,7 +51,7 @@ function display_flat(addrs) {
     idump += instruction_html_from_tags(addrs[i]);
   }
   idump += '</div>';
-  $("#cfg-static").html(idump);
+  $("#flat-static").html(idump);
 }
 
 function on_flat(addrs) { DS("flat");
