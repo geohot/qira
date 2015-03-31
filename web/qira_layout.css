@@ -3,7 +3,7 @@ html, body {
   margin: 0;
   overflow: hidden;
   padding: 0;
-  width: 400%; /* hella wide */
+  width: 100%;
 }
 
 /* universal things */
@@ -20,9 +20,34 @@ body {
   height: 100%;
 }
 
-#container2 {
- /* wtf?? */
- /* max-height: 15%;*/
+.dynamic-info {
+    width: 100%;
+    background-color: #AAAAAA;
+}
+
+.stay-bottom {
+    position: absolute;
+    z-index: 1;
+    bottom: 0;
+}
+.stay-top {
+    position: absolute;
+    z-index: 1;
+    top: 0;
+}
+
+.splitter {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    overflow: hidden;
+}
+
+.fill {
+    height: 100%;
+    overflow-y: auto;
 }
 
 /* controls */
@@ -85,12 +110,7 @@ body {
   overflow-x: auto;
 }
 
-#idump {
-  height: 270px;
-  /*padding: 5px;
-  overflow: hidden;
-  width: 614px;*/
-  
+#idump {  
   padding: 5px;
   overflow-y: hidden;
   overflow-x: auto;
@@ -119,7 +139,7 @@ body {
 #vtimelinebox {
   padding-top: 4px;
   height: 100%;
-  width: 110px;
+  width: 100%;
   /*background-color: #AAAAAA;*/
   overflow-x: auto;
   overflow-y: hidden;
