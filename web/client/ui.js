@@ -4,7 +4,7 @@ var scripts = ["/client/controls.js", "/client/ida.js", "/client/idump.js", "/cl
                "/client/static/static.js", "/client/static/graph.js"];
 
 $(document).ready(function() {
-    var myDocker = new wcDocker(document.body, {"theme": "qira_theme", "themePath": "/"});
+    var myDocker = new wcDocker(document.body, {"theme": "qira_theme", "themePath": ""});
 
     var cfgDef = $.Deferred();
     var memoryDef = $.Deferred();

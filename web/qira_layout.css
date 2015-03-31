@@ -6,6 +6,7 @@ html, body {
   width: 100%;
 }
 
+
 /* universal things */
 input {
   font-family: monospace;
@@ -13,11 +14,6 @@ input {
 
 td {
   font-family: monospace;
-}
-
-body {
-  margin: 0px 0px 0px 0px;
-  height: 100%;
 }
 
 .dynamic-info {
@@ -64,6 +60,7 @@ body {
   border: 1px solid black;
   /*padding: 2px;
   margin: 3px;*/
+  background-color: #ddd;
 }
 
 #control_fork {
@@ -129,10 +126,6 @@ body {
 
 .col {
   float: left;
-  background-color: #AAAAAA;
-}
-
-body {
   background-color: #AAAAAA;
 }
 
