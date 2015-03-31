@@ -19,7 +19,7 @@ function wcDocker(e,t){this.$outer=$(e),this.$container=$('<div class="wcDocker"
 //chrome was placing the code in a closure preventing it from binding to global scope
 window.wcDocker = wcDocker;
 window.wcSplitter = wcSplitter;
-window.wcDrawr = wcDrawer;
+//window.wcDrawer = wcDrawer;
 window.wcFrame = wcFrame;
 //window.wclFrame = wclFrame;
 window.wcLayout = wcLayout;
