@@ -9,10 +9,6 @@ Deps.autorun(function() { DA("update static view");
   stream.emit('getstaticview', iview, flat, [-15,40]);
 });
 
-/*$(function() {
-  $("#staticpanel").css("display", "none");
-});*/
-
 
 // TODO: this code is replicated in idump.js
 function instruction_html_from_tags(ins) {
@@ -55,16 +51,16 @@ function display_flat(addrs) {
     idump += instruction_html_from_tags(addrs[i]);
   }
   idump += '</div>';
-  $("#staticpanel").html(idump);
+  $("#cfg-static").html(idump);
 }
 
-function on_flat(addrs) { DS("flat"); 
+function on_flat(addrs) { DS("flat");
   display_flat(addrs);
   rehighlight();
   replace_names();
 } stream.on('flat', on_flat);
 
-function on_function(fxn) { DS("function"); 
+function on_function(fxn) { DS("function");
   var graph = new Graph();
   p(fxn);
 
@@ -73,7 +69,7 @@ function on_function(fxn) { DS("function");
     if (bb.length == 0) continue;
     var addr = bb[0].address;
     var cnt = bb.length;
-    
+
     var idump = "";
     for (var i = 0; i < cnt; i++) {
       idump += instruction_html_from_tags(bb[i]);
@@ -105,4 +101,3 @@ function on_function(fxn) { DS("function");
   rehighlight();
   replace_names();
 } stream.on('function', on_function);
-
