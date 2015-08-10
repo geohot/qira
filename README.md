@@ -1,5 +1,7 @@
 # QIRA
 
+## QIRA trunk is currently low quality. We recommend you install the release version from [qira.me](http://qira.me/)
+
 [![Build Status](https://travis-ci.org/BinaryAnalysisPlatform/qira.svg?branch=master)](https://travis-ci.org/BinaryAnalysisPlatform/qira)
 
 * QIRA is a competitor to strace and gdb
