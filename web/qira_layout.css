@@ -3,9 +3,8 @@ html, body {
   margin: 0;
   overflow: hidden;
   padding: 0;
-  width: 100%;
+  width: 400%; /* hella wide */
 }
-
 
 /* universal things */
 input {
@@ -16,34 +15,14 @@ td {
   font-family: monospace;
 }
 
-.dynamic-info {
-    width: 100%;
-    background-color: #AAAAAA;
+body {
+  margin: 0px 0px 0px 0px;
+  height: 100%;
 }
 
-.stay-bottom {
-    position: absolute;
-    z-index: 1;
-    bottom: 0;
-}
-.stay-top {
-    position: absolute;
-    z-index: 1;
-    top: 0;
-}
-
-.splitter {
-    position: absolute;
-    top: 0px;
-    left: 0px;
-    right: 0px;
-    bottom: 0px;
-    overflow: hidden;
-}
-
-.fill {
-    height: 100%;
-    overflow-y: auto;
+#container2 {
+ /* wtf?? */
+ /* max-height: 15%;*/
 }
 
 /* controls */
@@ -60,7 +39,6 @@ td {
   border: 1px solid black;
   /*padding: 2px;
   margin: 3px;*/
-  background-color: #ddd;
 }
 
 #control_fork {
@@ -107,7 +85,12 @@ td {
   overflow-x: auto;
 }
 
-#idump {  
+#idump {
+  height: 270px;
+  /*padding: 5px;
+  overflow: hidden;
+  width: 614px;*/
+  
   padding: 5px;
   overflow-y: hidden;
   overflow-x: auto;
@@ -129,10 +112,14 @@ td {
   background-color: #AAAAAA;
 }
 
+body {
+  background-color: #AAAAAA;
+}
+
 #vtimelinebox {
   padding-top: 4px;
   height: 100%;
-  width: 100%;
+  width: 110px;
   /*background-color: #AAAAAA;*/
   overflow-x: auto;
   overflow-y: hidden;
