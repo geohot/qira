@@ -3,8 +3,9 @@ html, body {
   margin: 0;
   overflow: hidden;
   padding: 0;
-  width: 400%; /* hella wide */
+  width: 100%;
 }
+
 
 /* universal things */
 input {
@@ -15,14 +16,34 @@ td {
   font-family: monospace;
 }
 
-body {
-  margin: 0px 0px 0px 0px;
-  height: 100%;
+.dynamic-info {
+    width: 100%;
+    background-color: #AAAAAA;
 }
 
-#container2 {
- /* wtf?? */
- /* max-height: 15%;*/
+.stay-bottom {
+    position: absolute;
+    z-index: 1;
+    bottom: 0;
+}
+.stay-top {
+    position: absolute;
+    z-index: 1;
+    top: 0;
+}
+
+.splitter {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    overflow: hidden;
+}
+
+.fill {
+    height: 100%;
+    overflow-y: auto;
 }
 
 /* controls */
@@ -39,6 +60,7 @@ body {
   border: 1px solid black;
   /*padding: 2px;
   margin: 3px;*/
+  background-color: #ddd;
 }
 
 #control_fork {
@@ -85,12 +107,7 @@ body {
   overflow-x: auto;
 }
 
-#idump {
-  height: 270px;
-  /*padding: 5px;
-  overflow: hidden;
-  width: 614px;*/
-  
+#idump {  
   padding: 5px;
   overflow-y: hidden;
   overflow-x: auto;
@@ -112,14 +129,10 @@ body {
   background-color: #AAAAAA;
 }
 
-body {
-  background-color: #AAAAAA;
-}
-
 #vtimelinebox {
   padding-top: 4px;
   height: 100%;
-  width: 110px;
+  width: 100%;
   /*background-color: #AAAAAA;*/
   overflow-x: auto;
   overflow-y: hidden;
