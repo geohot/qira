@@ -1,6 +1,7 @@
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
 from elftools.elf.relocation import RelocationSection
+from elftools.common.exceptions import ELFError
 import struct
 
 def get_arch(fb):
@@ -19,7 +20,11 @@ def get_arch(fb):
 
 
 def load_binary(static):
-  elf = ELFFile(open(static.path))
+  try:
+    elf = ELFFile(open(static.path))
+  except ELFError:
+    print "*** loader error: non-ELF detected"
+    return
 
   # TODO: replace with elf['e_machine']
   progdat = open(static.path).read(0x20)
