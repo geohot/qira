@@ -9,7 +9,6 @@ if [ "$1" == "distrib" ] ; then
   cd ../../
 fi
 
-eval `opam config env`
 source venv/bin/activate
 nosetests
 
