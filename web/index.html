@@ -1,59 +1,62 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <link rel="stylesheet" type="text/css" href="/qira_layout.css">
-        <link rel="stylesheet" type="text/css" href="/qira_types.css">
-        <link rel="stylesheet" type="text/css" href="/qira_new.css">
+  <head>
+    <link rel="stylesheet" type="text/css" href="/qira_layout.css">
+    <link rel="stylesheet" type="text/css" href="/qira_types.css">
+    <link rel="stylesheet" type="text/css" href="/qira_new.css">
 
-        <link rel='stylesheet' type='text/css' href='/client/compatibility/jquery.contextMenu.css'>
-        <link rel="stylesheet" type="text/css" href="/client/compatibility/font-awesome.min.css">
-        <link rel="stylesheet" type="text/css" href="/client/compatibility/wcDocker.min.css">
+    <link rel='stylesheet' type='text/css' href='/client/compatibility/jquery.contextMenu.css'>
+    <link rel="stylesheet" type="text/css" href="/client/compatibility/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="/client/compatibility/wcDocker.min.css">
 
 
-        <script> console.log("welcome to qira"); </script>
+    <script> console.log("welcome to qira"); </script>
 
-        <title>qira</title>
-    </head>
+    <title>qira</title>
+  </head>
 
-    <body></body>
+  <body></body>
 
-    <script type="text/javascript" src="/client/compatibility/jquery-2.1.1.min.js"></script>
-    <script type="text/javascript" src="/client/compatibility/head.core.min.js"></script>
+  <script type="text/javascript" src="/client/compatibility/jquery-2.1.1.min.js"></script>
+  <script type="text/javascript" src="/client/compatibility/head.core.min.js"></script>
 
-    <script type="text/javascript" src="/client/compatibility/fakemeteor.js"></script>
-    <script type="text/javascript" src="/client/compatibility/base.js"></script>
-    <script type="text/javascript" src="/client/compatibility/bignum.js"></script>
-    <script type="text/javascript" src="/client/compatibility/socket.io.min.js"></script>
-    <script type="text/javascript" src="/client/compatibility/highlight.js"></script>
-    <script type="text/javascript" src='/client/compatibility/jquery.contextMenu.js'></script>
-    <script type="text/javascript" src='/client/compatibility/jquery.ui.position.js'></script>
-    <script type="text/javascript" src="/client/compatibility/wcDocker.window-patch.js"></script>
-    <script type="text/javascript" src="/client/ui.js"></script>
+  <script type="text/javascript" src="/client/compatibility/fakemeteor.js"></script>
+  <script type="text/javascript" src="/client/compatibility/base.js"></script>
+  <script type="text/javascript" src="/client/compatibility/bignum.js"></script>
+  <script type="text/javascript" src="/client/compatibility/socket.io.min.js"></script>
+  <script type="text/javascript" src="/client/compatibility/highlight.js"></script>
+  <script type="text/javascript" src='/client/compatibility/jquery.contextMenu.js'></script>
+  <script type="text/javascript" src='/client/compatibility/jquery.ui.position.js'></script>
+  <script type="text/javascript" src="/client/compatibility/wcDocker.window-patch.js"></script>
+  <script type="text/javascript" src="/client/ui.js"></script>
 
-    <script type="text/template" id="dynamic-template">
-        <div class="container fill">
-            <div class="stay-top dynamic-info">
-                <div id="haddrline"></div>
-                <div id="controls" class="fill">
-                    <input spellcheck="false" id="control_clnum" class="control" />
-                    <input spellcheck="false" id="control_forknum" class="control" />
-                    <input spellcheck="false" id="control_iaddr" class="control" />
-                    <input spellcheck="false" id="control_daddr" class="control" />
-                </div>
-            </div>
-            <div class="panelthing fill" id="idump"></div>
-            <div class="stay-bottom">
-                <div class="panelthing" id="regviewer"></div>
-                <div class="panelthing" id="datachanges"></div>
-                <div class="panelthing" id="strace"></div>
-            </div>
+  <script type="text/template" id="dynamic-template">
+    <div class="container fill">
+      <div class="stay-top dynamic-info">
+        <div id="haddrline"></div>
+        <div id="controls" class="fill">
+          <input spellcheck="false" id="control_clnum" class="control" />
+          <input spellcheck="false" id="control_forknum" class="control" />
+          <input spellcheck="false" id="control_iaddr" class="control" />
+          <input spellcheck="false" id="control_daddr" class="control" />
         </div>
-    </script>
+      </div>
+      <div class="panelthing fill" id="idump"></div>
+      <div class="stay-bottom">
+        <div class="panelthing" id="regviewer"></div>
+        <div class="panelthing" id="datachanges"></div>
+      </div>
+    </div>
+  </script>
 
-    <script type="text/template" id="hexeditor-template">
-        <div class="panelthing fill" id="hexeditor">
-            <div id="hexdump" class="fill"></div>
-        </div>
-    </script>
+  <script type="text/template" id="strace-template">
+    <div class="panelthing" id="strace"></div>
+  </script>
+
+  <script type="text/template" id="hexeditor-template">
+    <div class="panelthing fill" id="hexeditor">
+      <div id="hexdump" class="fill"></div>
+    </div>
+  </script>
 
 </html>
