@@ -62,8 +62,8 @@ $(document).ready(function() {
   timelinePanel.maxSize(100, 0);
 
   var dynamicPanel = myDocker.addPanel("Dynamic", wcDocker.DOCK.RIGHT, timelinePanel);
-  var cfgPanel = myDocker.addPanel("Control Flow", wcDocker.DOCK.RIGHT, dynamicPanel);
-  var flatPanel = myDocker.addPanel("Flat", wcDocker.DOCK.BOTTOM, cfgPanel, {h: 300});
+  /*var cfgPanel = myDocker.addPanel("Control Flow", wcDocker.DOCK.RIGHT, dynamicPanel);
+  var flatPanel = myDocker.addPanel("Flat", wcDocker.DOCK.BOTTOM, cfgPanel, {h: 300});*/
   var memoryPanel = myDocker.addPanel("Memory", wcDocker.DOCK.BOTTOM, dynamicPanel, {h: 400});
   var stracePanel = myDocker.addPanel("strace", wcDocker.DOCK.BOTTOM, dynamicPanel, {h: 200});
 
@@ -77,7 +77,8 @@ $(document).ready(function() {
   });
 
 
-  $.when(timelineDef, dynamicDef, cfgDef, flatDef, memoryDef, straceDef)
+  //$.when(timelineDef, dynamicDef, cfgDef, flatDef, memoryDef, straceDef)
+  $.when(timelineDef, dynamicDef, memoryDef, straceDef)
     .done(function() {
       //UI elements now exist in the DOM.
       head.load(scripts);

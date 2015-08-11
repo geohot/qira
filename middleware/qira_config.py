@@ -17,9 +17,8 @@ sys.path.append(BASEDIR)
 # BAP is no longer supported
 WITH_BAP = False
 
-# it's time for this to be true
-# required for the next release
-WITH_STATIC = True
+# TODO: make this true in v3
+WITH_STATIC = False
 STATIC_ENGINE = "builtin"
 
 WEBSOCKET_DEBUG = False
