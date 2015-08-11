@@ -4,7 +4,7 @@ var scripts = ["/client/controls.js", "/client/ida.js", "/client/idump.js", "/cl
                "/client/static/static.js", "/client/static/graph.js"];
 
 $(document).ready(function() {
-  var myDocker = new wcDocker(document.body, {"theme": "qira_theme", "themePath": ""});
+  var myDocker = new wcDocker(document.body, {"theme": "qira_theme", "themePath": "", "allowContextMenu": false});
 
   var cfgDef = $.Deferred();
   var memoryDef = $.Deferred();
@@ -31,7 +31,7 @@ $(document).ready(function() {
   myDocker.registerPanelType('strace', {
     onCreate: function(myPanel, options) {
       myPanel.layout().addItem($($("#strace-template").remove().text()));
-      memoryDef.resolve();
+      straceDef.resolve();
     },
   });
 
@@ -58,7 +58,7 @@ $(document).ready(function() {
 
   var timelinePanel = myDocker.addPanel("Timeline", wcDocker.DOCK.LEFT, null);
 
-  //Limit the width of the vtimeline. Scrollbar exists if it overflows.
+  // Limit the width of the vtimeline. Scrollbar exists if it overflows.
   timelinePanel.maxSize(100, 0);
 
   var dynamicPanel = myDocker.addPanel("Dynamic", wcDocker.DOCK.RIGHT, timelinePanel);
@@ -67,10 +67,20 @@ $(document).ready(function() {
   var memoryPanel = myDocker.addPanel("Memory", wcDocker.DOCK.BOTTOM, dynamicPanel, {h: 400});
   var stracePanel = myDocker.addPanel("strace", wcDocker.DOCK.BOTTOM, dynamicPanel, {h: 200});
 
-  $.when(timelineDef, dynamicDef, cfgDef, flatDef, memoryDef)
+  // apply the panel defaults
+  myDocker.findPanels().forEach(function(x) {
+    x.title(false);
+    x.moveable(false);
+    x.closeable(false);
+    // scrollable isn't working
+    x.scrollable(false, false)
+  });
+
+
+  $.when(timelineDef, dynamicDef, cfgDef, flatDef, memoryDef, straceDef)
     .done(function() {
       //UI elements now exist in the DOM.
       head.load(scripts);
     });
-
 });
+
