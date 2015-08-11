@@ -49,6 +49,7 @@ fetcharch armhf precise
 fetcharch armel precise
 fetcharch powerpc precise
 fetcharch arm64 saucy
+fetcharch i386 precise
 
 # mini debootstrap 
 

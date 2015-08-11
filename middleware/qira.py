@@ -55,19 +55,12 @@ if __name__ == '__main__':
   else:
     qira_config.USE_PIN = args.pin
 
-  if qira_config.USE_PIN:
-    qira_config.WITH_CAPSTONE = True
 
   qira_config.HOST = args.host
   qira_config.WEB_PORT = args.web_port
   qira_config.SOCAT_PORT = args.socat_port
   qira_config.FORK_PORT = args.socat_port + 1
-  if qira_config.WITH_CAPSTONE:
-    try:
-      from capstone import *
-    except:
-      print "*** warning: WITH_CAPSTONE enabled but capstone not installed."
-      qira_config.WITH_CAPSTONE = False
+
   if args.tracelibraries:
     qira_config.TRACE_LIBRARIES = True
   if args.static:

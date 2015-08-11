@@ -12,16 +12,12 @@ if [[ "$unamestr" == 'Linux' ]]; then
     sudo apt-get update -qq
     sudo apt-get -qq -y install build-essential python-dev python-pip debootstrap libjpeg-dev zlib1g-dev unzip wget graphviz
 
+    # install capstone
+    curl -o /tmp/libcapstone3.deb http://www.capstone-engine.org/download/3.0.4/ubuntu-14.04/libcapstone3_3.0.4-0.1ubuntu1_amd64.deb
+    sudo dpkg -i /tmp/libcapstone3.deb
+
     # only python package we install globally
     sudo -H $PIP install virtualenv
-
-    echo "fetching BAP deps"
-    sudo apt-get install -qq -y software-properties-common libgmp-dev llvm-3.4-dev time clang-3.4
-
-    echo "installing ocaml and opam"
-    echo 'yes' | sudo add-apt-repository ppa:avsm/ocaml42+opam12
-    sudo apt-get update -qq
-    sudo apt-get install -qq -y ocaml ocaml-native-compilers camlp4-extra opam
   elif [ $(which pacman) ]; then
     echo "installing pip"
     sudo pacman -S base-devel python2-pip
@@ -39,10 +35,6 @@ if [[ "$unamestr" == 'Linux' ]]; then
     cd ../
   fi
 fi
-
-# do you like waiting a long time?
-# you should install BAP!
-./bap_install.sh
 
 echo "installing pip packages"
 virtualenv venv

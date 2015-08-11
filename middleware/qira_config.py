@@ -14,9 +14,8 @@ else:
 BASEDIR = os.path.realpath(os.path.dirname(os.path.realpath(__file__))+"/../")
 sys.path.append(BASEDIR)
 
-# capstone is now a requirement
-WITH_CAPSTONE = True
-WITH_BAP = True
+# BAP is no longer supported
+WITH_BAP = False
 
 # it's time for this to be true
 # required for the next release
@@ -24,3 +23,4 @@ WITH_STATIC = True
 STATIC_ENGINE = "builtin"
 
 WEBSOCKET_DEBUG = False
+
