@@ -23,6 +23,7 @@
 .flat {
   border: 1px solid gray;
   background-color: #CCCCCC;
+  width: 600px;
   padding: 10px;
 }
 

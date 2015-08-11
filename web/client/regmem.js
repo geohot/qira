@@ -44,7 +44,7 @@ function on_memory(msg) { DS("memory");
   var addr = msg['address'];
   var daddr = Session.get('daddr');
   var PTRSIZE = msg['ptrsize'];
-  html = "<table class='fill'><tr>";
+  html = "<table><tr>";
   for (var i = 0; i < msg['len']; i += PTRSIZE) {
     if ((i&0xF) == 0) html += "</tr><tr><td>"+bn_add(addr, i)+":</td>";
     html += "<td></td>";
@@ -80,7 +80,7 @@ function on_memory(msg) { DS("memory");
     }
 
     // this must run on the last one too
-    if ((i&0xF) == (0x10-PTRSIZE)) {
+    if ((i&0xF) == (0x10-PTRSIZE)) { 
       str = "";
       for (var j = 0; j < 0x10; j++) {
         // ewww
@@ -113,8 +113,7 @@ Deps.autorun(function() { DA("emit getmemory");
   if (dview == undefined) {
     $('#hexdump').empty();
   } else {
-    //TODO: This should not be hardcoded.
-    stream.emit('getmemory', forknum, clnum-1, dview, 0x200);
+    stream.emit('getmemory', forknum, clnum-1, dview, 0x100);
   }
 });
 
@@ -176,3 +175,4 @@ function on_clnum(msg) { DS("clnum");
   }
   $('#datachanges').html(datachanges);
 } stream.on('clnum', on_clnum);
+
