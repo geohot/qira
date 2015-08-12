@@ -117,10 +117,12 @@ class Program:
         self.qirabinary = qemu_dir + "qira-x86_64"
         self.pintool = pin_dir + "obj-intel64/qirapin.so"
       elif self.fb == 0x03:
+        use_lib('i386')
         self.tregs = arch.X86REGS
         self.qirabinary = qemu_dir + "qira-i386"
         self.pintool = pin_dir + "obj-ia32/qirapin.so"
       elif self.fb == 0x08:
+        use_lib('mipsel')
         self.tregs = arch.MIPSELREGS
         self.qirabinary = qemu_dir + 'qira-mipsel'
       elif self.fb == 0x1400:   # big endian...
@@ -128,6 +130,7 @@ class Program:
         self.tregs = arch.PPCREGS
         self.qirabinary = qemu_dir + "qira-ppc"
       elif self.fb == 0x800:
+        use_lib('mips')
         self.tregs = arch.MIPSREGS
         self.qirabinary = qemu_dir + 'qira-mips'
       else:
