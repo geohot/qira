@@ -1,16 +1,18 @@
 #!/bin/bash -e
 
 DEBOOTSTRAP_DIR=/usr/share/debootstrap
+DEBIAN_KEYFILE=/usr/share/keyrings/debian-archive-keyring.gpg
 
-if [ ! -d "$DEBOOTSTRAP_DIR" ]; then
-  echo "this script requires debootstrap to be installed"
+if [ ! -d "$DEBOOTSTRAP_DIR" ] || [ ! -f "$DEBIAN_KEYFILE" ]; then
+  echo "this script requires debootstrap and debian-archive-keyring to be installed"
   exit 1
 fi
 
 # this is ubuntu specific i think
 fetcharch() {
   ARCH="$1"
-  SUITE="$2" 
+  DISTRO="$2"
+  SUITE="$3"
   exec 4>&1
   SHA_SIZE=256
   DEBOOTSTRAP_CHECKSUM_FIELD="SHA$SHA_SIZE"
@@ -27,7 +29,16 @@ fetcharch() {
   . $DEBOOTSTRAP_DIR/functions
   . $DEBOOTSTRAP_DIR/scripts/$SUITE
 
-  MIRRORS="$DEF_MIRROR"
+  if [ $DISTRO == "ubuntu" ]; then
+    KEYRING=/usr/share/keyrings/ubuntu-archive-keyring.gpg
+    MIRRORS="$DEF_MIRROR"
+  elif [ $DISTRO == "debian" ]; then
+    KEYRING=/usr/share/keyrings/debian-archive-keyring.gpg
+    MIRRORS="http://ftp.us.debian.org/debian"
+  else
+    echo "need a distro"
+    exit 1
+  fi
 
   download_indices
   work_out_debs
@@ -45,11 +56,13 @@ mkdir -p libs
 cd libs
 
 LIBS="libc-bin libstdc++6"
-fetcharch armhf trusty
-fetcharch armel precise
-fetcharch powerpc trusty
-fetcharch arm64 trusty
-fetcharch i386 trusty
+fetcharch armhf ubuntu trusty
+fetcharch armel ubuntu precise
+fetcharch powerpc ubuntu trusty
+fetcharch arm64 ubuntu trusty
+fetcharch i386 ubuntu trusty
+fetcharch mips debian jessie
+fetcharch mipsel debian jessie
 
 # mini debootstrap 
 
