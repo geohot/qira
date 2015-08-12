@@ -32,6 +32,7 @@ MIPSREGLIST.append('$gp')
 MIPSREGLIST.append('$sp')
 MIPSREGLIST.append('$fp')
 MIPSREGLIST.append('$ra')
+MIPSREGLIST.append('$pc')
 
 MIPSREGS = (MIPSREGLIST, 4, True, "mips", ["jal\t","jr\t","jal","jr"])
 MIPSELREGS = (MIPSREGLIST, 4, False, "mipsel", ["jal\t","jr\t","jal","jr"])
