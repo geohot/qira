@@ -10,7 +10,7 @@ if [[ "$unamestr" == 'Linux' ]]; then
   if [ $(which apt-get) ]; then
     echo "installing apt packages"
     sudo apt-get update -qq
-    sudo apt-get -qq -y install build-essential python-dev python-pip debootstrap libjpeg-dev zlib1g-dev unzip wget graphviz
+    sudo apt-get -qq -y install build-essential python-dev python-pip debootstrap debian-archive-keyring libjpeg-dev zlib1g-dev unzip wget graphviz
 
     # install capstone
     curl -o /tmp/libcapstone3.deb http://www.capstone-engine.org/download/3.0.4/ubuntu-14.04/libcapstone3_3.0.4-0.1ubuntu1_amd64.deb
