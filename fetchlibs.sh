@@ -1,9 +1,10 @@
 #!/bin/bash -e
 
 DEBOOTSTRAP_DIR=/usr/share/debootstrap
-DEBIAN_KEYFILE=/usr/share/keyrings/debian-archive-keyring.gpg
+UBUNTU_KEYRING=/usr/share/keyrings/ubuntu-archive-keyring.gpg
+DEBIAN_KEYRING=/usr/share/keyrings/debian-archive-keyring.gpg
 
-if [ ! -d "$DEBOOTSTRAP_DIR" ] || [ ! -f "$DEBIAN_KEYFILE" ]; then
+if [ ! -d "$DEBOOTSTRAP_DIR" ] || [ ! -f "$DEBIAN_KEYRING" ]; then
   echo "this script requires debootstrap and debian-archive-keyring to be installed"
   exit 1
 fi
@@ -30,10 +31,10 @@ fetcharch() {
   . $DEBOOTSTRAP_DIR/scripts/$SUITE
 
   if [ $DISTRO == "ubuntu" ]; then
-    KEYRING=/usr/share/keyrings/ubuntu-archive-keyring.gpg
+    KEYRING=$UBUNTU_KEYRING
     MIRRORS="$DEF_MIRROR"
   elif [ $DISTRO == "debian" ]; then
-    KEYRING=/usr/share/keyrings/debian-archive-keyring.gpg
+    KEYRING=$DEBIAN_KEYRING
     MIRRORS="http://ftp.us.debian.org/debian"
   else
     echo "need a distro"
