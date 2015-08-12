@@ -13,6 +13,8 @@ def get_arch(fb):
     return 'x86-64'
   elif fb == 0x03:
     return 'i386'
+  elif fb == 0x08:
+    return 'mipsel'
   elif fb == 0x1400:   # big endian...
     return 'ppc'
   elif fb == 0x800:

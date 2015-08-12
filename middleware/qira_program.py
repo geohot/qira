@@ -120,6 +120,9 @@ class Program:
         self.tregs = arch.X86REGS
         self.qirabinary = qemu_dir + "qira-i386"
         self.pintool = pin_dir + "obj-ia32/qirapin.so"
+      elif self.fb == 0x08:
+        self.tregs = arch.MIPSELREGS
+        self.qirabinary = qemu_dir + 'qira-mipsel'
       elif self.fb == 0x1400:   # big endian...
         use_lib('powerpc')
         self.tregs = arch.PPCREGS
