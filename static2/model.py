@@ -247,8 +247,12 @@ class CsInsn(object):
       self.md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
     elif arch == "ppc":
       self.md = Cs(CS_ARCH_PPC, CS_MODE_32)
+    elif arch == "mips":
+      self.md = Cs(CS_ARCH_MIPS, CS_MODE_32 | CS_MODE_BIG_ENDIAN)
+    elif arch == "mipsel":
+      self.md = Cs(CS_ARCH_MIPS, CS_MODE_32 | CS_MODE_LITTLE_ENDIAN)
     else:
-      raise Exception('arch not supported by capstone')
+      raise Exception('arch "{}" not supported by capstone'.format(arch))
     self.md.detail = True
     try:
       self.i = self.md.disasm(self.raw, self.address).next()
