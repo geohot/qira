@@ -1,5 +1,7 @@
 # QIRA
 
+[![Join the chat at https://gitter.im/BinaryAnalysisPlatform/qira](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/BinaryAnalysisPlatform/qira?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 ## QIRA trunk is currently low quality. We recommend you install the release version from [qira.me](http://qira.me/)
 
 [![Build Status](https://travis-ci.org/BinaryAnalysisPlatform/qira.svg?branch=master)](https://travis-ci.org/BinaryAnalysisPlatform/qira)
