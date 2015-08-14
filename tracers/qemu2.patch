@@ -1,0 +1,154 @@
+diff -rupN qemu-2.1.3/include/librarymap.h ../qemu-mine/include/librarymap.h
+--- qemu-2.1.3/include/librarymap.h	1969-12-31 19:00:00.000000000 -0500
++++ ../qemu-mine/include/librarymap.h	2015-08-13 23:33:32.001902947 -0400
+@@ -0,0 +1,38 @@
++struct librarymap {
++  struct librarymap *next;
++  abi_ulong begin;
++  abi_ulong end;
++  const char *name;
++};
++
++struct librarymap *GLOBAL_librarymap;
++
++void init_librarymap(void);
++void add_to_librarymap(const char *name, abi_ulong begin, abi_ulong end);
++bool is_library_addr(abi_ulong addr);
++
++void init_librarymap(void){
++  GLOBAL_librarymap = malloc(sizeof(struct librarymap));
++  memset(GLOBAL_librarymap, 0, sizeof(struct librarymap));
++  GLOBAL_librarymap->name = "dummy";
++}
++
++void add_to_librarymap(const char *name, abi_ulong begin, abi_ulong end){
++  struct librarymap *cur, *newmap;
++  for(cur = GLOBAL_librarymap; cur->next != NULL; cur = cur->next);
++  newmap = malloc(sizeof(struct librarymap));
++  newmap->next = NULL;
++  newmap->begin = begin;
++  newmap->end = end;
++  newmap->name = strdup(name);
++  cur->next = newmap;
++}
++
++bool is_library_addr(abi_ulong addr){
++  struct librarymap *cur = GLOBAL_librarymap;
++  while(cur != NULL){
++    if (addr >= cur->begin && addr <= cur->end) return true;
++    cur = cur->next;
++  }
++  return false;
++}
+diff -rupN qemu-2.1.3/linux-user/elfload.c ../qemu-mine/linux-user/elfload.c
+--- qemu-2.1.3/linux-user/elfload.c	2015-01-22 11:19:05.000000000 -0500
++++ ../qemu-mine/linux-user/elfload.c	2015-08-13 23:34:18.887985331 -0400
+@@ -1788,6 +1788,9 @@ exit_errmsg:
+ 
+    On return: INFO values will be filled in, as necessary or available.  */
+ 
++extern struct library *GLOBAL_librarymap;
++extern const char *filename;
++
+ static void load_elf_image(const char *image_name, int image_fd,
+                            struct image_info *info, char **pinterp_name,
+                            char bprm_buf[BPRM_BUF_SIZE])
+@@ -1854,6 +1857,12 @@ static void load_elf_image(const char *i
+         load_addr = target_mmap(loaddr, hiaddr - loaddr, PROT_NONE,
+                                 MAP_PRIVATE | MAP_ANON | MAP_NORESERVE,
+                                 -1, 0);
++
++        if (strcmp(filename, image_name)){
++            if (GLOBAL_librarymap == NULL) init_librarymap();
++            add_to_librarymap(image_name, load_addr, load_addr+(hiaddr-loaddr));
++        }
++
+         if (load_addr == -1) {
+             goto exit_perror;
+         }
+diff -rupN qemu-2.1.3/linux-user/syscall.c ../qemu-mine/linux-user/syscall.c
+--- qemu-2.1.3/linux-user/syscall.c	2015-01-22 11:19:05.000000000 -0500
++++ ../qemu-mine/linux-user/syscall.c	2015-08-13 23:12:30.053634395 -0400
+@@ -5337,6 +5337,8 @@ static int do_open(void *cpu_env, const
+     return get_errno(open(path(pathname), flags, mode));
+ }
+ 
++extern void add_to_librarymap(const char *name, abi_ulong begin, abi_ulong end);
++
+ /* do_syscall() should always have a single exit point at the end so
+    that actions, such as logging of syscall results, can be performed.
+    All errnos that do_syscall() returns must be -TARGET_<errcode>. */
+@@ -9539,6 +9541,24 @@ fail:
+ #endif
+     if(do_strace)
+         print_syscall_ret(num, ret);
++
++#ifdef TARGET_NR_mmap2
++    if (num == TARGET_NR_mmap || num == TARGET_NR_mmap2){
++#else
++    if (num == TARGET_NR_mmap){
++#endif
++        int fd = arg5;
++        target_ulong mapaddr = ret;
++        target_ulong size = arg2;
++        if (fd >= 30){
++            add_to_librarymap("unknown", mapaddr, mapaddr+size);
++        }
++    }else if (num == TARGET_NR_open){
++        /* here we could store the fd->libname mapping */
++    }else if (num == TARGET_NR_close){
++        /* here we could clear the fd->libname mapping */
++    }
++
+     return ret;
+ efault:
+     ret = -TARGET_EFAULT;
+diff -rupN qemu-2.1.3/tci.c ../qemu-mine/tci.c
+--- qemu-2.1.3/tci.c	2015-08-13 22:13:53.040197520 -0400
++++ ../qemu-mine/tci.c	2015-08-13 23:45:24.556774746 -0400
+@@ -28,6 +28,7 @@
+ #include "exec/exec-all.h"           /* MAX_OPC_PARAM_IARGS */
+ #include "exec/cpu_ldst.h"
+ #include "tcg-op.h"
++#include "librarymap.h"
+ 
+ /* Marker for missing code. */
+ #define TODO() \
+@@ -564,6 +565,10 @@ void init_QIRA(CPUArchState *env, int id
+     }
+   }
+ 
++  if (GLOBAL_librarymap == NULL){
++      init_librarymap();
++  }
++
+   // no more opens can happen here in QEMU, only the target process
+ }
+ 
+@@ -845,7 +850,8 @@ bool is_filtered_address(target_ulong pc
+   if (unlikely(GLOBAL_tracelibraries)) {
+     return false;
+   } else {
+-    return ((bpc > 0x80000000 && bpc < 0xf6800000) || bpc >= 0x100000000);
++    return is_library_addr(pc);
++    // return ((bpc > 0x80000000 && bpc < 0xf6800000) || bpc >= 0x100000000);
+   }
+ }
+ 
+@@ -1090,6 +1096,16 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState
+               GLOBAL_last_was_syscall = 1;
+             }
+ #endif
++#ifdef TARGET_MIPS
++            struct change *a = NULL;
++            if ((void*)t0 == helper_raise_exception && a1 == EXCP_SYSCALL) {
++              if (GLOBAL_logstate->is_filtered == 1) {
++                commit_pending_changes();
++              }
++              a = track_syscall_begin(env, env->active_tc.gpr[2]);
++              GLOBAL_last_was_syscall = 1;
++            }
++#endif
+ 
+ #if TCG_TARGET_REG_BITS == 32
+             tmp64 = ((helper_function)t0)(a0,a1,a2,a3,
