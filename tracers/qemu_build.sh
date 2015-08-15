@@ -34,7 +34,6 @@ if [ ! -d qemu/qemu-latest ]; then
 
   cd qemu-latest
   patch -p1 < ../../qemu.patch
-  patch -p1 < ../../qemu2.patch
   cd ../..
 fi
 
