@@ -235,6 +235,7 @@ class CsInsn(object):
   def __init__(self, raw, address, arch):
     self.raw = raw
     self.address = address
+    self.arch = arch
     if arch == "i386":
       self.md = Cs(CS_ARCH_X86, CS_MODE_32)
     elif arch == "x86-64":
@@ -261,13 +262,37 @@ class CsInsn(object):
       self.regs_write = self.i.regs_write
 
       self.dtype = DESTTYPE.none
-      if self.i.mnemonic == "call":  # TODO: this is x86 specific
-        self.dtype = DESTTYPE.call
-      elif self.i.mnemonic == "jmp": # TODO: this is x86 specific
-        self.dtype = DESTTYPE.jump
-      elif capstone.CS_GRP_JUMP in self.i.groups:
-        self.dtype = DESTTYPE.cjump
+      if arch == 'i386' or arch == 'x86-64':
+          if self.i.mnemonic == "call":
+            self.dtype = DESTTYPE.call
+          elif self.i.mnemonic == "jmp":
+            self.dtype = DESTTYPE.jump
+          elif capstone.CS_GRP_JUMP in self.i.groups:
+            self.dtype = DESTTYPE.cjump
+      elif arch == "thumb" or arch == "arm" or arch == "aarch64":
+        if self.i.mnemonic[:2] == "bl":
+          self.dtype = DESTTYPE.call
+        elif self.i.mnemonic == "b" or self.i.mnemonic == "bx":
+          self.dtype = DESTTYPE.jump
+        elif self.i.mnemonic[0] == "b" or self.i.mnemonic[:2] == "cb":
+          self.dtype = DESTTYPE.cjump
+      elif arch == "ppc":
+        if self.i.mnemonic[:2] == "bl" and self.i.mnemonic[3] != "r":
+          self.dtype == DESTTYPE.call
+        elif self.i.mnemonic[:2] == "bc":
+          self.dtype = DESTTYPE.cjump
+        elif self.i.mnemonic[0] == "b":
+          self.dtype = DESTTYPE.jump
+      elif arch == "mips" or arch == "mipsel":
+        if self.i.mnemonic[:3] == "jal":
+          self.dtype = DESTTYPE.call
+        elif self.i.mnemonic == "j" or self.i.mnemonic == "jr" or self.i.mnemonic == "b":
+          self.dtype = DESTTYPE.jump
+        elif self.i.mnemonic[0] == "b":
+          self.dtype = DESTTYPE.cjump
 
+      if self.is_ret():
+        print self
     #if capstone can't decode it, we're screwed
     except StopIteration:
       self.decoded = False
@@ -286,9 +311,20 @@ class CsInsn(object):
     return self.dtype in [DESTTYPE.jump,DESTTYPE.cjump]
 
   def is_ret(self):
+    arch = self.arch
     if not self.decoded:
       return False
-    return self.i.mnemonic == "ret"
+    if arch == "i386" or arch == "x86-64":
+      return self.i.mnemonic == "ret"
+    elif arch == "thumb" or arch == "arm" or arch == "aarch64":
+       is_branch_lr = self.i.mnemonic[0] == 'b' and self.i.op_str == "lr"
+       is_pop_pc = self.i.mnemonic == "pop" and "pc" in self.i.op_str
+       return is_branch_lr or is_pop_pc
+    elif arch == "ppc":
+      return self.i.mnemonic == "blr"
+    elif arch == "mips" or arch == "mipsel":
+      return self.i.mnemonic == "jr" and self.i.op_str == "$ra"
+
     #TODO: what about iret? and RET isn't in the apt version of capstone
     return capstone.CS_GRP_RET in self.i.groups
 
