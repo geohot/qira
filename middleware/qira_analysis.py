@@ -424,6 +424,8 @@ def get_hacked_depth_map(flow, program):
   return_stack = []
   ret = [0]
   last_clnum = None
+
+  branch_delay = False
   for (address, length, clnum, ins) in flow:
     # handing missing changes
     if last_clnum != None and clnum != last_clnum+1:
@@ -434,11 +436,21 @@ def get_hacked_depth_map(flow, program):
     if address in return_stack:
       return_stack = return_stack[:rindex(return_stack, address)]
     # ugh, so gross
-    ret.append(len(return_stack))
+    if branch_delay:
+        ret.append(len(return_stack)-1)
+        branch_delay = False
+    else:
+        ret.append(len(return_stack))
 
     instr = program.static[address]['instruction']
     if instr.is_call():
-      return_stack.append(address+length)
+      if program.tregs[3][:4] == "mips":
+        # branch delay slot
+        branch_delay = True
+        ret_offset = length*2
+      else:
+        ret_offset = length
+      return_stack.append(address+ret_offset)
 
     if (time.time() - start) > 0.01:
       time.sleep(0.01)
