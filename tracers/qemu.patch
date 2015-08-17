@@ -1,8 +1,7 @@
-diff --git a/disas.c b/disas.c
-index 44a019a..f4272ab 100644
---- a/disas.c
-+++ b/disas.c
-@@ -187,6 +187,7 @@ static int print_insn_od_target(bfd_vma pc, disassemble_info *info)
+diff -ruN qemu-orig/disas.c qemu-patched/disas.c
+--- qemu-orig/disas.c	2015-08-15 01:37:20.318233173 -0400
++++ qemu-patched/disas.c	2015-08-15 01:33:45.242987977 -0400
+@@ -187,6 +187,7 @@
      return print_insn_objdump(pc, info, "OBJD-T");
  }
  
@@ -10,7 +9,7 @@ index 44a019a..f4272ab 100644
  /* Disassemble this for me please... (debugging). 'flags' has the following
     values:
      i386 - 1 means 16 bit code, 2 means 64 bit code
-@@ -195,7 +196,7 @@ static int print_insn_od_target(bfd_vma pc, disassemble_info *info)
+@@ -195,7 +196,7 @@
             bit 16 indicates little endian.
      other targets - unused
   */
@@ -19,7 +18,7 @@ index 44a019a..f4272ab 100644
                    target_ulong size, int flags)
  {
      target_ulong pc;
-@@ -225,6 +226,7 @@ void target_disas(FILE *out, CPUArchState *env, target_ulong code,
+@@ -225,6 +226,7 @@
          s.info.mach = bfd_mach_i386_i386;
      }
      print_insn = print_insn_i386;
@@ -27,7 +26,7 @@ index 44a019a..f4272ab 100644
  #elif defined(TARGET_ARM)
      if (flags & 4) {
          /* We might not be compiled with the A64 disassembler
-@@ -307,6 +309,10 @@ void target_disas(FILE *out, CPUArchState *env, target_ulong code,
+@@ -307,6 +309,10 @@
      }
  
      for (pc = code; size > 0; pc += count, size -= count) {
@@ -38,11 +37,78 @@ index 44a019a..f4272ab 100644
  	fprintf(out, "0x" TARGET_FMT_lx ":  ", pc);
  	count = print_insn(pc, &s.info);
  #if 0
-diff --git a/linux-user/main.c b/linux-user/main.c
-index b453a39..a678575 100644
---- a/linux-user/main.c
-+++ b/linux-user/main.c
-@@ -281,6 +281,7 @@ void cpu_loop(CPUX86State *env)
+diff -ruN qemu-orig/include/librarymap.h qemu-patched/include/librarymap.h
+--- qemu-orig/include/librarymap.h	1969-12-31 19:00:00.000000000 -0500
++++ qemu-patched/include/librarymap.h	2015-08-15 01:33:44.379023258 -0400
+@@ -0,0 +1,38 @@
++struct librarymap {
++  struct librarymap *next;
++  abi_ulong begin;
++  abi_ulong end;
++  const char *name;
++};
++
++struct librarymap *GLOBAL_librarymap;
++
++void init_librarymap(void);
++void add_to_librarymap(const char *name, abi_ulong begin, abi_ulong end);
++bool is_library_addr(abi_ulong addr);
++
++void init_librarymap(void){
++  GLOBAL_librarymap = malloc(sizeof(struct librarymap));
++  memset(GLOBAL_librarymap, 0, sizeof(struct librarymap));
++  GLOBAL_librarymap->name = "dummy";
++}
++
++void add_to_librarymap(const char *name, abi_ulong begin, abi_ulong end){
++  struct librarymap *cur, *newmap;
++  for(cur = GLOBAL_librarymap; cur->next != NULL; cur = cur->next);
++  newmap = malloc(sizeof(struct librarymap));
++  newmap->next = NULL;
++  newmap->begin = begin;
++  newmap->end = end;
++  newmap->name = strdup(name);
++  cur->next = newmap;
++}
++
++bool is_library_addr(abi_ulong addr){
++  struct librarymap *cur = GLOBAL_librarymap;
++  while(cur != NULL){
++    if (addr >= cur->begin && addr <= cur->end) return true;
++    cur = cur->next;
++  }
++  return false;
++}
+diff -ruN qemu-orig/linux-user/elfload.c qemu-patched/linux-user/elfload.c
+--- qemu-orig/linux-user/elfload.c	2015-08-15 01:33:43.831045636 -0400
++++ qemu-patched/linux-user/elfload.c	2015-08-15 01:33:44.111034201 -0400
+@@ -1788,6 +1788,9 @@
+ 
+    On return: INFO values will be filled in, as necessary or available.  */
+ 
++extern struct library *GLOBAL_librarymap;
++extern const char *filename;
++
+ static void load_elf_image(const char *image_name, int image_fd,
+                            struct image_info *info, char **pinterp_name,
+                            char bprm_buf[BPRM_BUF_SIZE])
+@@ -1854,6 +1857,12 @@
+         load_addr = target_mmap(loaddr, hiaddr - loaddr, PROT_NONE,
+                                 MAP_PRIVATE | MAP_ANON | MAP_NORESERVE,
+                                 -1, 0);
++
++        if (strcmp(filename, image_name)){
++            if (GLOBAL_librarymap == NULL) init_librarymap();
++            add_to_librarymap(image_name, load_addr, load_addr+(hiaddr-loaddr));
++        }
++
+         if (load_addr == -1) {
+             goto exit_perror;
+         }
+diff -ruN qemu-orig/linux-user/main.c qemu-patched/linux-user/main.c
+--- qemu-orig/linux-user/main.c	2015-08-15 01:37:20.318233173 -0400
++++ qemu-patched/linux-user/main.c	2015-08-15 01:33:44.115034038 -0400
+@@ -281,6 +281,7 @@
      int trapnr;
      abi_ulong pc;
      target_siginfo_t info;
@@ -50,7 +116,7 @@ index b453a39..a678575 100644
  
      for(;;) {
          trapnr = cpu_x86_exec(env);
-@@ -3640,6 +3641,28 @@ struct qemu_argument {
+@@ -3640,6 +3641,28 @@
      const char *help;
  };
  
@@ -79,7 +145,7 @@ index b453a39..a678575 100644
  static const struct qemu_argument arg_table[] = {
      {"h",          "",                 false, handle_arg_help,
       "",           "print this help"},
-@@ -3674,6 +3697,12 @@ static const struct qemu_argument arg_table[] = {
+@@ -3674,6 +3697,12 @@
       "pagesize",   "set the host page size to 'pagesize'"},
      {"singlestep", "QEMU_SINGLESTEP",  false, handle_arg_singlestep,
       "",           "run in singlestep mode"},
@@ -92,10 +158,9 @@ index b453a39..a678575 100644
      {"strace",     "QEMU_STRACE",      false, handle_arg_strace,
       "",           "log system calls"},
      {"version",    "QEMU_VERSION",     false, handle_arg_version,
-diff --git a/linux-user/qemu.h b/linux-user/qemu.h
-index 8012cc2..85934e3 100644
---- a/linux-user/qemu.h
-+++ b/linux-user/qemu.h
+diff -ruN qemu-orig/linux-user/qemu.h qemu-patched/linux-user/qemu.h
+--- qemu-orig/linux-user/qemu.h	2015-08-15 01:37:20.318233173 -0400
++++ qemu-patched/linux-user/qemu.h	2015-08-15 01:33:44.115034038 -0400
 @@ -22,6 +22,8 @@
  
  #define THREAD __thread
@@ -105,7 +170,7 @@ index 8012cc2..85934e3 100644
  /* This struct is used to hold certain information about the image.
   * Basically, it replicates in user space what would be certain
   * task_struct fields in the kernel
-@@ -373,6 +375,7 @@ static inline int access_ok(int type, abi_ulong addr, abi_ulong size)
+@@ -373,6 +375,7 @@
  #define get_user_u8(x, gaddr)  get_user((x), (gaddr), uint8_t)
  #define get_user_s8(x, gaddr)  get_user((x), (gaddr), int8_t)
  
@@ -113,7 +178,7 @@ index 8012cc2..85934e3 100644
  /* copy_from_user() and copy_to_user() are usually used to copy data
   * buffers between the target and host.  These internally perform
   * locking/unlocking of the memory.
-@@ -386,10 +389,17 @@ abi_long copy_to_user(abi_ulong gaddr, void *hptr, size_t len);
+@@ -386,10 +389,17 @@
     any byteswapping.  lock_user may return either a pointer to the guest
     memory, or a temporary buffer.  */
  
@@ -131,7 +196,7 @@ index 8012cc2..85934e3 100644
      if (!access_ok(type, guest_addr, len))
          return NULL;
  #ifdef DEBUG_REMAP
-@@ -400,11 +410,18 @@ static inline void *lock_user(int type, abi_ulong guest_addr, long len, int copy
+@@ -400,11 +410,18 @@
              memcpy(addr, g2h(guest_addr), len);
          else
              memset(addr, 0, len);
@@ -152,7 +217,7 @@ index 8012cc2..85934e3 100644
  }
  
  /* Unlock an area of guest memory.  The first LEN bytes must be
-@@ -413,6 +430,11 @@ static inline void *lock_user(int type, abi_ulong guest_addr, long len, int copy
+@@ -413,6 +430,11 @@
  static inline void unlock_user(void *host_ptr, abi_ulong guest_addr,
                                 long len)
  {
@@ -164,10 +229,9 @@ index 8012cc2..85934e3 100644
  
  #ifdef DEBUG_REMAP
      if (!host_ptr)
-diff --git a/linux-user/strace.c b/linux-user/strace.c
-index ea6c1d2..99fe9c5 100644
---- a/linux-user/strace.c
-+++ b/linux-user/strace.c
+diff -ruN qemu-orig/linux-user/strace.c qemu-patched/linux-user/strace.c
+--- qemu-orig/linux-user/strace.c	2015-08-15 01:37:20.318233173 -0400
++++ qemu-patched/linux-user/strace.c	2015-08-15 01:33:44.115034038 -0400
 @@ -11,6 +11,16 @@
  #include <sched.h>
  #include "qemu.h"
@@ -185,7 +249,7 @@ index ea6c1d2..99fe9c5 100644
  int do_strace=0;
  
  struct syscallname {
-@@ -637,10 +647,11 @@ print_raw_param(const char *fmt, abi_long param, int last)
+@@ -637,10 +647,11 @@
  static void
  print_pointer(abi_long p, int last)
  {
@@ -199,7 +263,7 @@ index ea6c1d2..99fe9c5 100644
  }
  
  /*
-@@ -1562,6 +1573,8 @@ static const struct syscallname scnames[] = {
+@@ -1562,6 +1573,8 @@
  
  static int nsyscalls = ARRAY_SIZE(scnames);
  
@@ -208,7 +272,7 @@ index ea6c1d2..99fe9c5 100644
  /*
   * The public interface to this module.
   */
-@@ -1573,6 +1586,7 @@ print_syscall(int num,
+@@ -1573,6 +1586,7 @@
      int i;
      const char *format="%s(" TARGET_ABI_FMT_ld "," TARGET_ABI_FMT_ld "," TARGET_ABI_FMT_ld "," TARGET_ABI_FMT_ld "," TARGET_ABI_FMT_ld "," TARGET_ABI_FMT_ld ")";
  
@@ -216,10 +280,9 @@ index ea6c1d2..99fe9c5 100644
      gemu_log("%d ", getpid() );
  
      for(i=0;i<nsyscalls;i++)
-diff --git a/linux-user/strace.list b/linux-user/strace.list
-index fcb258d..cb2f1b2 100644
---- a/linux-user/strace.list
-+++ b/linux-user/strace.list
+diff -ruN qemu-orig/linux-user/strace.list qemu-patched/linux-user/strace.list
+--- qemu-orig/linux-user/strace.list	2015-08-15 01:37:20.318233173 -0400
++++ qemu-patched/linux-user/strace.list	2015-08-15 01:33:44.115034038 -0400
 @@ -1000,7 +1000,7 @@
  { TARGET_NR_quotactl, "quotactl" , NULL, NULL, NULL },
  #endif
@@ -238,11 +301,55 @@ index fcb258d..cb2f1b2 100644
  #endif
  #ifdef TARGET_NR_writev
  { TARGET_NR_writev, "writev" , "%s(%d,%p,%#x)", NULL, NULL },
-diff --git a/tci.c b/tci.c
-index 4711ee4..ef25edc 100644
---- a/tci.c
-+++ b/tci.c
-@@ -419,6 +419,265 @@ static bool tci_compare64(uint64_t u0, uint64_t u1, TCGCond condition)
+diff -ruN qemu-orig/linux-user/syscall.c qemu-patched/linux-user/syscall.c
+--- qemu-orig/linux-user/syscall.c	2015-08-15 01:33:43.831045636 -0400
++++ qemu-patched/linux-user/syscall.c	2015-08-15 01:33:44.111034201 -0400
+@@ -5337,6 +5337,8 @@
+     return get_errno(open(path(pathname), flags, mode));
+ }
+ 
++extern void add_to_librarymap(const char *name, abi_ulong begin, abi_ulong end);
++
+ /* do_syscall() should always have a single exit point at the end so
+    that actions, such as logging of syscall results, can be performed.
+    All errnos that do_syscall() returns must be -TARGET_<errcode>. */
+@@ -9539,6 +9541,24 @@
+ #endif
+     if(do_strace)
+         print_syscall_ret(num, ret);
++
++#ifdef TARGET_NR_mmap2
++    if (num == TARGET_NR_mmap || num == TARGET_NR_mmap2){
++#else
++    if (num == TARGET_NR_mmap){
++#endif
++        int fd = arg5;
++        target_ulong mapaddr = ret;
++        target_ulong size = arg2;
++        if (fd >= 30){
++            add_to_librarymap("unknown", mapaddr, mapaddr+size);
++        }
++    }else if (num == TARGET_NR_open){
++        /* here we could store the fd->libname mapping */
++    }else if (num == TARGET_NR_close){
++        /* here we could clear the fd->libname mapping */
++    }
++
+     return ret;
+ efault:
+     ret = -TARGET_EFAULT;
+diff -ruN qemu-orig/tci.c qemu-patched/tci.c
+--- qemu-orig/tci.c	2015-08-15 01:37:20.318233173 -0400
++++ qemu-patched/tci.c	2015-08-15 01:33:44.111034201 -0400
+@@ -28,6 +28,7 @@
+ #include "exec/exec-all.h"           /* MAX_OPC_PARAM_IARGS */
+ #include "exec/cpu_ldst.h"
+ #include "tcg-op.h"
++#include "librarymap.h"
+ 
+ /* Marker for missing code. */
+ #define TODO() \
+@@ -419,6 +420,269 @@
      return result;
  }
  
@@ -391,6 +498,10 @@ index 4711ee4..ef25edc 100644
 +    }
 +  }
 +
++  if (GLOBAL_librarymap == NULL){
++      init_librarymap();
++  }
++
 +  // no more opens can happen here in QEMU, only the target process
 +}
 +
@@ -508,7 +619,7 @@ index 4711ee4..ef25edc 100644
  #ifdef CONFIG_SOFTMMU
  # define mmuidx          tci_read_i(&tb_ptr)
  # define qemu_ld_ub \
-@@ -450,25 +709,296 @@ static bool tci_compare64(uint64_t u0, uint64_t u1, TCGCond condition)
+@@ -450,25 +714,297 @@
  # define qemu_st_beq(X) \
      helper_be_stq_mmu(env, taddr, X, mmuidx, (uintptr_t)tb_ptr)
  #else
@@ -581,8 +692,8 @@ index 4711ee4..ef25edc 100644
 +        env->regs[R_EAX] = do_syscall(env, env->regs[R_EAX], env->regs[R_EBX], env->regs[R_ECX], env->regs[R_EDX], env->regs[R_ESI], env->regs[R_EDI], env->regs[R_EBP], 0, 0);
 +      }               
 +    }
- #endif
- 
++#endif
++
 +    // wrong for system, we need this
 +    if (flags & IS_WRITE) {
 +      void *base;
@@ -590,7 +701,7 @@ index 4711ee4..ef25edc 100644
 +      else { base = ((void *)env) + pchange.address; }
 +      memcpy(base, &pchange.data, (flags&SIZE_MASK) >> 3);
 +    }
-+#endif
+ #endif
 +    ret++;
 +  }
 +  return ret;
@@ -662,7 +773,8 @@ index 4711ee4..ef25edc 100644
 +  if (unlikely(GLOBAL_tracelibraries)) {
 +    return false;
 +  } else {
-+    return ((bpc > 0x80000000 && bpc < 0xf6800000) || bpc >= 0x100000000);
++    return is_library_addr(pc);
++    // return ((bpc > 0x80000000 && bpc < 0xf6800000) || bpc >= 0x100000000);
 +  }
 +}
 +
@@ -748,7 +860,7 @@ index 4711ee4..ef25edc 100644
 +  fclose(f);
 +#endif
 +}
-+
+ 
  /* Interpret pseudo code in tb. */
  uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
  {
@@ -819,7 +931,7 @@ index 4711ee4..ef25edc 100644
      long tcg_temps[CPU_TEMP_BUF_NLONGS];
      uintptr_t sp_value = (uintptr_t)(tcg_temps + CPU_TEMP_BUF_NLONGS);
      uintptr_t next_tb = 0;
-@@ -479,6 +1009,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
+@@ -479,6 +1015,7 @@
  
      for (;;) {
          TCGOpcode opc = tb_ptr[0];
@@ -827,7 +939,7 @@ index 4711ee4..ef25edc 100644
  #if !defined(NDEBUG)
          uint8_t op_size = tb_ptr[1];
          uint8_t *old_code_ptr = tb_ptr;
-@@ -486,6 +1017,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
+@@ -486,6 +1023,7 @@
          tcg_target_ulong t0;
          tcg_target_ulong t1;
          tcg_target_ulong t2;
@@ -835,7 +947,7 @@ index 4711ee4..ef25edc 100644
          tcg_target_ulong label;
          TCGCond condition;
          target_ulong taddr;
-@@ -521,11 +1053,46 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
+@@ -521,11 +1059,56 @@
              break;
          case INDEX_op_call:
              t0 = tci_read_ri(&tb_ptr);
@@ -876,6 +988,16 @@ index 4711ee4..ef25edc 100644
 +              GLOBAL_last_was_syscall = 1;
 +            }
 +#endif
++#ifdef TARGET_MIPS
++            struct change *a = NULL;
++            if ((void*)t0 == helper_raise_exception && a1 == EXCP_SYSCALL) {
++              if (GLOBAL_logstate->is_filtered == 1) {
++                commit_pending_changes();
++              }
++              a = track_syscall_begin(env, env->active_tc.gpr[2]);
++              GLOBAL_last_was_syscall = 1;
++            }
++#endif
 +
  #if TCG_TARGET_REG_BITS == 32
 -            tmp64 = ((helper_function)t0)(tci_read_reg(TCG_REG_R0),
@@ -886,7 +1008,7 @@ index 4711ee4..ef25edc 100644
                                            tci_read_reg(TCG_REG_R5),
                                            tci_read_reg(TCG_REG_R6),
                                            tci_read_reg(TCG_REG_R7),
-@@ -535,10 +1102,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
+@@ -535,10 +1118,7 @@
              tci_write_reg(TCG_REG_R0, tmp64);
              tci_write_reg(TCG_REG_R1, tmp64 >> 32);
  #else
@@ -898,7 +1020,7 @@ index 4711ee4..ef25edc 100644
                                            tci_read_reg(TCG_REG_R5));
              tci_write_reg(TCG_REG_R0, tmp64);
  #endif
-@@ -589,6 +1153,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
+@@ -589,6 +1169,7 @@
              t0 = *tb_ptr++;
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
@@ -906,7 +1028,7 @@ index 4711ee4..ef25edc 100644
              tci_write_reg8(t0, *(uint8_t *)(t1 + t2));
              break;
          case INDEX_op_ld8s_i32:
-@@ -602,18 +1167,21 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
+@@ -602,18 +1183,21 @@
              t0 = *tb_ptr++;
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
@@ -928,7 +1050,7 @@ index 4711ee4..ef25edc 100644
              *(uint16_t *)(t1 + t2) = t0;
              break;
          case INDEX_op_st_i32:
-@@ -621,6 +1189,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
+@@ -621,6 +1205,7 @@
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
              assert(t1 != sp_value || (int32_t)t2 < 0);
@@ -936,7 +1058,7 @@ index 4711ee4..ef25edc 100644
              *(uint32_t *)(t1 + t2) = t0;
              break;
  
-@@ -858,6 +1427,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
+@@ -858,6 +1443,7 @@
              t0 = *tb_ptr++;
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
@@ -944,7 +1066,7 @@ index 4711ee4..ef25edc 100644
              tci_write_reg8(t0, *(uint8_t *)(t1 + t2));
              break;
          case INDEX_op_ld8s_i64:
-@@ -869,36 +1439,42 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
+@@ -869,36 +1455,42 @@
              t0 = *tb_ptr++;
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
@@ -987,7 +1109,7 @@ index 4711ee4..ef25edc 100644
              *(uint32_t *)(t1 + t2) = t0;
              break;
          case INDEX_op_st_i64:
-@@ -906,6 +1482,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
+@@ -906,6 +1498,7 @@
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
              assert(t1 != sp_value || (int32_t)t2 < 0);
@@ -995,7 +1117,7 @@ index 4711ee4..ef25edc 100644
              *(uint64_t *)(t1 + t2) = t0;
              break;
  
-@@ -1115,6 +1692,7 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
+@@ -1115,6 +1708,7 @@
          case INDEX_op_goto_tb:
              t0 = tci_read_i32(&tb_ptr);
              assert(tb_ptr == old_code_ptr + op_size);
@@ -1003,7 +1125,7 @@ index 4711ee4..ef25edc 100644
              tb_ptr += (int32_t)t0;
              continue;
          case INDEX_op_qemu_ld_i32:
-@@ -1264,5 +1842,14 @@ uintptr_t tcg_qemu_tb_exec(CPUArchState *env, uint8_t *tb_ptr)
+@@ -1264,5 +1858,14 @@
          assert(tb_ptr == old_code_ptr + op_size);
      }
  exit:
