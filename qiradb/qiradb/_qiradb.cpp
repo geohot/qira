@@ -68,6 +68,12 @@ static PyObject *fetch_clnums_by_address_and_type(PyTrace *self, PyObject *args)
 }
 
 static PyObject *fetch_changes_by_clnum(PyTrace *self, PyObject *args) {
+  static PyObject *pystr_address = Py_BuildValue("s", "address");
+  static PyObject *pystr_data = Py_BuildValue("s", "data");
+  static PyObject *pystr_clnum = Py_BuildValue("s", "clnum");
+  static PyObject *pystr_type = Py_BuildValue("s", "type");
+  static PyObject *pystr_size = Py_BuildValue("s", "size");
+
   Clnum clnum;
   unsigned int limit;
   if (!PyArg_ParseTuple(args, "II", &clnum, &limit)) { return NULL; }
@@ -80,11 +86,21 @@ static PyObject *fetch_changes_by_clnum(PyTrace *self, PyObject *args) {
   FE(vector<struct change>::iterator, ret, it) {
     // copied (address, data, clnum, flags) from qira_log.py, but type instead of flags
     PyObject *iit = PyDict_New();
-    PyDict_SetItem(iit, Py_BuildValue("s", "address"), Py_BuildValue("K", it->address));
-    PyDict_SetItem(iit, Py_BuildValue("s", "data"), Py_BuildValue("K", it->data));
-    PyDict_SetItem(iit, Py_BuildValue("s", "clnum"), Py_BuildValue("I", it->clnum));
-    PyDict_SetItem(iit, Py_BuildValue("s", "type"), Py_BuildValue("c", Trace::get_type_from_flags(it->flags)));
-    PyDict_SetItem(iit, Py_BuildValue("s", "size"), Py_BuildValue("I", it->flags & SIZE_MASK));
+    PyObject *py_address = Py_BuildValue("K", it->address);
+    PyObject *py_data = Py_BuildValue("K", it->data);
+    PyObject *py_clnum = Py_BuildValue("I", it->clnum);
+    PyObject *py_type = Py_BuildValue("c", Trace::get_type_from_flags(it->flags));
+    PyObject *py_size = Py_BuildValue("I", it->flags & SIZE_MASK);
+    PyDict_SetItem(iit, pystr_address, py_address);
+    PyDict_SetItem(iit, pystr_data, py_data);
+    PyDict_SetItem(iit, pystr_clnum, py_clnum);
+    PyDict_SetItem(iit, pystr_type, py_type);
+    PyDict_SetItem(iit, pystr_size, py_size);
+    Py_DECREF(py_address);
+    Py_DECREF(py_data);
+    Py_DECREF(py_clnum);
+    Py_DECREF(py_type);
+    Py_DECREF(py_size);
     PyList_SetItem(pyret, i++, iit);
   }
   return pyret;
@@ -124,6 +140,10 @@ static PyObject *fetch_registers(PyTrace *self, PyObject *args) {
 }
 
 static PyObject *get_pmaps(PyTrace *self, PyObject *args) {
+  static PyObject *pystr_instruction = Py_BuildValue("s", "instruction");
+  static PyObject *pystr_memory = Py_BuildValue("s", "memory");
+  static PyObject *pystr_romemory = Py_BuildValue("s", "romemory");
+
   if (self->t == NULL) { return NULL; }
   map<Address, char> p = self->t->GetPages();
   PyObject *iit = PyDict_New();
@@ -131,13 +151,15 @@ static PyObject *get_pmaps(PyTrace *self, PyObject *args) {
   typedef map<Address, char>::iterator p_iter;
   FE(p_iter, p, it) {
     // eww these strings are long
+    PyObject *py_addr = Py_BuildValue("K", it->first);
     if (it->second & PAGE_INSTRUCTION) {
-      PyDict_SetItem(iit, Py_BuildValue("K", it->first), Py_BuildValue("s", "instruction"));
+      PyDict_SetItem(iit, py_addr, pystr_instruction);
     } else if (it->second & PAGE_WRITE) {
-      PyDict_SetItem(iit, Py_BuildValue("K", it->first), Py_BuildValue("s", "memory"));
+      PyDict_SetItem(iit, py_addr, pystr_memory);
     } else if (it->second & PAGE_READ) {
-      PyDict_SetItem(iit, Py_BuildValue("K", it->first), Py_BuildValue("s", "romemory"));
+      PyDict_SetItem(iit, py_addr, pystr_romemory);
     }
+    Py_DECREF(py_addr);
   }
   return iit;
 }
