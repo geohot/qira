@@ -291,8 +291,6 @@ class CsInsn(object):
         elif self.i.mnemonic[0] == "b":
           self.dtype = DESTTYPE.cjump
 
-      if self.is_ret():
-        print self
     #if capstone can't decode it, we're screwed
     except StopIteration:
       self.decoded = False
