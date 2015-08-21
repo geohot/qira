@@ -417,7 +417,7 @@ class Block:
 
 
 class Tags:
-  def __init__(self, static, address):
+  def __init__(self, static, address=None):
     self.backing = {}
     self.static = static
     self.address = address

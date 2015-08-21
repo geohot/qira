@@ -61,7 +61,7 @@ class Static:
 
     # fall through on an instruction
     # 'arch'
-    self.global_tags = {}
+    self.global_tags = Tags(self)
     self.global_tags['functions'] = set()
     self.global_tags['blocks'] = set()
     self.global_tags['segments'] = []
