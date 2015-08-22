@@ -630,8 +630,14 @@ VOID Instruction(INS ins, VOID *v) {
 		}
 	}
 
+	if(INS_Mnemonic(ins) == "XSAVE") {
+		// Avoids "Cannot use IARG_MEMORYWRITE_SIZE on non-standard memory access of instruction at 0xfoo: xsave ptr [rsp]"
+		// TODO: Bitch at the PIN folks.
+		return;
+	}
+
 	for(UINT32 i = 0; i < memOps; i++) {
-		if(!filtered) if(INS_MemoryOperandIsRead(ins, i)) {
+		if(!filtered && INS_MemoryOperandIsRead(ins, i)) {
 			INS_InsertPredicatedCall(
 				ins, IPOINT_BEFORE, (AFUNPTR)RecordMemRead, IARG_THREAD_ID,
 				IARG_MEMORYOP_EA, i,
@@ -695,9 +701,33 @@ struct Syscall_TLS {
 };
 static inline void syscall_tls_destruct(void *tls) { delete static_cast<Syscall_TLS *>(tls); }
 
+// Return the string with special characters replaced with backslash codes.
+string creprstr(const string &s) {
+	std::ostringstream stream;
+	stream << std::setbase(16) << std::setfill('0');
+	for(size_t i = 0; i < s.length(); i++) {
+		char c = s[i];
+		switch(c) {
+			case '\"': stream << "\\\""; break;
+			case '\'': stream << "\\\'"; break;
+			case '\\': stream << "\\\\"; break;
+			case '\t': stream << "\\t"; break;
+			case '\n': stream << "\\n"; break;
+			case '\r': stream << "\\r"; break;
+			default:
+				if(32 <= c && c < 127)
+					stream << c;
+				else
+					stream << "\\x" << std::setw(2) << (int)(unsigned char)c << std::setw(0);
+				break;
+		}
+	}
+	return stream.str();
+}
+
 VOID SyscallEntry(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v) {
 	int sys_nr = PIN_GetSyscallNumber(ctx, std);
-	if(isMac) sys_nr &= 0xFFFFFF;
+	if(isMac && (sys_nr >> 24) == 2) sys_nr &= 0xFFFFFF;
 	
 	Syscall_TLS *tls = new Syscall_TLS();
 	ASSERT(PIN_GetThreadData(syscall_tls_key, tid) == NULL, "Error, SyscallEntry/Exit entered recursively!");
@@ -710,6 +740,12 @@ VOID SyscallEntry(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v) {
 		tls->nargs = syscalls[sys_nr].nargs;
 		state->strace_printf("%u %u %s(", state->logstate()->changelist_number, state->logstate()->this_pid, syscalls[sys_nr].name);
 		for(int i = 0; i < syscalls[sys_nr].nargs; i++) {
+			if(isMac && i >= 6) {
+				// Avoids "REG_SysCallArgReg: 163: Syscall arg 6th should be taken from stack."
+				// TODO: Bitch at the PIN folks.
+				state->strace_printf(", ...");
+				break;
+			}
 			if(i > 0) state->strace_printf(", ");
 			ADDRINT arg = PIN_GetSyscallArgument(ctx, std, i);
 			tls->arg[i] = arg;
@@ -718,7 +754,7 @@ VOID SyscallEntry(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v) {
 					char buffer[104];
 					memcpy(&buffer[100], "...", 4);
 					PIN_SafeCopy((void*)buffer, (void*)arg, 100);
-					state->strace_printf("%p=\"%s\"", arg, (char *)buffer);
+					state->strace_printf("%p=\"%s\"", arg, creprstr(string((char *)buffer)).c_str());
 					break;
 				}
 				case ARG_INT: {
