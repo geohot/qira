@@ -845,20 +845,26 @@ string urlencode(const string &s) {
 // If standalone trace package is enabled, dump the memory range to the images folder.
 // The format of this folder is
 //   _images/
-//     url%20encoded%20sparsefile/
+//     a%20url%20encoded%20filepath.dll
+//     or%20a%20sparsfile%20directory.dll/
 //       0000C000
 //       DEADBEEF0000
 // where the hex-offset-named files represent data at an offset of the sparsefile.
-// TODO: Make a plain file instead of a sparsefile folder for "_images/file/00000000"s.
 // We need sparsefiles because OS X has non-contigous images, and the whole range of
 // address space becomes the "file" (instead of the just object file, like on windows
 // and linux).
-void dumpimage(const string &name, ADDRINT offset, ADDRINT low, ADDRINT size) {
+void dumpimage(const string &name, ADDRINT offset, bool sparse, ADDRINT low, ADDRINT size) {
+	// TODO: Throw a warning when a file would be overwritten.
+	// I don't *think* that's happening, but if it is that's a problem.
 	if(!process_state.image_folder) return; // Image saving is not enabled.
 	std::ostringstream stream;
 	stream << *process_state.image_folder << "/" << urlencode(name);
-	mkdir(stream.str().c_str(), 0755);
-	stream << "/" << std::hex << std::setw(8) << std::setfill('0') << offset;
+	if(sparse) {
+		mkdir(stream.str().c_str(), 0755);
+		stream << "/" << std::hex << std::setw(8) << std::setfill('0') << offset;
+	} else {
+		ASSERT(offset == 0, "Can only make non-sparsefile when offset is 0.");
+	}
 	FILE *file = fopen(stream.str().c_str(), "wb");
 	if(!file) perror_exit("fopen");
 	fwrite((void*)low, (size_t)size, 1, file);
@@ -867,7 +873,7 @@ void dumpimage(const string &name, ADDRINT offset, ADDRINT low, ADDRINT size) {
 
 VOID ImageLoad(IMG img, VOID *v) {
 	static int once = 0;
-	if(!once) {
+	if(!once) { // Hack: filter to main binary. Ideally this would be more controllable with tool args but it's fine for now.
 		once = 1;
 		std::cerr << "qira: filtering to image " << IMG_Name(img) << std::endl;
 		filter_ip_low = IMG_LowAddress(img);
@@ -882,16 +888,16 @@ VOID ImageLoad(IMG img, VOID *v) {
 		ADDRINT low = IMG_LowAddress(img);
 		ADDRINT high = IMG_HighAddress(img)+1;
 		process_state.base_printf("%08x-%08x 0 %s\n", (void*)low, (void*)high, imgname.c_str());
-		dumpimage(imgname, 0, low, high-low);
+		dumpimage(imgname, 0, false, low, high-low);
 	} else {
-		// TODO: Try to merge regions
+		// TODO: Try to merge regions, which would avoid some (most?) unnecessary sparse files.
 		ADDRINT imglow = IMG_LowAddress(img);
 		for(UINT32 i = 0; i < numRegions; i++) {
 			ADDRINT low = IMG_RegionLowAddress(img, i);
 			ADDRINT high = IMG_RegionHighAddress(img, i)+1;
 			if(low == 0) continue;
 			process_state.base_printf("%08x-%08x %zx %s\n", (void*)low, (void*)high, (size_t)(low - imglow), imgname.c_str());
-			dumpimage(imgname, low - imglow, low, high-low);
+			dumpimage(imgname, low - imglow, numRegions > 1, low, high-low);
 		}
 	}
 	process_state.base_flush();
