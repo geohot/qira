@@ -12,6 +12,7 @@
 #include <sstream>
 #include <string.h>
 #include <stdarg.h>
+#include <errno.h>
 
 #ifndef TARGET_WINDOWS
 #include <fcntl.h>
@@ -70,15 +71,14 @@ namespace WINDOWS {
 		ExitProcess(dw); 
 	}
 }
-#else
-#include <errno.h>
+#endif
+
 static inline void _perror_exit(const char *s) {
 	int err = errno;
 	perror(s);
 	exit(err);
 }
 #define perror_exit(s) _perror_exit("qira: " s)
-#endif
 
 #ifdef TARGET_WINDOWS
 #define atomic_postinc32(x) (InterlockedIncrement((long volatile*)(x))-1)
@@ -311,6 +311,7 @@ public:
 		
 		snprintf(path+len, sizeof(path) - len, "_strace");
 		strace_file = fopen(path, "wb");
+		if(!strace_file) perror_exit("fopen");
 		
 		struct logstate *log = logstate();
 		log->change_count = 1;
@@ -380,9 +381,10 @@ class Process_State {
 	volatile uint32_t threads_created;
 	volatile uint32_t changelist_number;
 	FILE *base_file;
-	string *image_folder;
 
 public:
+	string *image_folder;
+
 	Process_State() : main_id(0xDEADBEEF), threads_created(0xDEADBEEF), changelist_number(1), base_file(NULL), image_folder(NULL) {
 		PIN_InitLock(&lock);
 	}
@@ -405,6 +407,7 @@ public:
 		
 		snprintf(path+len, sizeof(path) - len, "_base");
 		FILE *new_base_file = fopen(path, "wb+");
+		if(!new_base_file) perror_exit("fopen");
 		if(base_file) {
 			long x = ftell(base_file);
 			rewind(base_file);
@@ -827,6 +830,29 @@ string urlencode(const string &s) {
 	return stream.str();
 }
 
+// If standalone trace package is enabled, dump the memory range to the images folder.
+// The format of this folder is
+//   _images/
+//     url%20encoded%20sparsefile/
+//       0000C000
+//       DEADBEEF0000
+// where the hex-offset-named files represent data at an offset of the sparsefile.
+// TODO: Make a plain file instead of a sparsefile folder for "_images/file/00000000"s.
+// We need sparsefiles because OS X has non-contigous images, and the whole range of
+// address space becomes the "file" (instead of the just object file, like on windows
+// and linux).
+void dumpimage(const string &name, ADDRINT offset, ADDRINT low, ADDRINT size) {
+	if(!process_state.image_folder) return; // Image saving is not enabled.
+	std::ostringstream stream;
+	stream << *process_state.image_folder << "/" << urlencode(name);
+	mkdir(stream.str().c_str(), 0755);
+	stream << "/" << std::hex << std::setw(8) << std::setfill('0') << offset;
+	FILE *file = fopen(stream.str().c_str(), "wb");
+	if(!file) perror_exit("fopen");
+	fwrite((void*)low, (size_t)size, 1, file);
+	fclose(file);
+}
+
 VOID ImageLoad(IMG img, VOID *v) {
 	static int once = 0;
 	if(!once) {
@@ -836,18 +862,24 @@ VOID ImageLoad(IMG img, VOID *v) {
 		filter_ip_high = IMG_HighAddress(img)+1;
 	}
 
-	UINT32 numRegions = IMG_NumRegions(img);
-	ADDRINT imglow = IMG_LowAddress(img);
 	string imgname = IMG_Name(img);
+	UINT32 numRegions = IMG_NumRegions(img);
 
-	// TODO: iterate and copy sections for OSX
-	if(!numRegions) { // TODO: Figure out if this is a windows bug
-		process_state.base_printf("%x-%x %x %s\n", (void*)imglow, (void*)IMG_HighAddress(img), 0, imgname.c_str());
+	// Yes, paths with newlines will break the basefile. No, I don't care.
+	if(numRegions == 0) {
+		ADDRINT low = IMG_LowAddress(img);
+		ADDRINT high = IMG_HighAddress(img)+1;
+		process_state.base_printf("%08x-%08x 0 %s\n", (void*)low, (void*)high, imgname.c_str());
+		dumpimage(imgname, 0, low, high-low);
 	} else {
+		// TODO: Try to merge regions
+		ADDRINT imglow = IMG_LowAddress(img);
 		for(UINT32 i = 0; i < numRegions; i++) {
 			ADDRINT low = IMG_RegionLowAddress(img, i);
 			ADDRINT high = IMG_RegionHighAddress(img, i)+1;
-			process_state.base_printf("%x-%x %zx %s\n", (void*)low, (void*)high, (size_t)(low - imglow), imgname.c_str());
+			if(low == 0) continue;
+			process_state.base_printf("%08x-%08x %zx %s\n", (void*)low, (void*)high, (size_t)(low - imglow), imgname.c_str());
+			dumpimage(imgname, low - imglow, low, high-low);
 		}
 	}
 	process_state.base_flush();
