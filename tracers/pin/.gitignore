@@ -1,1 +1,5 @@
-obj-*/
+/obj-*/
+/pin-*
+/vs_community*
+/qira_logs/
+/pin.log

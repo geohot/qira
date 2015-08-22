@@ -65,26 +65,48 @@ namespace WINDOWS {
 			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 			(LPTSTR)&lpMsgBuf, 0, NULL
 		);
-		printf("%s failed with error %d (%s)\n", funcName, dw, lpMsgBuf);
+		printf("qira: %s failed with error %d (%s)\n", funcName, dw, lpMsgBuf);
 		LocalFree(lpMsgBuf);
 		ExitProcess(dw); 
 	}
 }
 #else
 #include <errno.h>
-static inline void perror_exit(const char *s) {
+static inline void _perror_exit(const char *s) {
 	int err = errno;
 	perror(s);
 	exit(err);
 }
+#define perror_exit(s) _perror_exit("qira: " s)
 #endif
 
-#ifndef TARGET_WINDOWS
-#define InterlockedIncrement(x) __sync_add_and_fetch((x), 1)
+#ifdef TARGET_WINDOWS
+#define atomic_postinc32(x) (InterlockedIncrement((long volatile*)(x))-1)
+#else
+#define atomic_postinc32(x) __sync_fetch_and_add((x), 1)
 #endif
 
 #ifdef TARGET_WINDOWS
 #define mkdir(x, y) WINDOWS::CreateDirectoryA((x), NULL)
+#endif
+
+#if defined(_MSC_VER) && _MSC_VER < 1900
+static int vsnprintf(char *buf, size_t size, const char *fmt, va_list args) {
+	int ret = -1;
+	if(size != 0)
+		ret = vsnprintf_s(buf, size, _TRUNCATE, fmt, args);
+	if (ret == -1)
+		ret = _vscprintf(fmt, args);
+	return ret;
+}
+
+static inline int snprintf(char *buf, size_t size, const char *fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	int ret = vsnprintf(buf, size, fmt, args);
+	va_end(args);
+	return ret;
+}
 #endif
 
 // #ifndef TARGET_MAC
@@ -118,7 +140,7 @@ static MMAPFILE mmap_open(const char *path) {
 static inline void mmap_close(MMAPFILE handle) {
 	WINDOWS::CloseHandle(handle);
 }
-static void truncate(WINDOWS::HANDLE handle, size_t size) {
+static void truncate(MMAPFILE handle, size_t size) {
 	WINDOWS::LARGE_INTEGER lisaved, lizero, lisize;
 	lizero.QuadPart = 0;
 	lisize.QuadPart = size;
@@ -137,7 +159,7 @@ static void *mmap_map(MMAPFILE handle, size_t size, size_t offset = 0) {
 	WINDOWS::HANDLE fileMapping = WINDOWS::CreateFileMapping(handle, NULL, PAGE_READWRITE, 0, 0, NULL);
 	if(!fileMapping) WINDOWS::LastErrorExit("mmap_map CreateFileMapping");
 
-	void *ret = WINDOWS::MapViewOfFileEx(fileMapping, FILE_MAP_READ | FILE_MAP_WRITE, offset>>32, offset&0xFFFFFFFFul, size, NULL);
+	void *ret = WINDOWS::MapViewOfFileEx(fileMapping, FILE_MAP_READ | FILE_MAP_WRITE, (offset>>31)>>1, offset&0xFFFFFFFFul, size, NULL);
 	WINDOWS::CloseHandle(fileMapping);
 	if(!ret) WINDOWS::LastErrorExit("mmap_map MapViewOfFileEx");
 	
@@ -190,8 +212,9 @@ static inline void mmap_unmap(void *buf, size_t size) {
 	#define SYS_READ 3
 	#include "strace/osx_syscalls.h"
 #else
-	#define SYSCALL_MAXARGS 6
-	#define MAX_SYSCALL_NUM 0
+	#include "strace/syscalls.h"
+	const int MAX_SYSCALL_NUM = 0;
+	struct syscall_entry syscalls[1];
 #endif
 
 ////////////////////////////////////////////////////////////////
@@ -228,6 +251,7 @@ struct change {
 static TLS_KEY thread_state_tls_key;
 static REG writeea_scratch_reg;
 static const ADDRINT WRITEEA_SENTINEL = (sizeof(ADDRINT) > 4) ? (ADDRINT)0xDEADDEADDEADDEADull : (ADDRINT)0xDEADDEADul;
+// ^ Don't worry, programs are free to collide with this. It's really just for debug assertions.
 
 // TODO: Something that supports multiple filter ranges, etc.
 static ADDRINT filter_ip_low = 0;
@@ -238,7 +262,7 @@ static ADDRINT filter_ip_high = (ADDRINT)-1;
 ////////////////////////////////////////////////////////////////
 
 static KNOB<string> KnobOutputDir(KNOB_MODE_WRITEONCE, "pintool", "o",
-	isWindows ? "." : "/tmp/qira_logs",
+	isWindows ? "./qira_logs" : "/tmp/qira_logs",
 	"specify output directory"
 );
 
@@ -281,21 +305,20 @@ public:
 		file_handle = mmap_open(path);
 		
 		mapped_region_start = 0;
-		mapped_region_end = 8096;
+		mapped_region_end = 8096; // Initial size
 		mapped_region = mmap_map(file_handle, mapped_region_end - mapped_region_start, mapped_region_start);
 		logstate_region = mmap_map(file_handle, sizeof(struct logstate), 0);
 		
 		snprintf(path+len, sizeof(path) - len, "_strace");
 		strace_file = fopen(path, "wb");
 		
-		*logstate() = (struct logstate){
-			.change_count = 1,
-			.changelist_number = chglist,
-			.is_filtered = 1,
-			.first_changelist_number = chglist,
-			.parent_id = parent,
-			.this_pid = qira_fileid,
-		};
+		struct logstate *log = logstate();
+		log->change_count = 1;
+		log->changelist_number = chglist;
+		log->is_filtered = 1;
+		log->first_changelist_number = chglist;
+		log->parent_id = parent;
+		log->this_pid = qira_fileid;
 	}
 
 	~Thread_State() {
@@ -315,16 +338,20 @@ public:
 	inline struct change *change(size_t i) {
 		size_t target = sizeof(struct change) * (i+1); // +1 because first "change" is actually a header.
 		register size_t endtarget = target + sizeof(struct change);
-		if(endtarget > mapped_region_end) {
+		if(endtarget > mapped_region_end) { // Ran out of space, shift the mapped_region frame forward.
 			size_t region_size = mapped_region_end - mapped_region_start;
 			mmap_unmap(mapped_region, region_size);
-			const register size_t behind = 32*sizeof(struct change); // Seems prudent for some reason.
+
+			const register size_t behind = 32*sizeof(struct change); // Overlap the old region a bit. Seems prudent.
 			mapped_region_start = target > behind ? target - behind : 0;
 			mapped_region_start &= ~4095ull;
-			region_size = region_size*2;
-			if(region_size > (512<<20)) region_size = (512<<20);
+			region_size = region_size*2; // Allocate more space than we did last time.
 			region_size &= ~4095ull;
-			if(endtarget > mapped_region_start+region_size) {
+
+			// Clip to sane range.
+			if(region_size > (512<<20)) region_size = (512<<20);
+			if(region_size < 8192) region_size = 8192;
+			if(endtarget > mapped_region_start+region_size) { // Bizarre edge case that won't happen.
 				region_size = (endtarget - mapped_region_start + 4096) & ~4095ull;
 			}
 			mapped_region_end = mapped_region_start + region_size;
@@ -337,9 +364,9 @@ public:
 	inline int strace_printf(const char *fmt, ...) {
 		va_list args;
 		va_start(args, fmt);
-		int x = vfprintf(strace_file, fmt, args);
+		int ret = vfprintf(strace_file, fmt, args);
 		va_end(args);
-		return x;
+		return ret;
 	}
 
 	inline void strace_flush() {
@@ -350,8 +377,8 @@ public:
 class Process_State {
 	PIN_LOCK lock;
 	uint32_t main_id; // lol
-	uint32_t threads_created;
-	uint32_t changelist_number;
+	volatile uint32_t threads_created;
+	volatile uint32_t changelist_number;
 	FILE *base_file;
 	string *image_folder;
 
@@ -361,6 +388,7 @@ public:
 	}
 
 	void init(INT pid) {
+		// Called at program start, and also after a fork to update self for a new child.
 		// Thread start will be called after this.
 		main_id = 0x7FFFFFFF & (pid << 16); // New tracefile format needs to separate out the program from the first thread.
 		threads_created = 0;
@@ -381,6 +409,7 @@ public:
 			long x = ftell(base_file);
 			rewind(base_file);
 			while(x > 0) {
+				// Use `path` as a copy buffer, why not.
 				size_t y = fread(path, 1, sizeof path, base_file);
 				size_t z = fwrite(path, 1, y, new_base_file);
 				ASSERT(y > 0 && z == y, "File IO error while copying base file.");
@@ -414,7 +443,7 @@ public:
 #endif
 
 	void thread_start(THREADID tid) {
-		uint32_t t = InterlockedIncrement(&threads_created)-1;
+		uint32_t t = atomic_postinc32(&threads_created);
 		uint32_t qira_fileid = main_id ^ t; // TODO: New trace format needs more (i.e. arbitrary) name bits
 		Thread_State *state = new Thread_State(qira_fileid, main_id == qira_fileid ? -1 : main_id, claim_changelist_number());
 		PIN_SetThreadData(thread_state_tls_key, static_cast<void*>(state), tid);
@@ -423,15 +452,15 @@ public:
 	void thread_fini(THREADID tid) {}
 
 	inline int claim_changelist_number() {
-		return InterlockedIncrement(&changelist_number)-1;
+		return atomic_postinc32(&changelist_number);
 	}
 
 	inline int base_printf(const char *fmt, ...) {
 		va_list args;
 		va_start(args, fmt);
-		int x = vfprintf(base_file, fmt, args);
+		int ret = vfprintf(base_file, fmt, args);
 		va_end(args);
-		return x;
+		return ret;
 	}
 
 	inline void base_flush() {
@@ -444,7 +473,7 @@ static Process_State process_state;
 static inline void add_change(THREADID tid, uint64_t addr, uint64_t data, uint32_t flags) {
 	Thread_State *state = Thread_State::get(tid);
 	struct logstate *log = state->logstate();
-	struct change *c = Thread_State::get(tid)->change(log->change_count-1);
+	struct change *c = state->change(log->change_count-1);
 	c->address = addr;
 	c->data = data;
 	c->changelist_number = log->changelist_number;
@@ -485,7 +514,7 @@ VOID RecordRegWrite(THREADID tid, UINT32 regaddr, PIN_REGISTER *value, UINT32 si
 
 VOID RecordMemRead(THREADID tid, ADDRINT addr, UINT32 size) {
 	UINT64 value[16];
-	ASSERT(size <= sizeof(value), "wow");
+	ASSERT(size <= sizeof(value), "Single instructions can't read this much memory.");
 	PIN_SafeCopy(value, (const VOID *)addr, size); // Can assume it worked.
 	add_big_change(tid, addr, value, IS_MEM, size);
 }
@@ -496,14 +525,9 @@ ADDRINT RecordMemWrite1(THREADID tid, ADDRINT addr, ADDRINT oldval) {
 }
 ADDRINT RecordMemWrite2(THREADID tid, ADDRINT addr, UINT32 size) {
 	UINT64 value[16];
-	if (size > sizeof(value)) {
-		// dangerous address access!
-		add_big_change(tid, addr, value, IS_MEM|IS_WRITE, size);
-	} else {
-		ASSERT(size <= sizeof(value), "A single instruction wrote a huge amount of bytes.");
-		PIN_SafeCopy(value, (const VOID *)addr, size); // Can assume it worked.
-		add_big_change(tid, addr, value, IS_MEM|IS_WRITE, size);
-	}
+	ASSERT(size <= sizeof(value), "Single instructions can't write this much memory.");
+	PIN_SafeCopy(value, (const VOID *)addr, size); // Can assume it worked.
+	add_big_change(tid, addr, value, IS_MEM|IS_WRITE, size);
 	return WRITEEA_SENTINEL;
 }
 
@@ -735,7 +759,10 @@ VOID SyscallExit(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v) {
 #ifdef SYS_READ
 	// geohot doesn't approve of this hack, even though he wrote it
 	if(tls->syscall == SYS_READ) {
-		RecordMemWrite2(tid, tls->arg[1], syscall_return);
+		if(syscall_return > 0) {
+			// We're trusting the syscall to have errored if this memory is invalid or something.
+			add_big_change(tid, (uint64_t)tls->arg[1], (void*)tls->arg[1], IS_MEM|IS_WRITE, syscall_return);
+		}
 	}
 #endif
 
@@ -806,6 +833,7 @@ VOID ThreadFini(THREADID tid, const CONTEXT *ctx, INT32 code, VOID *v) {
 	process_state.thread_fini(tid);
 }
 
+#ifndef TARGET_WINDOWS
 VOID ForkBefore      (THREADID tid, const CONTEXT *ctx, VOID *v) { process_state.fork_before(tid); }
 VOID ForkAfterParent (THREADID tid, const CONTEXT *ctx, VOID *v) { process_state.fork_after_parent(tid); }
 VOID ForkAfterChild  (THREADID tid, const CONTEXT *ctx, VOID *v) {
@@ -813,6 +841,7 @@ VOID ForkAfterChild  (THREADID tid, const CONTEXT *ctx, VOID *v) {
 	PIN_SetThreadData(syscall_tls_key, NULL, tid);
 	process_state.fork_after_child(tid, PIN_GetPid());
 }
+#endif
 
 int main(int argc, char *argv[]) {
 	PIN_InitSymbols();
