@@ -51,6 +51,13 @@
 #endif
 
 #ifdef TARGET_WINDOWS
+#define ALLOC_GRAN (64<<10) // In theory, we check GetSystemInfo .dwAllocationGranularity
+#else
+#define ALLOC_GRAN (8192) // Linux and OS X are fine with >= 1 page.
+#endif
+#define ALLOC_GRAN_MASK (~(ALLOC_GRAN-1))
+
+#ifdef TARGET_WINDOWS
 namespace WINDOWS {
 	#include <Windows.h>
 	
@@ -66,7 +73,8 @@ namespace WINDOWS {
 			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 			(LPTSTR)&lpMsgBuf, 0, NULL
 		);
-		printf("qira: %s failed with error %d (%s)\n", funcName, dw, lpMsgBuf);
+		fprintf(stderr, "qira: %s failed with error %d (%s)\n", funcName, dw, lpMsgBuf);
+		fflush(stderr);
 		LocalFree(lpMsgBuf);
 		ExitProcess(dw); 
 	}
@@ -159,7 +167,12 @@ static void *mmap_map(MMAPFILE handle, size_t size, size_t offset = 0) {
 	WINDOWS::HANDLE fileMapping = WINDOWS::CreateFileMapping(handle, NULL, PAGE_READWRITE, 0, 0, NULL);
 	if(!fileMapping) WINDOWS::LastErrorExit("mmap_map CreateFileMapping");
 
-	void *ret = WINDOWS::MapViewOfFileEx(fileMapping, FILE_MAP_READ | FILE_MAP_WRITE, (offset>>31)>>1, offset&0xFFFFFFFFul, size, NULL);
+#ifdef TARGET_IA32E
+	size_t high_offset = (offset >> 32) & 0xFFFFFFFFul;
+#else
+	size_t high_offset = 0;
+#endif
+	void *ret = WINDOWS::MapViewOfFileEx(fileMapping, FILE_MAP_READ | FILE_MAP_WRITE, high_offset, offset&0xFFFFFFFFul, size, NULL);
 	WINDOWS::CloseHandle(fileMapping);
 	if(!ret) WINDOWS::LastErrorExit("mmap_map MapViewOfFileEx");
 	
@@ -305,7 +318,7 @@ public:
 		file_handle = mmap_open(path);
 		
 		mapped_region_start = 0;
-		mapped_region_end = 8096; // Initial size
+		mapped_region_end = ALLOC_GRAN; // Initial size
 		mapped_region = mmap_map(file_handle, mapped_region_end - mapped_region_start, mapped_region_start);
 		logstate_region = mmap_map(file_handle, sizeof(struct logstate), 0);
 		
@@ -345,15 +358,14 @@ public:
 
 			const register size_t behind = 32*sizeof(struct change); // Overlap the old region a bit. Seems prudent.
 			mapped_region_start = target > behind ? target - behind : 0;
-			mapped_region_start &= ~4095ull;
-			region_size = region_size*2; // Allocate more space than we did last time.
-			region_size &= ~4095ull;
+			mapped_region_start &= ALLOC_GRAN_MASK;
+			region_size = region_size*3/2 + 2*ALLOC_GRAN; // Allocate more space than we did last time.
+			region_size &= ALLOC_GRAN_MASK;
 
-			// Clip to sane range.
+			// Clip to maximum 512 MB.
 			if(region_size > (512<<20)) region_size = (512<<20);
-			if(region_size < 8192) region_size = 8192;
 			if(endtarget > mapped_region_start+region_size) { // Bizarre edge case that won't happen.
-				region_size = (endtarget - mapped_region_start + 4096) & ~4095ull;
+				region_size = (endtarget - mapped_region_start + ALLOC_GRAN) & ALLOC_GRAN_MASK;
 			}
 			mapped_region_end = mapped_region_start + region_size;
 			mapped_region = mmap_map(file_handle, region_size, mapped_region_start);
@@ -693,13 +705,13 @@ VOID Instruction(INS ins, VOID *v) {
 // strace instrumentation functions
 ////////////////////////////////////////////////////////////////
 
-// TODO-NEVER: Windows can enter a syscall, trigger application-level callbacks, then exit the syscall.
-// PIN has support for this, but we don't currently take advantage of that. This may break some things.
+// TODO-LATER: Windows can enter a syscall, trigger application-level callbacks, enter more syscalls
+// recursivley, and then exit the syscalls. PIN has support for this.
 
 TLS_KEY syscall_tls_key;
 struct Syscall_TLS {
-	int syscall;
-	int nargs;
+	unsigned syscall;
+	unsigned nargs;
 	ADDRINT arg[SYSCALL_MAXARGS];
 };
 static inline void syscall_tls_destruct(void *tls) { delete static_cast<Syscall_TLS *>(tls); }
@@ -729,11 +741,11 @@ string creprstr(const string &s) {
 }
 
 VOID SyscallEntry(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v) {
-	int sys_nr = PIN_GetSyscallNumber(ctx, std);
+	unsigned int sys_nr = PIN_GetSyscallNumber(ctx, std);
 	if(isMac && (sys_nr >> 24) == 2) sys_nr &= 0xFFFFFF;
 	
 	Syscall_TLS *tls = new Syscall_TLS();
-	ASSERT(PIN_GetThreadData(syscall_tls_key, tid) == NULL, "Error, SyscallEntry/Exit entered recursively!");
+	ASSERT(PIN_GetThreadData(syscall_tls_key, tid) == NULL, "Error, SyscallEntry/Exit entered recursively!"); // TODO: This happens on windows.
 	PIN_SetThreadData(syscall_tls_key, static_cast<void*>(tls), tid);
 
 	Thread_State *state = Thread_State::get(tid);
@@ -927,9 +939,11 @@ int main(int argc, char *argv[]) {
 
 	mkdir(KnobOutputDir.Value().c_str(), 0755);
 
+#ifndef TARGET_WINDOWS // Currently broken on windows
 	syscall_tls_key = PIN_CreateThreadDataKey(syscall_tls_destruct);
 	PIN_AddSyscallEntryFunction(SyscallEntry, 0);
 	PIN_AddSyscallExitFunction(SyscallExit, 0);
+#endif
 
 	thread_state_tls_key = PIN_CreateThreadDataKey(Thread_State::tls_destruct);
 	PIN_AddFiniFunction(Fini, 0);
