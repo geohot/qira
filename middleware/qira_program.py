@@ -426,15 +426,33 @@ class Trace:
       # done
       return
 
-    try:
-      from urllib import unquote
-      imd = qira_config.TRACE_FILE_BASE+str(self.forknum)+"_images/"
-      im = {unquote(i):imd+i for i in os.listdir(imd)}
-    except OSError:
-      im = {}
-    except Exception, e:
-      print "Unexpected exception while dealing with _images/:", e
-      im = {}
+    # Use any bundled images first. The structure of the images directory is:
+    # _images/
+    #   urlencoded%20image.dll
+    #   or%20maybe%20a%20folder.dll/
+    #     0000C000
+    #     100008000
+    # where a folder is like a sparsefile with chunks of data at it's hex-offset-named
+    # subfiles. The reason for this sparsefile stuff is that OS X has non-contigous
+    # loaded images, so we compensate by having each "file" actually be a chunk of
+    # address space, which in theory could be very large. (The correct solution of
+    # storing just the image file along with the regions data isn't well exposed
+    # by Pin at this time, and would require explicit mach-o parsing and stuff.)
+    img_map = {}
+    images_dir = qira_config.TRACE_FILE_BASE+str(self.forknum)+"_images"
+    if os.path.isdir(images_dir):
+      try:
+        from urllib import unquote
+        for image in os.listdir(images_dir):
+          if os.path.isfile(images_dir+"/"+image):
+            img_map[unquote(image)] = {0: images_dir+"/"+image}
+          else: # It's a directory
+            off_map = {}
+            for offset in os.listdir(images_dir+"/"+image):
+              off_map[int(offset, 16)] = images_dir+"/"+image+"/"+offset
+            img_map[unquote(image)] = off_map
+      except Exception, e:
+        print "Exception while dealing with _images/:", e
 
     for ln in f.read().split("\n"):
       ln = ln.split(" ")
@@ -447,11 +465,16 @@ class Trace:
       fn = ' '.join(ln[2:])
 
       try:
-        f = open(im.get(fn, fn))
-      except:
+        if fn in img_map:
+          off = max(i for i in img_map[fn].iter_keys() if i <= offset)
+          with open(img_map[fn][off]) as f:
+            f.seek(offset-off)
+            dat = f.read(se-ss)
+        else:
+          with open(fn) as f:
+            f.seek(offset)
+            dat = f.read(se-ss)
+      except Exception, e:
+        print "Failed to get", fn, "offset", offset, ":", e
         continue
-      f.seek(offset)
-      dat = f.read(se-ss)
       self.program.static.add_memory_chunk(ss, dat)
-      f.close()
-

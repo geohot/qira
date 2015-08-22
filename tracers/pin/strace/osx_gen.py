@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 from urllib import urlopen
-syscalls_master = urlopen("http://www.opensource.apple.com/source/xnu/xnu-2422.110.17/bsd/kern/syscalls.master?txt").read()
+syscalls_master = urlopen("http://www.opensource.apple.com/source/xnu/xnu-2782.10.72/bsd/kern/syscalls.master?txt").read()
 x = (i.strip().split(None, 3) for i in syscalls_master.splitlines() if i.strip() and i[0] not in '#;')
 x = ((i[0],i[3][i[3].index('{')+1:i[3].index('}')].strip()) for i in x if len(i) == 4)
-x = {int(k):v for k,v in x if v != 'int nosys(void);'}
+x = {int(k):v for k,v in x if v != 'int nosys(void);' and v != 'int enosys(void);'}
 
 # Yay assumptions
 
