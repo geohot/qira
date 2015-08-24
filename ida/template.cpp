@@ -105,14 +105,15 @@ static void ws_send(char *str) {
   format strings?
 */
 static void send_names() {
-  char tmp[100];
+  //max name length with some padding for "setname" and address
+  char tmp[MAXNAMELEN + 64];
   for (size_t i = 0; i < get_nlist_size(); i++) {
     ea_t address = get_nlist_ea(i);
     const char *name = get_nlist_name(i);
     #ifdef __EA64__
-    qsnprintf(tmp, 100-1, "setname 0x%llx %s", get_nlist_ea(i), get_nlist_name(i));
+    qsnprintf(tmp, sizeof(tmp)-1, "setname 0x%llx %s", get_nlist_ea(i), get_nlist_name(i));
     #else
-    qsnprintf(tmp, 100-1, "setname 0x%x %s", get_nlist_ea(i), get_nlist_name(i));
+    qsnprintf(tmp, sizeof(tmp)-1, "setname 0x%x %s", get_nlist_ea(i), get_nlist_name(i));
     #endif
     ws_send(tmp);
   }
@@ -121,9 +122,9 @@ static void send_names() {
 static void update_address(const char *type, ea_t addr) {
   char tmp[100];
   #ifdef __EA64__
-    qsnprintf(tmp, 100-1, "set%s 0x%llx", type, addr);
+    qsnprintf(tmp, sizeof(tmp)-1, "set%s 0x%llx", type, addr);
   #else
-    qsnprintf(tmp, 100-1, "set%s 0x%x", type, addr);
+    qsnprintf(tmp, sizeof(tmp)-1, "set%s 0x%x", type, addr);
   #endif
   ws_send(tmp);
 }
