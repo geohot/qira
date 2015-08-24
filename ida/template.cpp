@@ -3,6 +3,7 @@
 #include <loader.hpp>
 #include <bytes.hpp>
 #include <dbg.hpp>
+#include <name.hpp>
 
 //#define DEBUG
 
@@ -92,6 +93,31 @@ static void ws_send(char *str) {
 
 // ***************** IDAPLUGIN *******************
 
+/*
+  send the (address, name) pairs back to qira
+
+  IDA prefers to keep names for basic blocks "local" to the function
+  so you can reuse the same name (e.g. "loop") in different functions
+  therefore basic block names won't sync to qira from IDA
+
+  I was going to include a json library and do some fancy stuff,
+  then I realized why not continue the tradition of simple
+  format strings?
+*/
+static void send_names() {
+  char tmp[100];
+  for (size_t i = 0; i < get_nlist_size(); i++) {
+    ea_t address = get_nlist_ea(i);
+    const char *name = get_nlist_name(i);
+    #ifdef __EA64__
+    qsnprintf(tmp, 100-1, "setname 0x%llx %s", get_nlist_ea(i), get_nlist_name(i));
+    #else
+    qsnprintf(tmp, 100-1, "setname 0x%x %s", get_nlist_ea(i), get_nlist_name(i));
+    #endif
+    ws_send(tmp);
+  }
+}
+
 static void update_address(const char *type, ea_t addr) {
   char tmp[100];
   #ifdef __EA64__
@@ -119,6 +145,8 @@ static int idaapi hook(void *user_data, int event_id, va_list va) {
       }
     }
     old_addr = addr;
+  } else if (event_id == view_activated) {
+    send_names();
   }
   return 0;
 }

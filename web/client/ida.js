@@ -12,16 +12,22 @@ function do_ida_socket(callme) {
       callme();
     };
     ws.onmessage = function(msg) {
-      //p(msg.data);
       var dat = msg.data.split(" ");
       if (dat[0] == "setiaddr") {
         Session.set("iaddr", dat[1]);
         Session.set("dirtyiaddr", true);
       }
-      if (dat[0] == "setdaddr") {
+      else if (dat[0] == "setdaddr") {
         if (get_data_type(dat[1]) != "datainstruction") {
           update_dview(dat[1]);
         }
+      }
+      else if (dat[0] == "setname") {
+        var send = {}
+        var address = dat[1];
+        var name = dat[2];
+        send[address] = {"name": name};
+        stream.emit("settags", send);
       }
     };
   } else {
