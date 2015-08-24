@@ -138,10 +138,8 @@ static void send_comments() {
     cmt_len = get_cmt(cur, false, cmt_tmp, sizeof(cmt_tmp));
     if (cmt_len != -1) {
       #ifdef __EA64__
-        msg("comment: 0x%llx -> %s\n", cur, cmt_tmp);
         qsnprintf(tmp, sizeof(tmp)-1, "setcmt 0x%llx %s", cur, cmt_tmp);
       #else
-        msg("comment: 0x%x -> %s\n", cur, cmt_tmp);
         qsnprintf(tmp, sizeof(tmp)-1, "setcmt 0x%x %s", cur, cmt_tmp);
       #endif
     }
