@@ -81,6 +81,7 @@ static void ws_send(char *str) {
     msg("QIRATX:%s\n", str);
   #endif
   int len = strlen(str);
+  if (len == 0) return;
   unsigned char *buf = (unsigned char*)
     malloc(LWS_SEND_BUFFER_PRE_PADDING + len + LWS_SEND_BUFFER_POST_PADDING);
   memcpy(&buf[LWS_SEND_BUFFER_PRE_PADDING], str, len);
