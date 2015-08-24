@@ -29,6 +29,13 @@ function do_ida_socket(callme) {
         send[address] = {"name": name};
         stream.emit("settags", send);
       }
+      else if (dat[0] == "setcmt") {
+        var send = {}
+        var address = dat[1];
+        var comment = dat.slice(2).join(" ");
+        send[address] = {"comment": comment};
+        stream.emit("settags", send);
+      }
     };
   } else {
     callme();
