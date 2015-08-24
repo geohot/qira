@@ -144,6 +144,7 @@ static void send_comments() {
         qsnprintf(tmp, sizeof(tmp)-1, "setcmt 0x%x %s", cur, cmt_tmp);
       #endif
     }
+    ws_send(tmp);
   }
   return;
 }
