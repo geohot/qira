@@ -85,6 +85,7 @@ static void ws_send(char *str) {
     malloc(LWS_SEND_BUFFER_PRE_PADDING + len + LWS_SEND_BUFFER_POST_PADDING);
   memcpy(&buf[LWS_SEND_BUFFER_PRE_PADDING], str, len);
   if (gwsi != NULL) {
+    while (lws_partial_buffered(gwsi)); //this is gross. no async way to wait? :(
     libwebsocket_write(gwsi, &buf[LWS_SEND_BUFFER_PRE_PADDING], len, LWS_WRITE_TEXT);
   }
   free(buf);
@@ -111,12 +112,40 @@ static void send_names() {
     ea_t address = get_nlist_ea(i);
     const char *name = get_nlist_name(i);
     #ifdef __EA64__
-    qsnprintf(tmp, sizeof(tmp)-1, "setname 0x%llx %s", get_nlist_ea(i), get_nlist_name(i));
+      qsnprintf(tmp, sizeof(tmp)-1, "setname 0x%llx %s", get_nlist_ea(i), get_nlist_name(i));
     #else
-    qsnprintf(tmp, sizeof(tmp)-1, "setname 0x%x %s", get_nlist_ea(i), get_nlist_name(i));
+      qsnprintf(tmp, sizeof(tmp)-1, "setname 0x%x %s", get_nlist_ea(i), get_nlist_name(i));
     #endif
     ws_send(tmp);
   }
+}
+
+/*
+  IDA does not provide a mechanism to iterate over the comments,
+  so we must scan the entire address space. Horrible!
+*/
+static void send_comments() {
+  //How long is a reasonable comment? 100 should be enough.
+  //What about people who group blocks and "name" them pseudocode?
+  char cmt_tmp[100-7];
+  char tmp[100];
+  ssize_t cmt_len;
+  ea_t start = get_segm_base(get_first_seg());
+
+  for (ea_t cur = start; cur != BADADDR; cur = nextaddr(cur)) {
+    //Do people use repeatable comments?
+    cmt_len = get_cmt(cur, false, cmt_tmp, sizeof(cmt_tmp));
+    if (cmt_len != -1) {
+      #ifdef __EA64__
+        msg("comment: 0x%llx -> %s\n", cur, cmt_tmp);
+        qsnprintf(tmp, sizeof(tmp)-1, "setcmt 0x%llx %s", cur, cmt_tmp);
+      #else
+        msg("comment: 0x%x -> %s\n", cur, cmt_tmp);
+        qsnprintf(tmp, sizeof(tmp)-1, "setcmt 0x%x %s", cur, cmt_tmp);
+      #endif
+    }
+  }
+  return;
 }
 
 static void update_address(const char *type, ea_t addr) {
@@ -147,7 +176,13 @@ static int idaapi hook(void *user_data, int event_id, va_list va) {
     }
     old_addr = addr;
   } else if (event_id == view_activated) {
+    // I can't hook renaming directly so for now we use
+    // the inferior view_activated, which will trigger
+    // name syncing after dialog boxes are closed / the
+    // main window is refocused.
+    msg("auto-syncing\n");
     send_names();
+    send_comments();
   }
   return 0;
 }
@@ -208,17 +243,19 @@ void exit_websocket_thread() {
 int idaapi IDAP_init(void) {
   hook_to_notification_point(HT_VIEW, hook, NULL);
   start_websocket_thread();
-	return PLUGIN_KEEP;
+  return PLUGIN_KEEP;
 }
 
 void idaapi IDAP_term(void) {
   unhook_from_notification_point(HT_VIEW, hook);
   exit_websocket_thread();
-	return;
+  return;
 }
 
 void idaapi IDAP_run(int arg) {
-  msg("installing book\n");
+  msg("manually sending names and comments\n");
+  send_names();
+  send_comments();
   return;
 }
 
@@ -238,4 +275,3 @@ plugin_t PLUGIN = {
   IDAP_name,			// Plug-in name shown in 
   IDAP_hotkey			// Hot key to run the plug-in
 };
-
