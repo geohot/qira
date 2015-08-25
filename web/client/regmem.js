@@ -113,8 +113,8 @@ Deps.autorun(function() { DA("emit getmemory");
   if (dview == undefined) {
     $('#hexdump').empty();
   } else {
-    //TODO: This should not be hardcoded.
-    stream.emit('getmemory', forknum, clnum-1, dview, 0x200);
+    var size = Math.round($($("#hexdump").parents("div")[1]).height() / 16.0);
+    stream.emit('getmemory', forknum, clnum-1, dview, size*0x10);
   }
 });
 
