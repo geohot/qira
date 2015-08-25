@@ -18,7 +18,7 @@ sys.path.append(BASEDIR)
 WITH_BAP = False
 
 # TODO: make this true in v3
-WITH_STATIC = False
+WITH_STATIC = True
 STATIC_ENGINE = "builtin"
 
 WEBSOCKET_DEBUG = False

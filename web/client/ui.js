@@ -78,15 +78,18 @@ $(document).ready(function() {
   timelinePanel.maxSize(100, 0);
 
   var controlPanel = myDocker.addPanel("Control", wcDocker.DOCK.RIGHT, timelinePanel);
-  controlPanel.maxSize(0, 70);
+
+  controlPanel.maxSize(1000, 70);
+  var cfgPanel = myDocker.addPanel("Control Flow", wcDocker.DOCK.RIGHT, controlPanel);
   var idumpPanel = myDocker.addPanel("idump", wcDocker.DOCK.BOTTOM, controlPanel);
   var dynamicPanel = myDocker.addPanel("Dynamic", wcDocker.DOCK.BOTTOM, idumpPanel);
-  dynamicPanel.maxSize(0, 82);
+  //dynamicPanel.maxSize(0, 82);
 
-  /*var cfgPanel = myDocker.addPanel("Control Flow", wcDocker.DOCK.RIGHT, dynamicPanel);
-  var flatPanel = myDocker.addPanel("Flat", wcDocker.DOCK.BOTTOM, cfgPanel, {h: 300});*/
   var memoryPanel = myDocker.addPanel("Memory", wcDocker.DOCK.BOTTOM, dynamicPanel, {h: 400});
   var stracePanel = myDocker.addPanel("strace", wcDocker.DOCK.BOTTOM, dynamicPanel, {h: 200});
+
+  var flatPanel = myDocker.addPanel("Flat", wcDocker.DOCK.BOTTOM, cfgPanel, {h: 200});
+
 
   // apply the panel defaults
   myDocker.findPanels().forEach(function(x) {
@@ -99,10 +102,14 @@ $(document).ready(function() {
 
 
   //$.when(timelineDef, dynamicDef, cfgDef, flatDef, memoryDef, straceDef)
+  //$.when(timelineDef, idumpDef, memoryDef, straceDef, controlDef, dynamicDef, cfgDef, flatDef)
   $.when(timelineDef, idumpDef, memoryDef, straceDef, controlDef, dynamicDef)
     .done(function() {
+      p("loading UI");
+      $.holdReady(true);
       //UI elements now exist in the DOM.
       head.load(scripts);
+      $.holdReady(false);
     });
 });
 

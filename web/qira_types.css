@@ -58,7 +58,8 @@
 
 #control_forknum {
   /*width: 120px;*/
-  width: 21%;
+  /*width: 21%;*/
+  width: 30px;
   color: #555555;
   margin-left: 1%;
 }
