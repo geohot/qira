@@ -39,6 +39,22 @@ function on_instructions(msg) { DS("instructions");
 Deps.autorun(function() { DA("emit getinstructions");
   var forknum = Session.get("forknum");
   var clnum = Session.get("clnum");
-  //TODO: This should not be a hardcoded value.
-  stream.emit('getinstructions', forknum, clnum, clnum-8, clnum+24);
+  var maxclnum = Session.get("max_clnum");
+  if (maxclnum === undefined) return;
+  maxclnum = maxclnum[forknum];
+
+  // correct place for this clamp?
+  if (clnum > maxclnum[1]) {
+    clnum = maxclnum[1];
+    Session.set("clnum", clnum);
+  }
+
+  // TODO: make this clean
+  var size = Math.round($('#idump').parent().parent().parent().parent().parent().height() / 16.0);
+  var end = Math.min(maxclnum[1]+1, clnum+size-6);
+  var start = Math.max(maxclnum[0], end-size);
+  if (maxclnum[0] > (end-size)) end += maxclnum[0] - (end-size) + 1;
+
+  stream.emit('getinstructions', forknum, clnum, start, end);
 });
+
