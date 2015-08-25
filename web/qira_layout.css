@@ -17,33 +17,21 @@ td {
 }
 
 .dynamic-info {
-    width: 100%;
-    background-color: #AAAAAA;
-}
-
-.stay-bottom {
-    position: absolute;
-    z-index: 1;
-    bottom: 0;
-}
-.stay-top {
-    position: absolute;
-    z-index: 1;
-    top: 0;
+  width: 100%;
+  background-color: #AAAAAA;
 }
 
 .splitter {
-    position: absolute;
-    top: 0px;
-    left: 0px;
-    right: 0px;
-    bottom: 0px;
-    overflow: hidden;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  overflow: hidden;
 }
 
 .fill {
-    height: 100%;
-    overflow-y: auto;
+  overflow-y: hidden;
 }
 
 /* controls */

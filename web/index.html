@@ -30,9 +30,9 @@
   <script type="text/javascript" src="/client/compatibility/wcDocker.window-patch.js"></script>
   <script type="text/javascript" src="/client/ui.js"></script>
 
-  <script type="text/template" id="dynamic-template">
+  <script type="text/template" id="control-template">
     <div class="container fill">
-      <div class="stay-top dynamic-info">
+      <div class="dynamic-info">
         <div id="haddrline"></div>
         <div id="controls" class="fill">
           <input spellcheck="false" id="control_clnum" class="control" />
@@ -41,11 +41,17 @@
           <input spellcheck="false" id="control_daddr" class="control" />
         </div>
       </div>
+    </div>
+  </script>
+
+  <script type="text/template" id="idump-template">
       <div class="panelthing fill" id="idump"></div>
-      <div class="stay-bottom">
-        <div class="panelthing" id="regviewer"></div>
-        <div class="panelthing" id="datachanges"></div>
-      </div>
+  </script>
+
+  <script type="text/template" id="dynamic-template">
+    <div>
+      <div class="panelthing" id="regviewer"></div>
+      <div class="panelthing" id="datachanges"></div>
     </div>
   </script>
 

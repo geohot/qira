@@ -10,7 +10,9 @@ $(document).ready(function() {
   var memoryDef = $.Deferred();
   var straceDef = $.Deferred();
   var flatDef = $.Deferred();
+  var controlDef = $.Deferred();
   var dynamicDef = $.Deferred();
+  var idumpDef = $.Deferred();
   var timelineDef = $.Deferred();
 
   myDocker.registerPanelType('Timeline', {
@@ -21,10 +23,24 @@ $(document).ready(function() {
     },
   });
 
+  myDocker.registerPanelType('Control', {
+    onCreate: function(myPanel, options) {
+      myPanel.layout().addItem($($("#control-template").remove().text()));
+      controlDef.resolve();
+    },
+  });
+
   myDocker.registerPanelType('Dynamic', {
     onCreate: function(myPanel, options) {
       myPanel.layout().addItem($($("#dynamic-template").remove().text()));
       dynamicDef.resolve();
+    },
+  });
+
+  myDocker.registerPanelType('idump', {
+    onCreate: function(myPanel, options) {
+      myPanel.layout().addItem($($("#idump-template").remove().text()));
+      idumpDef.resolve();
     },
   });
 
@@ -61,7 +77,12 @@ $(document).ready(function() {
   // Limit the width of the vtimeline. Scrollbar exists if it overflows.
   timelinePanel.maxSize(100, 0);
 
-  var dynamicPanel = myDocker.addPanel("Dynamic", wcDocker.DOCK.RIGHT, timelinePanel);
+  var controlPanel = myDocker.addPanel("Control", wcDocker.DOCK.RIGHT, timelinePanel);
+  controlPanel.maxSize(0, 70);
+  var idumpPanel = myDocker.addPanel("idump", wcDocker.DOCK.BOTTOM, controlPanel);
+  var dynamicPanel = myDocker.addPanel("Dynamic", wcDocker.DOCK.BOTTOM, idumpPanel);
+  dynamicPanel.maxSize(0, 82);
+
   /*var cfgPanel = myDocker.addPanel("Control Flow", wcDocker.DOCK.RIGHT, dynamicPanel);
   var flatPanel = myDocker.addPanel("Flat", wcDocker.DOCK.BOTTOM, cfgPanel, {h: 300});*/
   var memoryPanel = myDocker.addPanel("Memory", wcDocker.DOCK.BOTTOM, dynamicPanel, {h: 400});
@@ -78,7 +99,7 @@ $(document).ready(function() {
 
 
   //$.when(timelineDef, dynamicDef, cfgDef, flatDef, memoryDef, straceDef)
-  $.when(timelineDef, dynamicDef, memoryDef, straceDef)
+  $.when(timelineDef, idumpDef, memoryDef, straceDef, controlDef, dynamicDef)
     .done(function() {
       //UI elements now exist in the DOM.
       head.load(scripts);

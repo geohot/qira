@@ -40,5 +40,5 @@ Deps.autorun(function() { DA("emit getinstructions");
   var forknum = Session.get("forknum");
   var clnum = Session.get("clnum");
   //TODO: This should not be a hardcoded value.
-  stream.emit('getinstructions', forknum, clnum, clnum-8, clnum+16);
+  stream.emit('getinstructions', forknum, clnum, clnum-8, clnum+24);
 });
