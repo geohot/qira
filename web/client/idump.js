@@ -44,13 +44,11 @@ Deps.autorun(function() { DA("emit getinstructions");
   maxclnum = maxclnum[forknum];
 
   // correct place for this clamp?
-  if (clnum > maxclnum[1]) {
-    clnum = maxclnum[1];
-    Session.set("clnum", clnum);
-  }
+  if (clnum > maxclnum[1]) { clnum = maxclnum[1]; Session.set("clnum", clnum); }
+  if (clnum < maxclnum[0]) { clnum = maxclnum[0]; Session.set("clnum", clnum); }
 
   // TODO: make this clean
-  var size = Math.round($('#idump').parent().parent().parent().parent().parent().height() / 16.0);
+  var size = Math.round($('#idump').parents("div").height() / 16.0);
   var end = Math.min(maxclnum[1]+1, clnum+size-6);
   var start = Math.max(maxclnum[0], end-size);
   if (maxclnum[0] > (end-size)) end += maxclnum[0] - (end-size) + 1;
