@@ -113,7 +113,7 @@ Deps.autorun(function() { DA("emit getmemory");
   if (dview == undefined) {
     $('#hexdump').empty();
   } else {
-    var size = Math.round($($("#hexdump").parents("div")[1]).height() / 16.0);
+    var size = get_size("#hexdump");
     stream.emit('getmemory', forknum, clnum-1, dview, size*0x10);
   }
 });

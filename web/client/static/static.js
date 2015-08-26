@@ -6,7 +6,11 @@ Deps.autorun(function() { DA("update static view");
   var iview = Session.get('iview');
   var flat = Session.get('flat');
   if (iview === undefined) return;
-  stream.emit('getstaticview', iview, flat, [-15,40]);
+
+  var size = get_size("#flat-static");
+  p(size);
+
+  stream.emit('getstaticview', iview, flat, [-5,size-5]);
 });
 
 
@@ -101,3 +105,4 @@ function on_function(fxn) { DS("function");
   rehighlight();
   replace_names();
 } stream.on('function', on_function);
+

@@ -102,8 +102,8 @@ $(document).ready(function() {
 
 
   //$.when(timelineDef, dynamicDef, cfgDef, flatDef, memoryDef, straceDef)
-  //$.when(timelineDef, idumpDef, memoryDef, straceDef, controlDef, dynamicDef, cfgDef, flatDef)
-  $.when(timelineDef, idumpDef, memoryDef, straceDef, controlDef, dynamicDef)
+  $.when(timelineDef, idumpDef, memoryDef, straceDef, controlDef, dynamicDef, cfgDef, flatDef)
+  //$.when(timelineDef, idumpDef, memoryDef, straceDef, controlDef, dynamicDef)
     .done(function() {
       p("loading UI");
       $.holdReady(true);

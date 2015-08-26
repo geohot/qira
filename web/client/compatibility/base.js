@@ -151,3 +151,9 @@ function async_tags_request(addrs, cb) {
   req.send(JSON.stringify(addrs));
 }
 
+function get_size(id) {
+  // TODO: 16 shouldn't be hardcoded
+  var size = Math.round($($(id).parents("div")[1]).height() / 16.0);
+  return size;
+}
+

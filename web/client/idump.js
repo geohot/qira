@@ -48,7 +48,7 @@ Deps.autorun(function() { DA("emit getinstructions");
   if (clnum < maxclnum[0]) { clnum = maxclnum[0]; Session.set("clnum", clnum); }
 
   // TODO: make this clean
-  var size = Math.round($('#idump').parents("div").height() / 16.0);
+  var size = get_size("#idump");
   var end = Math.min(maxclnum[1]+1, clnum+size-6);
   var start = Math.max(maxclnum[0], end-size);
   if (maxclnum[0] > (end-size)) end += maxclnum[0] - (end-size) + 1;
