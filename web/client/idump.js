@@ -52,7 +52,7 @@ Deps.autorun(function() { DA("emit getinstructions");
   maxclnum = maxclnum[forknum];
 
   // correct place for this clamp?
-  if (clnum > maxclnum[1]) { clnum = maxclnum[1]; Session.set("clnum", clnum); }
+  if (clnum > (maxclnum[1]+1)) { clnum = (maxclnum[1]+1); Session.set("clnum", clnum); }
   if (clnum < maxclnum[0]) { clnum = maxclnum[0]; Session.set("clnum", clnum); }
 
   // TODO: make this clean
