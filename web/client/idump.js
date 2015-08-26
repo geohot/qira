@@ -10,6 +10,7 @@ function on_arch(msg) { DS("arch");
 function on_instructions(msg) { DS("instructions");
   var clnum = Session.get("clnum");
   var idump = "";
+  var addrs = [];
   for (var i = 0; i<msg.length;i++) {
     var ins = msg[i];
 
@@ -22,15 +23,22 @@ function on_instructions(msg) { DS("instructions");
       ins.name = "";
     }
 
+    // track the addresses
+    addrs.push([ins.clnum-clnum, ins.address]);
+
     // compute the dynamic stuff
-    idump +=
-       '<div class="instruction" style="margin-left: '+(ins.depth*10)+'px">'+
-        '<div class="change '+(ins.slice ? "halfhighlight": "")+' clnum clnum_'+ins.clnum+'">'+ins.clnum+'</div> '+
-        '<span class="insaddr datainstruction addr addr_'+ins.address+'">'+ins.address+'</span> '+
-        '<div class="instructiondesc">'+highlight_instruction(ins.instruction)+'</div> '+
-        '<span class="comment comment_'+ins.address+'">'+(ins.comment !== undefined ? "; "+ins.comment : "")+'</span>'+
-      '</div>';
+    // TODO: hacks for trail stuff working
+    if (i >= 10) {
+      idump +=
+         '<div class="instruction" style="margin-left: '+(ins.depth*10)+'px">'+
+          '<div class="change '+(ins.slice ? "halfhighlight": "")+' clnum clnum_'+ins.clnum+'">'+ins.clnum+'</div> '+
+          '<span class="insaddr datainstruction addr addr_'+ins.address+'">'+ins.address+'</span> '+
+          '<div class="instructiondesc">'+highlight_instruction(ins.instruction)+'</div> '+
+          '<span class="comment comment_'+ins.address+'">'+(ins.comment !== undefined ? "; "+ins.comment : "")+'</span>'+
+        '</div>';
+    }
   }
+  Session.set('trail', addrs);
   $('#idump').html(idump);
   rehighlight();
   replace_names();
@@ -53,6 +61,6 @@ Deps.autorun(function() { DA("emit getinstructions");
   var start = Math.max(maxclnum[0], end-size);
   if (maxclnum[0] > (end-size)) end += maxclnum[0] - (end-size) + 1;
 
-  stream.emit('getinstructions', forknum, clnum, start, end);
+  stream.emit('getinstructions', forknum, clnum, start-10, end);
 });
 

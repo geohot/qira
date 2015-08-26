@@ -78,12 +78,27 @@ function rehighlight() {
   var clnum = Session.get("clnum");
   var iaddr = Session.get("iaddr");
   var daddr = Session.get("daddr");
+  var trail = Session.get("trail");
+  $(".trail").css('background-color', '')
+  $(".trail").removeClass("trail");
   $(".autohighlight").removeClass("autohighlight");
   $(".autohighlighti").removeClass("autohighlighti");
   $(".clnum_"+clnum).addClass("autohighlight");
   $(".addr_"+iaddr).addClass("autohighlighti");
   $(".daddr_"+daddr).addClass("autohighlight");
   $(".data_"+daddr).addClass("autohighlight");
+  if (trail !== undefined) {
+    for (var i = 0; i < trail.length; i++) {
+      var cldiff = trail[i][0];
+      if (cldiff <= 0) {
+        var htrail = $($(".insaddr.addr_"+trail[i][1]).parents(".instruction_static")[0]);
+        p(cldiff, htrail);
+        var opacity = ((16+cldiff)/35.0);
+        htrail.css('background-color', 'rgba(0,0,255,'+opacity+')');
+        htrail.addClass("trail");
+      }
+    }
+  }
 }
 
 Deps.autorun(function() { DA("rehighlight");

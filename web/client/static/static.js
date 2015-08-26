@@ -16,7 +16,7 @@ Deps.autorun(function() { DA("update static view");
 
 // TODO: this code is replicated in idump.js
 function instruction_html_from_tags(ins) {
-  var idump = '<div class="instruction">';
+  var idump = '<div class="instruction instruction_static">';
   idump += '<span class="insaddr datainstruction addr addr_'+ins.address+'">'+ins.address+'</span> ';
   if (ins.instruction !== undefined) {
     idump += '<div class="instructiondesc">'+highlight_instruction(ins.instruction)+'</div> ';
