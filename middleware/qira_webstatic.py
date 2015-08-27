@@ -30,6 +30,9 @@ def getnames(addrs):
     send[ghex(addr)] = ret[addr]['name']
   emit('names', send)
 
+@app.route('/hasstatic', methods=["GET"])
+def hasstatic():
+  return str(qira_config.WITH_STATIC)
 
 # TODO: this is a shitty function
 @app.route('/gettagsa', methods=["POST"])

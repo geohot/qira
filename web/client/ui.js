@@ -6,6 +6,11 @@ var scripts = ["/client/controls.js", "/client/ida.js", "/client/idump.js", "/cl
 $(document).ready(function() {
   var myDocker = new wcDocker(document.body, {"theme": "qira_theme", "themePath": "", "allowContextMenu": false});
 
+  var req = new XMLHttpRequest();
+  req.open('GET', '/hasstatic', false);
+  req.send()
+  var has_static = req.response == "True";
+
   var cfgDef = $.Deferred();
   var memoryDef = $.Deferred();
   var straceDef = $.Deferred();
@@ -80,7 +85,11 @@ $(document).ready(function() {
   var controlPanel = myDocker.addPanel("Control", wcDocker.DOCK.RIGHT, timelinePanel);
 
   controlPanel.maxSize(1000, 70);
-  var cfgPanel = myDocker.addPanel("Control Flow", wcDocker.DOCK.RIGHT, controlPanel);
+  if (has_static) {
+    var cfgPanel = myDocker.addPanel("Control Flow", wcDocker.DOCK.RIGHT, controlPanel);
+    var flatPanel = myDocker.addPanel("Flat", wcDocker.DOCK.BOTTOM, cfgPanel, {h: 200});
+  }
+  
   var idumpPanel = myDocker.addPanel("idump", wcDocker.DOCK.BOTTOM, controlPanel);
   var dynamicPanel = myDocker.addPanel("Dynamic", wcDocker.DOCK.BOTTOM, idumpPanel);
   //dynamicPanel.maxSize(0, 82);
@@ -88,7 +97,6 @@ $(document).ready(function() {
   var memoryPanel = myDocker.addPanel("Memory", wcDocker.DOCK.BOTTOM, dynamicPanel, {h: 400});
   var stracePanel = myDocker.addPanel("strace", wcDocker.DOCK.BOTTOM, dynamicPanel, {h: 200});
 
-  var flatPanel = myDocker.addPanel("Flat", wcDocker.DOCK.BOTTOM, cfgPanel, {h: 200});
 
 
   // apply the panel defaults
@@ -102,14 +110,18 @@ $(document).ready(function() {
 
 
   //$.when(timelineDef, dynamicDef, cfgDef, flatDef, memoryDef, straceDef)
-  $.when(timelineDef, idumpDef, memoryDef, straceDef, controlDef, dynamicDef, cfgDef, flatDef)
-  //$.when(timelineDef, idumpDef, memoryDef, straceDef, controlDef, dynamicDef)
-    .done(function() {
-      p("loading UI");
-      $.holdReady(true);
-      //UI elements now exist in the DOM.
-      head.load(scripts);
-      $.holdReady(false);
-    });
+  function is_done() {
+    p("loading UI");
+    $.holdReady(true);
+    //UI elements now exist in the DOM.
+    head.load(scripts);
+    $.holdReady(false);
+  }
+
+  if (has_static) {
+    $.when(timelineDef, idumpDef, memoryDef, straceDef, controlDef, dynamicDef, cfgDef, flatDef).done(is_done);
+  } else {
+    $.when(timelineDef, idumpDef, memoryDef, straceDef, controlDef, dynamicDef).done(is_done);
+  }
 });
 
