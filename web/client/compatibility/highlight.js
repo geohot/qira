@@ -91,8 +91,7 @@ function rehighlight() {
     for (var i = 0; i < trail.length; i++) {
       var cldiff = trail[i][0];
       if (cldiff <= 0) {
-        var htrail = $($(".insaddr.addr_"+trail[i][1]).parents(".instruction_static")[0]);
-        p(cldiff, htrail);
+        var htrail = $($(".insaddr.addr_"+trail[i][1]).parents(".instruction_static"));
         var opacity = ((16+cldiff)/35.0);
         htrail.css('background-color', 'rgba(0,0,255,'+opacity+')');
         htrail.addClass("trail");

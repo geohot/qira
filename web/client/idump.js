@@ -1,5 +1,8 @@
 stream = io.connect(STREAM_URL);
 
+// TODO: parameter should be dynamic?
+var backward_context_size = 6;
+
 // arch is public data
 arch = undefined;
 function on_arch(msg) { DS("arch");
@@ -27,8 +30,8 @@ function on_instructions(msg) { DS("instructions");
     addrs.push([ins.clnum-clnum, ins.address]);
 
     // compute the dynamic stuff
-    // TODO: hacks for trail stuff working
-    if (i >= 10) {
+    // TODO: hacks for trail stuff working, shitty off by ones here
+    if (i >= 10 || ins.clnum >= (clnum - backward_context_size)) {
       idump +=
          '<div class="instruction" style="margin-left: '+(ins.depth*10)+'px">'+
           '<div class="change '+(ins.slice ? "halfhighlight": "")+' clnum clnum_'+ins.clnum+'">'+ins.clnum+'</div> '+
@@ -57,7 +60,7 @@ Deps.autorun(function() { DA("emit getinstructions");
 
   // TODO: make this clean
   var size = get_size("#idump");
-  var end = Math.min(maxclnum[1]+1, clnum+size-6);
+  var end = Math.min(maxclnum[1]+1, clnum+size-backward_context_size);
   var start = Math.max(maxclnum[0], end-size);
   if (maxclnum[0] > (end-size)) end += maxclnum[0] - (end-size) + 1;
 
