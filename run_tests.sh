@@ -22,3 +22,6 @@ sleep 2
 phantomjs qira_tests/load_page.js
 
 kill $QIRA_PID
+
+./run_tests_static.sh
+
