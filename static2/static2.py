@@ -73,6 +73,7 @@ class Static:
     if static_engine is None:
       static_engine = qira_config.STATIC_ENGINE
 
+    # TODO: clean this up
     if static_engine == "r2":
       sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "r2"))
       import r2pipe 
@@ -82,6 +83,19 @@ class Static:
       # capstone is not working ok yet, so using udis for now
       self.r2core.cmd("e asm.arch=x86.udis")
       self.r2core.cmd("aa;af @ main")
+    elif static_engine == "ida":
+      # run the elf loader
+      sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "ida"))
+      import ida
+      class loader():
+        @staticmethod
+        def load_binary(static):
+          ida.init_with_binary(static.path)
+      class analyzer():
+        @staticmethod
+        def analyze_functions(x):
+          dat = ida.fetch_tags()
+          print dat
     else:
       # run the elf loader
       sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "builtin"))
