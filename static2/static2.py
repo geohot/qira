@@ -211,7 +211,7 @@ class Static:
 
   def process(self):
     self.analyzer.analyze_functions(self)
-    if self.debug >= 1:
+    if self.debug >= 0:
       print "*** found %d functions" % len(self['functions'])
 
 
