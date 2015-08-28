@@ -105,7 +105,9 @@ $(document).ready(function() {
     x.moveable(false);
     x.closeable(false);
     // scrollable isn't working
-    x.scrollable(false, false)
+    if (x._title != "Timeline") {
+      x.scrollable(false, false)
+    }
   });
 
 
