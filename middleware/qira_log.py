@@ -9,6 +9,7 @@ IS_BIGE  = 0x08000000    # not supported
 SIZE_MASK = 0xFF
 
 LOGFILE = "/tmp/qira_log"
+LOGDIR = "/tmp/qira_logs/"
 
 def flag_to_type(flags):
   if flags & IS_START:
