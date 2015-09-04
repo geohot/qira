@@ -32,26 +32,29 @@
 import collections
 import os, sys
 import re
+import pickle
+import atexit
+from hashlib import sha1
 
 sys.path.append("../middleware")
 import qira_config
 
 from model import *
 
-# debugging
-try:
-  from hexdump import hexdump
-except:
-  pass
-
-
 # the new interface for all things static
 # will only support radare2 for now
 # mostly tags, except for names and functions
 class Static:
   def __init__(self, path, debug=0, static_engine=None):
+    # create the static cache dir
+    try:
+      os.mkdir(qira_config.STATIC_CACHE_BASE)
+    except:
+      pass
+
     self.tags = {}
     self.path = path
+    self.scf = qira_config.STATIC_CACHE_BASE + sha1(open(self.path, "rb").read()).hexdigest()
     self.r2core = None
     self.debug = debug
 
@@ -106,6 +109,53 @@ class Static:
 
     if self.debug >= 1:
       print "*** elf loaded"
+
+    """
+    # check the cache
+    if os.path.isfile(self.scf):
+      # cache is global_tags + tags
+      with open(self.scf) as f:
+        try:
+          dd = pickle.load(f)
+          print "*** read %d bytes from static cache" % f.tell()
+        except:
+          dd = None
+          print "*** static cache corrupt, ignoring"
+        if dd != None:
+          self.deserialize(dd)
+      pass
+
+    # register cache writing
+    def write_cache():
+      with open(self.scf, "wb") as f:
+        dat = self.serialize()
+        pickle.dump(dat, f)
+        print "*** wrote %d bytes to static cache" % f.tell()
+
+    atexit.register(write_cache)
+    """
+
+  def serialize(self):
+    def blacklist(d):
+      ret = {}
+      for k in d:
+        #if k == "instruction":
+        if k != "name":
+          continue
+        ret[k] = d[k]
+      return ret
+    kk = self.tags.keys()
+    vv = map(lambda x: blacklist(self.tags[x].backing), kk)
+    return self.global_tags.backing, kk, vv
+
+  def deserialize(self, dat):
+    gt, kk, vv = dat
+    for k in gt:
+      self[k] = gt[k]
+
+    for address, dd in zip(kk, vv):
+      for k in dd:
+        self[address][k] = dd[k]
 
   # this should be replaced with a 
   def set_name(self, address, name):
