@@ -86,10 +86,13 @@ static void ws_send(char *str) {
     malloc(LWS_SEND_BUFFER_PRE_PADDING + len + LWS_SEND_BUFFER_POST_PADDING);
   memcpy(&buf[LWS_SEND_BUFFER_PRE_PADDING], str, len);
   if (gwsi != NULL) {
-    while (lws_partial_buffered(gwsi)); //this is gross. no async way to wait? :(
-    libwebsocket_write(gwsi, &buf[LWS_SEND_BUFFER_PRE_PADDING], len, LWS_WRITE_TEXT);
+    if (lws_send_pipe_choked(gwsi))
+      msg("couldn't send %s, pipe is choked.\n", str);
+    else
+      libwebsocket_write(gwsi, &buf[LWS_SEND_BUFFER_PRE_PADDING], len, LWS_WRITE_TEXT);
   }
   free(buf);
+  usleep(100); //to limit choking
 }
 
 
@@ -142,8 +145,8 @@ static void send_comments() {
       #else
         qsnprintf(tmp, sizeof(tmp)-1, "setcmt 0x%x %s", cur, cmt_tmp);
       #endif
+      ws_send(tmp);
     }
-    ws_send(tmp);
   }
   return;
 }
