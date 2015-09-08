@@ -251,4 +251,5 @@ def init_with_binary(filename):
 
 if __name__ == "__main__":
   init_with_binary(sys.argv[1])
+  print fetch_tags()
 

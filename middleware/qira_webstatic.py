@@ -30,6 +30,9 @@ def getnames(addrs):
     send[ghex(addr)] = ret[addr]['name']
   emit('names', send)
 
+@app.route('/hasstatic', methods=["GET"])
+def hasstatic():
+  return str(qira_config.WITH_STATIC)
 
 # TODO: this is a shitty function
 @app.route('/gettagsa', methods=["POST"])
@@ -171,7 +174,6 @@ if qira_config.WITH_STATIC:
       else:
         program.static[iaddr]['len'] = 1
     elif typ == 'string':
-      program.static[iaddr]['type'] = 'string'
       # get length of string
       eaddr = iaddr
       try:
@@ -179,7 +181,15 @@ if qira_config.WITH_STATIC:
           eaddr += 1
       except:
         pass
-      program.static[iaddr]['len'] = eaddr-iaddr
+      strlen = eaddr-iaddr
+      if strlen == 0:
+        return
+      mstr = program.static.memory(iaddr, strlen)
+      mstr = ''.join(filter(str.isalnum, mstr))
+
+      program.static[iaddr]['type'] = 'string'
+      program.static[iaddr]['len'] = strlen
+      program.static[iaddr]['name'] = "a"+mstr
     elif typ == 'undefined':
       del program.static[iaddr]['len']
       del program.static[iaddr]['type']

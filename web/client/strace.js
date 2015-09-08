@@ -41,8 +41,10 @@ Deps.autorun(function() { DA("updating sview on fork/cl change");
     if (t[i]['clnum'] > clnum) break;
   }
   //p(i);
+  var size = get_size("#strace");
+
   var min = Math.max(0, i-3);
-  var max = min+10;
+  var max = min+size;
   // ugh
   if (max > t.length) { 
     var off = max-t.length;

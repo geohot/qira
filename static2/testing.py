@@ -19,7 +19,8 @@ from elftools.common.exceptions import ELFError, ELFParseError
 from glob import glob
 
 TEST_PATH = os.path.join(qira_config.BASEDIR,"tests_auto","binary-autogen","*")
-ENGINES = ["builtin"]
+ENGINES = ["builtin", "r2"]
+#ENGINES = ["builtin"]
 
 class bcolors(object):
   HEADER = '\033[95m'

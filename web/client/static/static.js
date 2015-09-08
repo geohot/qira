@@ -6,13 +6,17 @@ Deps.autorun(function() { DA("update static view");
   var iview = Session.get('iview');
   var flat = Session.get('flat');
   if (iview === undefined) return;
-  stream.emit('getstaticview', iview, flat, [-15,40]);
+
+  var size = get_size("#flat-static");
+  p(size);
+
+  stream.emit('getstaticview', iview, flat, [-5,size-5]);
 });
 
 
 // TODO: this code is replicated in idump.js
 function instruction_html_from_tags(ins) {
-  var idump = '<div class="instruction">';
+  var idump = '<div class="instruction instruction_static">';
   idump += '<span class="insaddr datainstruction addr addr_'+ins.address+'">'+ins.address+'</span> ';
   if (ins.instruction !== undefined) {
     idump += '<div class="instructiondesc">'+highlight_instruction(ins.instruction)+'</div> ';
@@ -101,3 +105,4 @@ function on_function(fxn) { DS("function");
   rehighlight();
   replace_names();
 } stream.on('function', on_function);
+
