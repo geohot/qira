@@ -20,10 +20,11 @@ static int callback_http(struct libwebsocket_context* context,
 ea_t qira_address = BADADDR;
 
 static void set_qira_address(ea_t la) {
-  if (qira_address != BADADDR) { del_bpt(qira_address); }
+  bgcolor_t green = 0x0000FF00;
+  bgcolor_t white = 0xFFFFFFFF;
+  if (qira_address != BADADDR) { set_item_color(qira_address, white); }
   qira_address = la;
-  add_bpt(qira_address);
-  disable_bpt(qira_address);
+  set_item_color(qira_address, green);
 }
 
 static void thread_safe_jump_to(ea_t a) {
