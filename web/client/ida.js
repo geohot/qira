@@ -42,16 +42,33 @@ function do_ida_socket(callme) {
   }
 }
 
-Deps.autorun(function() { DA("send setaddress to ida");
-  var iaddr = Session.get('iaddr');
+function send_cmd(cmd) {
   do_ida_socket(function() {
-    cmd = 'setaddress '+iaddr;
     try {
       ws.send(cmd);
     } catch(err) {
       // nothing
     }
   });
+}
+
+Deps.autorun(function() { DA("send setaddress to ida");
+  var iaddr = Session.get('iaddr');
+  send_cmd('setaddress '+iaddr);
 });
 
+Deps.autorun(function() { DA("send user names and comments to ida");
+  var addr = Session.get("ida_sync_addr");
+  var tagname = Session.get("ida_sync_tagname");
+  var dat = Session.get("ida_sync_dat");
 
+  if (addr == undefined || tagname == undefined || dat == undefined) return;
+
+  if (tagname == "name")
+    send_cmd('setname ' + addr + " " + dat);
+  else if (tagname == "comment")
+    send_cmd('setcmt ' + addr + " " + dat);
+  else {
+    p("Unknown tag type from user: " + tagname)
+  }
+});

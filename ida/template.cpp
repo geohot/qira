@@ -2,7 +2,6 @@
 #include <idp.hpp>
 #include <loader.hpp>
 #include <bytes.hpp>
-#include <dbg.hpp>
 #include <name.hpp>
 
 //#define DEBUG
@@ -69,6 +68,38 @@ static int callback_qira(struct libwebsocket_context* context,
           ea_t addr = strtoul((char*)in+sizeof("setaddress ")-1, NULL, 0);
         #endif
         thread_safe_jump_to(addr);
+      } else if (memcmp(in, "setname ", sizeof("setname ")-1) == 0) {
+        char *dat = (char*)in + sizeof("setname ") - 1;
+
+        //parsing code borrowed from 1995
+        char *space = strchr(dat, ' ');
+        *space = '\0';
+        char *name = space + 1;
+        char *addr_s = dat;
+
+        #ifdef __EA64__
+          ea_t addr = strtoull(addr_s, NULL, 0);
+        #else
+          ea_t addr = strtoul(addr_s, NULL, 0);
+        #endif
+        set_name(addr, name, 0);
+      } else if (memcmp(in, "setcmt ", sizeof("setcmt ")-1) == 0) {
+        char *dat = (char*)in + sizeof("setcmt ") - 1;
+
+        //copy paste "inlining". microsoft levels of 1995
+        char *space = strchr(dat, ' ');
+        *space = '\0';
+        char *cmt = space + 1;
+        char *addr_s = dat;
+
+        #ifdef __EA64__
+          ea_t addr = strtoull(addr_s, NULL, 0);
+        #else
+          ea_t addr = strtoul(addr_s, NULL, 0);
+        #endif
+
+        bool repeatable = false;
+        set_cmt(addr, cmt, repeatable);
       }
       break;
     default:

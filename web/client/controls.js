@@ -210,6 +210,9 @@ window.onkeydown = function(e) {
 
     if (tagname == 'name') {
       var dat = prompt("Rename address "+addr, old);
+      //having no comment makes sense. having no name does not.
+      //or we should default to the autogen name like IDA
+      if (dat == "") return;
     } else {
       var dat = prompt("Enter comment for "+addr, old);
     }
@@ -224,8 +227,14 @@ window.onkeydown = function(e) {
       replace_names();
     } else if (tagname == 'comment') {
       // do this explictly?
-      $(".comment_"+addr).html("; "+dat);
+      if (dat != "")
+        $(".comment_"+addr).html("; "+dat);
+      else
+        $(".comment_"+addr).html("");
     }
+    Session.set("ida_sync_addr", addr);
+    Session.set("ida_sync_tagname", tagname);
+    Session.set("ida_sync_dat", dat);
   } else if (e.keyCode == 71) {
     var dat = prompt("Enter change or address");
     if (dat == undefined) return;

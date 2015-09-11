@@ -37,7 +37,7 @@ function on_instructions(msg) { DS("instructions");
           '<div class="change '+(ins.slice ? "halfhighlight": "")+' clnum clnum_'+ins.clnum+'">'+ins.clnum+'</div> '+
           '<span class="insaddr datainstruction addr addr_'+ins.address+'">'+ins.address+'</span> '+
           '<div class="instructiondesc">'+highlight_instruction(ins.instruction)+'</div> '+
-          '<span class="comment comment_'+ins.address+'">'+(ins.comment !== undefined ? "; "+ins.comment : "")+'</span>'+
+          '<span class="comment comment_'+ins.address+'">'+(ins.comment !== undefined && ins.comment !== "" ? "; "+ins.comment : "")+'</span>'+
         '</div>';
     }
   }
