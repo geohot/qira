@@ -210,14 +210,6 @@ static int idaapi hook(void *user_data, int event_id, va_list va) {
       }
     }
     old_addr = addr;
-  } else if (event_id == view_activated) {
-    // I can't hook renaming directly so for now we use
-    // the inferior view_activated, which will trigger
-    // name syncing after dialog boxes are closed / the
-    // main window is refocused.
-    //msg("auto-syncing\n");
-    //send_names();
-    //send_comments();
   }
   return 0;
 }

@@ -72,3 +72,26 @@ Deps.autorun(function() { DA("send user names and comments to ida");
     p("Unknown tag type from user: " + tagname)
   }
 });
+
+Deps.autorun(function() { DA("send trail to ida");
+  var trail = Session.get("trail");
+  //p(trail[0]);
+  if (trail !== undefined) {
+    for (var i = 0; i < trail.length; i++) {
+      var cldiff = trail[i][0];
+      var addr = trail[i][1];
+      if (cldiff <= 0) {
+        p(trail[i]);
+        //p(cldiff);
+        /*var htrail = $($(".insaddr.addr_"+trail[i][1]).parents(".instruction_static")[0]);
+        p(cldiff, htrail);
+        var opacity = ((16+cldiff)/35.0);
+        htrail.css('background-color', 'rgba(0,0,255,'+opacity+')');
+        htrail.addClass("trail");*/
+      }
+    }
+  }
+  //for (var i = 0; i < trails.length; i++) {
+  //  p("trail" + str(i) + " -> " + trails[i]);
+  //}
+});
