@@ -77,10 +77,10 @@ Deps.autorun(function() { DA("send trail to ida");
   var trail = Session.get("trail");
   if (trail !== undefined) {
     var s = "settrail ";
-    for (var i = Math.max(0, trail.length-5); i < trail.length; i++) {
+    for (var i = 0; i < trail.length; i++) {
       var cldiff = trail[i][0];
       var addr = trail[i][1];
-      if (cldiff <= 0) {
+      if (-5 <= cldiff && cldiff <= 0) {
         s += cldiff + "," + addr + ";";
       }
     }

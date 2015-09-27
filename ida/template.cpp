@@ -24,7 +24,7 @@ int trail_i = 0;
 
 static void clear_trail_colors() {
   bgcolor_t white = 0xFFFFFFFF;
-  for (size_t i = 0; i < sizeof(trail_addresses); i++) {
+  for (size_t i = 0; i < MAX_NUM_COLORS; i++) {
     ea_t addr = trail_addresses[i];
     if (addr != 0) {
       set_item_color(addr, white);
@@ -36,10 +36,11 @@ static void clear_trail_colors() {
 
 static void add_trail_color(int clnum, ea_t addr) {
   msg("adding trail color for clnum %d\n", clnum);
-  bgcolor_t green = 0x0000FF00;
-  if (trail_i > MAX_NUM_COLORS) return;
+  if (trail_i >= MAX_NUM_COLORS) return;
   trail_addresses[trail_i] = addr;
-  set_item_color(addr, green);
+  bgcolor_t color = ((0xFF - 10*(MAX_NUM_COLORS - trail_i)) << 8);
+  msg("setting color %d -> 0x%x.\n", trail_i, color);
+  set_item_color(addr, color);
   trail_i++;
 }
 
