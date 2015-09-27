@@ -4,7 +4,7 @@
 #include <bytes.hpp>
 #include <name.hpp>
 
-#define MAX_NUM_COLORS 5
+#define MAX_NUM_COLORS 10
 
 //#define DEBUG
 

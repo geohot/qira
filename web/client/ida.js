@@ -80,7 +80,7 @@ Deps.autorun(function() { DA("send trail to ida");
     for (var i = 0; i < trail.length; i++) {
       var cldiff = trail[i][0];
       var addr = trail[i][1];
-      if (-5 <= cldiff && cldiff <= 0) {
+      if (-10 <= cldiff && cldiff <= 0) {
         s += cldiff + "," + addr + ";";
       }
     }
