@@ -4,6 +4,8 @@
 #include <bytes.hpp>
 #include <name.hpp>
 
+#define MAX_NUM_COLORS 5
+
 //#define DEBUG
 
 // ***************** WEBSOCKETS *******************
@@ -17,6 +19,67 @@ static int callback_http(struct libwebsocket_context* context,
 }
 
 ea_t qira_address = BADADDR;
+ea_t trail_addresses[MAX_NUM_COLORS] = { 0 };
+int trail_i = 0;
+
+static void clear_trail_colors() {
+  bgcolor_t white = 0xFFFFFFFF;
+  for (size_t i = 0; i < sizeof(trail_addresses); i++) {
+    ea_t addr = trail_addresses[i];
+    if (addr != 0) {
+      set_item_color(addr, white);
+      trail_addresses[i] = 0;
+    }
+  }
+  trail_i = 0;
+}
+
+static void add_trail_color(int clnum, ea_t addr) {
+  msg("adding trail color for clnum %d\n", clnum);
+  bgcolor_t green = 0x0000FF00;
+  if (trail_i > MAX_NUM_COLORS) return;
+  trail_addresses[trail_i] = addr;
+  set_item_color(addr, green);
+  trail_i++;
+}
+
+static void set_trail_colors(char *in) {
+  char *dat = (char*)in + sizeof("settrail ") - 1;
+  char *token, *clnum_s, *addr_s;
+
+  clear_trail_colors();
+
+  while ((token = strsep(&dat, ";")) != NULL) {
+    //msg("token: %s\n", token);
+    clnum_s = strsep(&token, ",");
+    //msg("clnum_s: %s\n", clnum_s);
+    if (clnum_s == NULL) break;
+    addr_s = strsep(&token, ",");
+    //msg("addr_s: %s\n", addr_s);
+    if (addr_s == NULL) break;
+    #ifdef __EA64__
+      int clnum = strtoull(clnum_s, NULL, 0);
+      ea_t addr = strtoull(addr_s, NULL, 0);
+      //msg("Got clnum %d -> addr %llx.\n", clnum, addr);
+    #else
+      int clnum = strtoul(clnum_s, NULL, 0);
+      ea_t addr = strtoul(addr_s, NULL, 0);
+      //msg("Got clnum %d -> addr %x.\n", clnum, addr);
+    #endif
+    add_trail_color(clnum, addr);
+  }
+
+/*
+  #ifdef __EA64__
+    ea_t addr = strtoull(addr_s, NULL, 0);
+  #else
+    ea_t addr = strtoul(addr_s, NULL, 0);
+  #endif
+
+  bool repeatable = false;
+  set_cmt(addr, cmt, repeatable);
+*/
+}
 
 static void set_qira_address(ea_t la) {
   bgcolor_t green = 0x0000FF00;
@@ -25,6 +88,16 @@ static void set_qira_address(ea_t la) {
   qira_address = la;
   set_item_color(qira_address, green);
 }
+
+/*
+static void color_trail(char *s) {
+  bgcolor_t green = 0x0000FF00;
+  bgcolor_t white = 0xFFFFFFFF;
+  if (qira_address != BADADDR) { set_item_color(qira_address, white); }
+  qira_address = la;
+  set_item_color(qira_address, green);
+}
+*/
 
 static void thread_safe_jump_to(ea_t a) {
   struct uireq_jumpto_t: public ui_request_t {
@@ -100,6 +173,8 @@ static int callback_qira(struct libwebsocket_context* context,
 
         bool repeatable = false;
         set_cmt(addr, cmt, repeatable);
+      } else if (memcmp(in, "settrail ", sizeof("settrail ")-1) == 0) {
+        set_trail_colors((char*)in);
       }
       break;
     default:
