@@ -22,13 +22,29 @@ ea_t qira_address = BADADDR;
 ea_t trail_addresses[MAX_NUM_COLORS] = { 0 };
 int trail_i = 0;
 
+static void thread_safe_set_item_color(ea_t addr, bgcolor_t color) {
+  struct uireq_setcolor_t: public ui_request_t {
+    uireq_setcolor_t(ea_t addr, bgcolor_t color) {
+      la = addr;
+      lcolor = color;
+    }
+    virtual bool idaapi run() {
+      set_item_color(la, lcolor);
+      return false;
+    }
+    ea_t la;
+    bgcolor_t lcolor;
+  };
+  execute_ui_requests(new uireq_setcolor_t(addr, color), NULL);
+}
+
 static void clear_trail_colors() {
   bgcolor_t white = 0xFFFFFFFF;
   for (size_t i = 0; i < MAX_NUM_COLORS; i++) {
     ea_t addr = trail_addresses[i];
     if (addr != 0) {
       //msg("setting color %x -> 0x%x.\n", addr, white);
-      set_item_color(addr, white);
+      thread_safe_set_item_color(addr, white);
       trail_addresses[i] = 0;
     }
   }
@@ -36,12 +52,12 @@ static void clear_trail_colors() {
 }
 
 static void add_trail_color(int clnum, ea_t addr) {
-  msg("adding trail color for clnum %d\n", clnum);
+  //msg("adding trail color for clnum %d\n", clnum);
   if (trail_i >= MAX_NUM_COLORS) return;
   trail_addresses[trail_i] = addr;
   bgcolor_t color = ((0xFF - 4*(MAX_NUM_COLORS - trail_i)) << 8) + 0xFF000000;
   //msg("setting color 0x%x -> 0x%x.\n", addr, color);
-  set_item_color(addr, color);
+  thread_safe_set_item_color(addr, color);
   trail_i++;
 }
 
