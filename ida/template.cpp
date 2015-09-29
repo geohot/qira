@@ -54,7 +54,7 @@ static void clear_trail_colors() {
 static void add_trail_color(int clnum, ea_t addr) {
   if (trail_i >= MAX_NUM_COLORS) return;
   trail_addresses[trail_i] = addr;
-  bgcolor_t color = ((0xFF - 4*(MAX_NUM_COLORS - trail_i)) << 8) + 0xFF000000;
+  bgcolor_t color = ((0xFFFF - 4*(MAX_NUM_COLORS - trail_i)) << 8);
   thread_safe_set_item_color(addr, color);
   trail_i++;
 }
