@@ -22,20 +22,21 @@ ea_t qira_address = BADADDR;
 ea_t trail_addresses[MAX_NUM_COLORS] = { 0 };
 int trail_i = 0;
 
-static void thread_safe_set_item_color(ea_t addr, bgcolor_t color) {
-  struct uireq_setcolor_t: public ui_request_t {
-    uireq_setcolor_t(ea_t addr, bgcolor_t color) {
-      la = addr;
-      lcolor = color;
+static void thread_safe_set_item_color(ea_t a, bgcolor_t b) {
+  struct uireq_set_item_color_t: public ui_request_t {
+    uireq_set_item_color_t(ea_t a, bgcolor_t b) {
+      la = a;
+      lb = b;
     }
     virtual bool idaapi run() {
-      set_item_color(la, lcolor);
+      set_item_color(la, lb);
+      //msg("setting color %lx -> 0x%x.\n", la, lb);
       return false;
     }
     ea_t la;
-    bgcolor_t lcolor;
+    bgcolor_t lb;
   };
-  execute_ui_requests(new uireq_setcolor_t(addr, color), NULL);
+  execute_ui_requests(new uireq_set_item_color_t(a, b), NULL);
 }
 
 static void clear_trail_colors() {
@@ -51,7 +52,6 @@ static void clear_trail_colors() {
 }
 
 static void add_trail_color(int clnum, ea_t addr) {
-  //msg("adding trail color for clnum %d\n", clnum);
   if (trail_i >= MAX_NUM_COLORS) return;
   trail_addresses[trail_i] = addr;
   bgcolor_t color = ((0xFF - 4*(MAX_NUM_COLORS - trail_i)) << 8) + 0xFF000000;
@@ -113,7 +113,7 @@ static int callback_qira(struct libwebsocket_context* context,
     case LWS_CALLBACK_ESTABLISHED:
       // we only support one client
       gwsi = wsi;
-      msg("QIRA web connected\n");
+      msg("QIRA modern web connected\n");
       break;
     case LWS_CALLBACK_RECEIVE:
       #ifdef DEBUG

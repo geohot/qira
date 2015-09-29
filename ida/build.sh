@@ -8,7 +8,7 @@ if [[ "$unamestr" == 'Linux' ]]; then
   OUTPUT64="qira.plx64"
   ln -sf libs/linux_libwebsockets.a libwebsockets.a
 elif [[ "$unamestr" == 'Darwin' ]]; then
-  IDAROOT="/Applications/IDA Pro 6.6/idaq.app/Contents/MacOS/"
+  IDAROOT="/Applications/IDA Pro 6.7/idaq.app/Contents/MacOS/"
   OUTPUT="qira.pmc"
   OUTPUT64="qira.pmc64"
   ln -sf libs/mac_libwebsockets.a libwebsockets.a
