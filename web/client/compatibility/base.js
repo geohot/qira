@@ -75,13 +75,23 @@ function get_data_type(v, more) {
   }
 }
 
+function hexify(addr) {
+  if (addr.substr(0, 2) == "0x") {
+    return addr;
+  } else {
+    return hex(fdec(addr));
+  }
+}
+
 function update_dview(addr) {
+  addr = hexify(addr);
   Session.set('daddr', addr);
   Session.set('dview', bn_add(bn_round(addr, 1), -0x20));
   push_history("update dview");
 }
 
 function update_iaddr(addr, dirty) {
+  addr = hexify(addr);
   if (dirty === undefined) dirty = true;
   Session.set("iaddr", addr);
   if (dirty) {
