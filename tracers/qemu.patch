@@ -411,7 +411,7 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
 +struct change *GLOBAL_change_buffer;
 +
 +uint32_t GLOBAL_qira_log_fd;
-+uint32_t GLOBAL_change_size;
++size_t GLOBAL_change_size;
 +
 +// current state that must survive forks
 +struct logstate {
@@ -506,7 +506,7 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
 +}
 +
 +struct change *add_change(target_ulong addr, uint64_t data, uint32_t flags) {
-+  int cc = __sync_fetch_and_add(&GLOBAL_logstate->change_count, 1);
++  size_t cc = __sync_fetch_and_add(&GLOBAL_logstate->change_count, 1);
 +
 +  if (cc == GLOBAL_change_size) {
 +    // double the buffer size
