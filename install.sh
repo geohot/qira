@@ -38,7 +38,7 @@ elif [[ "$unamestr" == 'Darwin' ]]; then
   if [ $(brew > /dev/null; echo $?) == 1 ]; then
     echo "Installing OS X dependencies"
     brew update
-    brew install python
+    brew install python capstone
     pip install virtualenv
     cd tracers
     ./pin_build.sh
