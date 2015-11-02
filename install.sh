@@ -34,6 +34,18 @@ if [[ "$unamestr" == 'Linux' ]]; then
     ./qemu_build.sh
     cd ../
   fi
+elif [[ "$unamestr" == 'Darwin' ]]; then
+  if [ $(brew > /dev/null; echo $?) == 1 ]; then
+    echo "Installing OS X dependencies"
+    brew update
+    brew install python
+    pip install virtualenv
+    cd tracers
+    ./pin_build.sh
+    cd ../
+  else
+    echo "build script only supports Homebrew"
+  fi
 fi
 
 echo "installing pip packages"
