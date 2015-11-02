@@ -11,6 +11,8 @@ page.open('http://localhost:3002/', function() {
     console.log("BAD TITLE");
     phantom.exit(-1);
   }
+  else
+    console.log("Sorry");
   phantom.exit();
 });
 
