@@ -433,5 +433,9 @@ def run_server(largs, lprogram):
 
   print "****** starting WEB SERVER on %s:%d" % (qira_config.HOST, qira_config.WEB_PORT)
   threading.Thread(target=mwpoller).start()
-  socketio.run(app, host=qira_config.HOST, port=qira_config.WEB_PORT, log=open("/dev/null", "w"))
+  try:
+    socketio.run(app, host=qira_config.HOST, port=qira_config.WEB_PORT, log=open("/dev/null", "w"))
+  except KeyboardInterrupt:
+    print "*** User raised KeyboardInterrupt"
+    exit()
 
