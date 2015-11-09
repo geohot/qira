@@ -21,6 +21,7 @@ sleep 2
 # phantomjs
 # use phantomjs2.0 for non-draft WebSockets protol
 # unforunately this doesn't ship with Ubuntu by default
+sudo apt-get install libicu52
 wget https://github.com/nedwill/phantomjs2.0-ubuntu14.04x64/raw/master/bin/phantomjs
 chmod +x ./phantomjs
 ./phantomjs qira_tests/load_page.js
