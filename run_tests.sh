@@ -19,7 +19,11 @@ echo "qira pid is $QIRA_PID"
 sleep 2
 
 # phantomjs
-phantomjs qira_tests/load_page.js
+# use phantomjs2.0 for non-draft WebSockets protol
+# unforunately this doesn't ship with Ubuntu by default
+wget https://github.com/nedwill/phantomjs2.0-ubuntu14.04x64/raw/master/bin/phantomjs
+chmod +x ./phantomjs
+./phantomjs qira_tests/load_page.js
 
 kill $QIRA_PID
 
