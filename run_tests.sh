@@ -25,8 +25,8 @@ sleep 2
 sudo apt-get install libicu48
 wget https://s3.amazonaws.com/travis-phantomjs/phantomjs-2.0.0-ubuntu-12.04.tar.bz2
 tar xf ./phantomjs-2.0.0-ubuntu-12.04.tar.bz2
-chmod +x ./phantomjs-2.0.0-ubuntu-12.04/phantomjs
-./phantomjs-2.0.0-ubuntu-12.04/phantomjs qira_tests/load_page.js
+chmod +x ./phantomjs
+./phantomjs qira_tests/load_page.js
 
 kill $QIRA_PID
 
