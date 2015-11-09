@@ -21,10 +21,12 @@ sleep 2
 # phantomjs
 # use phantomjs2.0 for non-draft WebSockets protol
 # unforunately this doesn't ship with Ubuntu by default
-sudo apt-get install libicu52
-wget https://github.com/nedwill/phantomjs2.0-ubuntu14.04x64/raw/master/bin/phantomjs
-chmod +x ./phantomjs
-./phantomjs qira_tests/load_page.js
+# the next 3 lines are 12.04 specific. maybe we should update Travis at some point
+sudo apt-get install libicu48
+wget https://s3.amazonaws.com/travis-phantomjs/phantomjs-2.0.0-ubuntu-12.04.tar.bz2
+tar xf ./phantomjs-2.0.0-ubuntu-12.04.tar.bz2
+chmod +x ./phantomjs/phantomjs
+./phantomjs/phantomjs qira_tests/load_page.js
 
 kill $QIRA_PID
 
