@@ -6,7 +6,7 @@
 
 #define MAX_NUM_COLORS 15
 
-#define DEBUG
+//#define DEBUG
 
 struct queue_hdr {
   struct queue_item *head;
