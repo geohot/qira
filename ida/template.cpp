@@ -22,26 +22,37 @@ struct queue_item {
 struct queue_hdr *gq = NULL;
 
 void init_queue() {
-  struct queue_hdr *q = (struct queue_hdr *)malloc(sizeof(queue_hdr));
+  struct queue_hdr *q = (struct queue_hdr *)qalloc(sizeof(queue_hdr));
+  if (!q) {
+    msg("qalloc failed in init_queue\n");
+    return;
+  }
   q->head = NULL;
   q->foot = NULL;
   gq = q;
 }
 
 void destroy_queue() {
+  if (!gq) {
+    msg("no queue to destroy\n");
+    return;
+  }
   struct queue_item *cur = gq->head;
   while (cur != NULL) {
     struct queue_item *next = cur->next;
-    free(cur->s);
-    free(cur);
+    qfree(cur->s);
+    qfree(cur);
     cur = next;
   }
-  free(gq);
+  qfree(gq);
 }
 
 void enqueue(unsigned char *s, size_t len) {
-  msg("enqueuing %s\n", (char *)s);
-  struct queue_item *qe = (struct queue_item*)malloc(sizeof(queue_item));
+  struct queue_item *qe = (struct queue_item*)qalloc(sizeof(queue_item));
+  if (!qe) {
+    msg("qalloc failed in enqueue\n");
+    return;
+  }
   qe->s = s;
   qe->len = len;
   qe->next = NULL;
@@ -50,6 +61,11 @@ void enqueue(unsigned char *s, size_t len) {
     assert(gq->head == NULL); //empty
     gq->head = qe;
     gq->foot = qe;
+  }
+  else if (gq->head == NULL || gq->foot == NULL) {
+    msg("broken queue!\n");
+    qfree(qe);
+    return;
   } else {
     gq->foot->next = qe;
     gq->foot = qe;
@@ -60,13 +76,11 @@ struct queue_item *dequeue() {
   struct queue_item *head = gq->head;
   if (head == NULL) {
     assert(gq->foot == NULL);
-    msg("nothing to dequeue.\n");
     return NULL;
   }
   gq->head = head->next;
   if (gq->head == NULL) //dequeued last element
     gq->foot = NULL;
-  msg("dequeued %s\n", (char *)head->s);
   return head; //caller must free, since this is a tuple
 }
 
@@ -215,22 +229,6 @@ static int callback_qira(struct libwebsocket_context* context,
       gwsi = wsi;
       gcontext = context;
       msg("QIRA modern web connected\n");
-      //libwebsocket_callback_on_writable(context, wsi);
-      break;
-    case LWS_CALLBACK_SERVER_WRITEABLE:
-      if (to_send != NULL) {
-        //we're done sending the last thing, so free it
-        msg("freeing!\n");
-        msg("about to free %p\n", to_send->s);
-        //free(to_send->s);
-        //free(to_send);
-      }
-      to_send = dequeue();
-      if (to_send == NULL) {
-        libwebsocket_callback_on_writable(context, wsi);
-        return 0;
-      }
-      libwebsocket_write(wsi, to_send->s, to_send->len, LWS_WRITE_TEXT);
       libwebsocket_callback_on_writable(context, wsi);
       break;
     case LWS_CALLBACK_RECEIVE:
@@ -295,15 +293,20 @@ static void ws_send(char *str) {
   size_t len = strlen(str);
   if (len == 0) return;
   unsigned char *buf = (unsigned char*)
-    malloc(LWS_SEND_BUFFER_PRE_PADDING + len + LWS_SEND_BUFFER_POST_PADDING);
+    qalloc(LWS_SEND_BUFFER_PRE_PADDING + len + LWS_SEND_BUFFER_POST_PADDING);
   memcpy(&buf[LWS_SEND_BUFFER_PRE_PADDING], str, len);
+  enqueue(buf, len);
   if (gwsi) {
-    if (!lws_send_pipe_choked(gwsi)) {
-      libwebsocket_write(gwsi, &buf[LWS_SEND_BUFFER_PRE_PADDING], len, LWS_WRITE_TEXT);
-    } else {
-      //pipe is choked: queue us up
-      enqueue(buf, len);
-      libwebsocket_callback_on_writable(gcontext, gwsi);
+    while (!lws_send_pipe_choked(gwsi)) {
+      if (to_send != NULL) {
+        //last thing went through, free it
+        qfree(to_send->s);
+        qfree(to_send);
+      }
+      to_send = dequeue();
+      if (to_send == NULL)
+        break;
+      libwebsocket_write(gwsi, &to_send->s[LWS_SEND_BUFFER_PRE_PADDING], to_send->len, LWS_WRITE_TEXT);
     }
   }
 }
@@ -326,8 +329,6 @@ static void send_names() {
   //max name length with some padding for "setname" and address
   char tmp[MAXNAMELEN + 64];
   for (size_t i = 0; i < get_nlist_size(); i++) {
-    ea_t address = get_nlist_ea(i);
-    const char *name = get_nlist_name(i);
     #ifdef __EA64__
       qsnprintf(tmp, sizeof(tmp)-1, "setname 0x%llx %s", get_nlist_ea(i), get_nlist_name(i));
     #else
@@ -450,8 +451,8 @@ void exit_websocket_thread() {
 
 int idaapi IDAP_init(void) {
   hook_to_notification_point(HT_VIEW, hook, NULL);
-  start_websocket_thread();
   init_queue();
+  start_websocket_thread();
   return PLUGIN_KEEP;
 }
 
