@@ -101,6 +101,42 @@ static void thread_safe_set_item_color(ea_t a, bgcolor_t b) {
   execute_ui_requests(new uireq_set_item_color_t(a, b), NULL);
 }
 
+static void thread_safe_set_name(ea_t a, const char *b, int c) {
+  struct uireq_set_name_t: public ui_request_t {
+    uireq_set_name_t(ea_t a, const char *b, int c) {
+      la = a;
+      lb = b;
+      lc = c;
+    }
+    virtual bool idaapi run() {
+      set_name(la, lb, lc);
+      return false;
+    }
+    ea_t la;
+    const char *lb;
+    int lc;
+  };
+  execute_ui_requests(new uireq_set_name_t(a, b, c), NULL);
+}
+
+static void thread_safe_set_cmt(ea_t a, const char *b, bool c) {
+  struct uireq_set_cmt_t: public ui_request_t {
+    uireq_set_cmt_t(ea_t a, const char *b, bool c) {
+      la = a;
+      lb = b;
+      lc = c;
+    }
+    virtual bool idaapi run() {
+      set_cmt(la, lb, lc);
+      return false;
+    }
+    ea_t la;
+    const char *lb;
+    int lc;
+  };
+  execute_ui_requests(new uireq_set_cmt_t(a, b, c), NULL);
+}
+
 static void clear_trail_colors() {
   bgcolor_t white = 0xFFFFFFFF;
   for (size_t i = 0; i < MAX_NUM_COLORS; i++) {
@@ -223,7 +259,7 @@ static int callback_qira(struct libwebsocket_context* context,
         #else
           ea_t addr = strtoul(addr_s, NULL, 0);
         #endif
-        set_name(addr, name, 0);
+        thread_safe_set_name(addr, name, 0);
       } else if (memcmp(in, "setcmt ", sizeof("setcmt ")-1) == 0) {
         char *dat = (char*)in + sizeof("setcmt ") - 1;
 
@@ -240,7 +276,7 @@ static int callback_qira(struct libwebsocket_context* context,
         #endif
 
         bool repeatable = false;
-        set_cmt(addr, cmt, repeatable);
+        thread_safe_set_cmt(addr, cmt, repeatable);
       } else if (memcmp(in, "settrail ", sizeof("settrail ")-1) == 0) {
         set_trail_colors((char*)in);
       }
