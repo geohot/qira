@@ -4,6 +4,7 @@ flask-socketio
 pillow
 pyelftools
 socketIO-client
+gevent
 pydot
 ipaddr
 capstone

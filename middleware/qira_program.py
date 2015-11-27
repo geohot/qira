@@ -168,6 +168,9 @@ class Program:
         self.pintool = pin_dir + "obj-ia32/qirapin.dylib"
       else:
         raise Exception("osx binary not supported")
+      if not os.path.isfile(self.pintool):
+        print "Running an OS X binary requires PIN support. See tracers/pin_build.sh"
+        exit()
       self.runnable = True
     else:
       raise Exception("unknown binary type")

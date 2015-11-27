@@ -1,5 +1,13 @@
 #!/bin/bash -e
-DIR=$(dirname $(readlink -f $0))
+unamestr=$(uname)
+if [[ "$unamestr" == 'Linux' ]]; then
+  DIR=$(dirname $(readlink -f $0))
+elif [[ "$unamestr" == "Darwin" ]]; then
+  DIR=$(dirname $(readlink $(which $0)))
+else
+  echo "Only Linux and Mac OS X are supported!"
+  exit
+fi
+
 source $DIR/venv/bin/activate
 exec /usr/bin/env python2.7 $DIR/middleware/qira.py $*
-
