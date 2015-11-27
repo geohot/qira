@@ -6,7 +6,69 @@
 
 #define MAX_NUM_COLORS 15
 
-//#define DEBUG
+#define DEBUG
+
+struct queue_hdr {
+  struct queue_item *head;
+  struct queue_item *foot;
+};
+
+struct queue_item {
+  unsigned char *s;
+  size_t len;
+  struct queue_item *next;
+};
+
+struct queue_hdr *gq = NULL;
+
+void init_queue() {
+  struct queue_hdr *q = (struct queue_hdr *)malloc(sizeof(queue_hdr));
+  q->head = NULL;
+  q->foot = NULL;
+  gq = q;
+}
+
+void destroy_queue() {
+  struct queue_item *cur = gq->head;
+  while (cur != NULL) {
+    struct queue_item *next = cur->next;
+    free(cur->s);
+    free(cur);
+    cur = next;
+  }
+  free(gq);
+}
+
+void enqueue(unsigned char *s, size_t len) {
+  msg("enqueuing %s\n", (char *)s);
+  struct queue_item *qe = (struct queue_item*)malloc(sizeof(queue_item));
+  qe->s = s;
+  qe->len = len;
+  qe->next = NULL;
+  assert(gq != NULL); //should have been inited
+  if (gq->foot == NULL) {
+    assert(gq->head == NULL); //empty
+    gq->head = qe;
+    gq->foot = qe;
+  } else {
+    gq->foot->next = qe;
+    gq->foot = qe;
+  }
+}
+
+struct queue_item *dequeue() {
+  struct queue_item *head = gq->head;
+  if (head == NULL) {
+    assert(gq->foot == NULL);
+    msg("nothing to dequeue.\n");
+    return NULL;
+  }
+  gq->head = head->next;
+  if (gq->head == NULL) //dequeued last element
+    gq->foot = NULL;
+  msg("dequeued %s\n", (char *)head->s);
+  return head; //caller must free, since this is a tuple
+}
 
 // ***************** WEBSOCKETS *******************
 #include "libwebsockets.h"
@@ -103,6 +165,8 @@ static void thread_safe_jump_to(ea_t a) {
 }
 
 struct libwebsocket* gwsi = NULL;
+struct libwebsocket_context* gcontext = NULL;
+struct queue_item *to_send = NULL;
 
 static int callback_qira(struct libwebsocket_context* context,
       struct libwebsocket* wsi,
@@ -113,7 +177,25 @@ static int callback_qira(struct libwebsocket_context* context,
     case LWS_CALLBACK_ESTABLISHED:
       // we only support one client
       gwsi = wsi;
+      gcontext = context;
       msg("QIRA modern web connected\n");
+      //libwebsocket_callback_on_writable(context, wsi);
+      break;
+    case LWS_CALLBACK_SERVER_WRITEABLE:
+      if (to_send != NULL) {
+        //we're done sending the last thing, so free it
+        msg("freeing!\n");
+        msg("about to free %p\n", to_send->s);
+        //free(to_send->s);
+        //free(to_send);
+      }
+      to_send = dequeue();
+      if (to_send == NULL) {
+        libwebsocket_callback_on_writable(context, wsi);
+        return 0;
+      }
+      libwebsocket_write(wsi, to_send->s, to_send->len, LWS_WRITE_TEXT);
+      libwebsocket_callback_on_writable(context, wsi);
       break;
     case LWS_CALLBACK_RECEIVE:
       #ifdef DEBUG
@@ -169,23 +251,25 @@ static int callback_qira(struct libwebsocket_context* context,
   return 0;
 }
 
+//adds to queue to send asynchronously
 static void ws_send(char *str) {
   #ifdef DEBUG
     msg("QIRATX:%s\n", str);
   #endif
-  int len = strlen(str);
+  size_t len = strlen(str);
   if (len == 0) return;
   unsigned char *buf = (unsigned char*)
     malloc(LWS_SEND_BUFFER_PRE_PADDING + len + LWS_SEND_BUFFER_POST_PADDING);
   memcpy(&buf[LWS_SEND_BUFFER_PRE_PADDING], str, len);
-  if (gwsi != NULL) {
-    if (lws_send_pipe_choked(gwsi))
-      msg("couldn't send %s, pipe is choked.\n", str);
-    else
+  if (gwsi) {
+    if (!lws_send_pipe_choked(gwsi)) {
       libwebsocket_write(gwsi, &buf[LWS_SEND_BUFFER_PRE_PADDING], len, LWS_WRITE_TEXT);
+    } else {
+      //pipe is choked: queue us up
+      enqueue(buf, len);
+      libwebsocket_callback_on_writable(gcontext, gwsi);
+    }
   }
-  free(buf);
-  usleep(100); //to limit choking
 }
 
 
@@ -331,12 +415,14 @@ void exit_websocket_thread() {
 int idaapi IDAP_init(void) {
   hook_to_notification_point(HT_VIEW, hook, NULL);
   start_websocket_thread();
+  init_queue();
   return PLUGIN_KEEP;
 }
 
 void idaapi IDAP_term(void) {
   unhook_from_notification_point(HT_VIEW, hook);
   exit_websocket_thread();
+  destroy_queue();
   return;
 }
 
