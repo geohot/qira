@@ -229,7 +229,6 @@ static int callback_qira(struct libwebsocket_context* context,
       gwsi = wsi;
       gcontext = context;
       msg("QIRA modern web connected\n");
-      libwebsocket_callback_on_writable(context, wsi);
       break;
     case LWS_CALLBACK_RECEIVE:
       #ifdef DEBUG
@@ -246,8 +245,14 @@ static int callback_qira(struct libwebsocket_context* context,
       } else if (memcmp(in, "setname ", sizeof("setname ")-1) == 0) {
         char *dat = (char*)in + sizeof("setname ") - 1;
 
-        //parsing code borrowed from 1995
         char *space = strchr(dat, ' ');
+        if (space == NULL) {
+          msg("receieved malformed setname\n");
+          break;
+        }
+        if (strlen(dat) - strlen(space) <= 1) {
+          msg("recieved empty setname");
+        }
         *space = '\0';
         char *name = space + 1;
         char *addr_s = dat;
@@ -261,8 +266,14 @@ static int callback_qira(struct libwebsocket_context* context,
       } else if (memcmp(in, "setcmt ", sizeof("setcmt ")-1) == 0) {
         char *dat = (char*)in + sizeof("setcmt ") - 1;
 
-        //copy paste "inlining". microsoft levels of 1995
         char *space = strchr(dat, ' ');
+        if (space == NULL) {
+          msg("receieved malformed setcmt\n");
+          break;
+        }
+        if (strlen(dat) - strlen(space) <= 1) {
+          msg("recieved empty setcmt");
+        }
         *space = '\0';
         char *cmt = space + 1;
         char *addr_s = dat;
