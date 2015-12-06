@@ -42,8 +42,8 @@ if __name__ == '__main__':
   # validate arguments
   if args.web_port < 1 or args.web_port > 65535:
     raise Exception("--web-port must be a valid port number (1-65535)")
-  if args.socat_port < 1 or args.socat_port > 65535:
-    raise Exception("--socat-port must be a valid port number (1-65535)")
+  if args.socat_port < 1 or args.socat_port > 65534:
+    raise Exception("--socat-port must be a valid port number (1-65534)")
   try:
     args.host = ipaddr.IPAddress(args.host).exploded
   except ValueError:
