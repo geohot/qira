@@ -3599,11 +3599,11 @@ static void handle_arg_reserved_va(const char *arg)
         unsigned long unshifted = reserved_va;
         p++;
         reserved_va <<= shift;
-        if (((reserved_va >> shift) != unshifted)
+        bool test_virt_address = (reserved_va >> shift) != unshifted;        
 #if HOST_LONG_BITS > TARGET_VIRT_ADDR_SPACE_BITS
-            || (reserved_va > (1ul << TARGET_VIRT_ADDR_SPACE_BITS))
+        test_virt_address = test_virt_address || (reserved_va > (1ul << TARGET_VIRT_ADDR_SPACE_BITS));
 #endif
-            ) {
+        if (test_virt_address) {
             fprintf(stderr, "Reserved virtual address too big\n");
             exit(1);
         }
