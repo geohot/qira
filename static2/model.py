@@ -298,9 +298,11 @@ class CsInsn(object):
   def __repr__(self):
     return self.__str__()
 
-  def __str__(self):
+  #we don't want to break str(x), but sometimes we want to augment the
+  #diassembly with dynamic info. so we include optional arguments here
+  def __str__(self, trace=None, clnum=None):
     if self.decoded:
-      return "%s\t%s"%(self.i.mnemonic,self.i.op_str)
+      return "{}\t{}".format(self.i.mnemonic, self.get_operand_s(trace, clnum))
     return ""
 
   def is_jump(self):
@@ -351,6 +353,110 @@ class CsInsn(object):
       return False
     #code follows UNLESS we are a return or an unconditional jump
     return not (self.is_ret() or self.dtype == DESTTYPE.jump)
+
+  def has_relative_reference(self):
+    if not self.decoded:
+      return False
+    if self.arch in ["i386", "x86-64", "aarch64"]:
+      has_ref = "[" in self.i.op_str and "]" in self.i.op_str
+      uses_sp = "sp" in self.i.op_str.lower() or "bp" in self.i.op_str.lower()
+      return has_ref and not uses_sp
+    if self.arch == "aarch64":
+      has_ref = "[" in self.i.op_str and "]" in self.i.op_str
+      uses_sp = "sp" in self.i.op_str.lower()
+      return has_ref and not uses_sp
+    return False
+
+  def get_operands(self):
+    if self.arch in ["i386", "x86-64"]:
+      return self.i.op_str.split(", ")
+    raise Exception("unimplemented arch for get_operands: {}".format(self.arch))
+
+  def get_operand_s(self, trace, clnum):
+    if not self.has_relative_reference():
+      return self.i.op_str
+    print "special case! {} x {}".format(clnum, self.i.op_str)
+    if self.arch in ["i386", "x86-64"]:
+      operands = self.get_operands()
+      return ", ".join(self.resolve_relative_reference(operand, trace, clnum) for operand in operands)
+    if self.arch == "aarch64":
+      op_str = self.i.op_str
+      assert "[" in op_str
+      assert op_str.count("[") == 1
+      assert "]" in op_str and op_str.count("]") == 1
+      ref = op_str[op_str.index("[")+1:op_str.index("]")]
+      resolved = self.resolve_relative_reference(ref, trace, clnum)
+      return "".join([op_str.split("[")[0]+"[", resolved, "]"+op_str.split("]")[1]])
+    return self.i.op_str
+
+  def resolve_relative_reference(self, operand, trace, clnum):
+    if trace is None or clnum is None:
+      #No register information, we can't resolve dynamic information.
+      return operand
+
+    program = trace.program
+    registers = program.tregs[0]
+    register_values = trace.db.fetch_registers(clnum)
+    #ssert self.arch == program.tregs[-1] #this isn't true. see aarch64
+    reginfo = dict(zip(registers, register_values))
+
+    #check for overflow in here?
+    def _eval_op_x86(exp):
+      spl = exp.split(" ")
+      if len(spl) == 3:
+        op1, op, op2 = spl
+        if op == "+":
+          addr = _eval_op_x86(op1) + _eval_op_x86(op2)
+        else:
+          assert op == "-"
+          addr = _eval_op_x86(op1) - _eval_op_x86(op2)
+        return addr
+
+      if "*" in exp:
+        op1, op2 = exp.split("*")
+        #assert len(spl2) == 2
+        return _eval_op_x86(op1) * _eval_op_x86(op2)
+
+      try:
+        return int(exp, 16)
+      except ValueError:
+        if exp.upper() in reginfo: #it's a register
+          return reginfo[exp.upper()]
+        else:
+          raise Exception("unknown exp {}".format(exp))
+
+    def _eval_op_aarch64(exp):
+      spl = exp.split(", ")
+      if len(spl) == 2:
+        op1, op2 = spl
+        #print "recursing on", op1, op2
+        return _eval_op_aarch64(op1) + _eval_op_aarch64(op2)
+      if exp[0] == "#":
+        return int(exp[1:], 16)
+      if exp in reginfo: #it's a register
+        return reginfo[exp]
+      else:
+        raise Exception("unknown exp {}".format(exp))
+
+    if self.arch in ["i386", "x86-64"]:
+      """
+      looks like:
+      qword ptr [rbp - 0x10]
+      byte ptr [rip + 0x200a51]
+      dword ptr [rax + rax]
+      trace.fetch_raw_memory(clnum, addr, 1)
+      """
+      if "ptr" not in operand:
+        return operand
+      ref_size, ref = operand.split(" ptr ")
+      #reference_sizes = {"qword": 8, "dword": 4, "byte": 1}
+      ref = ref.replace("[", "").replace("]", "")
+      return "{} ptr {}".format(ref_size, "[0x{:x}]".format(_eval_op_x86(ref)))
+    elif self.arch == "aarch64":
+      return "0x{:x}".format(_eval_op_aarch64(operand)) #need to clean this up
+    else:
+      print "*** Error: unsupported architecture {} for relative reference resolution!".format(self.arch)
+      return operand
 
   def size(self):
     return self.i.size if self.decoded else 0
