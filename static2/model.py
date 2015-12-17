@@ -228,6 +228,9 @@ if qira_config.WITH_BAP:
         k_fmt = (k[0],hex(k[1]),k[2])
         print "{0} -> {1:x} expected, got {0} -> {2:x}".format(k_fmt,v,v_prime)
 
+class UnknownRegister(Exception):
+  def __init__(self, reg):
+    self.reg = reg
 
 # Instruction class
 class CsInsn(object):
@@ -247,7 +250,7 @@ class CsInsn(object):
     elif arch == "aarch64":
       self.md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
     elif arch == "ppc":
-      self.md = Cs(CS_ARCH_PPC, CS_MODE_32)
+      self.md = Cs(CS_ARCH_PPC, CS_MODE_32 | CS_MODE_BIG_ENDIAN)
     elif arch == "mips":
       self.md = Cs(CS_ARCH_MIPS, CS_MODE_32 | CS_MODE_BIG_ENDIAN)
     elif arch == "mipsel":
@@ -357,11 +360,11 @@ class CsInsn(object):
   def has_relative_reference(self):
     if not self.decoded:
       return False
-    if self.arch in ["i386", "x86-64", "aarch64"]:
+    if self.arch in ["i386", "x86-64"]:
       has_ref = "[" in self.i.op_str and "]" in self.i.op_str
       uses_sp = "sp" in self.i.op_str.lower() or "bp" in self.i.op_str.lower()
       return has_ref and not uses_sp
-    if self.arch == "aarch64":
+    if self.arch in ["arm", "thumb", "aarch64"]:
       has_ref = "[" in self.i.op_str and "]" in self.i.op_str
       uses_sp = "sp" in self.i.op_str.lower()
       return has_ref and not uses_sp
@@ -379,7 +382,7 @@ class CsInsn(object):
     if self.arch in ["i386", "x86-64"]:
       operands = self.get_operands()
       return ", ".join(self.resolve_relative_reference(operand, trace, clnum) for operand in operands)
-    if self.arch == "aarch64":
+    if self.arch in ["arm", "aarch64", "thumb"]:
       op_str = self.i.op_str
       assert "[" in op_str
       assert op_str.count("[") == 1
@@ -395,7 +398,7 @@ class CsInsn(object):
       return operand
 
     program = trace.program
-    registers = program.tregs[0]
+    registers = [reg.lower() for reg in program.tregs[0]]
     register_values = trace.db.fetch_registers(clnum)
     #ssert self.arch == program.tregs[-1] #this isn't true. see aarch64
     reginfo = dict(zip(registers, register_values))
@@ -420,23 +423,23 @@ class CsInsn(object):
       try:
         return int(exp, 16)
       except ValueError:
-        if exp.upper() in reginfo: #it's a register
-          return reginfo[exp.upper()]
-        else:
-          raise Exception("unknown exp {}".format(exp))
+        if exp in reginfo: #it's a register
+          return reginfo[exp]
+        raise UnknownRegister(exp)
 
-    def _eval_op_aarch64(exp):
+    def _eval_op_arm(exp):
       spl = exp.split(", ")
       if len(spl) == 2:
         op1, op2 = spl
         #print "recursing on", op1, op2
-        return _eval_op_aarch64(op1) + _eval_op_aarch64(op2)
+        return _eval_op_arm(op1) + _eval_op_arm(op2)
       if exp[0] == "#":
         return int(exp[1:], 16)
       if exp in reginfo: #it's a register
+        if exp == "pc": #arm is so annoying
+          return reginfo[exp] + self.size()
         return reginfo[exp]
-      else:
-        raise Exception("unknown exp {}".format(exp))
+      raise UnknownRegister(exp)
 
     if self.arch in ["i386", "x86-64"]:
       """
@@ -451,9 +454,16 @@ class CsInsn(object):
       ref_size, ref = operand.split(" ptr ")
       #reference_sizes = {"qword": 8, "dword": 4, "byte": 1}
       ref = ref.replace("[", "").replace("]", "")
-      return "{} ptr {}".format(ref_size, "[0x{:x}]".format(_eval_op_x86(ref)))
-    elif self.arch == "aarch64":
-      return "0x{:x}".format(_eval_op_aarch64(operand)) #need to clean this up
+      try:
+        return "{} ptr {}".format(ref_size, "[0x{:x}]".format(_eval_op_x86(ref)))
+      except UnknownRegister:
+        return operand
+    elif self.arch in ["arm", "aarch64", "thumb"]:
+      try:
+        return "0x{:x}".format(_eval_op_arm(operand)) #need to clean this up
+      except UnknownRegister as e:
+        print "unknown reg! {}".format(e.reg)
+        return operand
     else:
       print "*** Error: unsupported architecture {} for relative reference resolution!".format(self.arch)
       return operand
