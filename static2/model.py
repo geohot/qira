@@ -1,6 +1,7 @@
 from capstone import *
 import capstone # for some unexported (yet) symbols in Capstone 3.0
 import qira_config
+import string
 
 if qira_config.WITH_BAP:
   import bap
@@ -366,125 +367,109 @@ class CsInsn(object):
     if self.arch in ["i386", "x86-64"]:
       has_ref = "[" in self.i.op_str and "]" in self.i.op_str
       uses_sp = "sp" in self.i.op_str.lower() or "bp" in self.i.op_str.lower()
-      return has_ref and not uses_sp
+      return has_ref# and not uses_sp
     if self.arch in ["arm", "thumb", "aarch64"]:
       has_ref = "[" in self.i.op_str and "]" in self.i.op_str
       uses_sp = "sp" in self.i.op_str.lower()
-      return has_ref and not uses_sp
+      return has_ref# and not uses_sp
     return False
 
-  def get_operands(self):
-    if self.arch in ["i386", "x86-64"]:
-      return self.i.op_str.split(", ")
-    raise Exception("unimplemented arch for get_operands: {}".format(self.arch))
+  #returns format string and reference string
+  def _get_ref_square_bracket(self):
+    """
+    looks like:
+    qword ptr [rbp - 0x10]
+    byte ptr [rip + 0x200a51]
+    dword ptr [rax + rax]
+    """
+
+    #we assume only one reference per instruction
+    assert self.has_relative_reference()
+    assert self.i.op_str.count("[") == 1
+    assert self.i.op_str.count("]") == 1
+
+    pre_ref, temp = self.i.op_str.split("[")
+    ref, post_ref = temp.split("]")
+    fmt = pre_ref + "[0x{:x}]" + post_ref
+    return fmt, ref
+
+  def _get_register_dict(self, trace, clnum):
+    registers = map(string.lower, trace.program.tregs[0])
+    register_values = trace.db.fetch_registers(clnum)
+    return dict(zip(registers, register_values))
 
   def get_operand_s(self, trace, clnum):
-    if not self.has_relative_reference():
+    if not self.has_relative_reference() or trace is None or clnum is None:
       return self.i.op_str
-    print "special case! {} x {}".format(clnum, self.i.op_str)
-    if self.arch in ["i386", "x86-64"]:
-      operands = self.get_operands()
-      return ", ".join(self.resolve_relative_reference(operand, trace, clnum) for operand in operands)
-    if self.arch in ["arm", "aarch64", "thumb"]:
-      op_str = self.i.op_str
-      assert "[" in op_str
-      assert op_str.count("[") == 1
-      assert "]" in op_str and op_str.count("]") == 1
-      ref = op_str[op_str.index("[")+1:op_str.index("]")]
-      resolved = self.resolve_relative_reference(ref, trace, clnum)
-      return "".join([op_str.split("[")[0]+"[", resolved, "]"+op_str.split("]")[1]])
-    return self.i.op_str
 
-  def resolve_relative_reference(self, operand, trace, clnum):
-    if trace is None or clnum is None:
-      #No register information, we can't resolve dynamic information.
-      return operand
+    print "special case! {} -> {} {}".format(clnum, self.i.mnemonic, self.i.op_str)
 
-    program = trace.program
-    registers = [reg.lower() for reg in program.tregs[0]]
-    register_values = trace.db.fetch_registers(clnum)
-    #ssert self.arch == program.tregs[-1] #this isn't true. see aarch64
-    reginfo = dict(zip(registers, register_values))
+    reginfo = self._get_register_dict(trace, clnum)
 
     #check for overflow in here?
     def _eval_op_x86(exp):
       spl = exp.split(" ")
-      if len(spl) == 3:
-        op1, op, op2 = spl
-        if op == "+":
-          addr = _eval_op_x86(op1) + _eval_op_x86(op2)
-        else:
-          assert op == "-"
-          addr = _eval_op_x86(op1) - _eval_op_x86(op2)
-        return addr
 
-      if len(spl) == 5:
-        opr1, op1, opr2, op2, opr3 = spl
-        addr = _eval_op_x86(opr1)
-        if op1 == "+":
-          addr += _eval_op_x86(opr2)
-        else:
-          assert op1 == "-"
-          addr -= _eval_op_x86(opr2)
-        if op2 == "+":
-          addr += _eval_op_x86(opr3)
-        else:
-          assert op2 == "-"
-          addr -= _eval_op_x86(opr3)
+      #[a, +, b, -, c] -> sum(a, +b, -c)
+      if len(spl) > 2:
+        addr = _eval_op_x86(spl[0])
+        for i in xrange(1, len(spl), 2):
+          if spl[i] == "+":
+            addr += _eval_op_x86(spl[i+1])
+          else:
+            assert spl[i] == "-"
+            addr -= _eval_op_x86(spl[i+1])          
         return addr
 
       if "*" in exp:
         op1, op2 = exp.split("*")
-        #assert len(spl2) == 2
         return _eval_op_x86(op1) * _eval_op_x86(op2)
+
+      if exp in reginfo: #it's a register
+        return reginfo[exp]
 
       try:
         return int(exp, 16)
-      except ValueError:
-        if exp in reginfo: #it's a register
-          return reginfo[exp]
+      except ValueError: #it was an unknown register
         raise UnknownRegister(exp)
 
     def _eval_op_arm(exp):
-      spl = exp.split(", ")
+      spl = exp.split(", ") #they use `,` as the addition operator...
+
       if len(spl) == 2:
         op1, op2 = spl
-        #print "recursing on", op1, op2
         return _eval_op_arm(op1) + _eval_op_arm(op2)
-      if exp[0] == "#":
-        return int(exp[1:], 16)
+
       if exp in reginfo: #it's a register
-        if exp == "pc": #arm is so annoying
+        if exp == "pc": #arm is so annoying sometimes
           return reginfo[exp] + self.size()
         return reginfo[exp]
+
+      #no exception here, ARM is explicit about constants
+      if exp[0] == "#":
+        return int(exp[1:], 16)
+
       raise UnknownRegister(exp)
 
     if self.arch in ["i386", "x86-64"]:
-      """
-      looks like:
-      qword ptr [rbp - 0x10]
-      byte ptr [rip + 0x200a51]
-      dword ptr [rax + rax]
-      trace.fetch_raw_memory(clnum, addr, 1)
-      """
-      if "ptr" not in operand:
-        return operand
-      ref_size, ref = operand.split(" ptr ")
-      #reference_sizes = {"qword": 8, "dword": 4, "byte": 1}
-      ref = ref.replace("[", "").replace("]", "")
+      fmt, ref = self._get_ref_square_bracket()
       try:
-        return "{} ptr {}".format(ref_size, "[0x{:x}]".format(_eval_op_x86(ref)))
-      except UnknownRegister:
-        return operand
-    elif self.arch in ["arm", "aarch64", "thumb"]:
-      try:
-        return "0x{:x}".format(_eval_op_arm(operand)) #need to clean this up
+        return fmt.format(_eval_op_x86(ref))
       except UnknownRegister as e:
-        print "unknown reg! {}".format(e.reg)
-        return operand
-    else:
-      print "*** Error: unsupported architecture {} for relative reference resolution!".format(self.arch)
-      return operand
+        print "unknown register detected", e.reg
+        return self.i.op_str
+
+    if self.arch in ["arm", "aarch64", "thumb"]:
+      fmt, ref = self._get_ref_square_bracket()
+      try:
+        return fmt.format(_eval_op_arm(ref))
+      except UnknownRegister as e:
+        #we don't track fp or ip
+        if e.reg not in ["fp", "ip"]:
+          print "unknown register detected", e.reg
+        return self.i.op_str
+
+    return self.i.op_str
 
   def size(self):
     return self.i.size if self.decoded else 0
