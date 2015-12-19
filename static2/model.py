@@ -415,6 +415,21 @@ class CsInsn(object):
           addr = _eval_op_x86(op1) - _eval_op_x86(op2)
         return addr
 
+      if len(spl) == 5:
+        opr1, op1, opr2, op2, opr3 = spl
+        addr = _eval_op_x86(opr1)
+        if op1 == "+":
+          addr += _eval_op_x86(opr2)
+        else:
+          assert op1 == "-"
+          addr -= _eval_op_x86(opr2)
+        if op2 == "+":
+          addr += _eval_op_x86(opr3)
+        else:
+          assert op2 == "-"
+          addr -= _eval_op_x86(opr3)
+        return addr
+
       if "*" in exp:
         op1, op2 = exp.split("*")
         #assert len(spl2) == 2
