@@ -280,8 +280,11 @@ class CsInsn(object):
         elif self.i.mnemonic[0] == "b" or self.i.mnemonic[:2] == "cb":
           self.dtype = DESTTYPE.cjump
       elif arch == "ppc":
-        if self.i.mnemonic[:2] == "bl" and self.i.mnemonic[3] != "r":
-          self.dtype == DESTTYPE.call
+        if self.i.mnemonic == "bctr":
+          self.dtype = DESTTYPE.none
+        elif self.i.mnemonic[:2] == "bl":
+          if not (len(self.i.mnemonic) > 3 and self.i.mnemonic[3] == "r"):
+            self.dtype = DESTTYPE.call
         elif self.i.mnemonic[:2] == "bc":
           self.dtype = DESTTYPE.cjump
         elif self.i.mnemonic[0] == "b":
