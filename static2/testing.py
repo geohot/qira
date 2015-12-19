@@ -95,9 +95,12 @@ def test_files(fns,quiet=False,profile=False,runtime=False):
       except Exception as e:
         print "{} {}: {} engine failed to process file with `{}'".format(fail, short_fn, engine, e)
         continue
+      if runtime:
+        if not quiet:
+          print "{} {}: {} ran without exceptions".format(ok_green, short_fn, engine)
+        continue
+
     if runtime:
-      if not quiet:
-        print "{} {}: {} ran without exceptions".format(ok_green, short_fn, engine)
       continue
 
     if elf.has_dwarf_info():
