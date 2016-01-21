@@ -182,7 +182,8 @@ static void set_trail_colors(char *in) {
   struct timeval now;
   gettimeofday(&now, NULL);
   
-  size_t us_elapsed = (now.tv_sec - last_trail_time.tv_sec)*1000000L + now.tv_usec - last_trail_time.tv_usec;
+  size_t us_elapsed = (now.tv_sec - last_trail_time.tv_sec)*1000000L +
+                       now.tv_usec - last_trail_time.tv_usec;
   if (us_elapsed <= 200000) {
     msg("skipping set_trail_colors with ms = %zu.\n", us_elapsed);
     return;
@@ -335,7 +336,8 @@ static void ws_send(char *str) {
       to_send = dequeue();
       if (to_send == NULL)
         break;
-      libwebsocket_write(gwsi, &to_send->s[LWS_SEND_BUFFER_PRE_PADDING], to_send->len, LWS_WRITE_TEXT);
+      libwebsocket_write(gwsi, &to_send->s[LWS_SEND_BUFFER_PRE_PADDING],
+        to_send->len, LWS_WRITE_TEXT);
     }
   }
 }
@@ -359,9 +361,11 @@ static void send_names() {
   char tmp[MAXNAMELEN + 64];
   for (size_t i = 0; i < get_nlist_size(); i++) {
     #ifdef __EA64__
-      qsnprintf(tmp, sizeof(tmp)-1, "setname 0x%llx %s", get_nlist_ea(i), get_nlist_name(i));
+      qsnprintf(tmp, sizeof(tmp)-1, "setname 0x%llx %s",
+        get_nlist_ea(i), get_nlist_name(i));
     #else
-      qsnprintf(tmp, sizeof(tmp)-1, "setname 0x%x %s", get_nlist_ea(i), get_nlist_name(i));
+      qsnprintf(tmp, sizeof(tmp)-1, "setname 0x%x %s",
+        get_nlist_ea(i), get_nlist_name(i));
     #endif
     ws_send(tmp);
   }
