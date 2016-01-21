@@ -117,7 +117,6 @@ static void thread_safe_set_item_color(ea_t a, bgcolor_t b) {
     }
     virtual bool idaapi run() {
       set_item_color(la, lb);
-      //msg("setting color %lx -> 0x%x.\n", la, lb);
       return false;
     }
     ea_t la;
@@ -182,27 +181,9 @@ static void add_trail_color(int clnum, ea_t addr) {
   trail_i++;
 }
 
-// hack around bug in IDA
-struct timeval last_trail_time;
-
 static void set_trail_colors(char *in) {
   char *dat = (char*)in + sizeof("settrail ") - 1;
   char *token, *clnum_s, *addr_s;
-
-  struct timeval now;
-  gettimeofday(&now, NULL);
-  
-  size_t us_elapsed = (now.tv_sec - last_trail_time.tv_sec)*1000000L +
-                       now.tv_usec - last_trail_time.tv_usec;
-  if (us_elapsed <= TRAIL_DELAY) {
-    msg("skipping set_trail_colors with ms = %zu.\n", us_elapsed);
-    return;
-  }
-
-  msg("setting trail colors (ms_elapsed = %zu).\n", us_elapsed);
-
-  // refresh this time
-  gettimeofday(&last_trail_time, NULL);
 
   clear_trail_colors();
 
@@ -470,8 +451,6 @@ int idaapi websocket_thread(void *) {
   }
 
   msg("yay websockets\n");
-
-  gettimeofday(&last_trail_time, NULL);
 
   while (websockets_running) {
     libwebsocket_service(context, 50);
