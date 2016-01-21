@@ -7,6 +7,16 @@
 
 #define MAX_NUM_COLORS 15
 
+//How long is a reasonable comment? 100 should be enough.
+//What about people who group blocks and "name" them pseudocode?
+#define MAX_COMMENT_LEN 100
+
+// delay trail drawing by this many microseconds
+// we are performant enough to handle 0 by IDA
+// has a race condition that's seems to be
+// mitigated by this
+#define TRAIL_DELAY 200000
+
 //#define DEBUG
 
 struct queue_hdr {
@@ -184,7 +194,7 @@ static void set_trail_colors(char *in) {
   
   size_t us_elapsed = (now.tv_sec - last_trail_time.tv_sec)*1000000L +
                        now.tv_usec - last_trail_time.tv_usec;
-  if (us_elapsed <= 200000) {
+  if (us_elapsed <= TRAIL_DELAY) {
     msg("skipping set_trail_colors with ms = %zu.\n", us_elapsed);
     return;
   }
@@ -376,10 +386,8 @@ static void send_names() {
   so we must scan the entire address space. Horrible!
 */
 static void send_comments() {
-  //How long is a reasonable comment? 100 should be enough.
-  //What about people who group blocks and "name" them pseudocode?
-  char cmt_tmp[100-7];
-  char tmp[100];
+  char cmt_tmp[MAX_COMMENT_LEN-7];
+  char tmp[MAX_COMMENT_LEN];
   ssize_t cmt_len;
   ea_t start = get_segm_base(get_first_seg());
 
