@@ -1,7 +1,11 @@
 #!/bin/bash -e
 
 # default is just pip, but on things like arch where python 3 is default, it's pip2
-PIP="pip"
+if [ $(which pip2) ]; then
+    PIP="pip2"
+else
+    PIP="pip"
+fi
 
 unamestr=$(uname)
 if [[ "$unamestr" == 'Linux' ]]; then
