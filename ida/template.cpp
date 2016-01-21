@@ -296,9 +296,10 @@ static int callback_qira(struct libwebsocket_context* context,
 
         bool repeatable = false;
         thread_safe_set_cmt(addr, cmt, repeatable);
-      } else if (memcmp(in, "settrail ", sizeof("settrail ")-1) == 0) {
-        set_trail_colors((char*)in);
       }
+      /*else if (memcmp(in, "settrail ", sizeof("settrail ")-1) == 0) {
+        set_trail_colors((char*)in);
+      }*/
       break;
     default:
       break;
