@@ -233,6 +233,10 @@ class UnknownRegister(Exception):
   def __init__(self, reg):
     self.reg = reg
 
+class IgnoredRegister(Exception):
+  def __init__(self, reg):
+    self.reg = reg
+
 # Instruction class
 class CsInsn(object):
   """one disassembled instruction"""
@@ -396,9 +400,9 @@ class CsInsn(object):
     """
     Resolves relative reference given trace if possible:
     For example, if the opcode "dword ptr [rax + rax]" is present
-    in this instruction and in the given trace and clnum,
-    the value of rax is 2, we resolve this to "dword ptr [0x4]",
-    except in cases where the pointer is not dereferenced (see note 3).
+    in this instruction and in the given trace and clnum, the
+    value of rax is 2, we resolve this to "dword ptr [0x4]", except
+    in cases where the pointer is not dereferenced (see note 3).
 
     Design choices / limitations:
     
@@ -411,18 +415,7 @@ class CsInsn(object):
     2) We don't resolve stack/base pointers. I think the better way to
        handle these are via stack/struct support, with labelled stack elements.
     
-    3) QIRAdb exposes information about all memory accesses given a
-       trace, clnum pair. I was originally going to use this to sanity
-       check the resolved address, but I realized this actually informs
-       me of cases where a relative reference is present but not actually
-       dereferenced (e.g. "lea" instruction on x86). I opt to not resolve
-       these as I believe these arithmetic instuctions are better semantically
-       interpreted by the QIRA user if the register used in the "reference" is
-       not obscured. On the other hand, someone might be able to j/k up and
-       down through the instructions and see the constants changing. If this
-       is a better choice, I can change the behavior.
-    
-    4) This function should catch all exceptions, returning self.i.op_str
+    3) This function should catch all exceptions, returning self.i.op_str
        by default.
     """
     if trace is None or clnum is None or not self._has_relative_reference():
@@ -432,12 +425,12 @@ class CsInsn(object):
 
     reginfo = self._get_register_dict(trace, clnum)
 
-    #memory accesses reported by qiradb, used to check
-    #the resolved address
-    limit = 0 #all changes
-    mem_accesses = []
-    for c in trace.db.fetch_changes_by_clnum(clnum, limit):
-      mem_accesses.append(c.copy()['address'])
+    if self.arch in ["i386", "x86-64"]:
+      ignored_registers = ["esp", "rsp", "ebp", "rbp"]
+    elif self.arch in ["arm", "aarch64", "thumb"]:
+      ignored_registers = ["sp", "fp", "ip"]
+    else:
+      return self.i.op_str
 
     #check for overflow in here?
     def _eval_op_x86(exp):
@@ -459,6 +452,8 @@ class CsInsn(object):
         return _eval_op_x86(op1) * _eval_op_x86(op2)
 
       if exp in reginfo: #it's a register
+        if exp in ignored_registers:
+          raise IgnoredRegister(exp)
         return reginfo[exp]
 
       try:
@@ -474,6 +469,8 @@ class CsInsn(object):
         return _eval_op_arm(op1) + _eval_op_arm(op2)
 
       if exp in reginfo: #it's a register
+        if exp in ignored_registers:
+          raise IgnoredRegister(exp)
         if exp == "pc": #arm is so annoying sometimes
           return reginfo[exp] + self.size()
         return reginfo[exp]
@@ -484,6 +481,13 @@ class CsInsn(object):
 
       raise UnknownRegister(exp)
 
+    if self.arch in ["i386", "x86-64"]:
+      resolver = _eval_op_x86
+    elif self.arch in ["arm", "aarch64", "thumb"]:
+      resolver = _eval_op_arm
+    else:
+      return self.i.op_str
+
     try:
       fmt, ref = self._get_ref_square_bracket()
     except AssertionError:
@@ -493,31 +497,20 @@ class CsInsn(object):
       print "unknown exception in _get_operand_s"
       return self.i.op_str
 
-    if self.arch in ["i386", "x86-64"]:
-      resolver = _eval_op_x86
-      ignored_registers = ["esp", "rsp", "ebp", "rbp"]
-    elif self.arch in ["arm", "aarch64", "thumb"]:
-      resolver = _eval_op_arm
-      ignored_registers = ["sp", "fp", "ip"]
-    else:
-      return self.i.op_str
-
     try:
       resolved = resolver(ref)
-      #skip relative references that don't
-      #actually dereference like "lea"
-      if resolved not in mem_accesses:
-        return self.i.op_str
       return fmt.format(resolved)
+    except IgnoredRegister as e:
+      print "ignored register", e.reg
+      return self.i.op_str
     except UnknownRegister as e:
-      if e.reg not in ignored_registers:
-        print "unknown register detected in _get_operand_s", e.reg
+      print "unknown register", e.reg
+      #if e.reg not in ignored_registers:
+      #  print "unknown register detected in _get_operand_s", e.reg
       return self.i.op_str
     except Exception as e:
-      print "unknown exception in _get_operand_s"
+      print "unknown exception in _get_operand_s", e
       return self.i.op_str
-
-    return self.i.op_str
 
   def size(self):
     return self.i.size if self.decoded else 0
