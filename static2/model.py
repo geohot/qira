@@ -414,6 +414,7 @@ class CsInsn(object):
     
     2) We don't resolve stack/base pointers. I think the better way to
        handle these are via stack/struct support, with labelled stack elements.
+       On ARM, "fp" isn't in the qiradb so we drop them.
     
     3) This function should catch all exceptions, returning self.i.op_str
        by default.
@@ -426,7 +427,7 @@ class CsInsn(object):
     if self.arch in ["i386", "x86-64"]:
       ignored_registers = ["esp", "rsp", "ebp", "rbp"]
     elif self.arch in ["arm", "aarch64", "thumb"]:
-      ignored_registers = ["sp", "fp", "ip"]
+      ignored_registers = ["sp", "fp"]
     else:
       return self.i.op_str
 
@@ -449,9 +450,10 @@ class CsInsn(object):
         op1, op2 = exp.split("*")
         return _eval_op_x86(op1) * _eval_op_x86(op2)
 
+      if exp in ignored_registers:
+        raise IgnoredRegister(exp)
+
       if exp in reginfo: #it's a register
-        if exp in ignored_registers:
-          raise IgnoredRegister(exp)
         return reginfo[exp]
 
       try:
@@ -462,13 +464,15 @@ class CsInsn(object):
     def _eval_op_arm(exp):
       spl = exp.split(", ") #they use `,` as the addition operator...
 
+      #arm can't have more than 2 operands inside a reference, right?
       if len(spl) == 2:
         op1, op2 = spl
         return _eval_op_arm(op1) + _eval_op_arm(op2)
 
+      if exp in ignored_registers:
+        raise IgnoredRegister(exp)
+
       if exp in reginfo: #it's a register
-        if exp in ignored_registers:
-          raise IgnoredRegister(exp)
         if exp == "pc": #arm is so annoying sometimes
           return reginfo[exp] + self.size()
         return reginfo[exp]
@@ -485,6 +489,8 @@ class CsInsn(object):
       resolver = _eval_op_arm
     else:
       return self.i.op_str
+
+    print "special case! {} -> {} {}".format(clnum, self.i.mnemonic, self.i.op_str)
 
     try:
       fmt, ref = self._get_ref_square_bracket()
