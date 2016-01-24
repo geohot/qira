@@ -309,7 +309,7 @@ class CsInsn(object):
   #diassembly with dynamic info. so we include optional arguments here
   def __str__(self, trace=None, clnum=None):
     if self.decoded:
-      return "{}\t{}".format(self.i.mnemonic, self.get_operand_s(trace, clnum))
+      return "{}\t{}".format(self.i.mnemonic, self._get_operand_s(trace, clnum))
     return ""
 
   def is_jump(self):
@@ -361,29 +361,23 @@ class CsInsn(object):
     #code follows UNLESS we are a return or an unconditional jump
     return not (self.is_ret() or self.dtype == DESTTYPE.jump)
 
-  def has_relative_reference(self):
+  def _has_relative_reference(self):
     if not self.decoded:
       return False
-    if self.arch in ["i386", "x86-64"]:
-      has_ref = "[" in self.i.op_str and "]" in self.i.op_str
-      uses_sp = "sp" in self.i.op_str.lower() or "bp" in self.i.op_str.lower()
-      return has_ref and not uses_sp
-    if self.arch in ["arm", "thumb", "aarch64"]:
-      has_ref = "[" in self.i.op_str and "]" in self.i.op_str
-      uses_sp = "sp" in self.i.op_str.lower()
-      return has_ref and not uses_sp
+    if self.arch in ["i386", "x86-64", "arm", "thumb", "aarch64"]:
+      return "[" in self.i.op_str and "]" in self.i.op_str
     return False
 
   #returns format string and reference string
   def _get_ref_square_bracket(self):
     """
     qword ptr [rbp - 0x10] -> ("qword ptr [{}]", "rbp - 0x10")
-    byte ptr [rip + 0x200a51] ...
-    dword ptr [rax + rax] ...
+    byte ptr [rip + 0x200a51] -> ("byte ptr [{}]", "rip + 0x200a51")
+    dword ptr [rax + rax] -> ("dword ptr [{}]", "rax + rax")
     """
 
     #we assume only one reference per instruction
-    assert self.has_relative_reference()
+    assert self._has_relative_reference()
     assert self.i.op_str.count("[") == 1
     assert self.i.op_str.count("]") == 1
 
@@ -398,12 +392,43 @@ class CsInsn(object):
     register_values = trace.db.fetch_registers(clnum)
     return dict(zip(registers, register_values))
 
-  #resolves relative reference given trace if possible
-  def get_operand_s(self, trace, clnum):
-    if trace is None or clnum is None or not self.has_relative_reference():
+  def _get_operand_s(self, trace, clnum):
+    """
+    Resolves relative reference given trace if possible:
+    For example, if the opcode "dword ptr [rax + rax]" is present
+    in this instruction and in the given trace and clnum,
+    the value of rax is 2, we resolve this to "dword ptr [0x4]",
+    except in cases where the pointer is not dereferenced (see note 3).
+
+    Design choices / limitations:
+    
+    1) This is a glorified string parsing hack that assume Intel syntax.
+       This is quite ugly IMO, but the alternative is to write our own
+       dissassembler/printer which is unneccessary work. Fortunately,
+       this is localized to the CsInsn class so we assume that Capstone
+       syntax will not change. Otherwise, ping me if this breaks (@nedwill).
+    
+    2) We don't resolve stack/base pointers. I think the better way to
+       handle these are via stack/struct support, with labelled stack elements.
+    
+    3) QIRAdb exposes information about all memory accesses given a
+       trace, clnum pair. I was originally going to use this to sanity
+       check the resolved address, but I realized this actually informs
+       me of cases where a relative reference is present but not actually
+       dereferenced (e.g. "lea" instruction on x86). I opt to not resolve
+       these as I believe these arithmetic instuctions are better semantically
+       interpreted by the QIRA user if the register used in the "reference" is
+       not obscured. On the other hand, someone might be able to j/k up and
+       down through the instructions and see the constants changing. If this
+       is a better choice, I can change the behavior.
+    
+    4) This function should catch all exceptions, returning self.i.op_str
+       by default.
+    """
+    if trace is None or clnum is None or not self._has_relative_reference():
       return self.i.op_str
 
-    #print "special case! {} -> {} {}".format(clnum, self.i.mnemonic, self.i.op_str)
+    print "special case! {} -> {} {}".format(clnum, self.i.mnemonic, self.i.op_str)
 
     reginfo = self._get_register_dict(trace, clnum)
 
@@ -412,8 +437,7 @@ class CsInsn(object):
     limit = 0 #all changes
     mem_accesses = []
     for c in trace.db.fetch_changes_by_clnum(clnum, limit):
-      c = c.copy()
-      mem_accesses.append(c['address'])
+      mem_accesses.append(c.copy()['address'])
 
     #check for overflow in here?
     def _eval_op_x86(exp):
@@ -465,27 +489,32 @@ class CsInsn(object):
     except AssertionError:
       print "*** Warning: assumption in _get_ref_square_bracket violated"
       return self.i.op_str
-
-    x86 = (_eval_op_x86, [])
-    arm = (_eval_op_arm, ["fp", "ip"])
+    except Exception as e:
+      print "unknown exception in _get_operand_s"
+      return self.i.op_str
 
     if self.arch in ["i386", "x86-64"]:
-      resolver, ignored_registers = x86
+      resolver = _eval_op_x86
+      ignored_registers = ["esp", "rsp", "ebp", "rbp"]
     elif self.arch in ["arm", "aarch64", "thumb"]:
-      resolver, ignored_registers = arm
+      resolver = _eval_op_arm
+      ignored_registers = ["sp", "fp", "ip"]
     else:
       return self.i.op_str
 
     try:
       resolved = resolver(ref)
-      #handle relative references that don't
+      #skip relative references that don't
       #actually dereference like "lea"
-      if not resolved in mem_accesses:
+      if resolved not in mem_accesses:
         return self.i.op_str
       return fmt.format(resolved)
     except UnknownRegister as e:
       if e.reg not in ignored_registers:
-        print "unknown register detected", e.reg
+        print "unknown register detected in _get_operand_s", e.reg
+      return self.i.op_str
+    except Exception as e:
+      print "unknown exception in _get_operand_s"
       return self.i.op_str
 
     return self.i.op_str
