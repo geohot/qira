@@ -421,8 +421,6 @@ class CsInsn(object):
     if trace is None or clnum is None or not self._has_relative_reference():
       return self.i.op_str
 
-    print "special case! {} -> {} {}".format(clnum, self.i.mnemonic, self.i.op_str)
-
     reginfo = self._get_register_dict(trace, clnum)
 
     if self.arch in ["i386", "x86-64"]:
@@ -501,12 +499,9 @@ class CsInsn(object):
       resolved = resolver(ref)
       return fmt.format(resolved)
     except IgnoredRegister as e:
-      print "ignored register", e.reg
       return self.i.op_str
     except UnknownRegister as e:
-      print "unknown register", e.reg
-      #if e.reg not in ignored_registers:
-      #  print "unknown register detected in _get_operand_s", e.reg
+      print "_get_operand_s: unknown register {} at clnum {}".format(e.reg, clnum)
       return self.i.op_str
     except Exception as e:
       print "unknown exception in _get_operand_s", e
