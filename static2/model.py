@@ -367,20 +367,19 @@ class CsInsn(object):
     if self.arch in ["i386", "x86-64"]:
       has_ref = "[" in self.i.op_str and "]" in self.i.op_str
       uses_sp = "sp" in self.i.op_str.lower() or "bp" in self.i.op_str.lower()
-      return has_ref# and not uses_sp
+      return has_ref and not uses_sp
     if self.arch in ["arm", "thumb", "aarch64"]:
       has_ref = "[" in self.i.op_str and "]" in self.i.op_str
       uses_sp = "sp" in self.i.op_str.lower()
-      return has_ref# and not uses_sp
+      return has_ref and not uses_sp
     return False
 
   #returns format string and reference string
   def _get_ref_square_bracket(self):
     """
-    looks like:
-    qword ptr [rbp - 0x10]
-    byte ptr [rip + 0x200a51]
-    dword ptr [rax + rax]
+    qword ptr [rbp - 0x10] -> ("qword ptr [{}]", "rbp - 0x10")
+    byte ptr [rip + 0x200a51] ...
+    dword ptr [rax + rax] ...
     """
 
     #we assume only one reference per instruction
@@ -393,18 +392,28 @@ class CsInsn(object):
     fmt = pre_ref + "[0x{:x}]" + post_ref
     return fmt, ref
 
+  #returns mapping: register name (lowercase) -> value
   def _get_register_dict(self, trace, clnum):
     registers = map(string.lower, trace.program.tregs[0])
     register_values = trace.db.fetch_registers(clnum)
     return dict(zip(registers, register_values))
 
+  #resolves relative reference given trace if possible
   def get_operand_s(self, trace, clnum):
-    if not self.has_relative_reference() or trace is None or clnum is None:
+    if trace is None or clnum is None or not self.has_relative_reference():
       return self.i.op_str
 
-    print "special case! {} -> {} {}".format(clnum, self.i.mnemonic, self.i.op_str)
+    #print "special case! {} -> {} {}".format(clnum, self.i.mnemonic, self.i.op_str)
 
     reginfo = self._get_register_dict(trace, clnum)
+
+    #memory accesses reported by qiradb, used to check
+    #the resolved address
+    limit = 0 #all changes
+    mem_accesses = []
+    for c in trace.db.fetch_changes_by_clnum(clnum, limit):
+      c = c.copy()
+      mem_accesses.append(c['address'])
 
     #check for overflow in here?
     def _eval_op_x86(exp):
@@ -451,23 +460,33 @@ class CsInsn(object):
 
       raise UnknownRegister(exp)
 
-    if self.arch in ["i386", "x86-64"]:
+    try:
       fmt, ref = self._get_ref_square_bracket()
-      try:
-        return fmt.format(_eval_op_x86(ref))
-      except UnknownRegister as e:
-        print "unknown register detected", e.reg
-        return self.i.op_str
+    except AssertionError:
+      print "*** Warning: assumption in _get_ref_square_bracket violated"
+      return self.i.op_str
 
-    if self.arch in ["arm", "aarch64", "thumb"]:
-      fmt, ref = self._get_ref_square_bracket()
-      try:
-        return fmt.format(_eval_op_arm(ref))
-      except UnknownRegister as e:
-        #we don't track fp or ip
-        if e.reg not in ["fp", "ip"]:
-          print "unknown register detected", e.reg
+    x86 = (_eval_op_x86, [])
+    arm = (_eval_op_arm, ["fp", "ip"])
+
+    if self.arch in ["i386", "x86-64"]:
+      resolver, ignored_registers = x86
+    elif self.arch in ["arm", "aarch64", "thumb"]:
+      resolver, ignored_registers = arm
+    else:
+      return self.i.op_str
+
+    try:
+      resolved = resolver(ref)
+      #handle relative references that don't
+      #actually dereference like "lea"
+      if not resolved in mem_accesses:
         return self.i.op_str
+      return fmt.format(resolved)
+    except UnknownRegister as e:
+      if e.reg not in ignored_registers:
+        print "unknown register detected", e.reg
+      return self.i.op_str
 
     return self.i.op_str
 
