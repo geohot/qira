@@ -392,8 +392,13 @@ class CsInsn(object):
 
   #returns mapping: register name (lowercase) -> value
   def _get_register_dict(self, trace, clnum):
-    registers = map(string.lower, trace.program.tregs[0])
-    register_values = trace.db.fetch_registers(clnum)
+    # None may be present (aarch64), so we just insert dummy keys for the zip()
+    registers = [s.lower() if s is not None else "dummy" for s in trace.program.tregs[0]]
+
+    # QIRAdb gives us the registers after the instruction has been executed,
+    # so we need to decrement this for instructions like "ldr r3, [r3]". (see regmem.js)
+    register_values = trace.db.fetch_registers(clnum-1)
+    
     return dict(zip(registers, register_values))
 
   def _get_operand_s(self, trace, clnum):
@@ -489,8 +494,6 @@ class CsInsn(object):
       resolver = _eval_op_arm
     else:
       return self.i.op_str
-
-    print "special case! {} -> {} {}".format(clnum, self.i.mnemonic, self.i.op_str)
 
     try:
       fmt, ref = self._get_ref_square_bracket()
