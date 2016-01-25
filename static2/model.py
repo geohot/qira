@@ -511,13 +511,13 @@ class CsInsn(object):
       resolved = resolver(ref)
       return fmt.format(resolved)
     except IgnoredRegister as e:
-      return self.i.op_str
+      pass
     except UnknownRegister as e:
       print "_get_operand_s: unknown register {} at clnum {}".format(e.reg, clnum)
-      return self.i.op_str
     except Exception as e:
       print "unknown exception in _get_operand_s", e
-      return self.i.op_str
+
+    return self.i.op_str
 
   def size(self):
     return self.i.size if self.decoded else 0
