@@ -480,8 +480,12 @@ class CsInsn(object):
         raise IgnoredRegister(exp)
 
       if exp in reginfo: #it's a register
-        if exp == "pc": #arm is so annoying sometimes
-          return reginfo[exp] + self.size()
+        #http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0552a/BABJJAAA.html
+        if exp == "pc": #arm is *so* annoying sometimes
+          val = reginfo[exp] + 4
+          if val & 2:
+            val -= 2
+          return val
         return reginfo[exp]
 
       #no exception here, ARM is explicit about constants
