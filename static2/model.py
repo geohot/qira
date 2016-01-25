@@ -409,6 +409,8 @@ class CsInsn(object):
     value of rax is 2, we resolve this to "dword ptr [0x4]", except
     in cases where the pointer is not dereferenced (see note 3).
 
+    Implemented and tested on {x86, x86-64, arm, thumb, aarch64}
+
     Design choices / limitations:
     
     1) This is a glorified string parsing hack that assume Intel syntax.
@@ -419,10 +421,11 @@ class CsInsn(object):
     
     2) We don't resolve stack/base pointers. I think the better way to
        handle these are via stack/struct support, with labelled stack elements.
-       On ARM, "fp" isn't in the qiradb so we drop them.
     
-    3) This function should catch all exceptions, returning self.i.op_str
-       by default.
+    3) On ARM, "fp" isn't in the qiradb so we drop them.
+    
+    4) This function must not raise any exceptions, returning self.i.op_str
+       if necessary.
     """
     if trace is None or clnum is None or not self._has_relative_reference():
       return self.i.op_str
