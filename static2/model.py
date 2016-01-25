@@ -406,8 +406,7 @@ class CsInsn(object):
     Resolves relative reference given trace if possible:
     For example, if the opcode "dword ptr [rax + rax]" is present
     in this instruction and in the given trace and clnum, the
-    value of rax is 2, we resolve this to "dword ptr [0x4]", except
-    in cases where the pointer is not dereferenced (see note 3).
+    value of rax is 2, we resolve this to "dword ptr [0x4]".
 
     Implemented and tested on {x86, x86-64, arm, thumb, aarch64}
 
