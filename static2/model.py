@@ -412,9 +412,9 @@ class CsInsn(object):
 
     Design choices / limitations:
     
-    1) This is a glorified string parsing hack that assume Intel syntax.
+    1) This is a glorified string parsing hack that assumes Intel syntax.
        This is quite ugly IMO, but the alternative is to write our own
-       dissassembler/printer which is unneccessary work. Fortunately,
+       dissassembler/printer which is unnecessary work. Fortunately,
        this is localized to the CsInsn class so we assume that Capstone
        syntax will not change. Otherwise, ping me if this breaks (@nedwill).
     
