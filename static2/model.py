@@ -83,7 +83,7 @@ class BapInsn(object):
     else:
       self._dests = dests
 
-  def __str__(self):
+  def __str__(self, trace=None, clnum=None):
     # fix relative jumps to absolute address
     for d in self._dests:
       if d[1] is not DESTTYPE.implicit:
