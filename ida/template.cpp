@@ -2,9 +2,98 @@
 #include <idp.hpp>
 #include <loader.hpp>
 #include <bytes.hpp>
-#include <dbg.hpp>
+#include <name.hpp>
+#include <time.h>
+
+#define MAX_NUM_COLORS 15
+
+//How long is a reasonable comment? 100 should be enough.
+//What about people who group blocks and "name" them pseudocode?
+#define MAX_COMMENT_LEN 100
+
+// delay trail drawing by this many microseconds
+// we are performant enough to handle 0 by IDA
+// has a race condition that's seems to be
+// mitigated by this
+#define TRAIL_DELAY 200000
 
 //#define DEBUG
+
+struct queue_hdr {
+  struct queue_item *head;
+  struct queue_item *foot;
+};
+
+struct queue_item {
+  unsigned char *s;
+  size_t len;
+  struct queue_item *next;
+};
+
+struct queue_hdr *gq = NULL;
+
+void init_queue() {
+  struct queue_hdr *q = (struct queue_hdr *)qalloc(sizeof(queue_hdr));
+  if (!q) {
+    msg("qalloc failed in init_queue\n");
+    return;
+  }
+  q->head = NULL;
+  q->foot = NULL;
+  gq = q;
+}
+
+void destroy_queue() {
+  if (!gq) {
+    msg("no queue to destroy\n");
+    return;
+  }
+  struct queue_item *cur = gq->head;
+  while (cur != NULL) {
+    struct queue_item *next = cur->next;
+    qfree(cur->s);
+    qfree(cur);
+    cur = next;
+  }
+  qfree(gq);
+}
+
+void enqueue(unsigned char *s, size_t len) {
+  struct queue_item *qe = (struct queue_item*)qalloc(sizeof(queue_item));
+  if (!qe) {
+    msg("qalloc failed in enqueue\n");
+    return;
+  }
+  qe->s = s;
+  qe->len = len;
+  qe->next = NULL;
+  assert(gq != NULL); //should have been inited
+  if (gq->foot == NULL) {
+    assert(gq->head == NULL); //empty
+    gq->head = qe;
+    gq->foot = qe;
+  }
+  else if (gq->head == NULL || gq->foot == NULL) {
+    msg("broken queue!\n");
+    qfree(qe);
+    return;
+  } else {
+    gq->foot->next = qe;
+    gq->foot = qe;
+  }
+}
+
+struct queue_item *dequeue() {
+  struct queue_item *head = gq->head;
+  if (head == NULL) {
+    assert(gq->foot == NULL);
+    return NULL;
+  }
+  gq->head = head->next;
+  if (gq->head == NULL) //dequeued last element
+    gq->foot = NULL;
+  return head; //caller must free, since this is a tuple
+}
 
 // ***************** WEBSOCKETS *******************
 #include "libwebsockets.h"
@@ -17,12 +106,105 @@ static int callback_http(struct libwebsocket_context* context,
 }
 
 ea_t qira_address = BADADDR;
+ea_t trail_addresses[MAX_NUM_COLORS] = { 0 };
+int trail_i = 0;
+
+static void thread_safe_set_item_color(ea_t a, bgcolor_t b) {
+  struct uireq_set_item_color_t: public ui_request_t {
+    uireq_set_item_color_t(ea_t a, bgcolor_t b) {
+      la = a;
+      lb = b;
+    }
+    virtual bool idaapi run() {
+      set_item_color(la, lb);
+      return false;
+    }
+    ea_t la;
+    bgcolor_t lb;
+  };
+  execute_ui_requests(new uireq_set_item_color_t(a, b), NULL);
+}
+
+static void thread_safe_set_name(ea_t a, const char *b, int c) {
+  struct uireq_set_name_t: public ui_request_t {
+    uireq_set_name_t(ea_t a, const char *b, int c) {
+      la = a;
+      lb = b;
+      lc = c;
+    }
+    virtual bool idaapi run() {
+      set_name(la, lb, lc);
+      return false;
+    }
+    ea_t la;
+    const char *lb;
+    int lc;
+  };
+  execute_ui_requests(new uireq_set_name_t(a, b, c), NULL);
+}
+
+static void thread_safe_set_cmt(ea_t a, const char *b, bool c) {
+  struct uireq_set_cmt_t: public ui_request_t {
+    uireq_set_cmt_t(ea_t a, const char *b, bool c) {
+      la = a;
+      lb = b;
+      lc = c;
+    }
+    virtual bool idaapi run() {
+      set_cmt(la, lb, lc);
+      return false;
+    }
+    ea_t la;
+    const char *lb;
+    int lc;
+  };
+  execute_ui_requests(new uireq_set_cmt_t(a, b, c), NULL);
+}
+
+static void clear_trail_colors() {
+  bgcolor_t white = 0xFFFFFFFF;
+  for (size_t i = 0; i < MAX_NUM_COLORS; i++) {
+    ea_t addr = trail_addresses[i];
+    if (addr != 0) {
+      thread_safe_set_item_color(addr, white);
+      trail_addresses[i] = 0;
+    }
+  }
+  trail_i = 0;
+}
+
+static void add_trail_color(int clnum, ea_t addr) {
+  if (trail_i >= MAX_NUM_COLORS) return;
+  trail_addresses[trail_i] = addr;
+  bgcolor_t color = ((0xFFFF - 4*(MAX_NUM_COLORS - trail_i)) << 8);
+  thread_safe_set_item_color(addr, color);
+  trail_i++;
+}
+
+static void set_trail_colors(char *in) {
+  char *dat = (char*)in + sizeof("settrail ") - 1;
+  char *token, *clnum_s, *addr_s;
+
+  clear_trail_colors();
+
+  while ((token = strsep(&dat, ";")) != NULL) {
+    clnum_s = strsep(&token, ",");
+    if (clnum_s == NULL) break;
+    addr_s = strsep(&token, ",");
+    if (addr_s == NULL) break;
+    #ifdef __EA64__
+      int clnum = strtoull(clnum_s, NULL, 0);
+      ea_t addr = strtoull(addr_s, NULL, 0);
+    #else
+      int clnum = strtoul(clnum_s, NULL, 0);
+      ea_t addr = strtoul(addr_s, NULL, 0);
+    #endif
+    add_trail_color(clnum, addr);
+  }
+}
 
 static void set_qira_address(ea_t la) {
-  if (qira_address != BADADDR) { del_bpt(qira_address); }
   qira_address = la;
-  add_bpt(qira_address);
-  disable_bpt(qira_address);
 }
 
 static void thread_safe_jump_to(ea_t a) {
@@ -43,6 +225,8 @@ static void thread_safe_jump_to(ea_t a) {
 }
 
 struct libwebsocket* gwsi = NULL;
+struct libwebsocket_context* gcontext = NULL;
+struct queue_item *to_send = NULL;
 
 static int callback_qira(struct libwebsocket_context* context,
       struct libwebsocket* wsi,
@@ -53,7 +237,8 @@ static int callback_qira(struct libwebsocket_context* context,
     case LWS_CALLBACK_ESTABLISHED:
       // we only support one client
       gwsi = wsi;
-      msg("QIRA web connected\n");
+      gcontext = context;
+      msg("QIRA modern web connected\n");
       break;
     case LWS_CALLBACK_RECEIVE:
       #ifdef DEBUG
@@ -67,7 +252,54 @@ static int callback_qira(struct libwebsocket_context* context,
           ea_t addr = strtoul((char*)in+sizeof("setaddress ")-1, NULL, 0);
         #endif
         thread_safe_jump_to(addr);
+      } else if (memcmp(in, "setname ", sizeof("setname ")-1) == 0) {
+        char *dat = (char*)in + sizeof("setname ") - 1;
+
+        char *space = strchr(dat, ' ');
+        if (space == NULL) {
+          msg("receieved malformed setname\n");
+          break;
+        }
+        if (strlen(dat) - strlen(space) <= 1) {
+          msg("recieved empty setname");
+        }
+        *space = '\0';
+        char *name = space + 1;
+        char *addr_s = dat;
+
+        #ifdef __EA64__
+          ea_t addr = strtoull(addr_s, NULL, 0);
+        #else
+          ea_t addr = strtoul(addr_s, NULL, 0);
+        #endif
+        thread_safe_set_name(addr, name, 0);
+      } else if (memcmp(in, "setcmt ", sizeof("setcmt ")-1) == 0) {
+        char *dat = (char*)in + sizeof("setcmt ") - 1;
+
+        char *space = strchr(dat, ' ');
+        if (space == NULL) {
+          msg("receieved malformed setcmt\n");
+          break;
+        }
+        if (strlen(dat) - strlen(space) <= 1) {
+          msg("recieved empty setcmt");
+        }
+        *space = '\0';
+        char *cmt = space + 1;
+        char *addr_s = dat;
+
+        #ifdef __EA64__
+          ea_t addr = strtoull(addr_s, NULL, 0);
+        #else
+          ea_t addr = strtoul(addr_s, NULL, 0);
+        #endif
+
+        bool repeatable = false;
+        thread_safe_set_cmt(addr, cmt, repeatable);
       }
+      /*else if (memcmp(in, "settrail ", sizeof("settrail ")-1) == 0) {
+        set_trail_colors((char*)in);
+      }*/
       break;
     default:
       break;
@@ -75,29 +307,93 @@ static int callback_qira(struct libwebsocket_context* context,
   return 0;
 }
 
+//adds to queue to send asynchronously
 static void ws_send(char *str) {
   #ifdef DEBUG
     msg("QIRATX:%s\n", str);
   #endif
-  int len = strlen(str);
+  size_t len = strlen(str);
+  if (len == 0) return;
   unsigned char *buf = (unsigned char*)
-    malloc(LWS_SEND_BUFFER_PRE_PADDING + len + LWS_SEND_BUFFER_POST_PADDING);
+    qalloc(LWS_SEND_BUFFER_PRE_PADDING + len + LWS_SEND_BUFFER_POST_PADDING);
   memcpy(&buf[LWS_SEND_BUFFER_PRE_PADDING], str, len);
-  if (gwsi != NULL) {
-    libwebsocket_write(gwsi, &buf[LWS_SEND_BUFFER_PRE_PADDING], len, LWS_WRITE_TEXT);
+  enqueue(buf, len);
+  if (gwsi) {
+    while (!lws_send_pipe_choked(gwsi)) {
+      if (to_send != NULL) {
+        //last thing went through, free it
+        qfree(to_send->s);
+        qfree(to_send);
+      }
+      to_send = dequeue();
+      if (to_send == NULL)
+        break;
+      libwebsocket_write(gwsi, &to_send->s[LWS_SEND_BUFFER_PRE_PADDING],
+        to_send->len, LWS_WRITE_TEXT);
+    }
   }
-  free(buf);
 }
 
 
 // ***************** IDAPLUGIN *******************
 
+/*
+  send the (address, name) pairs back to qira
+
+  IDA prefers to keep names for basic blocks "local" to the function
+  so you can reuse the same name (e.g. "loop") in different functions
+  therefore basic block names won't sync to qira from IDA
+
+  I was going to include a json library and do some fancy stuff,
+  then I realized why not continue the tradition of simple
+  format strings?
+*/
+static void send_names() {
+  //max name length with some padding for "setname" and address
+  char tmp[MAXNAMELEN + 64];
+  for (size_t i = 0; i < get_nlist_size(); i++) {
+    #ifdef __EA64__
+      qsnprintf(tmp, sizeof(tmp)-1, "setname 0x%llx %s",
+        get_nlist_ea(i), get_nlist_name(i));
+    #else
+      qsnprintf(tmp, sizeof(tmp)-1, "setname 0x%x %s",
+        get_nlist_ea(i), get_nlist_name(i));
+    #endif
+    ws_send(tmp);
+  }
+}
+
+/*
+  IDA does not provide a mechanism to iterate over the comments,
+  so we must scan the entire address space. Horrible!
+*/
+static void send_comments() {
+  char cmt_tmp[MAX_COMMENT_LEN-7];
+  char tmp[MAX_COMMENT_LEN];
+  ssize_t cmt_len;
+  ea_t start = get_segm_base(get_first_seg());
+
+  for (ea_t cur = start; cur != BADADDR; cur = nextaddr(cur)) {
+    //Do people use repeatable comments?
+    cmt_len = get_cmt(cur, false, cmt_tmp, sizeof(cmt_tmp));
+    if (cmt_len != -1) {
+      #ifdef __EA64__
+        qsnprintf(tmp, sizeof(tmp)-1, "setcmt 0x%llx %s", cur, cmt_tmp);
+      #else
+        qsnprintf(tmp, sizeof(tmp)-1, "setcmt 0x%x %s", cur, cmt_tmp);
+      #endif
+      ws_send(tmp);
+    }
+  }
+  return;
+}
+
 static void update_address(const char *type, ea_t addr) {
   char tmp[100];
   #ifdef __EA64__
-    qsnprintf(tmp, 100-1, "set%s 0x%llx", type, addr);
+    qsnprintf(tmp, sizeof(tmp)-1, "set%s 0x%llx", type, addr);
   #else
-    qsnprintf(tmp, 100-1, "set%s 0x%x", type, addr);
+    qsnprintf(tmp, sizeof(tmp)-1, "set%s 0x%x", type, addr);
   #endif
   ws_send(tmp);
 }
@@ -178,18 +474,22 @@ void exit_websocket_thread() {
 
 int idaapi IDAP_init(void) {
   hook_to_notification_point(HT_VIEW, hook, NULL);
+  init_queue();
   start_websocket_thread();
-	return PLUGIN_KEEP;
+  return PLUGIN_KEEP;
 }
 
 void idaapi IDAP_term(void) {
   unhook_from_notification_point(HT_VIEW, hook);
   exit_websocket_thread();
-	return;
+  destroy_queue();
+  return;
 }
 
 void idaapi IDAP_run(int arg) {
-  msg("installing book\n");
+  msg("manually sending names and comments\n");
+  send_names();
+  send_comments();
   return;
 }
 
@@ -209,4 +509,3 @@ plugin_t PLUGIN = {
   IDAP_name,			// Plug-in name shown in 
   IDAP_hotkey			// Hot key to run the plug-in
 };
-
