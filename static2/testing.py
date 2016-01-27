@@ -5,6 +5,7 @@ import sys
 import os
 sys.path.insert(0, os.path.join('..','middleware'))
 import qira_config
+import struct
 
 try:
   from static2 import *
@@ -18,9 +19,11 @@ from elftools.elf.elffile import ELFFile
 from elftools.common.exceptions import ELFError, ELFParseError
 from glob import glob
 
+#what capstone supports. if bap comes back we'll have ppc64 too
+SUPPORTED = ["EM_ARM", "EM_X86_64", "EM_AARCH64", "EM_PPC", "EM_386"]
 TEST_PATH = os.path.join(qira_config.BASEDIR,"tests_auto","binary-autogen","*")
-ENGINES = ["builtin", "r2"]
-#ENGINES = ["builtin"]
+#ENGINES = ["builtin", "r2"]
+ENGINES = ["builtin"]
 
 class bcolors(object):
   HEADER = '\033[95m'
@@ -62,6 +65,12 @@ def test_files(fns,quiet=False,profile=False,runtime=False):
         print "{} {}: skipping non-ELF file".format(notice, short_fn)
       continue
 
+    arch = elf['e_machine']
+    if arch not in SUPPORTED:
+      if not quiet:
+        print "{} {}: skipping ELF with unsupported architecture `{}`".format(notice, short_fn, arch)
+      continue
+
     engine_functions = {}
     for engine in ENGINES:
       try:
@@ -86,9 +95,12 @@ def test_files(fns,quiet=False,profile=False,runtime=False):
       except Exception as e:
         print "{} {}: {} engine failed to process file with `{}'".format(fail, short_fn, engine, e)
         continue
+      if runtime:
+        if not quiet:
+          print "{} {}: {} ran without exceptions".format(ok_green, short_fn, engine)
+        continue
+
     if runtime:
-      if not quiet:
-        print "{} {}: {} ran without exceptions".format(ok_green, short_fn, engine)
       continue
 
     if elf.has_dwarf_info():

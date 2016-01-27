@@ -217,7 +217,8 @@ class Program:
         thumb_flag = d[0]
         if thumb_flag == 't':
           thumb = True
-          # override the arch since it's thumb
+          # override the arch since it's thumb, clear invalid tag
+          del self.static[addr]['instruction']
           self.static[addr]['arch'] = "thumb"
         elif thumb_flag == 'n':
           thumb = False

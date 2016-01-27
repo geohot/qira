@@ -263,7 +263,7 @@ def getinstructions(forknum, clnum, clstart, clend):
       rret = rret[0]
 
     instr = program.static[rret['address']]['instruction']
-    rret['instruction'] = str(instr)
+    rret['instruction'] = instr.__str__(trace, i) #i == clnum
 
     # check if static fails at this
     if rret['instruction'] == "":

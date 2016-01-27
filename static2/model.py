@@ -1,6 +1,7 @@
 from capstone import *
 import capstone # for some unexported (yet) symbols in Capstone 3.0
 import qira_config
+import string
 
 if qira_config.WITH_BAP:
   import bap
@@ -82,7 +83,7 @@ class BapInsn(object):
     else:
       self._dests = dests
 
-  def __str__(self):
+  def __str__(self, trace=None, clnum=None):
     # fix relative jumps to absolute address
     for d in self._dests:
       if d[1] is not DESTTYPE.implicit:
@@ -228,6 +229,13 @@ if qira_config.WITH_BAP:
         k_fmt = (k[0],hex(k[1]),k[2])
         print "{0} -> {1:x} expected, got {0} -> {2:x}".format(k_fmt,v,v_prime)
 
+class UnknownRegister(Exception):
+  def __init__(self, reg):
+    self.reg = reg
+
+class IgnoredRegister(Exception):
+  def __init__(self, reg):
+    self.reg = reg
 
 # Instruction class
 class CsInsn(object):
@@ -247,7 +255,7 @@ class CsInsn(object):
     elif arch == "aarch64":
       self.md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
     elif arch == "ppc":
-      self.md = Cs(CS_ARCH_PPC, CS_MODE_32)
+      self.md = Cs(CS_ARCH_PPC, CS_MODE_32 | CS_MODE_BIG_ENDIAN)
     elif arch == "mips":
       self.md = Cs(CS_ARCH_MIPS, CS_MODE_32 | CS_MODE_BIG_ENDIAN)
     elif arch == "mipsel":
@@ -277,8 +285,11 @@ class CsInsn(object):
         elif self.i.mnemonic[0] == "b" or self.i.mnemonic[:2] == "cb":
           self.dtype = DESTTYPE.cjump
       elif arch == "ppc":
-        if self.i.mnemonic[:2] == "bl" and self.i.mnemonic[3] != "r":
-          self.dtype == DESTTYPE.call
+        if self.i.mnemonic in ["bctr", "bctrl"]:
+          self.dtype = DESTTYPE.none
+        elif self.i.mnemonic[:2] == "bl":
+          if not (len(self.i.mnemonic) > 3 and self.i.mnemonic[3] == "r"):
+            self.dtype = DESTTYPE.call
         elif self.i.mnemonic[:2] == "bc":
           self.dtype = DESTTYPE.cjump
         elif self.i.mnemonic[0] == "b":
@@ -298,9 +309,11 @@ class CsInsn(object):
   def __repr__(self):
     return self.__str__()
 
-  def __str__(self):
+  #we don't want to break str(x), but sometimes we want to augment the
+  #diassembly with dynamic info. so we include optional arguments here
+  def __str__(self, trace=None, clnum=None):
     if self.decoded:
-      return "%s\t%s"%(self.i.mnemonic,self.i.op_str)
+      return "{}\t{}".format(self.i.mnemonic, self._get_operand_s(trace, clnum))
     return ""
 
   def is_jump(self):
@@ -351,6 +364,163 @@ class CsInsn(object):
       return False
     #code follows UNLESS we are a return or an unconditional jump
     return not (self.is_ret() or self.dtype == DESTTYPE.jump)
+
+  def _has_relative_reference(self):
+    if not self.decoded:
+      return False
+    if self.arch in ["i386", "x86-64", "arm", "thumb", "aarch64"]:
+      return "[" in self.i.op_str and "]" in self.i.op_str
+    return False
+
+  #returns format string and reference string
+  def _get_ref_square_bracket(self):
+    """
+    qword ptr [rbp - 0x10] -> ("qword ptr [{}]", "rbp - 0x10")
+    byte ptr [rip + 0x200a51] -> ("byte ptr [{}]", "rip + 0x200a51")
+    dword ptr [rax + rax] -> ("dword ptr [{}]", "rax + rax")
+    """
+
+    #we assume only one reference per instruction
+    assert self._has_relative_reference()
+    assert self.i.op_str.count("[") == 1
+    assert self.i.op_str.count("]") == 1
+
+    pre_ref, temp = self.i.op_str.split("[")
+    ref, post_ref = temp.split("]")
+    fmt = pre_ref + "[0x{:x}]" + post_ref
+    return fmt, ref
+
+  #returns mapping: register name (lowercase) -> value
+  def _get_register_dict(self, trace, clnum):
+    # None may be present (aarch64), so we just insert dummy keys for the zip()
+    registers = [s.lower() if s is not None else "dummy" for s in trace.program.tregs[0]]
+
+    # QIRAdb gives us the registers after the instruction has been executed,
+    # so we need to decrement this for instructions like "ldr r3, [r3]". (see regmem.js)
+    register_values = trace.db.fetch_registers(clnum-1)
+    
+    return dict(zip(registers, register_values))
+
+  def _get_operand_s(self, trace, clnum):
+    """
+    Resolves relative reference given trace if possible:
+    For example, if the opcode "dword ptr [rax + rax]" is present
+    in this instruction and in the given trace and clnum, the
+    value of rax is 2, we resolve this to "dword ptr [0x4]".
+
+    Implemented and tested on {x86, x86-64, arm, thumb, aarch64}
+
+    Design choices / limitations:
+    
+    1) This is a glorified string parsing hack that assumes Intel syntax.
+       This is quite ugly IMO, but the alternative is to write our own
+       dissassembler/printer which is unnecessary work. Fortunately,
+       this is localized to the CsInsn class so we assume that Capstone
+       syntax will not change. Otherwise, ping me if this breaks (@nedwill).
+    
+    2) We don't resolve stack/base pointers. I think the better way to
+       handle these are via stack/struct support, with labelled stack elements.
+    
+    3) On ARM, "fp" isn't in the qiradb so we drop them.
+    
+    4) This function must not raise any exceptions, returning self.i.op_str
+       if necessary.
+    """
+    if trace is None or clnum is None or not self._has_relative_reference():
+      return self.i.op_str
+
+    reginfo = self._get_register_dict(trace, clnum)
+
+    if self.arch in ["i386", "x86-64"]:
+      ignored_registers = ["esp", "rsp", "ebp", "rbp"]
+    elif self.arch in ["arm", "aarch64", "thumb"]:
+      ignored_registers = ["sp", "fp"]
+    else:
+      return self.i.op_str
+
+    #check for overflow in here?
+    def _eval_op_x86(exp):
+      spl = exp.split(" ")
+
+      #[a, +, b, -, c] -> sum(a, +b, -c)
+      if len(spl) > 2:
+        addr = _eval_op_x86(spl[0])
+        for i in xrange(1, len(spl), 2):
+          if spl[i] == "+":
+            addr += _eval_op_x86(spl[i+1])
+          else:
+            assert spl[i] == "-"
+            addr -= _eval_op_x86(spl[i+1])          
+        return addr
+
+      if "*" in exp:
+        op1, op2 = exp.split("*")
+        return _eval_op_x86(op1) * _eval_op_x86(op2)
+
+      if exp in ignored_registers:
+        raise IgnoredRegister(exp)
+
+      if exp in reginfo: #it's a register
+        return reginfo[exp]
+
+      try:
+        return int(exp, 16)
+      except ValueError: #it was an unknown register
+        raise UnknownRegister(exp)
+
+    def _eval_op_arm(exp):
+      spl = exp.split(", ") #they use `,` as the addition operator...
+
+      #arm can't have more than 2 operands inside a reference, right?
+      if len(spl) == 2:
+        op1, op2 = spl
+        return _eval_op_arm(op1) + _eval_op_arm(op2)
+
+      if exp in ignored_registers:
+        raise IgnoredRegister(exp)
+
+      if exp in reginfo: #it's a register
+        #http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0552a/BABJJAAA.html
+        if exp == "pc": #arm is *so* annoying sometimes
+          val = reginfo[exp] + 4
+          if val & 2:
+            val -= 2
+          return val
+        return reginfo[exp]
+
+      #no exception here, ARM is explicit about constants
+      if exp[0] == "#":
+        return int(exp[1:], 16)
+
+      raise UnknownRegister(exp)
+
+    if self.arch in ["i386", "x86-64"]:
+      resolver = _eval_op_x86
+    elif self.arch in ["arm", "aarch64", "thumb"]:
+      resolver = _eval_op_arm
+    else:
+      return self.i.op_str
+
+    try:
+      fmt, ref = self._get_ref_square_bracket()
+    except AssertionError:
+      print "*** Warning: assumption in _get_ref_square_bracket violated"
+      return self.i.op_str
+    except Exception as e:
+      print "unknown exception in _get_operand_s"
+      return self.i.op_str
+
+    try:
+      resolved = resolver(ref)
+      return fmt.format(resolved)
+    except IgnoredRegister as e:
+      pass
+    except UnknownRegister as e:
+      print "_get_operand_s: unknown register {} at clnum {}".format(e.reg, clnum)
+    except Exception as e:
+      print "unknown exception in _get_operand_s", e
+
+    return self.i.op_str
 
   def size(self):
     return self.i.size if self.decoded else 0
