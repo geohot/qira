@@ -2,6 +2,9 @@
 
 QEMU_VERSION=2.1.3
 
+#hardcoded to 2.1.3 for now
+QEMU_SHA256="9b68fd0e6f6c401939bd1c9c6ab7052d84962007bb02919623474e9269f60a40"
+
 # if you don't have ubuntu you are on your own here
 if [ $(which apt-get) ]; then
   echo "fetching qemu build-deps, enter your password"
@@ -21,6 +24,14 @@ if [ ! -d qemu/qemu-latest ]; then
   mkdir -p qemu
   cd qemu
   wget http://wiki.qemu-project.org/download/qemu-$QEMU_VERSION.tar.bz2
+
+  HASH=`sha256sum ./qemu-"$QEMU_VERSION".tar.bz2 2>/dev/null | cut -d' ' -f1`
+  
+  if [ "$HASH" != "$QEMU_SHA256" ]; then
+    echo "Error: qemu-"$QEMU_VERSION".tar.bz2 has an invalid checksum."
+    exit 1
+  fi
+
   tar xf qemu-$QEMU_VERSION.tar.bz2
   ln -s qemu-$QEMU_VERSION qemu-latest
 
