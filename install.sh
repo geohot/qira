@@ -7,6 +7,8 @@ else
     PIP="pip"
 fi
 
+LIBCAPSTONE_SHA256="a7bf1cb814c6e712a314659b074bc4c00d2e0006cac67d055d3130d4ecdd525d"
+
 unamestr=$(uname)
 if [[ "$unamestr" == 'Linux' ]]; then
   # we need pip to install python stuff
@@ -18,6 +20,15 @@ if [[ "$unamestr" == 'Linux' ]]; then
 
     # install capstone
     curl -o /tmp/libcapstone3.deb http://www.capstone-engine.org/download/3.0.4/ubuntu-14.04/libcapstone3_3.0.4-0.1ubuntu1_amd64.deb
+    HASH=`sha256sum /tmp/libcapstone3.deb 2>/dev/null | cut -d' ' -f1`
+    
+    if [ "$HASH" != "$LIBCAPSTONE_SHA256" ]; then
+
+      echo "Error: libcapstone3.deb has an invalid checksum."
+      exit 1
+
+    fi
+    
     sudo dpkg -i /tmp/libcapstone3.deb
 
     # only python package we install globally
