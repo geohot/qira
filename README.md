@@ -9,7 +9,7 @@
 
 ## Installing release
 
-See instructions on [qira.me](http://qira.me/) to install 1.0, the most stable version of QIRA
+See instructions on [qira.me](http://qira.me/) to install 1.2
 
 ## Installing trunk
 
