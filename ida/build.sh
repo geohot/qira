@@ -1,9 +1,9 @@
 #!/bin/bash -e
 
-SDKROOT=~/idasdk66
+SDKROOT=$IDA_SDK
 unamestr=$(uname)
 if [[ "$unamestr" == 'Linux' ]]; then
-  IDAROOT=~/ida-6.8
+  IDAROOT=$IDA_DIR
   OUTPUT="qira.plx"
   OUTPUT64="qira.plx64"
   ln -sf libs/linux_libwebsockets.a libwebsockets.a
