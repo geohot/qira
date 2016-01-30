@@ -28,6 +28,7 @@ cd qira/
 
 ## Releases
 
+* v1.2 -- Many many changes. Forced release due to v1.0 not working anymore.
 * v1.1 -- Support for names and comments. Static stuff added. Register colors.
 * v1.0 -- Perf is good! Tons of bugfixes. Quality software. http://qira.me/
 * v0.9 -- Function indentation. haddrline added (look familiar?). Register highlighting in hexdump.
