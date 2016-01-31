@@ -35,10 +35,10 @@ if [[ "$unamestr" == 'Linux' ]]; then
     sudo -H $PIP install virtualenv
   elif [ $(which pacman) ]; then
     echo "installing pip"
-    sudo pacman -S base-devel python2-pip
+    sudo pacman -S --needed --noconfirm base-devel python2-pip
     PIP="pip2"
   elif [ $(which yum) ]; then
-    sudo yum install python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
+    sudo yum install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
   fi
 
   if [ $(tracers/qemu/qira-i386 > /dev/null; echo $?) == 1 ]; then
