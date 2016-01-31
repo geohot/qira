@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <fcntl.h>
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS 1
+#endif
 #include <inttypes.h>
 
 #ifndef _WIN32
