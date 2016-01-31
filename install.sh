@@ -3,9 +3,13 @@
 # default is just pip, but on things like arch where python 3 is default, it's pip2
 if [ $(which pip2) ]; then
     PIP="pip2"
-    VIRTUALENV="virtualenv2"
 else
     PIP="pip"
+fi
+
+if [ $(which virtualenv2) ]; then
+    VIRTUALENV="virtualenv2"
+else
     VIRTUALENV="virtualenv"
 fi
 
@@ -37,7 +41,7 @@ if [[ "$unamestr" == 'Linux' ]]; then
     sudo -H $PIP install virtualenv
   elif [ $(which pacman) ]; then
     echo "installing pip"
-    sudo pacman -S --needed --noconfirm base-devel python2-pip
+    sudo pacman -S --needed --noconfirm base-devel python2-pip python2-virtualenv
     PIP="pip2"
     VIRTUALENV="virtualenv2"
   elif [ $(which yum) ]; then
