@@ -35,10 +35,10 @@ if [[ "$unamestr" == 'Linux' ]]; then
     sudo -H $PIP install virtualenv
   elif [ $(which pacman) ]; then
     echo "installing pip"
-    sudo pacman -S base-devel python2-pip
+    sudo pacman -S --needed --noconfirm base-devel python2-pip python2-virtualenv
     PIP="pip2"
   elif [ $(which yum) ]; then
-    sudo yum install python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
+    sudo yum install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
   fi
 
   if [ $(tracers/qemu/qira-i386 > /dev/null; echo $?) == 1 ]; then
@@ -64,7 +64,14 @@ elif [[ "$unamestr" == 'Darwin' ]]; then
 fi
 
 echo "installing pip packages"
-virtualenv venv
+
+if [ $(which virtualenv2) ]; then
+    VIRTUALENV="virtualenv2"
+else
+    VIRTUALENV="virtualenv"
+fi
+
+$VIRTUALENV venv
 source venv/bin/activate
 $PIP install --upgrade -r requirements.txt
 
