@@ -1,17 +1,22 @@
-language:
-  - python
+sudo: false
+
+language: python
 
 python:
   - 2.7
 
-before_install:
-  - sudo apt-get update -qq
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - gcc-4.8
+    - g++-4.8
+    - clang
 
 install:
-  # g++4.8.1
-  - sudo apt-get install -qq g++-4.8
-  - export CXX="g++-4.8"
-  - ./install.sh
+- if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
+- ./install.sh
 
 script:
   - $CXX --version
