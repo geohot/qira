@@ -7,12 +7,6 @@ else
     PIP="pip"
 fi
 
-if [ $(which virtualenv2) ]; then
-    VIRTUALENV="virtualenv2"
-else
-    VIRTUALENV="virtualenv"
-fi
-
 LIBCAPSTONE_SHA256="a7bf1cb814c6e712a314659b074bc4c00d2e0006cac67d055d3130d4ecdd525d"
 
 unamestr=$(uname)
@@ -43,7 +37,6 @@ if [[ "$unamestr" == 'Linux' ]]; then
     echo "installing pip"
     sudo pacman -S --needed --noconfirm base-devel python2-pip python2-virtualenv
     PIP="pip2"
-    VIRTUALENV="virtualenv2"
   elif [ $(which yum) ]; then
     sudo yum install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
   fi
@@ -71,6 +64,13 @@ elif [[ "$unamestr" == 'Darwin' ]]; then
 fi
 
 echo "installing pip packages"
+
+if [ $(which virtualenv2) ]; then
+    VIRTUALENV="virtualenv2"
+else
+    VIRTUALENV="virtualenv"
+fi
+
 $VIRTUALENV venv
 source venv/bin/activate
 $PIP install --upgrade -r requirements.txt
