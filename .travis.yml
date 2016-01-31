@@ -19,7 +19,6 @@ install:
 - ./install.sh
 
 script:
-  - $CXX --version
   - ./run_tests.sh
   - ./run_tests_static.sh
 
