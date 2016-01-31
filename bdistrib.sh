@@ -10,7 +10,7 @@ echo "packaging version $VERSION"
 
 # VERSION is required to build the python thing
 echo "copying docs"
-cp -av VERSION README distrib/qira/
+cp -av VERSION README.md distrib/qira/
 
 # requires objdump
 # writable /tmp
@@ -53,20 +53,19 @@ mkdir -p distrib/qira/ida/bin
 echo "copying ida plugin"
 cp -av ida/bin/* distrib/qira/ida/bin/
 
-echo "copying qemu source"
+echo "copying qemu source build scripts"
 if [ $QEMU_SOURCE ]; then
-  #echo "copying qemu_mods for building qemu from source"
-  cp -Rav qemu_mods distrib/qira/
-  cp -av qemu_build.sh distrib/qira/
+  mkdir -p distrib/qira/tracers
+  cp -av tracers/qemu.patch tracers/qemu_build.sh distrib/qira/tracers
 fi
 
 if [ $QEMU_BINARIES ]; then
   # fairly standard deps + librt, libglib, libpcre
   echo "copying qemu"
-  mkdir -p distrib/qira/qemu
-  for arch in "i386" "arm" "x86_64" "ppc" "aarch64"; do
-    cp -v "qemu/qira-$arch" "distrib/qira/qemu/qira-$arch"
-    strip "distrib/qira/qemu/qira-$arch"
+  mkdir -p distrib/qira/tracers/qemu
+  for arch in "i386" "arm" "x86_64" "ppc" "aarch64" "mips" "mipsel"; do
+    cp -v "tracers/qemu/qira-$arch" "distrib/qira/tracers/qemu/qira-$arch"
+    strip "distrib/qira/tracers/qemu/qira-$arch"
     #upx -9 "distrib/qira/qemu/qira-$arch"
   done
 fi
@@ -76,11 +75,11 @@ mkdir -p distrib/qira/qiradb
 cp -Rav qiradb/* distrib/qira/qiradb/
 
 echo "copying pin"
-mkdir -p distrib/qira/pin
-cp -av pin_build.sh distrib/qira/
-cp -av pin/makefile pin/qirapin.cpp distrib/qira/pin/
-mkdir -p distrib/qira/pin/strace
-cp -av pin/strace/*.h distrib/qira/pin/strace/
+mkdir -p distrib/qira/tracers/pin
+cp -av tracers/pin_build.sh distrib/qira/tracers
+cp -av tracers/pin/makefile tracers/pin/qirapin.cpp distrib/qira/tracers/pin/
+mkdir -p distrib/qira/tracers/pin/strace
+cp -av tracers/pin/strace/*.h distrib/qira/tracers/pin/strace/
 
 #echo "copying cda"
 #mkdir -p distrib/qira/cda distrib/qira/cda/clang

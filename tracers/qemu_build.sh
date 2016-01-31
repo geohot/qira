@@ -30,7 +30,6 @@ if [ ! -d qemu/qemu-latest ]; then
   wget http://wiki.qemu-project.org/download/qemu-$QEMU_VERSION.tar.bz2
 
   HASH=`sha256sum ./qemu-"$QEMU_VERSION".tar.bz2 2>/dev/null | cut -d' ' -f1`
-  
   if [ "$HASH" != "$QEMU_SHA256" ]; then
     echo "Error: qemu-"$QEMU_VERSION".tar.bz2 has an invalid checksum."
     exit 1

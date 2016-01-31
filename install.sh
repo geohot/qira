@@ -14,25 +14,21 @@ if [[ "$unamestr" == 'Linux' ]]; then
   # we need pip to install python stuff
   # build for building qiradb and stuff for flask like gevent
   if [ $(which apt-get) ]; then
-    echo "installing apt packages"
+    echo "running apt-get update"
     sudo apt-get update -qq
-    sudo apt-get -qq -y install build-essential python-dev python-pip debootstrap debian-archive-keyring libjpeg-dev zlib1g-dev unzip wget graphviz curl
+    echo "installing apt packages"
+    sudo apt-get -qq -y install build-essential python-dev python-pip python-virtualenv debootstrap debian-archive-keyring libjpeg-dev zlib1g-dev unzip wget graphviz curl
 
     # install capstone
     curl -o /tmp/libcapstone3.deb http://www.capstone-engine.org/download/3.0.4/ubuntu-14.04/libcapstone3_3.0.4-0.1ubuntu1_amd64.deb
-    HASH=`sha256sum /tmp/libcapstone3.deb 2>/dev/null | cut -d' ' -f1`
-    
-    if [ "$HASH" != "$LIBCAPSTONE_SHA256" ]; then
 
+    HASH=`sha256sum /tmp/libcapstone3.deb 2>/dev/null | cut -d' ' -f1`
+    if [ "$HASH" != "$LIBCAPSTONE_SHA256" ]; then
       echo "Error: libcapstone3.deb has an invalid checksum."
       exit 1
-
     fi
-    
     sudo dpkg -i /tmp/libcapstone3.deb
 
-    # only python package we install globally
-    sudo -H $PIP install virtualenv
   elif [ $(which pacman) ]; then
     echo "installing pip"
     sudo pacman -S --needed --noconfirm base-devel python2-pip python2-virtualenv
