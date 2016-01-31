@@ -157,19 +157,25 @@ class Program:
       else:
         raise Exception("windows binary with machine "+hex(wh)+" not supported")
 
-    # OS X binaries
-    elif progdat[0:4] in ("\xCF\xFA\xED\xFE", "\xCE\xFA\xED\xFE"):
-      print "**** osx binary detected"
+    # Mach-O binaries
+    elif progdat[0:4] in ("\xCF\xFA\xED\xFE", "\xFE\xED\xFA\xCF", "\xCE\xFA\xED\xFE", "\xFE\xED\xFA\xCE"):
+      print "**** Mach-O binary detected"
       if progdat[0:4] == "\xCF\xFA\xED\xFE":
+        self.tregs = arch.X64REGS
+        self.pintool = pin_dir + "obj-intel64/qirapin.dylib"
+      elif progdat[0:4] == "\xFE\xED\xFA\xCF":   # big endian...
         self.tregs = arch.X64REGS
         self.pintool = pin_dir + "obj-intel64/qirapin.dylib"
       elif progdat[0:4] == "\xCE\xFA\xED\xFE":
         self.tregs = arch.X86REGS
         self.pintool = pin_dir + "obj-ia32/qirapin.dylib"
+      elif progdat[0:4] == "\xFE\xED\xFA\xCE":   # big endian...
+        self.tregs = arch.X86REGS
+        self.pintool = pin_dir + "obj-ia32/qirapin.dylib"
       else:
-        raise Exception("osx binary not supported")
+        raise Exception("Mach-O binary not supported")
       if not os.path.isfile(self.pintool):
-        print "Running an OS X binary requires PIN support. See tracers/pin_build.sh"
+        print "Running a Mach-O binary requires PIN support. See tracers/pin_build.sh"
         exit()
       self.runnable = True
     else:
