@@ -5,12 +5,16 @@ QEMU_VERSION=2.1.3
 #hardcoded to 2.1.3 for now
 QEMU_SHA256="9b68fd0e6f6c401939bd1c9c6ab7052d84962007bb02919623474e9269f60a40"
 
+python="python"
 # if you don't have ubuntu you are on your own here
 if [ $(which apt-get) ]; then
   echo "fetching qemu build-deps, enter your password"
   sudo apt-get update -qq
   sudo apt-get --no-install-recommends -qq -y build-dep qemu
   sudo apt-get install -qq -y wget flex bison libtool automake autoconf autotools-dev pkg-config libglib2.0-dev
+elif [ $(which pacman) ]; then
+  python="python2"
+  echo "WARNING: you are using pacman, you are awesome but are going to need to fetch the build deps of QEMU on your own"
 else
   echo "WARNING: you don't have apt-get, you are required to fetch the build deps of QEMU on your own"
 fi
@@ -49,6 +53,5 @@ if [ ! -d qemu/qemu-latest ]; then
 fi
 
 cd qemu/qemu-latest
-./configure --target-list=i386-linux-user,x86_64-linux-user,arm-linux-user,ppc-linux-user,aarch64-linux-user,mips-linux-user,mipsel-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown
+./configure --target-list=i386-linux-user,x86_64-linux-user,arm-linux-user,ppc-linux-user,aarch64-linux-user,mips-linux-user,mipsel-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown --python="$python"
 make -j $(grep processor < /proc/cpuinfo | wc -l)
-
