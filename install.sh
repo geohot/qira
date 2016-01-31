@@ -73,7 +73,6 @@ fi
 
 $VIRTUALENV venv
 source venv/bin/activate
-$PIP uninstall pyparsing
 $PIP install -Iv https://pypi.python.org/packages/source/p/pyparsing/pyparsing-1.5.7.tar.gz#md5=9be0fcdcc595199c646ab317c1d9a709
 $PIP install --upgrade -r requirements.txt
 
