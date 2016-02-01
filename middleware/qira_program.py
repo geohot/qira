@@ -157,21 +157,89 @@ class Program:
       else:
         raise Exception("windows binary with machine "+hex(wh)+" not supported")
 
+    # Mach-O FAT binaries
+    elif progdat[0:4] in ("\xCA\xFE\xBA\xBE", "\xBE\xBA\xFE\xCA", "\xCA\xFE\xD0\x0D", "\x0D\xD0\xFE\xCA"):
+      print "**** Mach-O FAT (Universal) binary detected"
+      # 0 : CPU_SUBTYPE_ARM_ALL
+      # 5 : CPU_SUBTYPE_ARM_V4T
+      # 6 : CPU_SUBTYPE_ARM_V6
+      # 7 : CPU_SUBTYPE_ARM_V5TEJ
+      # 8 : CPU_SUBTYPE_ARM_XSCALE
+      # 9 : CPU_SUBTYPE_ARM_V7
+      if progdat[8:9] in ("\x00", "\x05", "\x06", "\x07", "\x08", "\x09"):
+        print "**** Mach-O ARM architecture detected"
+        self.macharch = "ARM"
+      else:
+        self.macharch = ""
+        print "**** Mach-O X86/64 architecture detected"
+
+      if progdat[0:4] in ("\xCA\xFE\xD0\x0D", "\x0D\xD0\xFE\xCA"):
+        raise Exception("Pack200 compressed files are not supported")
+      elif progdat[0:4] == "\xCA\xFE\xBA\xBE":
+        if self.macharch == "ARM":
+          self.tregs = arch.ARMREGS
+          self.pintool = ""
+        else:
+          self.tregs = arch.X86REGS
+          self.pintool = pin_dir + "obj-ia32/qirapin.dylib"
+      elif progdat[0:4] == "\xBE\xBA\xFE\xCA":   # big endian...
+        if self.macharch == "ARM":
+          self.tregs = arch.ARMREGS
+          self.pintool = ""
+        else:
+          self.tregs = arch.X86REGS
+          self.pintool = pin_dir + "obj-ia32/qirapin.dylib"
+      else:
+        raise Exception("Mach-O FAT (Universal) binary not supported")
+      if not os.path.isfile(self.pintool):
+        print "Running a Mach-O FAT (Universal) binary requires PIN support. See tracers/pin_build.sh"
+        exit()
+      self.runnable = True
+
     # Mach-O binaries
     elif progdat[0:4] in ("\xCF\xFA\xED\xFE", "\xFE\xED\xFA\xCF", "\xCE\xFA\xED\xFE", "\xFE\xED\xFA\xCE"):
       print "**** Mach-O binary detected"
+      # 0 : CPU_SUBTYPE_ARM_ALL
+      # 5 : CPU_SUBTYPE_ARM_V4T
+      # 6 : CPU_SUBTYPE_ARM_V6
+      # 7 : CPU_SUBTYPE_ARM_V5TEJ
+      # 8 : CPU_SUBTYPE_ARM_XSCALE
+      # 9 : CPU_SUBTYPE_ARM_V7
+      if progdat[8:9] in ("\x00", "\x05", "\x06", "\x07", "\x08", "\x09"):
+        print "**** Mach-O ARM architecture detected"
+        self.macharch = "ARM"
+      else:
+        self.macharch = ""
+        print "**** Mach-O X86/64 architecture detected"
+
       if progdat[0:4] == "\xCF\xFA\xED\xFE":
-        self.tregs = arch.X64REGS
-        self.pintool = pin_dir + "obj-intel64/qirapin.dylib"
+        if self.macharch == "ARM":
+          self.tregs = arch.ARMREGS
+          self.pintool = ""
+        else:
+          self.tregs = arch.X64REGS
+          self.pintool = pin_dir + "obj-intel64/qirapin.dylib"
       elif progdat[0:4] == "\xFE\xED\xFA\xCF":   # big endian...
-        self.tregs = arch.X64REGS
-        self.pintool = pin_dir + "obj-intel64/qirapin.dylib"
+        if self.macharch == "ARM":
+          self.tregs = arch.ARMREGS
+          self.pintool = ""
+        else:
+          self.tregs = arch.X64REGS
+          self.pintool = pin_dir + "obj-intel64/qirapin.dylib"
       elif progdat[0:4] == "\xCE\xFA\xED\xFE":
-        self.tregs = arch.X86REGS
-        self.pintool = pin_dir + "obj-ia32/qirapin.dylib"
+        if self.macharch == "ARM":
+          self.tregs = arch.ARMREGS
+          self.pintool = ""
+        else:
+          self.tregs = arch.X86REGS
+          self.pintool = pin_dir + "obj-ia32/qirapin.dylib"
       elif progdat[0:4] == "\xFE\xED\xFA\xCE":   # big endian...
-        self.tregs = arch.X86REGS
-        self.pintool = pin_dir + "obj-ia32/qirapin.dylib"
+        if self.macharch == "ARM":
+          self.tregs = arch.ARMREGS
+          self.pintool = ""
+        else:
+          self.tregs = arch.X86REGS
+          self.pintool = pin_dir + "obj-ia32/qirapin.dylib"
       else:
         raise Exception("Mach-O binary not supported")
       if not os.path.isfile(self.pintool):
