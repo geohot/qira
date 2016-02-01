@@ -90,6 +90,31 @@ class Program:
     # pmaps is global, but updated by the traces
     progdat = open(self.program, "rb").read(0x800)
 
+    # 12: CPU_TYPE_ARM
+    # 0 : CPU_SUBTYPE_ARM_ALL
+    # 5 : CPU_SUBTYPE_ARM_V4T
+    # 6 : CPU_SUBTYPE_ARM_V6
+    # 7 : CPU_SUBTYPE_ARM_V5TEJ
+    # 8 : CPU_SUBTYPE_ARM_XSCALE
+    # 9 : CPU_SUBTYPE_ARM_V7
+
+    CPU_TYPE_ARM = "\x0C"
+    CPU_SUBTYPE_ARM_ALL = "\x00"
+    CPU_SUBTYPE_ARM_V4T = "\x05"
+    CPU_SUBTYPE_ARM_V6 = "\x06"
+    CPU_SUBTYPE_ARM_V5TEJ = "\x07"
+    CPU_SUBTYPE_ARM_XSCALE = "\x08"
+    CPU_SUBTYPE_ARM_V7 = "\x09"
+
+    MACHO_MAGIC = "\xFE\xED\xFA\xCE"
+    MACHO_CIGAM = "\xCE\xFA\xED\xFE"
+    MACHO_MAGIC_64 = "\xFE\xED\xFA\xCF"
+    MACHO_CIGAM_64 = "\xCF\xFA\xED\xFE"
+    MACHO_FAT_MAGIC = "\xCA\xFE\xBA\xBE"
+    MACHO_FAT_CIGAM = "\xBE\xBA\xFE\xCA"
+    MACHO_P200_FAT_MAGIC = "\xCA\xFE\xD0\x0D"
+    MACHO_P200_FAT_CIGAM = "\x0D\xD0\xFE\xCA"
+
     # Linux binaries
     if progdat[0:4] == "\x7FELF":
       # get file type
@@ -157,32 +182,28 @@ class Program:
       else:
         raise Exception("windows binary with machine "+hex(wh)+" not supported")
 
-    # Mach-O FAT binaries
-    elif progdat[0:4] in ("\xCA\xFE\xBA\xBE", "\xBE\xBA\xFE\xCA", "\xCA\xFE\xD0\x0D", "\x0D\xD0\xFE\xCA"):
+    # MACHO FAT binaries
+    elif progdat[0:4] in (MACHO_FAT_MAGIC, MACHO_FAT_CIGAM, MACHO_P200_FAT_MAGIC, MACHO_P200_FAT_CIGAM):
       print "**** Mach-O FAT (Universal) binary detected"
-      # 0 : CPU_SUBTYPE_ARM_ALL
-      # 5 : CPU_SUBTYPE_ARM_V4T
-      # 6 : CPU_SUBTYPE_ARM_V6
-      # 7 : CPU_SUBTYPE_ARM_V5TEJ
-      # 8 : CPU_SUBTYPE_ARM_XSCALE
-      # 9 : CPU_SUBTYPE_ARM_V7
-      if progdat[8:9] in ("\x00", "\x05", "\x06", "\x07", "\x08", "\x09"):
+
+      #if progdat[4:5] == CPU_TYPE_ARM:
+      if progdat[8:9] in (CPU_SUBTYPE_ARM_ALL, CPU_SUBTYPE_ARM_V4T, CPU_SUBTYPE_ARM_V6, CPU_SUBTYPE_ARM_V5TEJ, CPU_SUBTYPE_ARM_XSCALE, CPU_SUBTYPE_ARM_V7):
         print "**** Mach-O ARM architecture detected"
         self.macharch = "ARM"
       else:
         self.macharch = ""
         print "**** Mach-O X86/64 architecture detected"
 
-      if progdat[0:4] in ("\xCA\xFE\xD0\x0D", "\x0D\xD0\xFE\xCA"):
+      if progdat[0:4] in (MACHO_P200_FAT_MAGIC, MACHO_P200_FAT_CIGAM):
         raise Exception("Pack200 compressed files are not supported")
-      elif progdat[0:4] == "\xCA\xFE\xBA\xBE":
+      elif progdat[0:4] == MACHO_FAT_MAGIC:
         if self.macharch == "ARM":
           self.tregs = arch.ARMREGS
           self.pintool = ""
         else:
           self.tregs = arch.X86REGS
           self.pintool = pin_dir + "obj-ia32/qirapin.dylib"
-      elif progdat[0:4] == "\xBE\xBA\xFE\xCA":   # big endian...
+      elif progdat[0:4] == MACHO_FAT_CIGAM:   # big endian...
         if self.macharch == "ARM":
           self.tregs = arch.ARMREGS
           self.pintool = ""
@@ -196,44 +217,40 @@ class Program:
         exit()
       self.runnable = True
 
-    # Mach-O binaries
-    elif progdat[0:4] in ("\xCF\xFA\xED\xFE", "\xFE\xED\xFA\xCF", "\xCE\xFA\xED\xFE", "\xFE\xED\xFA\xCE"):
+    # MACHO binaries
+    elif progdat[0:4] in (MACHO_MAGIC_64, MACHO_CIGAM_64, MACHO_MAGIC, MACHO_CIGAM):
       print "**** Mach-O binary detected"
-      # 0 : CPU_SUBTYPE_ARM_ALL
-      # 5 : CPU_SUBTYPE_ARM_V4T
-      # 6 : CPU_SUBTYPE_ARM_V6
-      # 7 : CPU_SUBTYPE_ARM_V5TEJ
-      # 8 : CPU_SUBTYPE_ARM_XSCALE
-      # 9 : CPU_SUBTYPE_ARM_V7
-      if progdat[8:9] in ("\x00", "\x05", "\x06", "\x07", "\x08", "\x09"):
-        print "**** Mach-O ARM architecture detected"
+
+      #if progdat[4:5] == CPU_TYPE_ARM:
+      if progdat[8:9] in (CPU_SUBTYPE_ARM_ALL, CPU_SUBTYPE_ARM_V4T, CPU_SUBTYPE_ARM_V6, CPU_SUBTYPE_ARM_V5TEJ, CPU_SUBTYPE_ARM_XSCALE, CPU_SUBTYPE_ARM_V7):
+        print "**** Mach-O ARM/Aarch64 architecture detected"
         self.macharch = "ARM"
       else:
         self.macharch = ""
         print "**** Mach-O X86/64 architecture detected"
 
-      if progdat[0:4] == "\xCF\xFA\xED\xFE":
+      if progdat[0:4] == MACHO_CIGAM_64:   # big endian...
         if self.macharch == "ARM":
-          self.tregs = arch.ARMREGS
+          self.tregs = arch.AARCH64REGS
           self.pintool = ""
         else:
           self.tregs = arch.X64REGS
           self.pintool = pin_dir + "obj-intel64/qirapin.dylib"
-      elif progdat[0:4] == "\xFE\xED\xFA\xCF":   # big endian...
+      elif progdat[0:4] == MACHO_MAGIC_64:
         if self.macharch == "ARM":
-          self.tregs = arch.ARMREGS
+          self.tregs = arch.AARCH64REGS
           self.pintool = ""
         else:
           self.tregs = arch.X64REGS
           self.pintool = pin_dir + "obj-intel64/qirapin.dylib"
-      elif progdat[0:4] == "\xCE\xFA\xED\xFE":
+      elif progdat[0:4] == MACHO_CIGAM:   # big endian...
         if self.macharch == "ARM":
           self.tregs = arch.ARMREGS
           self.pintool = ""
         else:
           self.tregs = arch.X86REGS
           self.pintool = pin_dir + "obj-ia32/qirapin.dylib"
-      elif progdat[0:4] == "\xFE\xED\xFA\xCE":   # big endian...
+      elif progdat[0:4] == MACHO_MAGIC:
         if self.macharch == "ARM":
           self.tregs = arch.ARMREGS
           self.pintool = ""
