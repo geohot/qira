@@ -90,13 +90,22 @@ class Program:
     # pmaps is global, but updated by the traces
     progdat = open(self.program, "rb").read(0x800)
 
-    # 12: CPU_TYPE_ARM
-    # 0 : CPU_SUBTYPE_ARM_ALL
-    # 5 : CPU_SUBTYPE_ARM_V4T
-    # 6 : CPU_SUBTYPE_ARM_V6
-    # 7 : CPU_SUBTYPE_ARM_V5TEJ
-    # 8 : CPU_SUBTYPE_ARM_XSCALE
-    # 9 : CPU_SUBTYPE_ARM_V7
+    # 12       : CPU_TYPE_ARM
+    # 0  : CPU_SUBTYPE_ARM_ALL
+    # 5  : CPU_SUBTYPE_ARM_V4T
+    # 6  : CPU_SUBTYPE_ARM_V6
+    # 7  : CPU_SUBTYPE_ARM_V5TEJ
+    # 8  : CPU_SUBTYPE_ARM_XSCALE
+    # 9  : CPU_SUBTYPE_ARM_V7
+    # 10 : CPU_SUBTYPE_ARM_V7F
+    # 11 : CPU_SUBTYPE_ARM_V7S
+    # 12 : CPU_SUBTYPE_ARM_V7K
+    # 14 : CPU_SUBTYPE_ARM_V6M
+    # 15 : CPU_SUBTYPE_ARM_V7M
+    # 16 : CPU_SUBTYPE_ARM_V7EM
+
+    # 16777228 : CPU_TYPE_ARM64
+    # 0  : CPU_SUBTYPE_ARM64_ALL
 
     CPU_TYPE_ARM = "\x0C"
     CPU_SUBTYPE_ARM_ALL = "\x00"
@@ -105,6 +114,17 @@ class Program:
     CPU_SUBTYPE_ARM_V5TEJ = "\x07"
     CPU_SUBTYPE_ARM_XSCALE = "\x08"
     CPU_SUBTYPE_ARM_V7 = "\x09"
+    CPU_SUBTYPE_ARM_V7F = "\x0A"
+    CPU_SUBTYPE_ARM_V7S = "\x0B"
+    CPU_SUBTYPE_ARM_V7K = "\x0C"
+    CPU_SUBTYPE_ARM_V6M = "\x0E"
+    CPU_SUBTYPE_ARM_V7M = "\x0F"
+    CPU_SUBTYPE_ARM_V7EM = "\x0F"
+    CPU_SUBTYPE_ARM = [CPU_SUBTYPE_ARM_ALL, CPU_SUBTYPE_ARM_V4T, CPU_SUBTYPE_ARM_V6, CPU_SUBTYPE_ARM_V5TEJ, CPU_SUBTYPE_ARM_XSCALE, CPU_SUBTYPE_ARM_V7, CPU_SUBTYPE_ARM_V7F, CPU_SUBTYPE_ARM_V7S, CPU_SUBTYPE_ARM_V7K, CPU_SUBTYPE_ARM_V6M, CPU_SUBTYPE_ARM_V7M, CPU_SUBTYPE_ARM_V7EM]
+
+    CPU_TYPE_ARM64 = "\x01\x00\x00\x0C"
+    CPU_SUBTYPE_ARM64_ALL = "\x00"
+    CPU_SUBTYPE_ARM64 = [CPU_SUBTYPE_ARM64_ALL, CPU_SUBTYPE_ARM_V7S]
 
     MACHO_MAGIC = "\xFE\xED\xFA\xCE"
     MACHO_CIGAM = "\xCE\xFA\xED\xFE"
@@ -186,10 +206,12 @@ class Program:
     elif progdat[0:4] in (MACHO_FAT_MAGIC, MACHO_FAT_CIGAM, MACHO_P200_FAT_MAGIC, MACHO_P200_FAT_CIGAM):
       print "**** Mach-O FAT (Universal) binary detected"
 
-      #if progdat[4:5] == CPU_TYPE_ARM:
-      if progdat[8:9] in (CPU_SUBTYPE_ARM_ALL, CPU_SUBTYPE_ARM_V4T, CPU_SUBTYPE_ARM_V6, CPU_SUBTYPE_ARM_V5TEJ, CPU_SUBTYPE_ARM_XSCALE, CPU_SUBTYPE_ARM_V7):
+      if progdat[4:5] == CPU_TYPE_ARM and progdat[8:9] in CPU_SUBTYPE_ARM:
         print "**** Mach-O ARM architecture detected"
         self.macharch = "ARM"
+      elif progdat[4:8] == CPU_TYPE_ARM64 and progdat[8:9] in CPU_SUBTYPE_ARM64:
+        print "**** Mach-O Aarch64 architecture detected"
+        self.macharch = "Aarch64"
       else:
         self.macharch = ""
         print "**** Mach-O X86/64 architecture detected"
@@ -221,10 +243,12 @@ class Program:
     elif progdat[0:4] in (MACHO_MAGIC_64, MACHO_CIGAM_64, MACHO_MAGIC, MACHO_CIGAM):
       print "**** Mach-O binary detected"
 
-      #if progdat[4:5] == CPU_TYPE_ARM:
-      if progdat[8:9] in (CPU_SUBTYPE_ARM_ALL, CPU_SUBTYPE_ARM_V4T, CPU_SUBTYPE_ARM_V6, CPU_SUBTYPE_ARM_V5TEJ, CPU_SUBTYPE_ARM_XSCALE, CPU_SUBTYPE_ARM_V7):
-        print "**** Mach-O ARM/Aarch64 architecture detected"
+      if progdat[4:5] == CPU_TYPE_ARM and progdat[8:9] in CPU_SUBTYPE_ARM:
+        print "**** Mach-O ARM architecture detected"
         self.macharch = "ARM"
+      elif progdat[4:8] == CPU_TYPE_ARM64 and progdat[8:9] in CPU_SUBTYPE_ARM64:
+        print "**** Mach-O Aarch64 architecture detected"
+        self.macharch = "Aarch64"
       else:
         self.macharch = ""
         print "**** Mach-O X86/64 architecture detected"
