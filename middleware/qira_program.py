@@ -121,7 +121,7 @@ class Program:
     CPU_SUBTYPE_ARM_V7K = "\x0C"
     CPU_SUBTYPE_ARM_V6M = "\x0E"
     CPU_SUBTYPE_ARM_V7M = "\x0F"
-    CPU_SUBTYPE_ARM_V7EM = "\x0F"
+    CPU_SUBTYPE_ARM_V7EM = "\x10"
 
     CPU_SUBTYPE_ARM = [
                          CPU_SUBTYPE_ARM_V4T,
