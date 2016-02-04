@@ -24,34 +24,19 @@ struct queue_hdr {
   struct queue_item *foot;
 };
 
+struct queue_hdr gq = { .head = NULL, .foot = NULL };
+
 struct queue_item {
   unsigned char *s;
   size_t len;
   struct queue_item *next;
 };
 
-struct queue_hdr *gq = NULL;
-
-void report_msg(char *s) {
-  msg("%s in QIRA plugin. Please report to the maintainers.\n");
-}
-
-void init_queue() {
-  struct queue_hdr *q = (struct queue_hdr *)qalloc(sizeof(queue_hdr));
-  if (q == NULL) {
-    report_msg("init_queue: qalloc failed");
-    return;
-  }
-  q->head = NULL;
-  q->foot = NULL;
-  gq = q;
+void report_msg(char *fn, char *error) {
+  msg("%s: `%s` in QIRA plugin. Please report to the maintainers.\n", fn, error);
 }
 
 void destroy_queue() {
-  if (gq == NULL) {
-    report_msg("destroy_queue: no queue to destroy");
-    return;
-  }
   struct queue_item *cur = gq->head;
   while (cur != NULL) {
     struct queue_item *next = cur->next;
@@ -59,38 +44,39 @@ void destroy_queue() {
     qfree(cur);
     cur = next;
   }
-  qfree(gq);
 }
 
 // returns 0 on success, -1 on failure
 int enqueue(unsigned char *s, size_t len) {
-  struct queue_item *qe = (struct queue_item*)qalloc(sizeof(queue_item));
-  if (qe == NULL) {
-    report_msg("enqueue: qalloc failed");
-    return -1;
-  }
-  
-  qe->s = s;
-  qe->len = len;
-  qe->next = NULL;
-  
-  if (gq == NULL) {
-    report_msg("enqueue: gq == NULL");
+  if (s == NULL) {
+    report_msg("enqueue", "s == NULL");
     return -1;
   }
 
+  struct queue_item *qe = (struct queue_item*)qalloc(sizeof(queue_item));
+  if (qe == NULL) {
+    report_msg("enqueue", "qalloc failed");
+    return -1;
+  }
+
+  qe->s = s;
+  qe->len = len;
+  qe->next = NULL;
+
+  // empty queue case
   if (gq->foot == NULL) {
-    if (gq->head == NULL) {
-      report_msg("enqueue: gq->head == NULL");
+    if (gq->head != NULL) {
+      report_msg("enqueue", "gq->foot == NULL, but gq->head != NULL");
       return -1;
     }
     gq->head = qe;
     gq->foot = qe;
     return 0;
   }
-  
-  if (gq->head == NULL || gq->foot == NULL) {
-    report_msg("enqueue: null gq->head or gq->foot");
+
+  assert(gq->foot != NULL);
+  if (gq->head == NULL) {
+    report_msg("enqueue", "null gq->head");
     qfree(qe);
     return -1;
   }
@@ -104,7 +90,7 @@ struct queue_item *dequeue() {
   struct queue_item *head = gq->head;
   if (head == NULL) {
     if (gq->foot != NULL) {
-      report_msg("dequeue: non-null gq->foot in dequeue");
+      report_msg("dequeue", "null head with non-null gq->foot");
     }
     return NULL;
   }
@@ -147,6 +133,10 @@ static void thread_safe_set_item_color(ea_t a, bgcolor_t b) {
 }
 
 static void thread_safe_set_name(ea_t a, const char *b, int c) {
+  if (b == NULL) {
+    report_msg("thread_safe_set_name", "null name string");
+    return;
+  }
   struct uireq_set_name_t: public ui_request_t {
     uireq_set_name_t(ea_t a, const char *b, int c) {
       la = a;
@@ -165,6 +155,10 @@ static void thread_safe_set_name(ea_t a, const char *b, int c) {
 }
 
 static void thread_safe_set_cmt(ea_t a, const char *b, bool c) {
+  if (b == NULL) {
+    report_msg("thread_safe_set_cmt", "null name string");
+    return;
+  }
   struct uireq_set_cmt_t: public ui_request_t {
     uireq_set_cmt_t(ea_t a, const char *b, bool c) {
       la = a;
@@ -497,7 +491,6 @@ void exit_websocket_thread() {
 
 int idaapi IDAP_init(void) {
   hook_to_notification_point(HT_VIEW, hook, NULL);
-  init_queue();
   start_websocket_thread();
   return PLUGIN_KEEP;
 }
