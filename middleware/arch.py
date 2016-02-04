@@ -36,9 +36,7 @@ MIPSREGLIST.append('$sp')
 MIPSREGLIST.append('$fp')
 MIPSREGLIST.append('$ra')
 MIPSREGLIST.append('$pc')
-
 MIPSREGS = [MIPSREGLIST, 4, True, "mips", ["jal\t","jr\t","jal","jr"]]
-MIPSELREGS = [MIPSREGLIST, 4, False, "mipsel", ["jal\t","jr\t","jal","jr"]]
 
 # ARM CPU
 ARMREGS = [['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','IP','SP','LR','PC'], 4, False, "arm"]

@@ -164,18 +164,22 @@ class Program:
         self.tregs = arch.X86REGS
         self.qirabinary = qemu_dir + "qira-i386"
         self.pintool = pin_dir + "obj-ia32/qirapin.so"
+      elif self.fb == 0x800:
+        use_lib('mips')
+        arch.MIPSREGS[2] = True
+        arch.MIPSREGS[3] = "mips"
+        self.tregs = arch.MIPSREGS
+        self.qirabinary = qemu_dir + 'qira-mips'
       elif self.fb == 0x08:
         use_lib('mipsel')
-        self.tregs = arch.MIPSELREGS
+        arch.MIPSREGS[2] = False
+        arch.MIPSREGS[3] = "mipsel"
+        self.tregs = arch.MIPSREGS
         self.qirabinary = qemu_dir + 'qira-mipsel'
       elif self.fb == 0x1400:   # big endian...
         use_lib('powerpc')
         self.tregs = arch.PPCREGS
         self.qirabinary = qemu_dir + "qira-ppc"
-      elif self.fb == 0x800:
-        use_lib('mips')
-        self.tregs = arch.MIPSREGS
-        self.qirabinary = qemu_dir + 'qira-mips'
       else:
         raise Exception("binary type "+hex(self.fb)+" not supported")
 
