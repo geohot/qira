@@ -46,7 +46,7 @@ if [[ "$unamestr" == 'Linux' ]]; then
     cd ../
   fi
 elif [[ "$unamestr" == 'Darwin' ]]; then
-  if [ $(brew > /dev/null; echo $?) == 1 ]; then
+  if [ $(which brew) ]; then
     echo "Installing OS X dependencies"
     brew update
     brew install python capstone
