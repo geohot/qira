@@ -11,11 +11,7 @@
 //What about people who group blocks and "name" them pseudocode?
 #define MAX_COMMENT_LEN 100
 
-// delay trail drawing by this many microseconds
-// we are performant enough to handle 0 by IDA
-// has a race condition that's seems to be
-// mitigated by this
-#define TRAIL_DELAY 200000
+#define WHITE 0xFFFFFFFF
 
 //#define DEBUG
 
@@ -24,13 +20,16 @@ struct queue_hdr {
   struct queue_item *foot;
 };
 
-struct queue_hdr gq = { .head = NULL, .foot = NULL };
-
 struct queue_item {
   unsigned char *s;
   size_t len;
   struct queue_item *next;
 };
+
+static struct queue_hdr gq = { .head = NULL, .foot = NULL };
+static ea_t qira_address = BADADDR;
+static ea_t trail_addresses[MAX_NUM_COLORS] = { 0 };
+static int trail_i = 0;
 
 void report_msg(char *fn, char *error) {
   msg("%s: `%s` in QIRA plugin. Please report to the maintainers.\n", fn, error);
@@ -67,6 +66,7 @@ int enqueue(unsigned char *s, size_t len) {
   if (gq->foot == NULL) {
     if (gq->head != NULL) {
       report_msg("enqueue", "gq->foot == NULL, but gq->head != NULL");
+      qfree(qe);
       return -1;
     }
     gq->head = qe;
@@ -74,6 +74,7 @@ int enqueue(unsigned char *s, size_t len) {
     return 0;
   }
 
+  // non-empty case
   assert(gq->foot != NULL);
   if (gq->head == NULL) {
     report_msg("enqueue", "null gq->head");
@@ -88,18 +89,30 @@ int enqueue(unsigned char *s, size_t len) {
 
 struct queue_item *dequeue() {
   struct queue_item *head = gq->head;
+
+  // queue is empty
   if (head == NULL) {
     if (gq->foot != NULL) {
-      report_msg("dequeue", "null head with non-null gq->foot");
+      report_msg("dequeue", "invariant violated: null head with non-null gq->foot");
     }
     return NULL;
   }
+
+  // advance global head
   gq->head = head->next;
+
+  // dequeued last element?
   if (gq->head == NULL) {
-    //dequeued last element
+    if (gq->tail != head) {
+      report_msg("dequeue", "invariant violated: internal list pointer invalid");
+    }
+    // clear the foot if we're at the end of the list
     gq->foot = NULL;
   }
-  return head; //caller must free, since this is a struct
+
+  // return the popped head
+  // it's the caller's reponsibility to free this
+  return head;
 }
 
 // ***************** WEBSOCKETS *******************
@@ -111,10 +124,6 @@ static int callback_http(struct libwebsocket_context* context,
     void* in, size_t len) {
   return 0;
 }
-
-ea_t qira_address = BADADDR;
-ea_t trail_addresses[MAX_NUM_COLORS] = { 0 };
-int trail_i = 0;
 
 static void thread_safe_set_item_color(ea_t a, bgcolor_t b) {
   struct uireq_set_item_color_t: public ui_request_t {
@@ -177,17 +186,18 @@ static void thread_safe_set_cmt(ea_t a, const char *b, bool c) {
 }
 
 static void clear_trail_colors() {
-  bgcolor_t white = 0xFFFFFFFF;
   for (size_t i = 0; i < MAX_NUM_COLORS; i++) {
     ea_t addr = trail_addresses[i];
     if (addr != 0) {
-      thread_safe_set_item_color(addr, white);
+      thread_safe_set_item_color(addr, WHITE);
       trail_addresses[i] = 0;
     }
   }
   trail_i = 0;
 }
 
+// adds another color to the trail.
+// if the trail is full, do nothing.
 static void add_trail_color(int clnum, ea_t addr) {
   if (trail_i >= MAX_NUM_COLORS) return;
   trail_addresses[trail_i] = addr;
@@ -197,6 +207,10 @@ static void add_trail_color(int clnum, ea_t addr) {
 }
 
 static void set_trail_colors(char *in) {
+  if (in == NULL) {
+    report_msg("set_trail_colors": "in == NULL");
+  }
+
   char *dat = (char*)in + sizeof("settrail ") - 1;
   char *token, *clnum_s, *addr_s;
 
@@ -204,9 +218,15 @@ static void set_trail_colors(char *in) {
 
   while ((token = strsep(&dat, ";")) != NULL) {
     clnum_s = strsep(&token, ",");
-    if (clnum_s == NULL) break;
+    if (clnum_s == NULL) {
+      report_msg("set_trail_colors", "clnum_s == NULL");
+      return;
+    }
     addr_s = strsep(&token, ",");
-    if (addr_s == NULL) break;
+    if (addr_s == NULL) {
+      report_msg("set_trail_colors", "addr_s == NULL");
+      return;
+    }
     #ifdef __EA64__
       int clnum = strtoull(clnum_s, NULL, 0);
       ea_t addr = strtoull(addr_s, NULL, 0);
@@ -259,6 +279,10 @@ static int callback_qira(struct libwebsocket_context* context,
       #ifdef DEBUG
         msg("QIRARX:%s\n", (char *)in);
       #endif
+      if (in == NULL) {
+        report_msg("callback_qira": "in == NULL");
+        break;
+      }
       if (memcmp(in, "setaddress ", sizeof("setaddress ")-1) == 0) {
         // untested
         #ifdef __EA64__
@@ -269,15 +293,17 @@ static int callback_qira(struct libwebsocket_context* context,
         thread_safe_jump_to(addr);
       } else if (memcmp(in, "setname ", sizeof("setname ")-1) == 0) {
         char *dat = (char*)in + sizeof("setname ") - 1;
-
         char *space = strchr(dat, ' ');
+
         if (space == NULL) {
-          report_msg("callback_qira: receieved malformed setname");
+          report_msg("callback_qira", "receieved malformed setname");
           break;
         }
         if (strlen(dat) - strlen(space) <= 1) {
-          report_msg("callback_qira: recieved empty setname");
+          // not fatal
+          report_msg("callback_qira", "recieved empty setname");
         }
+
         *space = '\0';
         char *name = space + 1;
         char *addr_s = dat;
@@ -327,27 +353,53 @@ static void ws_send(char *str) {
   #ifdef DEBUG
     msg("QIRATX:%s\n", str);
   #endif
+  if (gwsi == NULL) {
+    // gwsi not initialized yet
+    return;
+  }
+
+  if (str == NULL) {
+    report_msg("ws_send", "str == NULL");
+    return;
+  }
+
   size_t len = strlen(str);
-  if (len == 0) return;
+  if (len == 0) {
+    return;
+  }
+
   unsigned char *buf = (unsigned char*)
     qalloc(LWS_SEND_BUFFER_PRE_PADDING + len + LWS_SEND_BUFFER_POST_PADDING);
-  memcpy(&buf[LWS_SEND_BUFFER_PRE_PADDING], str, len);
-  if (enqueue(buf, len) < 0) {
-    report_msg("ws_send: failed to enqueue %s\n");
+  if (buf == NULL) {
+    report_msg("ws_send", "qalloc failed");
+    return;
   }
-  if (gwsi) {
-    while (!lws_send_pipe_choked(gwsi)) {
-      if (to_send != NULL) {
-        //last thing went through, free it
-        qfree(to_send->s);
-        qfree(to_send);
-      }
-      to_send = dequeue();
-      if (to_send == NULL)
-        break;
-      libwebsocket_write(gwsi, &to_send->s[LWS_SEND_BUFFER_PRE_PADDING],
-        to_send->len, LWS_WRITE_TEXT);
+
+  memcpy(&buf[LWS_SEND_BUFFER_PRE_PADDING], str, len);
+
+  if (enqueue(buf, len) < 0) {
+    report_msg("ws_send", "failed to enqueue string");
+  }
+
+  // If we're blocked, wait until the next ws_send to dequeue
+  // and send the passed string. I would make another worker
+  // thread to do this, but libwebsockets is not thread safe. :(
+  while (!lws_send_pipe_choked(gwsi)) {
+    if (to_send != NULL) {
+      // libwebsocket_write does not block so
+      // we need to make sure to_send is allocated
+      // until the pipe is clear, which we won't know
+      // unless !lws_send_pipe_choked(gwsi). Therefore
+      // we free to_send->s and to_send if necessary
+      // in IDA_term.
+      qfree(to_send->s);
+      qfree(to_send);
     }
+    to_send = dequeue();
+    if (to_send == NULL)
+      break;
+    libwebsocket_write(gwsi, &to_send->s[LWS_SEND_BUFFER_PRE_PADDING],
+      to_send->len, LWS_WRITE_TEXT);
   }
 }
 
@@ -498,6 +550,11 @@ int idaapi IDAP_init(void) {
 void idaapi IDAP_term(void) {
   unhook_from_notification_point(HT_VIEW, hook);
   exit_websocket_thread();
+  // see ws_send
+  if (to_send != NULL) {
+    qfree(to_send->s);
+    qfree(to_send);
+  }
   destroy_queue();
   return;
 }
