@@ -23,7 +23,7 @@ cd qira/
 ## Installation Extras
 
 * ./fetchlibs.sh will fetch the libraries for i386, armhf, armel, aarch64, mips, mipsel, and ppc
-* ./pin_build.sh will install the QIRA PIN plugin, allowing --pin to work
+* ./tracers/pin_build.sh will install the QIRA PIN plugin, allowing --pin to work
 
 
 ## Releases
