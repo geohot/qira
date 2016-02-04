@@ -257,7 +257,7 @@ class Program:
         else:
           self.tregs = arch.X64REGS
           self.pintool = pin_dir + "obj-intel64/qirapin.dylib"
-      if progdat[0x0:0x04] in (MACHO_MAGIC, MACHO_CIGAM):
+      elif progdat[0x0:0x04] in (MACHO_MAGIC, MACHO_CIGAM):
         if self.macharch == "arm":
           self.tregs = arch.ARMREGS
           self.pintool = ""
