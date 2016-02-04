@@ -319,11 +319,11 @@ static int callback_qira(struct libwebsocket_context* context,
 
         char *space = strchr(dat, ' ');
         if (space == NULL) {
-          msg("callback_qira: receieved malformed setcmt");
+          report_msg("callback_qira", "receieved malformed setcmt");
           break;
         }
         if (strlen(dat) - strlen(space) <= 1) {
-          msg("callback_qira: recieved empty setcmt");
+          report_msg("callback_qira", "recieved empty setcmt");
         }
         *space = '\0';
         char *cmt = space + 1;
@@ -516,7 +516,7 @@ int idaapi websocket_thread(void *) {
   context = libwebsocket_create_context(&info);
 
   if (context == NULL) {
-    msg("websocket init failed\n");
+    report_msg("websockets_thread", "websocket init failed");
     return -1;
   }
 
