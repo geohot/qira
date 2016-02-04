@@ -32,10 +32,14 @@ struct queue_item {
 
 struct queue_hdr *gq = NULL;
 
+void report_msg(char *s) {
+  msg("%s in QIRA plugin. Please report to the maintainers.\n");
+}
+
 void init_queue() {
   struct queue_hdr *q = (struct queue_hdr *)qalloc(sizeof(queue_hdr));
-  if (!q) {
-    msg("qalloc failed in init_queue\n");
+  if (q == NULL) {
+    report_msg("init_queue: qalloc failed");
     return;
   }
   q->head = NULL;
@@ -44,8 +48,8 @@ void init_queue() {
 }
 
 void destroy_queue() {
-  if (!gq) {
-    msg("no queue to destroy\n");
+  if (gq == NULL) {
+    report_msg("destroy_queue: no queue to destroy");
     return;
   }
   struct queue_item *cur = gq->head;
@@ -58,41 +62,58 @@ void destroy_queue() {
   qfree(gq);
 }
 
-void enqueue(unsigned char *s, size_t len) {
+// returns 0 on success, -1 on failure
+int enqueue(unsigned char *s, size_t len) {
   struct queue_item *qe = (struct queue_item*)qalloc(sizeof(queue_item));
-  if (!qe) {
-    msg("qalloc failed in enqueue\n");
-    return;
+  if (qe == NULL) {
+    report_msg("enqueue: qalloc failed");
+    return -1;
   }
+  
   qe->s = s;
   qe->len = len;
   qe->next = NULL;
-  assert(gq != NULL); //should have been inited
+  
+  if (gq == NULL) {
+    report_msg("enqueue: gq == NULL");
+    return -1;
+  }
+
   if (gq->foot == NULL) {
-    assert(gq->head == NULL); //empty
+    if (gq->head == NULL) {
+      report_msg("enqueue: gq->head == NULL");
+      return -1;
+    }
     gq->head = qe;
     gq->foot = qe;
+    return 0;
   }
-  else if (gq->head == NULL || gq->foot == NULL) {
-    msg("broken queue!\n");
+  
+  if (gq->head == NULL || gq->foot == NULL) {
+    report_msg("enqueue: null gq->head or gq->foot");
     qfree(qe);
-    return;
-  } else {
-    gq->foot->next = qe;
-    gq->foot = qe;
+    return -1;
   }
+  
+  gq->foot->next = qe;
+  gq->foot = qe;
+  return 0;
 }
 
 struct queue_item *dequeue() {
   struct queue_item *head = gq->head;
   if (head == NULL) {
-    assert(gq->foot == NULL);
+    if (gq->foot != NULL) {
+      report_msg("dequeue: non-null gq->foot in dequeue");
+    }
     return NULL;
   }
   gq->head = head->next;
-  if (gq->head == NULL) //dequeued last element
+  if (gq->head == NULL) {
+    //dequeued last element
     gq->foot = NULL;
-  return head; //caller must free, since this is a tuple
+  }
+  return head; //caller must free, since this is a struct
 }
 
 // ***************** WEBSOCKETS *******************
@@ -257,11 +278,11 @@ static int callback_qira(struct libwebsocket_context* context,
 
         char *space = strchr(dat, ' ');
         if (space == NULL) {
-          msg("receieved malformed setname\n");
+          report_msg("callback_qira: receieved malformed setname");
           break;
         }
         if (strlen(dat) - strlen(space) <= 1) {
-          msg("recieved empty setname");
+          report_msg("callback_qira: recieved empty setname");
         }
         *space = '\0';
         char *name = space + 1;
@@ -278,11 +299,11 @@ static int callback_qira(struct libwebsocket_context* context,
 
         char *space = strchr(dat, ' ');
         if (space == NULL) {
-          msg("receieved malformed setcmt\n");
+          msg("callback_qira: receieved malformed setcmt");
           break;
         }
         if (strlen(dat) - strlen(space) <= 1) {
-          msg("recieved empty setcmt");
+          msg("callback_qira: recieved empty setcmt");
         }
         *space = '\0';
         char *cmt = space + 1;
@@ -317,7 +338,9 @@ static void ws_send(char *str) {
   unsigned char *buf = (unsigned char*)
     qalloc(LWS_SEND_BUFFER_PRE_PADDING + len + LWS_SEND_BUFFER_POST_PADDING);
   memcpy(&buf[LWS_SEND_BUFFER_PRE_PADDING], str, len);
-  enqueue(buf, len);
+  if (enqueue(buf, len) < 0) {
+    report_msg("ws_send: failed to enqueue %s\n");
+  }
   if (gwsi) {
     while (!lws_send_pipe_choked(gwsi)) {
       if (to_send != NULL) {
