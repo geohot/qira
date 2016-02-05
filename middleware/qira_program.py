@@ -166,14 +166,12 @@ class Program:
         self.pintool = pin_dir + "obj-ia32/qirapin.so"
       elif self.fb == 0x800:
         use_lib('mips')
-        arch.MIPSREGS[2] = True
-        arch.MIPSREGS[3] = "mips"
+        arch.MIPSREGS[2:-1] = (True, "mips")
         self.tregs = arch.MIPSREGS
         self.qirabinary = qemu_dir + 'qira-mips'
       elif self.fb == 0x08:
         use_lib('mipsel')
-        arch.MIPSREGS[2] = False
-        arch.MIPSREGS[3] = "mipsel"
+        arch.MIPSREGS[2:-1] = (False, "mipsel")
         self.tregs = arch.MIPSREGS
         self.qirabinary = qemu_dir + 'qira-mipsel'
       elif self.fb == 0x1400:   # big endian...
