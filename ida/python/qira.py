@@ -13,14 +13,17 @@ def start_server():
 
 def set_qira_address(la):
   global qira_address
-  #if qira_address != BADADDR:
-  #   del_bpt(qira_address)
+  if qira_address is not None and qira_address != BADADDR:
+    ea=idaapi.toEA(0,qira_address)
+  if CheckBpt(ea) > 0:
+     idaapi.del_bpt(ea)
   qira_address = la
-  #idaapi.add_bpt(qira_address)
-  #idaapi.disable_bpt(qira_address)
+  idaapi.add_bpt(qira_address, 0, BPT_SOFT)
+  EnableBpt(qira_address, False)
 
 def jump_to(a):
-  if (qira_address != a):
+  global qira_address
+  if (qira_address != a) and (a != BADADDR):
     set_qira_address(a)
     idaapi.jumpto(qira_address, -1, 0)
   else:
@@ -32,13 +35,13 @@ def ws_send(msg):
       conn.sendMessage(msg)
 
 def update_address(addr_type, addr):
-  cmd = "set%s 0x%x" % (addr_type, addr,)
+  cmd = "set%s 0x%x" % (addr_type, addr)
   ws_send(cmd)
 
 class qiraplugin_t(idaapi.plugin_t):
   flags = 0
-  comment = ""
-  help = ""
+  comment = "QEMU Interactive Runtime Analyser plugin"
+  help = "Visit qira.me for more infos"
   wanted_name = "QIRA Plugin"
   wanted_hotkey = "Alt-F5"
 
@@ -53,12 +56,14 @@ class qiraplugin_t(idaapi.plugin_t):
 
 
   def run(self, arg):
+    global qira_address
     idaapi.msg("[QIRA Plugin] Syncing with Qira\n")
     self.addr = idaapi.get_screen_ea()
     if (self.old_addr != self.addr):
       if (idaapi.isCode(idaapi.getFlags(self.addr))):
         # don't update the address if it's already the qira address
         if (self.addr != qira_address):
+          idaapi.msg("[QIRA Plugin] Qira Address %x \n" % (self.addr))
           # Instruction Address
           set_qira_address(self.addr)
           update_address("iaddr", self.addr)

@@ -44,6 +44,6 @@ ARMREGS = [['R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','IP','
 # Intel x86 CPU REGS
 X86REGS = [['EAX', 'ECX', 'EDX', 'EBX', 'ESP', 'EBP', 'ESI', 'EDI', 'EIP'], 4, False, "i386"]
 
-# x86_64 CPU REGSZ
+# x86_64 CPU REGS
 X64REGS = [['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15", 'RIP'], 8, False, "x86-64"]
 
