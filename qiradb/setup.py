@@ -1,13 +1,13 @@
 #!/usr/bin/env python2.7
-from setuptools import setup, Extension
-
-# should be a symlink to the root
-# could also add the git rev to this?
-version=open('VERSION').read().strip()
+from version import __version__
+from setuptools import setup, Extension, Command
 
 # the c++ extension module
-extension_mod = Extension("qiradb._qiradb", ["qiradb/Trace.cpp", "qiradb/_qiradb.cpp"])
+extension_mod = Extension("qiradb._qiradb", sources=["qiradb/Trace.cpp", "qiradb/_qiradb.cpp"], language="c++")
+
+url="https://github.com/BinaryAnalysisPlatform"
+description="QEMU Interactive Runtime Analyser, QIRADB Tracer package."
 
 # specify the package
-setup(name='qiradb', version=version, ext_modules=[extension_mod], packages=['qiradb'])
+setup(name='qiradb', version=__version__, url=url, description=description, ext_modules=[extension_mod], packages=['qiradb'])
 
