@@ -13,30 +13,35 @@ def start_server():
 
 def set_qira_address(la):
   global qira_address
+  ea=0
   if qira_address is not None and qira_address != BADADDR:
-    ea=idaapi.toEA(0,qira_address)
-  if CheckBpt(ea) > 0:
-     idaapi.del_bpt(ea)
+    ea=idaapi.toEA(0, qira_address)
+    if CheckBpt(ea) > 0:
+      idaapi.del_bpt(ea)
+
   qira_address = la
   idaapi.add_bpt(qira_address, 0, BPT_SOFT)
   EnableBpt(qira_address, False)
 
 def jump_to(a):
   global qira_address
-  if (qira_address != a) and (a != BADADDR):
-    set_qira_address(a)
-    idaapi.jumpto(qira_address, -1, 0)
-  else:
-    idaapi.jumpto(qira_address, -1, 0)
+  if a is not None:
+    if (a != qira_address) and (a != BADADDR):
+      set_qira_address(a)
+      idaapi.jumpto(qira_address, -1, 0)
+    else:
+      idaapi.jumpto(qira_address, -1, 0)
 
 def ws_send(msg):
-  if wsserver is not None:
+  global wsserver
+  if (wsserver is not None) and (msg is not None):
     for conn in wsserver.connections.itervalues():
       conn.sendMessage(msg)
 
 def update_address(addr_type, addr):
-  cmd = "set%s 0x%x" % (addr_type, addr)
-  ws_send(cmd)
+  if (addr_type is not None) and (addr is not None):
+    cmd = "set%s 0x%x" % (addr_type, addr)
+    ws_send(cmd)
 
 class qiraplugin_t(idaapi.plugin_t):
   flags = 0
@@ -61,8 +66,8 @@ class qiraplugin_t(idaapi.plugin_t):
     self.addr = idaapi.get_screen_ea()
     if (self.old_addr != self.addr):
       if (idaapi.isCode(idaapi.getFlags(self.addr))):
-        # don't update the address if it's already the qira address
-        if (self.addr != qira_address):
+        # don't update the address if it's already the qira address or None
+        if (self.addr is not None) and (self.addr != qira_address):
           idaapi.msg("[QIRA Plugin] Qira Address %x \n" % (self.addr))
           # Instruction Address
           set_qira_address(self.addr)
