@@ -35,10 +35,10 @@ cp $OUTPUT "$IDAROOT/plugins"
 cp $OUTPUT64 "$IDAROOT/plugins"
 
 if [[ "$unamestr" == 'Linux' ]]; then
-  cp $OUTPUT bin/qira_ida66_linux.plx
-  cp $OUTPUT64 bin/qira_ida66_linux.plx64
+  cp $OUTPUT bin/qira_ida_linux.plx
+  cp $OUTPUT64 bin/qira_ida_linux.plx64
 elif [[ "$unamestr" == 'Darwin' ]]; then
-  cp $OUTPUT bin/qira_ida66_mac.pmc
-  cp $OUTPUT64 bin/qira_ida66_mac.pmc64
+  cp $OUTPUT bin/qira_ida_mac.pmc
+  cp $OUTPUT64 bin/qira_ida_mac.pmc64
 fi
 

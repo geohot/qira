@@ -1,7 +1,12 @@
 #include <ida.hpp>
 #include <idp.hpp>
+#include <dbg.hpp>
 #include <loader.hpp>
+#include <kernwin.hpp>
 #include <bytes.hpp>
+#include <offset.hpp>
+#include <auto.hpp>
+#include <entry.hpp>
 #include <name.hpp>
 #include <time.h>
 
@@ -493,8 +498,8 @@ void idaapi IDAP_run(int arg) {
   return;
 }
 
-char IDAP_comment[] 	= "This is my test plug-in";
-char IDAP_help[] 		= "My plugin";
+char IDAP_comment[] 	= "QEMU Interactive Runtime Analyser server";
+char IDAP_help[] 		= "Visit qira.me for more infos";
 char IDAP_name[] 		= "QIRA server";
 char IDAP_hotkey[] 	= "Alt-X";
 

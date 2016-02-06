@@ -164,18 +164,20 @@ class Program:
         self.tregs = arch.X86REGS
         self.qirabinary = qemu_dir + "qira-i386"
         self.pintool = pin_dir + "obj-ia32/qirapin.so"
+      elif self.fb == 0x800:
+        use_lib('mips')
+        arch.MIPSREGS[2:-1] = (True, "mips")
+        self.tregs = arch.MIPSREGS
+        self.qirabinary = qemu_dir + 'qira-mips'
       elif self.fb == 0x08:
         use_lib('mipsel')
-        self.tregs = arch.MIPSELREGS
+        arch.MIPSREGS[2:-1] = (False, "mipsel")
+        self.tregs = arch.MIPSREGS
         self.qirabinary = qemu_dir + 'qira-mipsel'
       elif self.fb == 0x1400:   # big endian...
         use_lib('powerpc')
         self.tregs = arch.PPCREGS
         self.qirabinary = qemu_dir + "qira-ppc"
-      elif self.fb == 0x800:
-        use_lib('mips')
-        self.tregs = arch.MIPSREGS
-        self.qirabinary = qemu_dir + 'qira-mips'
       else:
         raise Exception("binary type "+hex(self.fb)+" not supported")
 
@@ -217,6 +219,9 @@ class Program:
       if progdat[0x0:0x04] in (MACHO_P200_FAT_MAGIC, MACHO_P200_FAT_CIGAM):
         raise NotImplementedError("Pack200 compressed files are not supported yet")
       elif progdat[0x0:0x04] in (MACHO_FAT_MAGIC, MACHO_FAT_CIGAM):
+        if progdat[0x0:0x04] == MACHO_FAT_CIGAM:
+          arch.ARMREGS[2] = True
+          arch.AARCH64REGS[2] = True
         if self.macharch == "arm":
           self.tregs = arch.ARMREGS
           self.pintool = ""
@@ -251,6 +256,8 @@ class Program:
         print "**** Mach-O X86/64 architecture detected"
 
       if progdat[0x0:0x04] in (MACHO_MAGIC_64, MACHO_CIGAM_64):
+        if progdat[0x0:0x04] == MACHO_CIGAM_64:
+          arch.AARCH64REGS[2] = True
         if self.macharch == "aarch64":
           self.tregs = arch.AARCH64REGS
           self.pintool = ""
@@ -258,6 +265,8 @@ class Program:
           self.tregs = arch.X64REGS
           self.pintool = pin_dir + "obj-intel64/qirapin.dylib"
       elif progdat[0x0:0x04] in (MACHO_MAGIC, MACHO_CIGAM):
+        if progdat[0x0:0x04] == MACHO_CIGAM:
+          arch.ARMREGS[2] = True
         if self.macharch == "arm":
           self.tregs = arch.ARMREGS
           self.pintool = ""
