@@ -31,7 +31,7 @@ if [[ "$unamestr" == 'Linux' ]]; then
 
   elif [ $(which pacman) ]; then
     echo "installing pip"
-    sudo pacman -S --needed --noconfirm base-devel python2-pip python2-virtualenv
+    sudo pacman -Sy --needed --noconfirm base-devel python2-pip python2-virtualenv
     PIP="pip2"
   elif [ $(which yum) ]; then
     sudo yum install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
