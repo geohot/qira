@@ -7,9 +7,12 @@ else
     PIP="pip"
 fi
 
-LIBCAPSTONE_SHA256="a7bf1cb814c6e712a314659b074bc4c00d2e0006cac67d055d3130d4ecdd525d"
+LIBCAPSTONE64_SHA256="a7bf1cb814c6e712a314659b074bc4c00d2e0006cac67d055d3130d4ecdd525d"
+LIBCAPSTONE32_SHA256="4ffb4630829b9b4e8c713ae8336a8259b180194233f248170bfe0d1577257fb2"
 
 unamestr=$(uname)
+arch=$(uname -p)
+
 if [[ "$unamestr" == 'Linux' ]]; then
   # we need pip to install python stuff
   # build for building qiradb and stuff for flask like gevent
@@ -20,10 +23,14 @@ if [[ "$unamestr" == 'Linux' ]]; then
     sudo apt-get -qq -y install build-essential python-dev python-pip python-virtualenv debootstrap debian-archive-keyring libjpeg-dev zlib1g-dev unzip wget graphviz curl
 
     # install capstone
-    curl -o /tmp/libcapstone3.deb http://www.capstone-engine.org/download/3.0.4/ubuntu-14.04/libcapstone3_3.0.4-0.1ubuntu1_amd64.deb
-
+    if [ "$arch" == 'i686' ]; then
+        curl -o /tmp/libcapstone3.deb http://www.capstone-engine.org/download/3.0.4/ubuntu-14.04/libcapstone3_3.0.4-0.1ubuntu1_i386.deb
+    else
+        curl -o /tmp/libcapstone3.deb http://www.capstone-engine.org/download/3.0.4/ubuntu-14.04/libcapstone3_3.0.4-0.1ubuntu1_amd64.deb
+    fi
+    
     HASH=`sha256sum /tmp/libcapstone3.deb 2>/dev/null | cut -d' ' -f1`
-    if [ "$HASH" != "$LIBCAPSTONE_SHA256" ]; then
+    if [ "$HASH" != "$LIBCAPSTONE64_SHA256"] ||  ["$HASH" != "$LIBCAPSTONE32_SHA256"]; then
       echo "Error: libcapstone3.deb has an invalid checksum."
       exit 1
     fi
