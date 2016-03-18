@@ -245,7 +245,7 @@ def navigatefunction(forknum, clnum, start):
     if clnum == trace.minclnum or clnum == trace.maxclnum:
       ret = clnum
       break
-  emit('setclnum', forknum, ret)
+  emit('setclnum', {'forknum': forknum, 'clnum': ret})
 
 
 @socketio.on('getinstructions', namespace='/qira')
