@@ -30,7 +30,7 @@ if [[ "$unamestr" == 'Linux' ]]; then
     fi
     
     HASH=`sha256sum /tmp/libcapstone3.deb 2>/dev/null | cut -d' ' -f1`
-    if [ "$HASH" != "$LIBCAPSTONE64_SHA256" ] || [ "$HASH" != "$LIBCAPSTONE32_SHA256" ]; then
+    if [ "$HASH" != "$LIBCAPSTONE64_SHA256" ] && [ "$HASH" != "$LIBCAPSTONE32_SHA256" ]; then
       echo "Error: libcapstone3.deb has an invalid checksum."
       exit 1
     fi
