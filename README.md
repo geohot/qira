@@ -23,7 +23,7 @@ cd qira/
 ## Installation Extras
 
 * ./fetchlibs.sh will fetch the libraries for i386, armhf, armel, aarch64, mips, mipsel, and ppc
-* ./pin_build.sh will install the QIRA PIN plugin, allowing --pin to work
+* ./tracers/pin_build.sh will install the QIRA PIN plugin, allowing --pin to work
 
 
 ## Releases
@@ -77,8 +77,6 @@ m -- go to return from current function
 
 z -- zoom out max on vtimeline
 
-l -- set iaddr to instruction at current clnum
-
 left  -- -1 fork
 right -- +1 fork
 up    -- -1 clnum
@@ -90,8 +88,8 @@ shift-c -- clear all forks
 
 n -- rename instruction
 shift-n -- rename data
-; -- add comment at instruction
-shift-; -- add comment at data
+: -- add comment at instruction
+shift-: -- add comment at data
 
 g -- go to change, address, or name
 space -- toggle flat/function view

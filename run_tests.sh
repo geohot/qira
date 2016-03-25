@@ -18,13 +18,29 @@ QIRA_PID=$!
 echo "qira pid is $QIRA_PID"
 sleep 2
 
+LSB="/etc/lsb-release"
+VER="12.04"
+LIBICU="libicu48"
+
+if [ -f $LSB ] ; then
+  echo "*** Debian Based Distro."
+  . $LSB
+  if [ $DISTRIB_ID == "Ubuntu" ]; then
+    if [ $DISTRIB_RELEASE != "12.04" ]; then
+      VER="14.04"
+      LIBICU="libicu52"
+    fi
+  fi
+fi
+
 # phantomjs
 # use phantomjs2.0 for non-draft WebSockets protol
 # unforunately this doesn't ship with Ubuntu by default
-# the next 3 lines are 12.04 specific. maybe we should update Travis at some point
-sudo apt-get install libicu48
-wget https://s3.amazonaws.com/travis-phantomjs/phantomjs-2.0.0-ubuntu-12.04.tar.bz2
-tar xf ./phantomjs-2.0.0-ubuntu-12.04.tar.bz2
+
+sudo apt-get install $LIBICU
+
+wget https://s3.amazonaws.com/travis-phantomjs/phantomjs-2.0.0-ubuntu-$VER.tar.bz2
+tar xf ./phantomjs-2.0.0-ubuntu-$VER.tar.bz2
 chmod +x ./phantomjs
 ./phantomjs qira_tests/load_page.js
 

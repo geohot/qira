@@ -1,3 +1,4 @@
+pip
 six
 html
 flask-socketio

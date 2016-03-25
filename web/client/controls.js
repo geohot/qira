@@ -4,7 +4,9 @@ function on_setiaddr(iaddr) { DS("setiaddr");
   update_iaddr(iaddr);
 } stream.on('setiaddr', on_setiaddr);
 
-function on_setclnum(forknum, clnum) { DS("setclnum");
+function on_setclnum(msg) { DS("setclnum");
+  var forknum = msg['forknum'];
+  var clnum = msg['clnum'];
   Session.set('forknum', forknum);
   Session.set('clnum', clnum);
   push_history("remote setclnum");

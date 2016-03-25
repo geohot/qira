@@ -109,7 +109,7 @@ bool Trace::remap_backing(uint64_t new_size) {
 #else
   while (1) {
     off_t fs = lseek(fd_, 0, SEEK_END);
-    if (fs < new_size) {
+    if ((unsigned int)fs < new_size) {
       printf("WARNING: requested %" PRIu64 " bytes, but only %" PRIx64 " are in the file...waiting\n", new_size, fs);
       usleep(100 * 1000);
     } else {
@@ -196,7 +196,7 @@ void Trace::process() {
     ret.first->second.insert(c->clnum);
 
     // registers_
-    if (type == 'W' && c->address < (register_size_ * register_count_)) {
+    if (type == 'W' && (c->address < (unsigned int)(register_size_ * register_count_))) {
       registers_[c->address / register_size_][c->clnum] = c->data;
     }
 
