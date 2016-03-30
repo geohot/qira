@@ -1,7 +1,7 @@
-diff -ruN qemu-orig/disas.c qemu-patched/disas.c
---- qemu-orig/disas.c	2015-08-15 01:37:20.318233173 -0400
-+++ qemu-patched/disas.c	2015-08-15 01:33:45.242987977 -0400
-@@ -187,6 +187,7 @@
+diff -ruN qemu-2.5.1/disas.c qemu-2.5.1-patched/disas.c
+--- qemu-2.5.1/disas.c	2016-03-29 22:01:14.000000000 +0100
++++ qemu-2.5.1-patched/disas.c	2016-03-30 16:48:08.429754903 +0100
+@@ -172,6 +172,7 @@
      return print_insn_objdump(pc, info, "OBJD-T");
  }
  
@@ -9,24 +9,25 @@ diff -ruN qemu-orig/disas.c qemu-patched/disas.c
  /* Disassemble this for me please... (debugging). 'flags' has the following
     values:
      i386 - 1 means 16 bit code, 2 means 64 bit code
-@@ -195,7 +196,7 @@
+@@ -179,7 +180,7 @@
             bit 16 indicates little endian.
      other targets - unused
   */
--void target_disas(FILE *out, CPUArchState *env, target_ulong code,
-+void real_target_disas(FILE *out, CPUArchState *env, target_ulong code,
+-void target_disas(FILE *out, CPUState *cpu, target_ulong code,
++void real_target_disas(FILE *out, CPUState *cpu, target_ulong code,
                    target_ulong size, int flags)
  {
-     target_ulong pc;
-@@ -225,6 +226,7 @@
-         s.info.mach = bfd_mach_i386_i386;
+     CPUClass *cc = CPU_GET_CLASS(cpu);
+@@ -228,7 +229,7 @@
+         s.info.mach = bfd_mach_ppc;
+ #endif
      }
-     print_insn = print_insn_i386;
+-    s.info.disassembler_options = (char *)"any";
 +    s.info.disassembler_options = (char *)"intel";
- #elif defined(TARGET_ARM)
-     if (flags & 4) {
-         /* We might not be compiled with the A64 disassembler
-@@ -307,6 +309,10 @@
+     s.info.print_insn = print_insn_ppc;
+ #endif
+     if (s.info.print_insn == NULL) {
+@@ -236,6 +237,10 @@
      }
  
      for (pc = code; size > 0; pc += count, size -= count) {
@@ -35,11 +36,11 @@ diff -ruN qemu-orig/disas.c qemu-patched/disas.c
 +    else fprintf(out, "n");
 +    #endif
  	fprintf(out, "0x" TARGET_FMT_lx ":  ", pc);
- 	count = print_insn(pc, &s.info);
+ 	count = s.info.print_insn(pc, &s.info);
  #if 0
-diff -ruN qemu-orig/include/librarymap.h qemu-patched/include/librarymap.h
---- qemu-orig/include/librarymap.h	1969-12-31 19:00:00.000000000 -0500
-+++ qemu-patched/include/librarymap.h	2015-08-15 01:33:44.379023258 -0400
+diff -ruN qemu-2.5.1/include/librarymap.h qemu-2.5.1-patched/include/librarymap.h
+--- qemu-2.5.1/include/librarymap.h	1970-01-01 01:00:00.000000000 +0100
++++ qemu-2.5.1-patched/include/librarymap.h	2016-03-30 16:45:38.821919080 +0100
 @@ -0,0 +1,38 @@
 +struct librarymap {
 +  struct librarymap *next;
@@ -79,10 +80,10 @@ diff -ruN qemu-orig/include/librarymap.h qemu-patched/include/librarymap.h
 +  }
 +  return false;
 +}
-diff -ruN qemu-orig/linux-user/elfload.c qemu-patched/linux-user/elfload.c
---- qemu-orig/linux-user/elfload.c	2015-08-15 01:33:43.831045636 -0400
-+++ qemu-patched/linux-user/elfload.c	2015-08-15 01:33:44.111034201 -0400
-@@ -1788,6 +1788,9 @@
+diff -ruN qemu-2.5.1/linux-user/elfload.c qemu-2.5.1-patched/linux-user/elfload.c
+--- qemu-2.5.1/linux-user/elfload.c	2016-03-29 22:01:17.000000000 +0100
++++ qemu-2.5.1-patched/linux-user/elfload.c	2016-03-30 16:45:38.821919080 +0100
+@@ -1808,6 +1808,9 @@
  
     On return: INFO values will be filled in, as necessary or available.  */
  
@@ -92,7 +93,7 @@ diff -ruN qemu-orig/linux-user/elfload.c qemu-patched/linux-user/elfload.c
  static void load_elf_image(const char *image_name, int image_fd,
                             struct image_info *info, char **pinterp_name,
                             char bprm_buf[BPRM_BUF_SIZE])
-@@ -1854,6 +1857,12 @@
+@@ -1874,6 +1877,12 @@
          load_addr = target_mmap(loaddr, hiaddr - loaddr, PROT_NONE,
                                  MAP_PRIVATE | MAP_ANON | MAP_NORESERVE,
                                  -1, 0);
@@ -105,18 +106,27 @@ diff -ruN qemu-orig/linux-user/elfload.c qemu-patched/linux-user/elfload.c
          if (load_addr == -1) {
              goto exit_perror;
          }
-diff -ruN qemu-orig/linux-user/main.c qemu-patched/linux-user/main.c
---- qemu-orig/linux-user/main.c	2015-08-15 01:37:20.318233173 -0400
-+++ qemu-patched/linux-user/main.c	2015-08-15 01:33:44.115034038 -0400
-@@ -281,6 +281,7 @@
+diff -ruN qemu-2.5.1/linux-user/main.c qemu-2.5.1-patched/linux-user/main.c
+--- qemu-2.5.1/linux-user/main.c	2016-03-29 22:01:17.000000000 +0100
++++ qemu-2.5.1-patched/linux-user/main.c	2016-03-30 17:39:36.487105911 +0100
+@@ -37,7 +37,7 @@
+ char *exec_path;
+ 
+ int singlestep;
+-static const char *filename;
++const char *filename;
+ static const char *argv0;
+ static int gdbstub_port;
+ static envlist_t *envlist;
+@@ -275,6 +275,7 @@
      int trapnr;
      abi_ulong pc;
      target_siginfo_t info;
 +    void *a;
  
      for(;;) {
-         trapnr = cpu_x86_exec(env);
-@@ -3640,6 +3641,28 @@
+         cpu_exec_start(cs);
+@@ -3899,6 +3900,28 @@
      const char *help;
  };
  
@@ -145,7 +155,7 @@ diff -ruN qemu-orig/linux-user/main.c qemu-patched/linux-user/main.c
  static const struct qemu_argument arg_table[] = {
      {"h",          "",                 false, handle_arg_help,
       "",           "print this help"},
-@@ -3674,6 +3697,12 @@
+@@ -3933,6 +3956,12 @@
       "pagesize",   "set the host page size to 'pagesize'"},
      {"singlestep", "QEMU_SINGLESTEP",  false, handle_arg_singlestep,
       "",           "run in singlestep mode"},
@@ -157,10 +167,10 @@ diff -ruN qemu-orig/linux-user/main.c qemu-patched/linux-user/main.c
 +     "",           "address to gate starting trace on"},
      {"strace",     "QEMU_STRACE",      false, handle_arg_strace,
       "",           "log system calls"},
-     {"version",    "QEMU_VERSION",     false, handle_arg_version,
-diff -ruN qemu-orig/linux-user/qemu.h qemu-patched/linux-user/qemu.h
---- qemu-orig/linux-user/qemu.h	2015-08-15 01:37:20.318233173 -0400
-+++ qemu-patched/linux-user/qemu.h	2015-08-15 01:33:44.115034038 -0400
+     {"seed",       "QEMU_RAND_SEED",   true,  handle_arg_randseed,
+diff -ruN qemu-2.5.1/linux-user/qemu.h qemu-2.5.1-patched/linux-user/qemu.h
+--- qemu-2.5.1/linux-user/qemu.h	2016-03-29 22:01:17.000000000 +0100
++++ qemu-2.5.1-patched/linux-user/qemu.h	2016-03-30 16:45:38.821919080 +0100
 @@ -22,6 +22,8 @@
  
  #define THREAD __thread
@@ -170,7 +180,7 @@ diff -ruN qemu-orig/linux-user/qemu.h qemu-patched/linux-user/qemu.h
  /* This struct is used to hold certain information about the image.
   * Basically, it replicates in user space what would be certain
   * task_struct fields in the kernel
-@@ -373,6 +375,7 @@
+@@ -362,6 +364,7 @@
  #define get_user_u8(x, gaddr)  get_user((x), (gaddr), uint8_t)
  #define get_user_s8(x, gaddr)  get_user((x), (gaddr), int8_t)
  
@@ -178,7 +188,7 @@ diff -ruN qemu-orig/linux-user/qemu.h qemu-patched/linux-user/qemu.h
  /* copy_from_user() and copy_to_user() are usually used to copy data
   * buffers between the target and host.  These internally perform
   * locking/unlocking of the memory.
-@@ -386,10 +389,17 @@
+@@ -375,10 +378,17 @@
     any byteswapping.  lock_user may return either a pointer to the guest
     memory, or a temporary buffer.  */
  
@@ -196,7 +206,7 @@ diff -ruN qemu-orig/linux-user/qemu.h qemu-patched/linux-user/qemu.h
      if (!access_ok(type, guest_addr, len))
          return NULL;
  #ifdef DEBUG_REMAP
-@@ -400,11 +410,18 @@
+@@ -389,11 +399,18 @@
              memcpy(addr, g2h(guest_addr), len);
          else
              memset(addr, 0, len);
@@ -217,7 +227,7 @@ diff -ruN qemu-orig/linux-user/qemu.h qemu-patched/linux-user/qemu.h
  }
  
  /* Unlock an area of guest memory.  The first LEN bytes must be
-@@ -413,6 +430,11 @@
+@@ -402,6 +419,11 @@
  static inline void unlock_user(void *host_ptr, abi_ulong guest_addr,
                                 long len)
  {
@@ -229,9 +239,9 @@ diff -ruN qemu-orig/linux-user/qemu.h qemu-patched/linux-user/qemu.h
  
  #ifdef DEBUG_REMAP
      if (!host_ptr)
-diff -ruN qemu-orig/linux-user/strace.c qemu-patched/linux-user/strace.c
---- qemu-orig/linux-user/strace.c	2015-08-15 01:37:20.318233173 -0400
-+++ qemu-patched/linux-user/strace.c	2015-08-15 01:33:44.115034038 -0400
+diff -ruN qemu-2.5.1/linux-user/strace.c qemu-2.5.1-patched/linux-user/strace.c
+--- qemu-2.5.1/linux-user/strace.c	2016-03-29 22:01:17.000000000 +0100
++++ qemu-2.5.1-patched/linux-user/strace.c	2016-03-30 16:45:38.821919080 +0100
 @@ -11,6 +11,16 @@
  #include <sched.h>
  #include "qemu.h"
@@ -280,9 +290,9 @@ diff -ruN qemu-orig/linux-user/strace.c qemu-patched/linux-user/strace.c
      gemu_log("%d ", getpid() );
  
      for(i=0;i<nsyscalls;i++)
-diff -ruN qemu-orig/linux-user/strace.list qemu-patched/linux-user/strace.list
---- qemu-orig/linux-user/strace.list	2015-08-15 01:37:20.318233173 -0400
-+++ qemu-patched/linux-user/strace.list	2015-08-15 01:33:44.115034038 -0400
+diff -ruN qemu-2.5.1/linux-user/strace.list qemu-2.5.1-patched/linux-user/strace.list
+--- qemu-2.5.1/linux-user/strace.list	2016-03-29 22:01:17.000000000 +0100
++++ qemu-2.5.1-patched/linux-user/strace.list	2016-03-30 16:45:38.821919080 +0100
 @@ -1000,7 +1000,7 @@
  { TARGET_NR_quotactl, "quotactl" , NULL, NULL, NULL },
  #endif
@@ -292,7 +302,7 @@ diff -ruN qemu-orig/linux-user/strace.list qemu-patched/linux-user/strace.list
  #endif
  #ifdef TARGET_NR_readahead
  { TARGET_NR_readahead, "readahead" , NULL, NULL, NULL },
-@@ -1507,7 +1507,7 @@
+@@ -1519,7 +1519,7 @@
  { TARGET_NR_waitpid, "waitpid" , "%s(%d,%p,%#x)", NULL, NULL },
  #endif
  #ifdef TARGET_NR_write
@@ -301,11 +311,11 @@ diff -ruN qemu-orig/linux-user/strace.list qemu-patched/linux-user/strace.list
  #endif
  #ifdef TARGET_NR_writev
  { TARGET_NR_writev, "writev" , "%s(%d,%p,%#x)", NULL, NULL },
-diff -ruN qemu-orig/linux-user/syscall.c qemu-patched/linux-user/syscall.c
---- qemu-orig/linux-user/syscall.c	2015-08-15 01:33:43.831045636 -0400
-+++ qemu-patched/linux-user/syscall.c	2015-08-15 01:33:44.111034201 -0400
-@@ -5337,6 +5337,8 @@
-     return get_errno(open(path(pathname), flags, mode));
+diff -ruN qemu-2.5.1/linux-user/syscall.c qemu-2.5.1-patched/linux-user/syscall.c
+--- qemu-2.5.1/linux-user/syscall.c	2016-03-29 22:01:17.000000000 +0100
++++ qemu-2.5.1-patched/linux-user/syscall.c	2016-03-30 16:45:38.821919080 +0100
+@@ -5663,6 +5663,8 @@
+     return timerid;
  }
  
 +extern void add_to_librarymap(const char *name, abi_ulong begin, abi_ulong end);
@@ -313,7 +323,7 @@ diff -ruN qemu-orig/linux-user/syscall.c qemu-patched/linux-user/syscall.c
  /* do_syscall() should always have a single exit point at the end so
     that actions, such as logging of syscall results, can be performed.
     All errnos that do_syscall() returns must be -TARGET_<errcode>. */
-@@ -9539,6 +9541,24 @@
+@@ -10029,6 +10031,24 @@
  #endif
      if(do_strace)
          print_syscall_ret(num, ret);
@@ -338,9 +348,9 @@ diff -ruN qemu-orig/linux-user/syscall.c qemu-patched/linux-user/syscall.c
      return ret;
  efault:
      ret = -TARGET_EFAULT;
-diff -ruN qemu-orig/tci.c qemu-patched/tci.c
---- qemu-orig/tci.c	2015-08-15 01:37:20.318233173 -0400
-+++ qemu-patched/tci.c	2015-08-15 01:33:44.111034201 -0400
+diff -ruN qemu-2.5.1/tci.c qemu-2.5.1-patched/tci.c
+--- qemu-2.5.1/tci.c	2016-03-29 22:01:20.000000000 +0100
++++ qemu-2.5.1-patched/tci.c	2016-03-30 17:39:24.918794988 +0100
 @@ -28,6 +28,7 @@
  #include "exec/exec-all.h"           /* MAX_OPC_PARAM_IARGS */
  #include "exec/cpu_ldst.h"
@@ -349,7 +359,7 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
  
  /* Marker for missing code. */
  #define TODO() \
-@@ -419,6 +420,269 @@
+@@ -413,6 +414,269 @@
      return result;
  }
  
@@ -617,11 +627,11 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
 +
 +
  #ifdef CONFIG_SOFTMMU
- # define mmuidx          tci_read_i(&tb_ptr)
  # define qemu_ld_ub \
-@@ -450,25 +714,297 @@
+     helper_ret_ldub_mmu(env, taddr, oi, (uintptr_t)tb_ptr)
+@@ -443,25 +707,297 @@
  # define qemu_st_beq(X) \
-     helper_be_stq_mmu(env, taddr, X, mmuidx, (uintptr_t)tb_ptr)
+     helper_be_stq_mmu(env, taddr, X, oi, (uintptr_t)tb_ptr)
  #else
 -# define qemu_ld_ub      ldub_p(g2h(taddr))
 -# define qemu_ld_leuw    lduw_le_p(g2h(taddr))
@@ -778,8 +788,8 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
 +  }
 +}
 +
-+void real_target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong size, int flags);
-+void target_disas(FILE *out, CPUArchState *env, target_ulong code, target_ulong size, int flags) {
++void real_target_disas(FILE *out, CPUState *env, target_ulong code, target_ulong size, int flags);
++void target_disas(FILE *out, CPUState *env, target_ulong code, target_ulong size, int flags) {
 +  OPEN_GLOBAL_ASM_FILE
 +
 +  if (is_filtered_address(code, true)) return;
@@ -931,7 +941,7 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
      long tcg_temps[CPU_TEMP_BUF_NLONGS];
      uintptr_t sp_value = (uintptr_t)(tcg_temps + CPU_TEMP_BUF_NLONGS);
      uintptr_t next_tb = 0;
-@@ -479,6 +1015,7 @@
+@@ -472,6 +1008,7 @@
  
      for (;;) {
          TCGOpcode opc = tb_ptr[0];
@@ -939,7 +949,7 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
  #if !defined(NDEBUG)
          uint8_t op_size = tb_ptr[1];
          uint8_t *old_code_ptr = tb_ptr;
-@@ -486,6 +1023,7 @@
+@@ -479,6 +1016,7 @@
          tcg_target_ulong t0;
          tcg_target_ulong t1;
          tcg_target_ulong t2;
@@ -947,8 +957,8 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
          tcg_target_ulong label;
          TCGCond condition;
          target_ulong taddr;
-@@ -521,11 +1059,56 @@
-             break;
+@@ -501,11 +1039,56 @@
+         switch (opc) {
          case INDEX_op_call:
              t0 = tci_read_ri(&tb_ptr);
 +            a0 = tci_read_reg(TCG_REG_R0);
@@ -1008,7 +1018,7 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
                                            tci_read_reg(TCG_REG_R5),
                                            tci_read_reg(TCG_REG_R6),
                                            tci_read_reg(TCG_REG_R7),
-@@ -535,10 +1118,7 @@
+@@ -515,10 +1098,7 @@
              tci_write_reg(TCG_REG_R0, tmp64);
              tci_write_reg(TCG_REG_R1, tmp64 >> 32);
  #else
@@ -1020,7 +1030,7 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
                                            tci_read_reg(TCG_REG_R5));
              tci_write_reg(TCG_REG_R0, tmp64);
  #endif
-@@ -589,6 +1169,7 @@
+@@ -569,6 +1149,7 @@
              t0 = *tb_ptr++;
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
@@ -1028,7 +1038,7 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
              tci_write_reg8(t0, *(uint8_t *)(t1 + t2));
              break;
          case INDEX_op_ld8s_i32:
-@@ -602,18 +1183,21 @@
+@@ -582,18 +1163,21 @@
              t0 = *tb_ptr++;
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
@@ -1050,7 +1060,7 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
              *(uint16_t *)(t1 + t2) = t0;
              break;
          case INDEX_op_st_i32:
-@@ -621,6 +1205,7 @@
+@@ -601,6 +1185,7 @@
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
              assert(t1 != sp_value || (int32_t)t2 < 0);
@@ -1058,7 +1068,7 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
              *(uint32_t *)(t1 + t2) = t0;
              break;
  
-@@ -858,6 +1443,7 @@
+@@ -838,6 +1423,7 @@
              t0 = *tb_ptr++;
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
@@ -1066,7 +1076,7 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
              tci_write_reg8(t0, *(uint8_t *)(t1 + t2));
              break;
          case INDEX_op_ld8s_i64:
-@@ -869,36 +1455,42 @@
+@@ -849,36 +1435,42 @@
              t0 = *tb_ptr++;
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
@@ -1109,7 +1119,7 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
              *(uint32_t *)(t1 + t2) = t0;
              break;
          case INDEX_op_st_i64:
-@@ -906,6 +1498,7 @@
+@@ -886,6 +1478,7 @@
              t1 = tci_read_r(&tb_ptr);
              t2 = tci_read_s32(&tb_ptr);
              assert(t1 != sp_value || (int32_t)t2 < 0);
@@ -1117,7 +1127,7 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
              *(uint64_t *)(t1 + t2) = t0;
              break;
  
-@@ -1115,6 +1708,7 @@
+@@ -1088,6 +1681,7 @@
          case INDEX_op_goto_tb:
              t0 = tci_read_i32(&tb_ptr);
              assert(tb_ptr == old_code_ptr + op_size);
@@ -1125,7 +1135,7 @@ diff -ruN qemu-orig/tci.c qemu-patched/tci.c
              tb_ptr += (int32_t)t0;
              continue;
          case INDEX_op_qemu_ld_i32:
-@@ -1264,5 +1858,14 @@
+@@ -1237,5 +1831,14 @@
          assert(tb_ptr == old_code_ptr + op_size);
      }
  exit:
