@@ -1,9 +1,9 @@
 #!/bin/bash
 
-QEMU_VERSION=2.1.3
+QEMU_VERSION=2.5.1
 
-#hardcoded to 2.1.3 for now
-QEMU_SHA256="9b68fd0e6f6c401939bd1c9c6ab7052d84962007bb02919623474e9269f60a40"
+#hardcoded to 2.5.1 for now
+QEMU_SHA256="028752c33bb786abbfe496ba57315dc5a7d0a33b5a7a767f6d7a29020c525d2c"
 
 python="python"
 # if you don't have ubuntu you are on your own here
