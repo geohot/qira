@@ -3,7 +3,11 @@ unamestr=$(uname)
 if [[ "$unamestr" == 'Linux' ]]; then
   DIR=$(dirname $(readlink -f $0))
 elif [[ "$unamestr" == "Darwin" ]]; then
-  DIR=$(dirname $(readlink $(which $0)))
+  cmd=$(which "$0")
+  if [ -L "$cmd" ]; then
+    cmd=$(readlink "$cmd")
+  fi
+  DIR=$(dirname "$cmd")
 else
   echo "Only Linux and Mac OS X are supported!"
   exit
