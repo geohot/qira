@@ -20,7 +20,9 @@ if [[ "$unamestr" == 'Linux' ]]; then
     echo "running apt-get update"
     sudo apt-get update -qq
     echo "installing apt packages"
-    sudo apt-get -qq -y install build-essential python-dev python-pip python-virtualenv debootstrap debian-archive-keyring libjpeg-dev zlib1g-dev unzip wget graphviz curl
+    sudo apt-get -qq -y install build-essential debootstrap debian-archive-keyring libjpeg-dev zlib1g-dev unzip wget graphviz curl
+    echo "install python packages"
+    sudo apt-get -qq -y install python-dev python-pip python-virtualenv
 
     # install capstone
     if [ "$arch" == 'i686' ]; then
