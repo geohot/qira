@@ -13,5 +13,6 @@ else
   exit
 fi
 
+unset PYTHONPATH
 source $DIR/venv/bin/activate
 exec /usr/bin/env python2.7 $DIR/middleware/qira.py $*
