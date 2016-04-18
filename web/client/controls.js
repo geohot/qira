@@ -131,6 +131,7 @@ Session.setDefault("flat", false);
 
 // keyboard shortcuts
 window.onkeydown = function(e) {
+  e.preventDefault();
   //p(e.keyCode);
   //p(e);
   if (e.ctrlKey == true) return;
