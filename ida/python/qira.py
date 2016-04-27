@@ -67,18 +67,21 @@ class qiraplugin_t(idaapi.plugin_t):
     idaapi.msg("[QIRA Plugin] Syncing with Qira\n")
     self.addr = idaapi.get_screen_ea()
     if (self.old_addr != self.addr):
-      if (idaapi.isCode(idaapi.getFlags(self.addr))):
-        # don't update the address if it's already the qira_address or None
-        if (self.addr is not None):
-          if (self.addr != BADADDR) and (self.addr != qira_address):
+      # check against BADADDR and None before going
+      if (self.addr is not None) and (self.addr != BADADDR):
+        if (idaapi.isCode(idaapi.getFlags(self.addr))):
+          # don't set the address if it's already the qira_address
+          if (self.addr != qira_address):
             idaapi.msg("[QIRA Plugin] Qira Address %x \n" % (self.addr))
             # Instruction Address
             set_qira_address(self.addr)
             update_address("iaddr", self.addr)
-      else:
-        # Data Address
-        update_address("daddr", self.addr)
+        else:
+          # Data Address
+          update_address("daddr", self.addr)
+
     self.old_addr = self.addr
+
 
   def term(self):
     global wsserver
