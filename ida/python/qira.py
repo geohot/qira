@@ -2,7 +2,7 @@ import idaapi
 import threading
 
 wsserver = None
-qira_address = None
+qira_address = BADADDR
 
 def start_server():
   global wsserver
@@ -14,11 +14,13 @@ def start_server():
 def set_qira_address(la):
   global qira_address
   ea=0
-  if qira_address is not None and qira_address != BADADDR:
+  # Check if there is a BreakPoint and delete is before processing.
+  if (qira_address is not None) and (qira_address != BADADDR):
     ea=idaapi.toEA(0, qira_address)
     if CheckBpt(ea) > 0:
       idaapi.del_bpt(ea)
 
+  # Update qira_address and set BreakPont.
   qira_address = la
   idaapi.add_bpt(qira_address, 0, BPT_SOFT)
   EnableBpt(qira_address, False)
@@ -66,12 +68,13 @@ class qiraplugin_t(idaapi.plugin_t):
     self.addr = idaapi.get_screen_ea()
     if (self.old_addr != self.addr):
       if (idaapi.isCode(idaapi.getFlags(self.addr))):
-        # don't update the address if it's already the qira address or None
-        if (self.addr is not None) and (self.addr != qira_address):
-          idaapi.msg("[QIRA Plugin] Qira Address %x \n" % (self.addr))
-          # Instruction Address
-          set_qira_address(self.addr)
-          update_address("iaddr", self.addr)
+        # don't update the address if it's already the qira_address or None
+        if (self.addr is not None):
+          if (self.addr != BADADDR) and (self.addr != qira_address):
+            idaapi.msg("[QIRA Plugin] Qira Address %x \n" % (self.addr))
+            # Instruction Address
+            set_qira_address(self.addr)
+            update_address("iaddr", self.addr)
       else:
         # Data Address
         update_address("daddr", self.addr)
