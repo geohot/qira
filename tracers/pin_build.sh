@@ -12,7 +12,7 @@ Linux)
   # pin build deps, good?
   if which apt-get; then
     echo "apt-getting pin tool building deps"
-    sudo apt-get install gcc-multilib g++-multilib || echo "WARNING: apt-get failed"
+    sudo apt-get -qq -y install gcc-multilib g++-multilib || echo "WARNING: apt-get failed"
   else
     echo "WARNING: you don't have apt-get, you are required to fetch pin tool building deps (e.g. 32 bit libs) on your own"
   fi
