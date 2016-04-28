@@ -463,7 +463,7 @@ int idaapi websocket_thread(void *) {
 
 	struct lws_context_creation_info info;
 	memset(&info, 0, sizeof info);
-  info.port = 3003;
+	info.port = 3003;
 	info.iface = NULL;
 	info.protocols = protocols;
 	info.extensions = libwebsocket_get_internal_extensions();
