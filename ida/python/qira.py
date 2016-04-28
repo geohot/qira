@@ -15,6 +15,7 @@ class qiraplugin_t(idaapi.plugin_t):
   wanted_hotkey = "Alt-F5"
 
   def init(self):
+    self.MAX_COMMENT_LEN = 100
     self.qira_address = BADADDR
     self.wsserver = None
     self.old_addr = None
@@ -28,10 +29,17 @@ class qiraplugin_t(idaapi.plugin_t):
     return ret
 
   def start(self):
-    t = Thread(target = self.start_server, args = ("3003",))
+    t = Thread(target = self.start_server, args = (3003,))
     t.start()
 
     return idaapi.PLUGIN_KEEP
+
+  def FirstSeg(self):
+    seg = idaapi.get_first_seg()
+    if not seg:
+      return BADADDR
+    else:
+      return seg.startEA
 
   def set_qira_address(self, la):
     # Check if there is a BreakPoint and delete is before processing.
@@ -44,21 +52,47 @@ class qiraplugin_t(idaapi.plugin_t):
     self.qira_address = la
     idaapi.add_bpt(self.qira_address, 0, BPT_SOFT)
     EnableBpt(self.qira_address, False)
+    idaapi.msg("[QIRA Plugin] set_qira_address: 0x%x\n" % (self.qira_address,))
+
+  def send_names(self):
+    qira_names = idaapi.get_nlist_size()
+    for i in range(0, qira_names):
+      self.cmd = "setname 0x%x %s" % (idaapi.get_nlist_ea(i), idaapi.get_nlist_name(i),)
+      self.ws_send(self.cmd)
+
+  def send_comments(self):
+    start = idaapi.get_segm_base(idaapi.get_first_seg())
+    cur = start
+    while(True):
+      if GetMnem(cur) != BADADDR:
+        if isAlign(idaapi.getFlags(NextAddr(cur))):
+          cur = NextAddr(cur)
+          cmt_len = idaapi.get_cmt(cur, 0)
+          if (cmt_len != -1):
+            self.cmd = "setname 0x%x %s" % (cur, MAX_COMMENT_LEN - 7,)
+            self.ws_send(self.cmd)
+        else:
+          return False
+      else:
+        return False
 
   def update_address(self, addr_type, addr):
     if (addr_type is not None) and (addr is not None):
       self.cmd = "set%s 0x%x" % (addr_type, addr)
       self.ws_send(self.cmd)
     else:
-      idaapi.msg("[QIRA Plugin] Cannot update address: type '' %x, addr '' %x!\n" % (addr_type, addr))
+      idaapi.msg("[QIRA Plugin] Cannot update address: None\n")
 
   def jump_to(self, a):
     if a is not None:
       if (a != self.qira_address) and (a != BADADDR):
         self.set_qira_address(a)
-        idaapi.jumpto(self.qira_address, -1, 0)
+        idaapi.jumpto(self.qira_address, -1, 0x0001)
       else:
-        idaapi.jumpto(self.qira_address, -1, 0)
+        idaapi.jumpto(self.qira_address, -1, 0x0001)
+      idaapi.msg("[QIRA Plugin] jump_to: qira_address [0x%x], a [0x%x]\n" % (self.qira_address, a,))
+    else:
+      idaapi.msg("[QIRA Plugin] Cannot jump_to: None\n")
 
   def run(self, arg):
     idaapi.msg("[QIRA Plugin] Syncing with Qira\n")
@@ -69,7 +103,7 @@ class qiraplugin_t(idaapi.plugin_t):
         if (idaapi.isCode(idaapi.getFlags(self.addr))):
           # don't set the address if it's already the qira_address
           if (self.addr != self.qira_address):
-            idaapi.msg("[QIRA Plugin] Qira Address %x \n" % (self.addr))
+            idaapi.msg("[QIRA Plugin] Qira Address 0x%x \n" % (self.addr,))
             # Instruction Address
             self.set_qira_address(self.addr)
             self.update_address("iaddr", self.addr)
@@ -78,12 +112,14 @@ class qiraplugin_t(idaapi.plugin_t):
           self.update_address("daddr", self.addr)
 
     self.old_addr = self.addr
+    self.send_names()
+    self.send_comments()
 
   def start_server(self, port):
     if port is None:
       port = 3003
     self.wsserver = SimpleWebSocketServer('', port, QiraServer)
-    time.sleep(2)
+    time.sleep(1)
     if self.wsserver is not None:
       idaapi.msg("[QIRA Plugin] Starting WS Server\n")
       self.wsserver.serveforever()
@@ -737,8 +773,6 @@ class SimpleSSLWebSocketServer(SimpleWebSocketServer):
   def serveforever(self):
     super(SimpleSSLWebSocketServer, self).serveforever()
 
-
-
 ###################
 #                 #
 #    QIRA CODE    #
@@ -747,12 +781,14 @@ class SimpleSSLWebSocketServer(SimpleWebSocketServer):
 
 class QiraServer(WebSocket):
   def handleMessage(self):
-    #idaapi.msg("[QIRA Plugin] Received from QIRA web: %s\n" % (self.data,))
+    idaapi.msg("[QIRA Plugin] Received from QIRA web: %s\n" % (self.data,))
+    self.qira = qiraplugin_t()
     dat = self.data.split(" ")
     if dat[0] == "setaddress" and dat[1] != "undefined":
       try:
         a = idaapi.toEA(0, int(str(dat[1][2:]),16))
-        qiraplugin_t.jump_to(a)
+        idaapi.msg("[QIRA Plugin] EA address 0x%x\n" % (a,))
+        self.qira.jump_to(a)
       except e:
         idaapi.msg("[QIRA Plugin] Error processing the address\n")
 
