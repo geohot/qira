@@ -1,69 +1,66 @@
+import time
+import functools
+from threading import Thread
+
+from idaapi import plugin_t
 import idaapi
-import threading
-
-wsserver = None
-qira_address = BADADDR
-
-def start_server():
-  global wsserver
-  wsserver = SimpleWebSocketServer('', 3003, QiraServer)
-  if wsserver is not None:
-    idaapi.msg("[QIRA Plugin] Starting WS Server\n")
-    wsserver.serveforever()
-
-def set_qira_address(la):
-  global qira_address
-  ea=0
-  # Check if there is a BreakPoint and delete is before processing.
-  if (qira_address is not None) and (qira_address != BADADDR):
-    ea=idaapi.toEA(0, qira_address)
-    if CheckBpt(ea) > 0:
-      idaapi.del_bpt(ea)
-
-  # Update qira_address and set BreakPont.
-  qira_address = la
-  idaapi.add_bpt(qira_address, 0, BPT_SOFT)
-  EnableBpt(qira_address, False)
-
-def jump_to(a):
-  global qira_address
-  if a is not None:
-    if (a != qira_address) and (a != BADADDR):
-      set_qira_address(a)
-      idaapi.jumpto(qira_address, -1, 0)
-    else:
-      idaapi.jumpto(qira_address, -1, 0)
-
-def ws_send(msg):
-  global wsserver
-  if (wsserver is not None) and (msg is not None):
-    for conn in wsserver.connections.itervalues():
-      conn.sendMessage(msg)
-
-def update_address(addr_type, addr):
-  if (addr_type is not None) and (addr is not None):
-    cmd = "set%s 0x%x" % (addr_type, addr)
-    ws_send(cmd)
+import idautils
+import idc
 
 class qiraplugin_t(idaapi.plugin_t):
-  flags = 0
+  flags = idaapi.PLUGIN_KEEP
   comment = "QEMU Interactive Runtime Analyser plugin"
   help = "Visit qira.me for more infos"
   wanted_name = "QIRA Plugin"
   wanted_hotkey = "Alt-F5"
 
   def init(self):
+    self.qira_address = BADADDR
+    self.wsserver = None
     self.old_addr = None
     self.addr = None
+    self.cmd = None
+    self.ea = 0
 
-    threading.Thread(target=start_server).start()
+    ret = self.start()
     idaapi.msg("[QIRA Plugin] Ready to go!\n")
+
+    return ret
+
+  def start(self):
+    t = Thread(target = self.start_server, args = ("3003",))
+    t.start()
 
     return idaapi.PLUGIN_KEEP
 
+  def set_qira_address(self, la):
+    # Check if there is a BreakPoint and delete is before processing.
+    if (self.qira_address is not None) and (self.qira_address != BADADDR):
+      self.ea = idaapi.toEA(0, self.qira_address)
+      if CheckBpt(self.ea) > 0:
+        idaapi.del_bpt(self.ea)
+
+    # Update qira_address and set BreakPont.
+    self.qira_address = la
+    idaapi.add_bpt(self.qira_address, 0, BPT_SOFT)
+    EnableBpt(self.qira_address, False)
+
+  def update_address(self, addr_type, addr):
+    if (addr_type is not None) and (addr is not None):
+      self.cmd = "set%s 0x%x" % (addr_type, addr)
+      self.ws_send(self.cmd)
+    else:
+      idaapi.msg("[QIRA Plugin] Cannot update address: type '' %x, addr '' %x!\n" % (addr_type, addr))
+
+  def jump_to(self, a):
+    if a is not None:
+      if (a != self.qira_address) and (a != BADADDR):
+        self.set_qira_address(a)
+        idaapi.jumpto(self.qira_address, -1, 0)
+      else:
+        idaapi.jumpto(self.qira_address, -1, 0)
 
   def run(self, arg):
-    global qira_address
     idaapi.msg("[QIRA Plugin] Syncing with Qira\n")
     self.addr = idaapi.get_screen_ea()
     if (self.old_addr != self.addr):
@@ -71,29 +68,41 @@ class qiraplugin_t(idaapi.plugin_t):
       if (self.addr is not None) and (self.addr != BADADDR):
         if (idaapi.isCode(idaapi.getFlags(self.addr))):
           # don't set the address if it's already the qira_address
-          if (self.addr != qira_address):
+          if (self.addr != self.qira_address):
             idaapi.msg("[QIRA Plugin] Qira Address %x \n" % (self.addr))
             # Instruction Address
-            set_qira_address(self.addr)
-            update_address("iaddr", self.addr)
+            self.set_qira_address(self.addr)
+            self.update_address("iaddr", self.addr)
         else:
           # Data Address
-          update_address("daddr", self.addr)
+          self.update_address("daddr", self.addr)
 
     self.old_addr = self.addr
 
+  def start_server(self, port):
+    if port is not None:
+      port = 3003
+    self.wsserver = SimpleWebSocketServer('', port, QiraServer)
+    time.sleep(2)
+    if self.wsserver is not None:
+      idaapi.msg("[QIRA Plugin] Starting WS Server\n")
+      self.wsserver.serveforever()
+    else:
+      idaapi.msg("[QIRA Plugin] Cannot Start WS Server\n")
+
+  def ws_send(self, msg):
+    if (self.wsserver is not None) and (msg is not None):
+      for conn in self.wsserver.connections.itervalues():
+        conn.sendMessage(msg)
 
   def term(self):
-    global wsserver
-    if wsserver is not None:
-      wsserver.close()
+    if self.wsserver is not None:
+      self.wsserver.close()
     idaapi.msg("[QIRA Plugin] Plugin uninstalled!\n")
 
 
 def PLUGIN_ENTRY():
   return qiraplugin_t()
-
-
 
 ###########################################################
 #                                                         #
@@ -743,7 +752,7 @@ class QiraServer(WebSocket):
     if dat[0] == "setaddress" and dat[1] != "undefined":
       try:
         a = idaapi.toEA(0, int(str(dat[1][2:]),16))
-        jump_to(a)
+        qiraplugin_t.jump_to(a)
       except e:
         idaapi.msg("[QIRA Plugin] Error processing the address\n")
 
