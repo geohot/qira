@@ -80,7 +80,7 @@ class qiraplugin_t(idaapi.plugin_t):
     self.old_addr = self.addr
 
   def start_server(self, port):
-    if port is not None:
+    if port is None:
       port = 3003
     self.wsserver = SimpleWebSocketServer('', port, QiraServer)
     time.sleep(2)
