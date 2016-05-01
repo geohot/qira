@@ -85,10 +85,31 @@ class MyIDAViewWrapper(idaapi.IDAViewWrapper):
         update_address("daddr", self.addr)
     self.old_addr = self.addr
 
-class hook(idaapi.IDB_Hooks):
+class idbhook(idaapi.IDB_Hooks):
   def cmt_changed(self, a, b):
     update_comment(a, b)
     return 0
+
+class idphook(idaapi.IDP_Hooks):
+  def renamed(self, ea, new_name, local_name):
+    print ea, new_name
+    ws_send("setname 0x%x %s" % (ea, new_name))
+    return 0
+  
+class uihook(idaapi.UI_Hooks):
+  def __init__(self):
+    idaapi.UI_Hooks.__init__(self)
+    self.binds = []
+  def preprocess(self, arg):
+    print "preprocess", arg
+    return 0
+  def current_tform_changed(self, a1, a2):
+    #print "tform", idaapi.get_tform_title(a1)
+    tm = MyIDAViewWrapper(idaapi.get_tform_title(a1))
+    if tm.Bind():
+      self.binds.append(tm)
+    return 0
+
 
 class qiraplugin_t(idaapi.plugin_t):
   flags = 0
@@ -101,12 +122,16 @@ class qiraplugin_t(idaapi.plugin_t):
     threading.Thread(target=start_server).start()
     idaapi.msg("[QIRA Plugin] Ready to go!\n")
     
-    self.w = None
+    self.w1 = None
 
     #threading.Thread(target=poll_address).start()
 
-    self.hook = hook()
-    self.hook.hook()
+    self.idbhook = idbhook()
+    self.idbhook.hook()
+    self.idphook = idphook()
+    self.idphook.hook()
+    self.uihook = uihook()
+    self.uihook.hook()
 
     return idaapi.PLUGIN_KEEP
 
@@ -115,13 +140,6 @@ class qiraplugin_t(idaapi.plugin_t):
     global qira_address
     idaapi.msg("[QIRA Plugin] Syncing with Qira\n")
 
-    viewName = "IDA View-A"
-    if self.w is None:
-      self.w = MyIDAViewWrapper(viewName)
-      if self.w.Bind():
-        print "bound to view"
-      else:
-        print "BIND FAILED!"
 
     # sync names
     for i in range(idaapi.get_nlist_size()):
