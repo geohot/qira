@@ -1,8 +1,26 @@
 import idaapi
 import threading
+import time
 
 wsserver = None
 qira_address = None
+running = True
+
+# this handles all receiving
+msg_queue = []  # python array is threadsafe
+#handle_message_queue()
+def handle_message_queue():
+  global msg_queue
+  while len(msg_queue) > 0:
+    dat = msg_queue[0].split(" ")
+    msg_queue = msg_queue[1:]
+
+    if dat[0] == "setaddress" and dat[1] != "undefined":
+      try:
+        a = idaapi.toEA(0, int(str(dat[1][2:]),16))
+        jump_to(a)
+      except e:
+        idaapi.msg("[QIRA Plugin] Error processing the address\n")
 
 def start_server():
   global wsserver
@@ -13,11 +31,10 @@ def start_server():
 
 def set_qira_address(la):
   global qira_address
-  ea=0
+  ea = 0
   if qira_address is not None and qira_address != BADADDR:
-    ea=idaapi.toEA(0, qira_address)
-    if CheckBpt(ea) > 0:
-      idaapi.del_bpt(ea)
+    ea = idaapi.toEA(0, qira_address)
+    idaapi.del_bpt(ea)
 
   qira_address = la
   idaapi.add_bpt(qira_address, 0, BPT_SOFT)
@@ -43,6 +60,16 @@ def update_address(addr_type, addr):
     cmd = "set%s 0x%x" % (addr_type, addr)
     ws_send(cmd)
 
+# TODO: ugh IDA, I need hook_to_notification_point
+def poll_address():
+  mea = None
+  while running:
+    nea = idaapi.get_screen_ea()
+    if mea != nea:
+      print "new ea", nea
+    mea = nea
+    time.sleep(0.5)
+
 class qiraplugin_t(idaapi.plugin_t):
   flags = 0
   comment = "QEMU Interactive Runtime Analyser plugin"
@@ -56,6 +83,12 @@ class qiraplugin_t(idaapi.plugin_t):
 
     threading.Thread(target=start_server).start()
     idaapi.msg("[QIRA Plugin] Ready to go!\n")
+
+    #threading.Thread(target=poll_address).start()
+
+    #self.uihook = uihook()
+    #hook = self.uihook.hook()
+    #print("hooking UI %d\n" % hook)
 
     return idaapi.PLUGIN_KEEP
 
@@ -79,6 +112,8 @@ class qiraplugin_t(idaapi.plugin_t):
 
   def term(self):
     global wsserver
+    global running
+    running = False
     if wsserver is not None:
       wsserver.close()
     idaapi.msg("[QIRA Plugin] Plugin uninstalled!\n")
@@ -730,16 +765,12 @@ class SimpleSSLWebSocketServer(SimpleWebSocketServer):
 #                 #
 ###################
 
+
 class QiraServer(WebSocket):
   def handleMessage(self):
     #idaapi.msg("[QIRA Plugin] Received from QIRA web: %s\n" % (self.data,))
-    dat = self.data.split(" ")
-    if dat[0] == "setaddress" and dat[1] != "undefined":
-      try:
-        a = idaapi.toEA(0, int(str(dat[1][2:]),16))
-        jump_to(a)
-      except e:
-        idaapi.msg("[QIRA Plugin] Error processing the address\n")
+    msg_queue.append(self.data)
+    idaapi.execute_sync(handle_message_queue, idaapi.MFF_WRITE)
 
   def handleConnected(self):
     idaapi.msg("[QIRA Plugin] Client connected\n")
