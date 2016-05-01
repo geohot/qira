@@ -4,7 +4,6 @@ import time
 
 wsserver = None
 qira_address = None
-running = True
 
 # this handles all receiving
 msg_queue = []  # python array is threadsafe
@@ -60,16 +59,27 @@ def update_address(addr_type, addr):
     cmd = "set%s 0x%x" % (addr_type, addr)
     ws_send(cmd)
 
-# TODO: ugh IDA, I need hook_to_notification_point
-def poll_address():
-  mea = None
-  while running:
-    nea = idaapi.get_screen_ea()
-    if mea != nea:
-      print "new ea", nea
-    mea = nea
-    time.sleep(0.5)
 
+class MyIDAViewWrapper(idaapi.IDAViewWrapper):
+  def __init__(self, viewName):
+    idaapi.IDAViewWrapper.__init__(self, viewName)
+    self.old_addr = None
+    self.addr = None
+
+  def OnViewCurpos(self):
+    self.addr = idaapi.get_screen_ea()
+    if (self.old_addr != self.addr):
+      if (idaapi.isCode(idaapi.getFlags(self.addr))):
+        # don't update the address if it's already the qira address or None
+        if (self.addr is not None) and (self.addr != qira_address):
+          #idaapi.msg("[QIRA Plugin] Qira Address %x \n" % (self.addr))
+          # Instruction Address
+          set_qira_address(self.addr)
+          update_address("iaddr", self.addr)
+      else:
+        # Data Address
+        update_address("daddr", self.addr)
+    self.old_addr = self.addr
 
 class qiraplugin_t(idaapi.plugin_t):
   flags = 0
@@ -79,11 +89,10 @@ class qiraplugin_t(idaapi.plugin_t):
   wanted_hotkey = "z"
 
   def init(self):
-    self.old_addr = None
-    self.addr = None
-
     threading.Thread(target=start_server).start()
     idaapi.msg("[QIRA Plugin] Ready to go!\n")
+    
+    self.w = None
 
     #threading.Thread(target=poll_address).start()
 
@@ -98,28 +107,21 @@ class qiraplugin_t(idaapi.plugin_t):
     global qira_address
     idaapi.msg("[QIRA Plugin] Syncing with Qira\n")
 
+    viewName = "IDA View-A"
+    if self.w is None:
+      self.w = MyIDAViewWrapper(viewName)
+      if self.w.Bind():
+        print "bound to view"
+      else:
+        print "BIND FAILED!"
+
     # sync names
     for i in range(idaapi.get_nlist_size()):
       ws_send("setname 0x%x %s" % (idaapi.get_nlist_ea(i), idaapi.get_nlist_name(i)))
 
-    self.addr = idaapi.get_screen_ea()
-    if (self.old_addr != self.addr):
-      if (idaapi.isCode(idaapi.getFlags(self.addr))):
-        # don't update the address if it's already the qira address or None
-        if (self.addr is not None) and (self.addr != qira_address):
-          idaapi.msg("[QIRA Plugin] Qira Address %x \n" % (self.addr))
-          # Instruction Address
-          set_qira_address(self.addr)
-          update_address("iaddr", self.addr)
-      else:
-        # Data Address
-        update_address("daddr", self.addr)
-    self.old_addr = self.addr
 
   def term(self):
     global wsserver
-    global running
-    running = False
     if wsserver is not None:
       wsserver.close()
     idaapi.msg("[QIRA Plugin] Plugin uninstalled!\n")
