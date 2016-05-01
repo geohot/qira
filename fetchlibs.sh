@@ -57,6 +57,7 @@ mkdir -p libs
 cd libs
 
 LIBS="libc-bin libstdc++6"
+fetcharch arm64 ubuntu trusty
 fetcharch armhf ubuntu trusty
 fetcharch armel ubuntu precise
 fetcharch powerpc ubuntu trusty
