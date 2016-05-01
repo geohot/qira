@@ -8,7 +8,7 @@ running = True
 
 # this handles all receiving
 msg_queue = []  # python array is threadsafe
-#handle_message_queue()
+
 def handle_message_queue():
   global msg_queue
   while len(msg_queue) > 0:
@@ -70,12 +70,13 @@ def poll_address():
     mea = nea
     time.sleep(0.5)
 
+
 class qiraplugin_t(idaapi.plugin_t):
   flags = 0
   comment = "QEMU Interactive Runtime Analyser plugin"
   help = "Visit qira.me for more infos"
   wanted_name = "QIRA Plugin"
-  wanted_hotkey = "Alt-F5"
+  wanted_hotkey = "z"
 
   def init(self):
     self.old_addr = None
@@ -96,6 +97,11 @@ class qiraplugin_t(idaapi.plugin_t):
   def run(self, arg):
     global qira_address
     idaapi.msg("[QIRA Plugin] Syncing with Qira\n")
+
+    # sync names
+    for i in range(idaapi.get_nlist_size()):
+      ws_send("setname 0x%x %s" % (idaapi.get_nlist_ea(i), idaapi.get_nlist_name(i)))
+
     self.addr = idaapi.get_screen_ea()
     if (self.old_addr != self.addr):
       if (idaapi.isCode(idaapi.getFlags(self.addr))):
@@ -768,7 +774,6 @@ class SimpleSSLWebSocketServer(SimpleWebSocketServer):
 
 class QiraServer(WebSocket):
   def handleMessage(self):
-    #idaapi.msg("[QIRA Plugin] Received from QIRA web: %s\n" % (self.data,))
     msg_queue.append(self.data)
     idaapi.execute_sync(handle_message_queue, idaapi.MFF_WRITE)
 
