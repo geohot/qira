@@ -92,7 +92,7 @@ class idbhook(idaapi.IDB_Hooks):
 
 class idphook(idaapi.IDP_Hooks):
   def renamed(self, ea, new_name, local_name):
-    print ea, new_name
+    #print ea, new_name
     ws_send("setname 0x%x %s" % (ea, new_name))
     return 0
   
@@ -101,7 +101,7 @@ class uihook(idaapi.UI_Hooks):
     idaapi.UI_Hooks.__init__(self)
     self.binds = []
   def preprocess(self, arg):
-    print "preprocess", arg
+    #print "preprocess", arg
     return 0
   def current_tform_changed(self, a1, a2):
     #print "tform", idaapi.get_tform_title(a1)
