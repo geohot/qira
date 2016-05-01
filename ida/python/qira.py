@@ -59,6 +59,10 @@ def update_address(addr_type, addr):
     cmd = "set%s 0x%x" % (addr_type, addr)
     ws_send(cmd)
 
+def update_comment(addr, rpt):
+  cmt = idaapi.get_cmt(addr, rpt)
+  if cmt is not None:
+    ws_send("setcmt 0x%x %s" % (addr, cmt))
 
 class MyIDAViewWrapper(idaapi.IDAViewWrapper):
   def __init__(self, viewName):
@@ -81,6 +85,11 @@ class MyIDAViewWrapper(idaapi.IDAViewWrapper):
         update_address("daddr", self.addr)
     self.old_addr = self.addr
 
+class hook(idaapi.IDB_Hooks):
+  def cmt_changed(self, a, b):
+    update_comment(a, b)
+    return 0
+
 class qiraplugin_t(idaapi.plugin_t):
   flags = 0
   comment = "QEMU Interactive Runtime Analyser plugin"
@@ -96,9 +105,8 @@ class qiraplugin_t(idaapi.plugin_t):
 
     #threading.Thread(target=poll_address).start()
 
-    #self.uihook = uihook()
-    #hook = self.uihook.hook()
-    #print("hooking UI %d\n" % hook)
+    self.hook = hook()
+    self.hook.hook()
 
     return idaapi.PLUGIN_KEEP
 
@@ -119,6 +127,12 @@ class qiraplugin_t(idaapi.plugin_t):
     for i in range(idaapi.get_nlist_size()):
       ws_send("setname 0x%x %s" % (idaapi.get_nlist_ea(i), idaapi.get_nlist_name(i)))
 
+    # sync comment
+    addr = idaapi.get_segm_base(idaapi.get_first_seg())
+    while addr != idaapi.BADADDR:
+      for rpt in [True, False]:
+        update_comment(addr, rpt)
+      addr = idaapi.nextaddr(addr)
 
   def term(self):
     global wsserver
