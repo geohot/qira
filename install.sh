@@ -45,10 +45,10 @@ if [[ "$unamestr" == 'Linux' ]]; then
   elif [ $(which dnf) ]; then
     sudo dnf install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
     PIP="pip2"
-  fi
   elif [ $(which yum) ]; then
     sudo yum install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
   fi
+if
 
   if [ $(tracers/qemu/qira-i386 > /dev/null; echo $?) == 1 ]; then
     echo "QIRA QEMU appears to run okay"
