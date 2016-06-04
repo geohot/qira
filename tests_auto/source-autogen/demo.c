@@ -10,5 +10,6 @@ int main() {
   for (i = 0; i < 5; i++) {
     printf("%d\n", test(i));
   }
+  return 0;
 }
 
