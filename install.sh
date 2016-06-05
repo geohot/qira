@@ -11,7 +11,7 @@ LIBCAPSTONE64_SHA256="a7bf1cb814c6e712a314659b074bc4c00d2e0006cac67d055d3130d4ec
 LIBCAPSTONE32_SHA256="4ffb4630829b9b4e8c713ae8336a8259b180194233f248170bfe0d1577257fb2"
 
 unamestr=$(uname)
-arch=$(uname -m)
+arch=$(uname -p)
 
 if [[ "$unamestr" == 'Linux' ]]; then
   # we need pip to install python stuff
