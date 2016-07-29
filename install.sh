@@ -30,7 +30,7 @@ if [[ "$unamestr" == 'Linux' ]]; then
     else
         curl -o /tmp/libcapstone3.deb http://www.capstone-engine.org/download/3.0.4/ubuntu-14.04/libcapstone3_3.0.4-0.1ubuntu1_amd64.deb
     fi
-    
+
     HASH=`sha256sum /tmp/libcapstone3.deb 2>/dev/null | cut -d' ' -f1`
     if [ "$HASH" != "$LIBCAPSTONE64_SHA256" ] && [ "$HASH" != "$LIBCAPSTONE32_SHA256" ]; then
       echo "Error: libcapstone3.deb has an invalid checksum."
@@ -61,7 +61,7 @@ elif [[ "$unamestr" == 'Darwin' ]]; then
   if [ $(which brew) ]; then
     echo "Installing OS X dependencies"
     brew update
-    brew install python capstone
+    brew install python capstone graphviz
     pip install virtualenv
     cd tracers
     ./pin_build.sh
@@ -92,4 +92,3 @@ echo "  Check out README for more info"
 echo "  Or just dive in with 'qira /bin/ls'"
 echo "  And point Chrome to localhost:3002"
 echo "    ~geohot"
-
