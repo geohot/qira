@@ -12,13 +12,13 @@ Linux)
   # pin build deps, good?
   if which apt-get; then
     echo "apt-getting pin tool building deps"
-    sudo apt-get -qq -y install gcc-multilib g++-multilib || echo "WARNING: apt-get failed"
+    sudo apt-get -qq -y install g++-4.9 gcc-4.9-multilib g++-4.9-multilib || echo "WARNING: apt-get failed"
   else
     echo "WARNING: you don't have apt-get, you are required to fetch pin tool building deps (e.g. 32 bit libs) on your own"
   fi
 
-  PIN_ROOT=./pin-latest TARGET=intel64 make
-  PIN_ROOT=./pin-latest TARGET=ia32 make
+  PIN_ROOT=./pin-latest TARGET=intel64 make CXX=g++-4.9
+  PIN_ROOT=./pin-latest TARGET=ia32 make CXX=g++-4.9
   ;;
 
 Darwin)
