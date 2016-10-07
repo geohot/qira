@@ -120,7 +120,7 @@ function on_names(msg) { DS("names");
     names_cache[addr] = msg[addr];
     $(".addr_"+addr).each(function() {
       $(this).addClass("name");
-      $(this).html(msg[addr]);
+      $(this).text(msg[addr]);
     });
   }
 } stream.on("names", on_names);
@@ -133,7 +133,7 @@ function replace_names() {
     var ret = get_address_from_class(this);
     if (names_cache[ret] !== undefined) {
       $(this).addClass("name");
-      $(this).html(names_cache[ret]);
+      $(this).text(names_cache[ret]);
     }
     if (ret !== undefined) addrs.push(ret);
   });
