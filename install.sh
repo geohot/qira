@@ -82,7 +82,7 @@ fi
 $VIRTUALENV venv
 source venv/bin/activate
 python -m pip install --upgrade --force pip 
-pip install setuptools==33.1.1
+$PIP install setuptools==33.1.1
 $PIP install --upgrade -r requirements.txt
 
 echo "making symlink"
