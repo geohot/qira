@@ -81,6 +81,7 @@ fi
 
 $VIRTUALENV venv
 source venv/bin/activate
+$PIP install setuptools==33.1.1
 $PIP install --upgrade -r requirements.txt
 
 echo "making symlink"
