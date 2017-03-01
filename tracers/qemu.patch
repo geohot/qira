@@ -1,10 +1,10 @@
 diff -ruN qemu-2.5.1/disas.c qemu-2.5.1-patched/disas.c
---- qemu-2.5.1/disas.c	2016-03-29 22:01:14.000000000 +0100
-+++ qemu-2.5.1-patched/disas.c	2016-03-30 16:48:08.429754903 +0100
+--- qemu-2.5.1/disas.c	2016-03-30 05:01:14.000000000 +0800
++++ qemu-2.5.1-patched/disas.c	2017-03-01 13:49:50.279884586 +0800
 @@ -172,6 +172,7 @@
      return print_insn_objdump(pc, info, "OBJD-T");
  }
- 
+
 +
  /* Disassemble this for me please... (debugging). 'flags' has the following
     values:
@@ -18,18 +18,17 @@ diff -ruN qemu-2.5.1/disas.c qemu-2.5.1-patched/disas.c
                    target_ulong size, int flags)
  {
      CPUClass *cc = CPU_GET_CLASS(cpu);
-@@ -228,7 +229,7 @@
-         s.info.mach = bfd_mach_ppc;
- #endif
-     }
--    s.info.disassembler_options = (char *)"any";
+@@ -194,6 +195,7 @@
+     s.info.buffer_vma = code;
+     s.info.buffer_length = size;
+     s.info.print_address_func = generic_print_address;
 +    s.info.disassembler_options = (char *)"intel";
-     s.info.print_insn = print_insn_ppc;
- #endif
-     if (s.info.print_insn == NULL) {
-@@ -236,6 +237,10 @@
+
+ #ifdef TARGET_WORDS_BIGENDIAN
+     s.info.endian = BFD_ENDIAN_BIG;
+@@ -236,6 +238,10 @@
      }
- 
+
      for (pc = code; size > 0; pc += count, size -= count) {
 +    #ifdef TARGET_ARM
 +    if (flags & 1) fprintf(out, "t");
