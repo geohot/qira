@@ -38,8 +38,8 @@ if [[ "$unamestr" == 'Linux' ]]; then
     fi
     sudo dpkg -i /tmp/libcapstone3.deb
 
-  elif [ $(which pacman) ]; then
     echo "installing pip"
+  elif [ $(which pacman) ]; then
     sudo pacman -S --needed --noconfirm base-devel python2-pip python2-virtualenv
     PIP="pip2"
   elif [ $(which dnf) ]; then
