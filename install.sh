@@ -47,7 +47,6 @@ if [[ "$unamestr" == 'Linux' ]]; then
     PIP="pip2"
   elif [ $(which yum) ]; then
     sudo yum install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
-  fi
   elif [ $(which zypper) ]; then
     sudo zypper install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
   fi
