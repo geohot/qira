@@ -48,6 +48,9 @@ if [[ "$unamestr" == 'Linux' ]]; then
   elif [ $(which yum) ]; then
     sudo yum install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
   fi
+  elif [ $(which zypper) ]; then
+    sudo zypper install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
+  fi
 
   if [ $(tracers/qemu/qira-i386 > /dev/null; echo $?) == 1 ]; then
     echo "QIRA QEMU appears to run okay"
