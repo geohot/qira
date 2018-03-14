@@ -15,7 +15,7 @@ See instructions on [qira.me](http://qira.me/) to install 1.2
 
 <pre>
 cd ~/
-git clone https://github.com/BinaryAnalysisPlatform/qira.git
+git clone https://github.com/geohot/qira.git
 cd qira/
 ./install.sh
 </pre>
