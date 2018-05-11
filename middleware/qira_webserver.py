@@ -38,7 +38,7 @@ import qira_log
 LIMIT = 0
 
 from flask import Flask, Response, redirect, request
-from flask.ext.socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit
 
 # http://stackoverflow.com/questions/8774958/keyerror-in-module-threading-after-a-successful-py-test-run
 import threading

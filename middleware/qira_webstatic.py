@@ -9,7 +9,7 @@ from qira_webserver import socket_method
 from qira_webserver import app
 
 from flask import Flask, Response, redirect, request
-from flask.ext.socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit
 
 from qira_base import *
 import json

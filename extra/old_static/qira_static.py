@@ -3,7 +3,7 @@ from qira_base import *
 import qira_config
 from qira_webserver import socket_method, socketio, app
 from flask import request
-from flask.ext.socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit
 import os
 import sys
 import json

@@ -1,6 +1,6 @@
 from qira_log import *
 from flask import Flask
-from flask.ext.socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit
 import base64
 
 class Address:
