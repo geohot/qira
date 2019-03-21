@@ -36,8 +36,14 @@ fi
 # phantomjs
 # use phantomjs2.0 for non-draft WebSockets protol
 # unforunately this doesn't ship with Ubuntu by default
-
-sudo apt-get install $LIBICU
+if [ $(sudo apt-get install $LIBICU; echo $?) != 100 ]; then
+    echo "libcsu55 installed successfully."
+else
+    echo "missing dependencies, fixing source"
+    echo -e "deb http://security.ubuntu.com/ubuntu trusty-security main" | sudo tee -a /etc/apt/sources.list
+    sudo apt-get update
+    sudo apt-get install $LIBICU
+fi
 
 wget https://s3.amazonaws.com/travis-phantomjs/phantomjs-2.0.0-ubuntu-$VER.tar.bz2
 tar xf ./phantomjs-2.0.0-ubuntu-$VER.tar.bz2

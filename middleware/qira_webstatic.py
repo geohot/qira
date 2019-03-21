@@ -9,7 +9,8 @@ from qira_webserver import socket_method
 from qira_webserver import app
 
 from flask import Flask, Response, redirect, request
-from flask.ext.socketio import SocketIO, emit
+#from flask.ext.socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit
 
 from qira_base import *
 import json
@@ -81,7 +82,7 @@ def graph_dot():
   os.system("dot /tmp/in.dot > /tmp/out.dot")
   ret = open("/tmp/out.dot").read()
   #print "DOT RESPONSE", ret
-  return ret 
+  return ret
 
 # currently if we aren't using static, we don't want to draw the staticview
 # or be able to makefunction
