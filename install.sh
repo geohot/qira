@@ -38,8 +38,8 @@ if [[ "$unamestr" == 'Linux' ]]; then
     fi
     sudo dpkg -i /tmp/libcapstone3.deb
 
-  elif [ $(which pacman) ]; then
     echo "installing pip"
+  elif [ $(which pacman) ]; then
     sudo pacman -S --needed --noconfirm base-devel python2-pip python2-virtualenv
     PIP="pip2"
   elif [ $(which dnf) ]; then
@@ -47,6 +47,8 @@ if [[ "$unamestr" == 'Linux' ]]; then
     PIP="pip2"
   elif [ $(which yum) ]; then
     sudo yum install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
+  elif [ $(which zypper) ]; then
+    sudo zypper install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
   fi
 
   if [ $(tracers/qemu/qira-i386 > /dev/null; echo $?) == 1 ]; then
