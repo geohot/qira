@@ -9,7 +9,7 @@ LIMIT = 10000
 
 # register size = 4, register count = 9
 def test():
-  t = qiradb.Trace("qira_tests/bin/hello_trace", 0, 4, 9, False)
+  t = qiradb.PyTrace("qira_tests/bin/hello_trace", 0, 4, 9, False)
   print "trace created"
 
   while not t.did_update():

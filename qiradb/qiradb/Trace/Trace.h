@@ -1,3 +1,6 @@
+#ifndef TRACE_H
+#define TRACE_H
+
 #include <vector>
 #include <map>
 #if __cplusplus == 201103L
@@ -95,9 +98,9 @@ void *thread_entry(void *);
 
 class Trace {
 public:
-  Trace(unsigned int trace_index);
+  Trace();
   ~Trace();
-  bool ConnectToFileAndStart(char *filename, int register_size, int register_count, bool is_big_endian);
+  bool ConnectToFileAndStart(char *filename, unsigned int trace_index, int register_size, int register_count, bool is_big_endian);
 
   // these must be threadsafe
   vector<Clnum> FetchClnumsByAddressAndType(Address address, char type, Clnum start_clnum, Clnum end_clnum, unsigned int limit);
@@ -143,4 +146,6 @@ private:
   bool did_update_;
   unsigned int trace_index_;
 };
+
+#endif
 

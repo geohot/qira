@@ -397,7 +397,7 @@ class Trace:
   def __init__(self, fn, forknum, program, r1, r2, r3):
     self.forknum = forknum
     self.program = program
-    self.db = qiradb.Trace(fn, forknum, r1, r2, r3)
+    self.db = qiradb.PyTrace(fn, forknum, r1, r2, r3)
     self.load_base_memory()
 
     # analysis stuff
