@@ -1,1 +1,1 @@
-from qiradb import PyTrace
+from .qiradb import PyTrace
