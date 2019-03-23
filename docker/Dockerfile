@@ -10,6 +10,7 @@ WORKDIR /qira
 
 # install python packages, build qemu, and link qira
 RUN pip install --upgrade -r requirements.txt
+RUN pip install --upgrade ./qiradb
 RUN cd tracers && ./qemu_build.sh
 RUN ln -sf /qira/middleware/qira.py /usr/local/bin/qira
 
