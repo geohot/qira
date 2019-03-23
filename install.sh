@@ -65,7 +65,6 @@ fi
 $VIRTUALENV venv
 source venv/bin/activate
 $PIP install --upgrade -r requirements.txt
-$PIP install --upgrade ./qiradb
 
 echo "making symlink"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira

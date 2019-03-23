@@ -1,5 +1,3 @@
-# distutils: language = c++
-
 from Trace.Trace cimport Trace
 
 # copied from Trace.h
