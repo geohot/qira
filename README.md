@@ -1,15 +1,15 @@
 # QIRA
 
-[![Join the chat at https://gitter.im/BinaryAnalysisPlatform/qira](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/BinaryAnalysisPlatform/qira?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Build Status](https://travis-ci.org/BinaryAnalysisPlatform/qira.svg?branch=master)](https://travis-ci.org/BinaryAnalysisPlatform/qira)
+[![Join the chat at https://gitter.im/geohot/qira](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/geohot/qira?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Build Status](https://travis-ci.org/geohot/qira.svg?branch=master)](https://travis-ci.org/geohot/qira)
 
 * QIRA is a competitor to strace and gdb
 * See http://qira.me/ for high level usage information
-* All QIRA code is released under GPLv2 or BSD
+* All QIRA code is released under MIT license
 * Other code in this repo released under its respective license
 
 ## Installing release
 
-See instructions on [qira.me](http://qira.me/) to install 1.2
+See instructions on [qira.me](http://qira.me/) to install 1.3
 
 ## Installing trunk
 
@@ -28,6 +28,7 @@ cd qira/
 
 ## Releases
 
+* v1.3 -- Update using pinned python packages
 * v1.2 -- Many many changes. Forced release due to v1.0 not working anymore.
 * v1.1 -- Support for names and comments. Static stuff added. Register colors.
 * v1.0 -- Perf is good! Tons of bugfixes. Quality software. http://qira.me/
