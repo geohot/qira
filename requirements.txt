@@ -2,6 +2,7 @@ capstone==4.0.1
 certifi==2019.3.9
 chardet==3.0.4
 Click==7.0
+Cython==0.29.6
 Flask==1.0.2
 Flask-SocketIO==3.3.2
 gevent==1.4.0

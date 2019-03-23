@@ -28,11 +28,11 @@ cdef class PyTrace:
     ret = {}
     pagemap = self.t.GetPages()
     for address,ttype in pagemap:
-      if ttype == PAGE_INSTRUCTION:
+      if ttype & PAGE_INSTRUCTION:
         ret[address] = "instruction"
-      elif ttype == PAGE_WRITE:
+      elif ttype & PAGE_WRITE:
         ret[address] = "memory"
-      elif ttype == PAGE_READ:
+      elif ttype & PAGE_READ:
         ret[address] = "romemory"
     return ret
 
@@ -47,12 +47,14 @@ cdef class PyTrace:
 
   def fetch_changes_by_clnum(self, clnum, limit):
     ret = []
+    if limit == -1:
+      limit = 0
     its = self.t.FetchChangesByClnum(clnum, limit)
     for it in its:
       tl = {"address": it.address,
             "data": it.data,
             "clnum": it.clnum,
-            "type": self.t.get_type_from_flags(it.flags),
+            "type": chr(self.t.get_type_from_flags(it.flags)),
             "size": it.flags & SIZE_MASK}
       ret.append(tl)
     return ret
