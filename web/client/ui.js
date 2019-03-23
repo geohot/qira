@@ -1,5 +1,6 @@
 // Scripts to load after UI has been initialized.
-var scripts = ["/client/controls.js", "/client/ida.js", "/client/idump.js", "/client/regmem.js",
+var scripts = ["/client/compatibility/base.js", "/client/compatibility/highlight.js",
+               "/client/controls.js", "/client/ida.js", "/client/idump.js", "/client/regmem.js",
                "/client/vtimeline.js", "/client/strace.js", "/client/haddrline.js",
                "/client/static/static.js", "/client/static/graph.js"];
 
@@ -115,7 +116,7 @@ $(document).ready(function() {
   function is_done() {
     p("loading UI");
     $.holdReady(true);
-    //UI elements now exist in the DOM.
+    // UI elements now exist in the DOM.
     head.load(scripts);
     $.holdReady(false);
   }
