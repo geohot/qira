@@ -143,10 +143,16 @@ bool Trace::ConnectToFileAndStart(char *filename, unsigned int trace_index, int 
   fd_ = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 #else
   fd_ = open(filename, O_RDONLY);
-  if (fd_ <= 0) return false;
+  if (fd_ == -1) {
+    printf("ERROR: file open failed\n");
+    return false;
+  }
 #endif
 
-  if (!remap_backing(sizeof(struct change))) return false;
+  if (!remap_backing(sizeof(struct change))) {
+    printf("ERROR: remap backing failed\n");
+    return false;
+  }
 
   THREAD_CREATE(thread, thread_entry, this);
   return true;
