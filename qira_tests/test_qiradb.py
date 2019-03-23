@@ -60,6 +60,3 @@ def test():
     ret = t.fetch_memory(0, 0xf6fff080, 0x10)
   """
 
-if __name__ == "__main__":
-  test()
-
