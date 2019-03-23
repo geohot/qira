@@ -234,6 +234,11 @@ class Static:
   # TODO: refactor this! 
   def memory(self, address, ln):
     dat = []
+    def ret():
+      if (sys.version_info > (3, 0)):
+        return bytes(dat)
+      else:
+        return ''.join(dat)
     for i in range(ln):
       ri = address+i
 
@@ -244,8 +249,8 @@ class Static:
             dat.append(self.base_memory[(ss,se)][ri-ss])
             break
           except:
-            return ''.join(dat)
-    return ''.join(dat)
+            return ret()
+    return ret()
 
   def add_memory_chunk(self, address, dat):
     #print "add segment",hex(address),len(dat)

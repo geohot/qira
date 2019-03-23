@@ -472,9 +472,9 @@ class Trace:
             self.mapped.append(mapp)
             try:
               try:
-                f = open(os.environ['QEMU_LD_PREFIX']+"/"+files[fil])
+                f = open(os.environ['QEMU_LD_PREFIX']+"/"+files[fil], 'rb')
               except:
-                f = open(files[fil])
+                f = open(files[fil], 'rb')
               alldat = f.read()
 
               if fxn == "mmap2":
@@ -524,7 +524,7 @@ class Trace:
 
   def load_base_memory(self):
     def get_forkbase_from_log(n):
-      ret = struct.unpack("i", open(qira_config.TRACE_FILE_BASE+str(n)).read(0x18)[0x10:0x14])[0]
+      ret = struct.unpack("i", open(qira_config.TRACE_FILE_BASE+str(n), 'rb').read(0x18)[0x10:0x14])[0]
       if ret == -1:
         return n
       else:
@@ -533,7 +533,7 @@ class Trace:
     try:
       forkbase = get_forkbase_from_log(self.forknum)
       print("*** using base %d for %d" % (forkbase, self.forknum))
-      f = open(qira_config.TRACE_FILE_BASE+str(forkbase)+"_base")
+      f = open(qira_config.TRACE_FILE_BASE+str(forkbase)+"_base", 'r')
     except Exception as e:
       print("*** base file issue",e)
       # done
@@ -580,11 +580,11 @@ class Trace:
       try:
         if fn in img_map:
           off = max(i for i in img_map[fn].iter_keys() if i <= offset)
-          with open(img_map[fn][off]) as f:
+          with open(img_map[fn][off], 'rb') as f:
             f.seek(offset-off)
             dat = f.read(se-ss)
         else:
-          with open(fn) as f:
+          with open(fn, 'rb') as f:
             f.seek(offset)
             dat = f.read(se-ss)
       except Exception as e:

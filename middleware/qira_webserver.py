@@ -1,5 +1,6 @@
 from __future__ import print_function
 from qira_base import *
+import traceback
 import qira_config
 import os
 import sys
@@ -27,6 +28,7 @@ def socket_method(func):
         print("SOCKET %6.2f ms in %-20s with" % (tm, func.__name__), args)
       return ret
     except Exception as e:
+      traceback.print_exc()
       print("ERROR",e,"in",func.__name__,"with",args)
   return func_wrapper
 

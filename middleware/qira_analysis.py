@@ -11,7 +11,7 @@ import struct
 from PIL import Image
 import base64
 try:
-  import StringIO
+  from StringIO import StringIO
 except ImportError:
   from io import BytesIO as StringIO
 
@@ -314,7 +314,7 @@ def guess_calling_conv(program,readregs,readstack):
     return ('UNKNOWN',0) #we can't guess the ABI with 0 information
 
   regs = program.tregs[0]
-  readregs = map(lambda x: regs[x], readregs) #convert read regs into strings
+  readregs = list(map(lambda x: regs[x], readregs)) #convert read regs into strings
 
   for abi in filter(lambda x:x[0] != "_",static2.ABITYPE.__dict__):
     if abi == 'UNKNOWN':
@@ -365,14 +365,14 @@ def analyse_calls(trace):
       seen = 0
       init_regs = set()
       uninit_regs = set()
-      for cl in xrange(clnum+1,endclnum):
+      for cl in range(clnum+1,endclnum):
         changes = filter(lambda x:x['type'] in "LS",trace.db.fetch_changes_by_clnum(cl, -1))
-        argchanges = filter(lambda x:argrange[0] <= x['address'] <= argrange[1], changes)
+        argchanges = list(filter(lambda x:argrange[0] <= x['address'] <= argrange[1], changes))
         if len(argchanges) > 0:
           seen = max(max(map(lambda x:x['address'],argchanges)),seen)
         rchanges = filter(lambda x:x['type'] in "RW",trace.db.fetch_changes_by_clnum(cl, -1))
         for rchange in rchanges:
-          regnum = rchange['address']/rsize
+          regnum = rchange['address']//rsize
           if rchange['type'] is 'W' and regnum < nregs:
             init_regs.add(regnum)
             if ((regnum) in uninit_regs) and (rchange['data'] == regs[regnum]):
@@ -404,7 +404,7 @@ def display_call_args(instr,trace,clnum):
 
   ret = []
   i = 0
-  for i in xrange(min(nargs,len(args))):
+  for i in range(min(nargs,len(args))):
     ret += [ghex(regs[program.tregs[0].index(args[i])])]
 
   if len(args) > 0:
@@ -413,7 +413,7 @@ def display_call_args(instr,trace,clnum):
   if i < nargs:
     stack_reg = ["ESP","RSP","SP"][["i386","x86-64","arm"].index(program.static['arch'])]
     esp = regs[program.tregs[0].index(stack_reg)]
-    for j in xrange(i,nargs):
+    for j in range(i,nargs):
       ret += [ghex(struct.unpack("<Q" if program.tregs[1] == 8 else "<I", \
        trace.fetch_raw_memory(clnum, esp+program.tregs[1], program.tregs[1]))[0])]
       esp += program.tregs[1]
@@ -491,11 +491,11 @@ def get_vtimeline_picture(trace, minclnum, maxclnum):
       if i/sampling < im_y:
         px[0, i/sampling] = (96, 32, 32)
 
-  buf = StringIO.StringIO()
+  buf = StringIO()
   im.save(buf, format='PNG')
 
-  dat = "data:image/png;base64,"+base64.b64encode(buf.getvalue())
-  return dat
+  dat = b"data:image/png;base64,"+base64.b64encode(buf.getvalue())
+  return dat.decode('utf-8')
 
 def analyze(trace, program):
   minclnum = trace.db.get_minclnum()

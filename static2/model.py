@@ -265,7 +265,7 @@ class CsInsn(object):
       raise Exception('arch "{}" not supported by capstone'.format(arch))
     self.md.detail = True
     try:
-      self.i = self.md.disasm(self.raw, self.address).next()
+      self.i = next(self.md.disasm(self.raw, self.address))
       self.decoded = True
       self.regs_read = self.i.regs_read
       self.regs_write = self.i.regs_write
@@ -446,7 +446,7 @@ class CsInsn(object):
       #[a, +, b, -, c] -> sum(a, +b, -c)
       if len(spl) > 2:
         addr = _eval_op_x86(spl[0])
-        for i in xrange(1, len(spl), 2):
+        for i in range(1, len(spl), 2):
           if spl[i] == "+":
             addr += _eval_op_x86(spl[i+1])
           else:
