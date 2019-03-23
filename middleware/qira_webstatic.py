@@ -1,6 +1,7 @@
 # eventually, this can live in a different process
 # or we can break the boundary at static2
 # these calls don't have to be included for qira to work
+from __future__ import print_function
 
 import qira_config
 
@@ -150,7 +151,7 @@ if qira_config.WITH_STATIC:
         for i in sorted(b.addresses):
           bbb = {'address': ghex(i)}
           copy_fields(bbb, program.static[i])
-          bbb['dests'] = map(lambda (x,y): (ghex(x), y), program.static[i]['instruction'].dests())
+          bbb['dests'] = map(lambda x: (ghex(x[0]), x[1]), program.static[i]['instruction'].dests())
           bb.append(bbb)
         blocks.append(bb)
 
@@ -160,7 +161,7 @@ if qira_config.WITH_STATIC:
   @socket_method
   def make(typ, iaddr):
     iaddr = fhex(iaddr)
-    print "*** make",typ,"at",ghex(iaddr)
+    print("*** make",typ,"at",ghex(iaddr))
     if typ == 'function':
       program.static.analyzer.make_function_at(program.static, iaddr)
     elif typ == 'code':

@@ -1,4 +1,5 @@
 #!/usr/bin/env python2.7
+from __future__ import print_function
 import qira_config
 import qira_program
 import arch
@@ -6,6 +7,14 @@ import time
 import math
 import sys
 import struct
+
+from PIL import Image
+import base64
+try:
+  import StringIO
+except ImportError:
+  from io import BytesIO as StringIO
+
 sys.path.append(qira_config.BASEDIR+"/static2")
 import static2
 
@@ -17,7 +26,7 @@ def ghex(a):
 def draw_multigraph(blocks):
   import pydot
 
-  print "generating traces"
+  print("generating traces")
 
   arr = []
   trace = []
@@ -36,7 +45,7 @@ def draw_multigraph(blocks):
 
   graph = pydot.Dot(graph_type='digraph')
 
-  print "adding nodes"
+  print("adding nodes")
   nodes = []
   for a in arr:
     n = pydot.Node(a, shape="box")
@@ -46,8 +55,8 @@ def draw_multigraph(blocks):
   edges = []
   cnts = []
 
-  print "trace size",len(trace)
-  print "realblock count",len(arr)
+  print("trace size",len(trace))
+  print("realblock count",len(arr))
 
   # coalesce loops
   """
@@ -75,12 +84,12 @@ def draw_multigraph(blocks):
     graph.add_edge(e)
   """
 
-  print "adding edges"
+  print("adding edges")
   for i in range(0, len(trace)-1):
     e = pydot.Edge(nodes[trace[i]], nodes[trace[i+1]], label=str(cls[i+1]), headport="n", tailport="s")
     graph.add_edge(e)
 
-  print "drawing png @ /tmp/graph.png"
+  print("drawing png @ /tmp/graph.png")
   graph.write_png('/tmp/graph.png')
   
 
@@ -235,7 +244,7 @@ def do_loop_analysis(blocks):
           # remove the loop from the blocks
           bb = bb[0:i] + bb[i:i+j] + bb[i+j*loopcnt:]
           ab = ab[0:i] + ab[i:i+j] + ab[i+j*loopcnt:]
-          print loop
+          print(loop)
           loops.append(loop)
           did_update = True
           break
@@ -465,9 +474,6 @@ def get_vtimeline_picture(trace, minclnum, maxclnum):
   r = maxclnum-minclnum
   sampling = int(math.ceil(r/50000.0))
 
-  from PIL import Image   # sudo pip install pillow
-  import base64
-  import StringIO
   im_y = int(maxclnum/sampling)
   im = Image.new( 'RGB', (1, im_y), "black")
   px = im.load()
@@ -560,7 +566,7 @@ if __name__ == "__main__":
   trace = program.add_trace("/tmp/qira_logs/0", 0)
   while not trace.db.did_update():
     time.sleep(0.1)
-  print "loaded"
+  print("loaded")
   program.qira_asm_file = open("/tmp/qira_asm", "r")
   qira_program.Program.read_asm_file(program)
 
@@ -569,7 +575,7 @@ if __name__ == "__main__":
   flow = get_instruction_flow(trace, program, trace.db.get_minclnum(), trace.db.get_maxclnum())
   blocks = get_blocks(flow, True)
   
-  print slice(trace, 124)
+  print(slice(trace, 124))
 
   #print analyze(t, program)
   #print blocks

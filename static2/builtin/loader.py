@@ -1,3 +1,4 @@
+from __future__ import print_function
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
 from elftools.elf.relocation import RelocationSection
@@ -23,13 +24,13 @@ def get_arch(fb):
 
 def load_binary(static):
   try:
-    elf = ELFFile(open(static.path))
+    elf = ELFFile(open(static.path, "rb"))
   except ELFError:
-    print "*** loader error: non-ELF detected"
+    print("*** loader error: non-ELF detected")
     return
 
   # TODO: replace with elf['e_machine']
-  progdat = open(static.path).read(0x20)
+  progdat = open(static.path, "rb").read(0x20)
   fb = struct.unpack("H", progdat[0x12:0x14])[0]   # e_machine
   static['arch'] = get_arch(fb)
   static['entry'] = elf['e_entry']
@@ -39,11 +40,11 @@ def load_binary(static):
     addr = segment['p_vaddr']
     if segment['p_type'] == 'PT_LOAD':
       memsize = segment['p_memsz']
-      static.add_memory_chunk(addr, segment.data().ljust(memsize, "\x00"))
+      static.add_memory_chunk(addr, segment.data().ljust(memsize, b"\x00"))
 
   for section in elf.iter_sections():
     if static.debug >= 1:
-      print "** found section", section.name, type(section)
+      print("** found section", section.name, type(section))
 
     if isinstance(section, RelocationSection):
       symtable = elf.get_section(section['sh_link'])
@@ -53,7 +54,7 @@ def load_binary(static):
       for rel in section.iter_relocations():
         symbol = symtable.get_symbol(rel['r_info_sym'])
         if static.debug >= 1: #suppress output for testing
-          print "Relocation",rel, symbol.name
+          print("Relocation",rel, symbol.name)
         if rel['r_offset'] != 0 and symbol.name != "":
           static[rel['r_offset']]['name'] = "__"+symbol.name
           ncount += 1
@@ -85,12 +86,12 @@ def load_binary(static):
         #print symbol['st_info'], symbol.name, hex(symbol['st_value'])
         if symbol['st_value'] != 0 and symbol.name != "" and symbol['st_info']['type'] == "STT_FUNC":
           if static.debug >= 1:
-            print "Symbol",hex(symbol['st_value']), symbol.name
+            print("Symbol",hex(symbol['st_value']), symbol.name)
           static[symbol['st_value']]['name'] = symbol.name
           ncount += 1
 
     # parse the DynamicSection to get the libraries
     #if isinstance(section, DynamicSection):
   if static.debug >= 1:
-    print "** found %d names" % ncount
+    print("** found %d names" % ncount)
 

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import socket
 import signal
@@ -27,7 +28,7 @@ def start_bindserver(program, port, parent_id, start_cl, loop = False):
     return
   # bindserver runs in a fork
   while 1:
-    print "**** listening on",myss
+    print("**** listening on",myss)
     (cs, address) = myss.accept()
 
     # fork off the child if we are looping
@@ -36,7 +37,7 @@ def start_bindserver(program, port, parent_id, start_cl, loop = False):
         cs.close()
         continue
     run_id = get_next_run_id()
-    print "**** ID",run_id,"CLIENT",cs, address, cs.fileno()
+    print("**** ID",run_id,"CLIENT",cs, address, cs.fileno())
 
     fd = cs.fileno()
     # python nonblocking is a lie...
