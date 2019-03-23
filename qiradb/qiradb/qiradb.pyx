@@ -13,7 +13,7 @@ cdef class PyTrace:
 
   def __cinit__(self, filename, trace_index, register_size, register_count, is_big_endian):
     self.t = Trace()
-    assert self.t.ConnectToFileAndStart(filename, trace_index, register_size, register_count, is_big_endian !=0 )
+    assert self.t.ConnectToFileAndStart(filename.encode('utf-8'), trace_index, register_size, register_count, is_big_endian !=0 )
 
   def get_maxclnum(self):
     return self.t.GetMaxClnum()
