@@ -7,7 +7,6 @@ Flask-SocketIO==3.3.2
 gevent==1.4.0
 greenlet==0.4.15
 hexdump==3.3
-html==1.16
 idna==2.8
 ipaddr==2.2.0
 itsdangerous==1.1.0
