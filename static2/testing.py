@@ -10,7 +10,7 @@ import struct
 try:
   from static2 import *
 except ImportError as e:
-  print "Couldn't import static2 with error `{}'. Are you in the virtualenv?".format(e)
+  print("Couldn't import static2 with error `{}'. Are you in the virtualenv?".format(e))
   sys.exit()
 import subprocess
 import argparse
@@ -56,19 +56,19 @@ def test_files(fns,quiet=False,profile=False,runtime=False):
     short_fn = fn.split("/")[-1] if "/" in fn else fn
     if os.path.isdir(fn):
       if not quiet:
-        print "{} {}: skipping directory".format(notice, short_fn)
+        print("{} {}: skipping directory".format(notice, short_fn))
       continue
     try:
-      elf = ELFFile(open(fn))
+      elf = ELFFile(open(fn, "rb"))
     except ELFError:
       if not quiet:
-        print "{} {}: skipping non-ELF file".format(notice, short_fn)
+        print("{} {}: skipping non-ELF file".format(notice, short_fn))
       continue
 
     arch = elf['e_machine']
     if arch not in SUPPORTED:
       if not quiet:
-        print "{} {}: skipping ELF with unsupported architecture `{}`".format(notice, short_fn, arch)
+        print("{} {}: skipping ELF with unsupported architecture `{}`".format(notice, short_fn, arch))
       continue
 
     engine_functions = {}
@@ -87,17 +87,17 @@ def test_files(fns,quiet=False,profile=False,runtime=False):
           this_engine.process()
         engine_functions[engine] = {x.start for x in this_engine['functions']}
       except KeyboardInterrupt:
-        print "{} User stopped processing test cases.".format(notice)
+        print("{} User stopped processing test cases.".format(notice))
         sys.exit()
       except MemoryError:
-        #print "{} {}: bap encountered a memory error.".format(fail, short_fn, engine)
+        #print("{} {}: bap encountered a memory error.".format(fail, short_fn, engine)
         continue
       except Exception as e:
-        print "{} {}: {} engine failed to process file with `{}'".format(fail, short_fn, engine, e)
+        print("{} {}: {} engine failed to process file with `{}'".format(fail, short_fn, engine, e))
         continue
       if runtime:
         if not quiet:
-          print "{} {}: {} ran without exceptions".format(ok_green, short_fn, engine)
+          print("{} {}: {} ran without exceptions".format(ok_green, short_fn, engine))
         continue
 
     if runtime:
@@ -106,29 +106,29 @@ def test_files(fns,quiet=False,profile=False,runtime=False):
     if elf.has_dwarf_info():
       dwarfinfo = elf.get_dwarf_info()
       dwarf_functions = get_functions(dwarfinfo)
-      for engine,functions in engine_functions.iteritems():
+      for engine,functions in engine_functions.items():
         missed = dwarf_functions - functions
         total_fxns = len(dwarf_functions)
         if len(missed) == 0:
-          print "{} {}: {} engine found all {} function(s)".format(ok_green,
+          print("{} {}: {} engine found all {} function(s)".format(ok_green,
                                                                    short_fn,
                                                                    engine,
-                                                                   total_fxns)
+                                                                   total_fxns))
         else:
           status = fail if len(missed) == total_fxns else warn
           if args.verbose:
             fmt = "{} {}: {} engine missed {}/{} function(s): {}"
             missed_s = ", ".join(hex(fxn) for fxn in missed)
-            print fmt.format(status, short_fn, engine,
-                    len(missed), total_fxns, missed_s)
+            print(fmt.format(status, short_fn, engine,
+                    len(missed), total_fxns, missed_s))
           else:
             fmt = "{} {}: {} engine missed {}/{} function(s)"
-            print fmt.format(status, short_fn, engine,
-                    len(missed), total_fxns)
+            print(fmt.format(status, short_fn, engine,
+                    len(missed), total_fxns))
     else:
-      for engine,functions in engine_functions.iteritems():
+      for engine,functions in engine_functions.items():
         status = fail if len(functions) == 0 else ok_blue
-        print "{} {}: {} engine found {} function(s). (dwarf info unavailable)".format(status, short_fn, engine, len(functions))
+        print("{} {}: {} engine found {} function(s). (dwarf info unavailable)".format(status, short_fn, engine, len(functions)))
 
 def get_file_list(location, recursive=False):
   fns = []
@@ -146,7 +146,7 @@ def get_file_list(location, recursive=False):
         if not os.path.isdir(fn):
           fns.append(fn)
   if fns == []:
-    print "No files found. Try running with -r."
+    print("No files found. Try running with -r.")
   return fns
 
 if __name__ == "__main__":
@@ -171,9 +171,9 @@ if __name__ == "__main__":
     fns = get_file_list(args.files, args.recursive)
   else:
     if args.profile:
-      print "Profiling over entire test suite. Are you sure that's what you wanted?"
+      print("Profiling over entire test suite. Are you sure that's what you wanted?")
     fns = get_file_list([TEST_PATH], args.recursive)
     if len(fns) == 0:
-      print "No files found in {}. Try running python autogen.py --dwarf in the tests directory.".format(TEST_PATH)
+      print("No files found in {}. Try running python autogen.py --dwarf in the tests directory.".format(TEST_PATH))
 
   test_files(fns, args.quiet, args.profile, args.runtime)

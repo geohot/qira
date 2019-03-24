@@ -46,7 +46,7 @@ def compiler_command(path,filename,this_arch,args):
   if args.clang:
     if this_arch not in [arch.x86,arch.x86_64]:
       #todo: fix this, clang should support all archs pretty easily
-      print "clang doesn't support arch"
+      print("clang doesn't support arch")
       return []
     compiler = "clang"
     raw_filename += "_clang"
@@ -75,7 +75,7 @@ def compiler_command(path,filename,this_arch,args):
     command += [PPC64_GCC]
     raw_filename += "_ppc64"
   else:
-    print "Invalid archicture"
+    print("Invalid arch")
     return []
 
   if args.static:
@@ -185,21 +185,21 @@ def process_files(archs,files,args):
       if cmd == []:
         continue #failed to get command
       if args.print_only:
-        print " ".join(cmd)
+        print(" ".join(cmd))
       else:
-        print "{} [{}/{}] {}".format(green_plus,
-          progress,to_compile," ".join(cmd))
+        print("{} [{}/{}] {}".format(green_plus,
+          progress,to_compile," ".join(cmd)))
         #don't show warnings
         status = subprocess.call(cmd,stdout=FNULL,stderr=FNULL)
         if status != 0:
           any_failed = True
           fail_path = os.path.join(path,fn)
-          print "{} Compilation failed for {}.".format(fail_minus,fail_path)
+          print("{} Compilation failed for {}.".format(fail_minus,fail_path))
       progress += 1
   if any_failed:
-    print "At least one test failed."
-    print "Install ./autogen-extras.sh if necessary."
-    print "Otherwise, it's a bug and we're working on it."
+    print("At least one test failed.")
+    print("Install ./autogen-extras.sh if necessary.")
+    print("Otherwise, it's a bug and we're working on it.")
 
 def generate_binaries():
   args = argument_parse()
@@ -210,7 +210,7 @@ def generate_binaries():
     sys.exit()
 
   if args.strip and args.dwarf:
-    print "Both --strip and --dwarf seleted. Was that intended?"
+    print("Both --strip and --dwarf seleted. Was that intended?")
 
   archs = get_archs(args)
   files = get_files(args)
