@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 if [ ! -d qemu/qemu ]; then
   cd qemu
