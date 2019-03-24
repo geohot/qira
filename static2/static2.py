@@ -46,20 +46,11 @@ import loader
 import analyzer
 
 # the new interface for all things static
-# will only support radare2 for now
 # mostly tags, except for names and functions
 class Static:
-  def __init__(self, path, debug=0):
-    # create the static cache dir
-    try:
-      os.mkdir(qira_config.STATIC_CACHE_BASE)
-    except:
-      pass
-
+  def __init__(self, path, debug=1):
     self.tags = {}
     self.path = path
-    self.scf = qira_config.STATIC_CACHE_BASE + sha1(open(self.path, "rb").read()).hexdigest()
-    self.r2core = None
     self.debug = debug
 
     # radare doesn't seem to have a concept of names
@@ -83,6 +74,12 @@ class Static:
       print("*** elf loaded")
 
     """
+    # create the static cache dir
+    try:
+      os.mkdir(qira_config.STATIC_CACHE_BASE)
+    except:
+      pass
+    self.scf = qira_config.STATIC_CACHE_BASE + sha1(open(self.path, "rb").read()).hexdigest()
     # check the cache
     if os.path.isfile(self.scf):
       # cache is global_tags + tags
@@ -239,7 +236,7 @@ class Static:
   def process(self):
     self.analyzer.analyze_functions(self)
     if self.debug >= 1:
-      print("*** found %d functions" % len(self['functions']))
+      print("*** static found %d functions" % len(self['functions']))
 
 
 # *** STATIC TEST STUFF ***

@@ -43,7 +43,7 @@ def load_binary(static):
       static.add_memory_chunk(addr, segment.data().ljust(memsize, b"\x00"))
 
   for section in elf.iter_sections():
-    if static.debug >= 1:
+    if static.debug >= 2:
       print("** found section", section.name, type(section))
 
     if isinstance(section, RelocationSection):
@@ -53,7 +53,7 @@ def load_binary(static):
 
       for rel in section.iter_relocations():
         symbol = symtable.get_symbol(rel['r_info_sym'])
-        if static.debug >= 1: #suppress output for testing
+        if static.debug >= 2: #suppress output for testing
           print("Relocation",rel, symbol.name)
         if rel['r_offset'] != 0 and symbol.name != "":
           static[rel['r_offset']]['name'] = "__"+symbol.name
@@ -85,7 +85,7 @@ def load_binary(static):
       for nsym, symbol in enumerate(section.iter_symbols()):
         #print symbol['st_info'], symbol.name, hex(symbol['st_value'])
         if symbol['st_value'] != 0 and symbol.name != "" and symbol['st_info']['type'] == "STT_FUNC":
-          if static.debug >= 1:
+          if static.debug >= 2:
             print("Symbol",hex(symbol['st_value']), symbol.name)
           static[symbol['st_value']]['name'] = symbol.name
           ncount += 1
