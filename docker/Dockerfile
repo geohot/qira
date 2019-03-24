@@ -1,7 +1,9 @@
-FROM ubuntu:16.04
+FROM ubuntu:14.04
 
 # prepare packages in env
 RUN apt-get update && apt-get -y install build-essential debootstrap debian-archive-keyring libjpeg-dev zlib1g-dev unzip wget graphviz curl python-dev python-pip python-virtualenv git wget flex bison libtool automake autoconf autotools-dev pkg-config libglib2.0-dev
+RUN apt-get --no-install-recommends -qq -y build-dep qemu
+RUN apt-get -y install wget flex bison libtool automake autoconf autotools-dev pkg-config libglib2.0-dev
 RUN pip install --upgrade pip
 
 # fetch qira
