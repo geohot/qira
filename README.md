@@ -12,7 +12,7 @@
 <pre>
 Ubuntu 14.04 and 16.04 supported out of the box.
 18.04 is having a problem with building QEMU
-See QEMU source at https://github.com/geohot/qemu on branch qira to fix.
+See forked QEMU source at https://github.com/geohot/qemu/tree/qira to fix.
 
 Non Linux hosts may run the rest of QIRA, but cannot run the QEMU tracer.
 Very limited support for Mac OS X and Windows natively.
