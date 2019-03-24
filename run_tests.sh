@@ -10,7 +10,7 @@ if [ "$1" == "distrib" ] ; then
 fi
 
 source venv/bin/activate
-nosetests -v
+nosetests -v -s
 
 # integration test
 qira qira_tests/bin/loop &

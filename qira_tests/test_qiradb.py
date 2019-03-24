@@ -34,7 +34,7 @@ def test():
 
   # fetch registers
   ret = t.fetch_registers(113)
-  print("fetch regs:",map(hex, ret))
+  print("fetch regs:",list(map(hex, ret)))
   assert len(ret) == 9
   assert ret[8] == 0x80484d1
   assert ret[4] == 0xf6ffef00
