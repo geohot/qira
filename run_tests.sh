@@ -13,7 +13,7 @@ source venv/bin/activate
 nosetests -v -s
 
 # integration test
-qira qira_tests/bin/loop &
+./qira qira_tests/bin/loop &
 QIRA_PID=$!
 trap "kill $QIRA_PID" EXIT
 echo "qira pid is $QIRA_PID"

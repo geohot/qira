@@ -9,13 +9,20 @@ else
 fi
 
 # build qemu
-if [ $(tracers/qemu/qira-i386 > /dev/null; echo $?) == 1 ]; then
-  echo "QIRA QEMU appears to run okay"
+if [[ "$(uname)" == 'Linux' ]]; then
+  if [ $(tracers/qemu/qira-i386 > /dev/null; echo $?) == 1 ]; then
+    echo "QIRA QEMU appears to run okay"
+  else
+    echo "building QEMU"
+    cd tracers
+    ./qemu_build.sh
+    cd ../
+  fi
 else
-  echo "building QEMU"
-  cd tracers
-  ./qemu_build.sh
-  cd ../
+  echo "QEMU user only works on Linux."
+  echo "While the rest of QIRA will run, you cannot run binaries."
+  echo "This is due to QEMU user forwarding the syscalls to the kernel."
+  echo "See other backends in qira/tracers, PIN may work on Windows and OS X"
 fi
 
 echo "building python venv"
