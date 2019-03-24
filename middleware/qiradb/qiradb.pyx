@@ -7,11 +7,14 @@ PAGE_READ = 2
 PAGE_WRITE = 4
 
 cdef class PyTrace:
-  cdef Trace t
+  cdef Trace *t
 
   def __cinit__(self, filename, trace_index, register_size, register_count, is_big_endian):
-    self.t = Trace()
-    assert self.t.ConnectToFileAndStart(filename.encode('utf-8'), trace_index, register_size, register_count, is_big_endian != 0)
+    self.t = new Trace()
+    assert self.t.ConnectToFileAndStart(filename.encode('utf-8'), trace_index, register_size, register_count, is_big_endian)
+
+  def __dealloc__(self):
+    del self.t
 
   def get_maxclnum(self):
     return self.t.GetMaxClnum()
