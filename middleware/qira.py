@@ -28,7 +28,6 @@ if __name__ == '__main__':
   parser.add_argument("--web-port", metavar="PORT", help="listen port for web interface. 3002 by default", type=int, default=qira_config.WEB_PORT)
   parser.add_argument("--socat-port", metavar="PORT", help="listen port for socat. 4000 by default", type=int, default=qira_config.SOCAT_PORT)
   parser.add_argument('-S', '--static', help="enable static2", action="store_true")
-  parser.add_argument("--engine", help="static engine to use with static2 (builtin or r2)", default="builtin")
   #capstone flag in qira_config for now
 
   # parse arguments, first try
@@ -69,7 +68,6 @@ if __name__ == '__main__':
   if args.static:
     print("*** using static")
     qira_config.WITH_STATIC = True
-    qira_config.STATIC_ENGINE = args.engine
   if args.flush_cache:
     print("*** flushing caches")
     os.system("rm -rfv /tmp/qira*")

@@ -3,7 +3,6 @@ try:
 except ImportError:
   import queue as Queue
 from model import Function, Block, DESTTYPE
-import byteweight
 import time
 
 def analyze_functions(static):
@@ -11,9 +10,7 @@ def analyze_functions(static):
   main = static.get_address_by_name("main")
   if main != None:
     make_function_at(static, main)
-  bw_functions = byteweight.fsi(static)
-  for f in bw_functions:
-    make_function_at(static, f)
+  # TODO: use functions from loaded program
 
 # things to actually drive the static analyzer
 # runs the recursive descent parser at address
@@ -90,8 +87,9 @@ def make_function_at(static, address, recurse = True):
         start = time.time()
     static['blocks'].add(this_block)
 
-   # find more functions
+  # find more functions
   if recurse:
     for f in function_starts:
       if static[f]['function'] == None:
         make_function_at(static, f)
+

@@ -6,6 +6,8 @@ PAGE_INSTRUCTION = 1
 PAGE_READ = 2
 PAGE_WRITE = 4
 
+MAXINT = 2**32-1
+
 cdef class PyTrace:
   cdef Trace *t
 
@@ -41,9 +43,13 @@ cdef class PyTrace:
     return self.t.FetchClnumsByAddressAndType(address, ord(ttype), start_clnum, end_clnum, limit)
 
   def fetch_registers(self, clnum):
+    if clnum == -1:   # fetch the latest
+      clnum = MAXINT
     return self.t.FetchRegisters(clnum)
 
   def fetch_memory(self, clnum, address, llen):
+    if clnum == -1:   # fetch the latest
+      clnum = MAXINT
     return self.t.FetchMemory(clnum, address, llen)
 
   def fetch_changes_by_clnum(self, clnum, limit):

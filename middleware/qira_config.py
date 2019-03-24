@@ -14,12 +14,8 @@ else:
 BASEDIR = os.path.realpath(os.path.dirname(os.path.realpath(__file__))+"/../")
 sys.path.append(BASEDIR)
 
-# BAP is no longer supported
-WITH_BAP = False
-
 # TODO: make this true in v3
 WITH_STATIC = False
-STATIC_ENGINE = "builtin"
 STATIC_CACHE_BASE = "/tmp/qira_static_cache/"
 
 WEBSOCKET_DEBUG = False

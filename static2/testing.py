@@ -72,33 +72,33 @@ def test_files(fns,quiet=False,profile=False,runtime=False):
       continue
 
     engine_functions = {}
-    for engine in ENGINES:
-      try:
-        this_engine = Static(fn, debug=0, static_engine=engine) #no debug output
-        if args.profile:
-          #needs pycallgraph
-          from pycallgraph import PyCallGraph
-          from pycallgraph.output import GraphvizOutput
-          graphviz = GraphvizOutput()
-          graphviz.output_file = 'prof.png'
-          with PyCallGraph(output=graphviz):
-            this_engine.process()
-        else:
+    engine = "builtin"
+    try:
+      this_engine = Static(fn, debug=0) #no debug output
+      if args.profile:
+        #needs pycallgraph
+        from pycallgraph import PyCallGraph
+        from pycallgraph.output import GraphvizOutput
+        graphviz = GraphvizOutput()
+        graphviz.output_file = 'prof.png'
+        with PyCallGraph(output=graphviz):
           this_engine.process()
-        engine_functions[engine] = {x.start for x in this_engine['functions']}
-      except KeyboardInterrupt:
-        print("{} User stopped processing test cases.".format(notice))
-        sys.exit()
-      except MemoryError:
-        #print("{} {}: bap encountered a memory error.".format(fail, short_fn, engine)
-        continue
-      except Exception as e:
-        print("{} {}: {} engine failed to process file with `{}'".format(fail, short_fn, engine, e))
-        continue
-      if runtime:
-        if not quiet:
-          print("{} {}: {} ran without exceptions".format(ok_green, short_fn, engine))
-        continue
+      else:
+        this_engine.process()
+      engine_functions[engine] = {x.start for x in this_engine['functions']}
+    except KeyboardInterrupt:
+      print("{} User stopped processing test cases.".format(notice))
+      sys.exit()
+    except MemoryError:
+      #print("{} {}: bap encountered a memory error.".format(fail, short_fn, engine)
+      continue
+    except Exception as e:
+      print("{} {}: {} engine failed to process file with `{}'".format(fail, short_fn, engine, e))
+      continue
+    if runtime:
+      if not quiet:
+        print("{} {}: {} ran without exceptions".format(ok_green, short_fn, engine))
+      continue
 
     if runtime:
       continue
