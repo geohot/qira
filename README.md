@@ -7,6 +7,18 @@
 * All QIRA code is released under MIT license
 * Other code in this repo released under its respective license
 
+## Supported OS
+
+<pre>
+Ubuntu 14.04 and 16.04 supported out of the box.
+18.04 is having a problem with building QEMU
+See QEMU source at https://github.com/geohot/qemu to fix.
+
+Non Linux hosts may run the rest of QIRA, but cannot run the QEMU tracer.
+Very limited support for Mac OS X and Windows natively.
+Though the Docker image in docker/ should work.
+</pre>
+
 ## Installing release
 
 See instructions on [qira.me](http://qira.me/) to install 1.3

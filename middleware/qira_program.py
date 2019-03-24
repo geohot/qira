@@ -382,14 +382,18 @@ class Program:
   def execqira(self, args=[], shouldfork=True):
     if self.runnable == False:
       return
-    if shouldfork:
-      if os.fork() != 0:
-        return
     if qira_config.USE_PIN:
       # is "-injection child" good?
       eargs = [self.pinbinary, "-injection", "child", "-t", self.pintool, "--", self.program]+self.args
     else:
       eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
+    if not os.path.exists(eargs[0]):
+      print("\nQIRA tracer %s not found" % eargs[0])
+      print("Your install is broken. Check ./install.sh for issues")
+      exit(-1)
+    if shouldfork:
+      if os.fork() != 0:
+        return
     #print "***",' '.join(eargs)
     os.execvp(eargs[0], eargs)
 
