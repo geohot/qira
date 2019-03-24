@@ -1,12 +1,5 @@
 #!/bin/bash -e
 
-# default is just pip, but on things like arch where python 3 is default, it's pip2
-if [ $(which pip2) ]; then
-    PIP="pip2"
-else
-    PIP="pip"
-fi
-
 unamestr=$(uname)
 arch=$(uname -p)
 
@@ -20,10 +13,8 @@ if [[ "$unamestr" == 'Linux' ]]; then
     sudo apt-get -y install build-essential debootstrap debian-archive-keyring libjpeg-dev zlib1g-dev unzip wget graphviz curl python-dev python-pip python-virtualenv git wget flex bison libtool automake autoconf autotools-dev pkg-config libglib2.0-dev
   elif [ $(which pacman) ]; then
     sudo pacman -S --needed --noconfirm base-devel python2-pip python2-virtualenv
-    PIP="pip2"
   elif [ $(which dnf) ]; then
     sudo dnf install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
-    PIP="pip2"
   elif [ $(which yum) ]; then
     sudo yum install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
   elif [ $(which zypper) ]; then
@@ -54,16 +45,10 @@ fi
 
 echo "installing pip packages"
 
-if [ $(which virtualenv2) ]; then
-    VIRTUALENV="virtualenv2"
-else
-    VIRTUALENV="virtualenv"
-fi
-
-$VIRTUALENV venv
+virtualenv venv --python=python3
 source venv/bin/activate
-$PIP install --upgrade pip
-$PIP install --upgrade -r requirements.txt
+pip3 install --upgrade pip
+pip3 install --upgrade -r requirements.txt
 
 echo "making symlink"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira

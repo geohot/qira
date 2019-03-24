@@ -124,3 +124,12 @@ dirtyiaddr -- whether we should update the clnum based on the iaddr or not
 flat -- if we are in flat view
 </pre>
 
+
+## Static
+
+QIRA static has historically been such a trash heap it's gated behind -S. QIRA should not be trying to compete with IDA.
+
+User input and the actual traces of the program should drive creation of the static database. Don't try to recover all CFGs, only what ran.
+
+The basic idea of static is that it exists at change -1 and doesn't change ever. Each address has a set of tags, including things like name.
+
