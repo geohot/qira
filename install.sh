@@ -17,12 +17,7 @@ if [[ "$unamestr" == 'Linux' ]]; then
     echo "running apt-get update"
     sudo apt-get update -qq
     echo "installing apt packages"
-    sudo apt-get -qq -y install build-essential debootstrap debian-archive-keyring libjpeg-dev zlib1g-dev unzip wget graphviz curl
-    echo "install python packages"
-    sudo apt-get -qq -y install python-dev python-pip python-virtualenv
-    echo "install qemu build deps"
-    sudo apt-get --no-install-recommends -qq -y build-dep qemu
-    sudo apt-get -y install wget flex bison libtool automake autoconf autotools-dev pkg-config libglib2.0-dev
+    sudo apt-get -y install build-essential debootstrap debian-archive-keyring libjpeg-dev zlib1g-dev unzip wget graphviz curl python-dev python-pip python-virtualenv git wget flex bison libtool automake autoconf autotools-dev pkg-config libglib2.0-dev
   elif [ $(which pacman) ]; then
     sudo pacman -S --needed --noconfirm base-devel python2-pip python2-virtualenv
     PIP="pip2"
@@ -67,6 +62,7 @@ fi
 
 $VIRTUALENV venv
 source venv/bin/activate
+$PIP install --upgrade pip
 $PIP install --upgrade -r requirements.txt
 
 echo "making symlink"
