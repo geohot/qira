@@ -21,14 +21,6 @@ if [[ "$unamestr" == 'Linux' ]]; then
     sudo zypper install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
   fi
 
-  if [ $(tracers/qemu/qira-i386 > /dev/null; echo $?) == 1 ]; then
-    echo "QIRA QEMU appears to run okay"
-  else
-    echo "building QEMU"
-    cd tracers
-    ./qemu_build.sh
-    cd ../
-  fi
 elif [[ "$unamestr" == 'Darwin' ]]; then
   if [ $(which brew) ]; then
     echo "Installing OS X dependencies"
@@ -43,12 +35,21 @@ elif [[ "$unamestr" == 'Darwin' ]]; then
   fi
 fi
 
+if [ $(tracers/qemu/qira-i386 > /dev/null; echo $?) == 1 ]; then
+  echo "QIRA QEMU appears to run okay"
+else
+  echo "building QEMU"
+  cd tracers
+  ./qemu_build.sh
+  cd ../
+fi
+
 echo "installing pip packages"
 
-virtualenv venv --python=python3
+virtualenv venv
 source venv/bin/activate
-pip3 install --upgrade pip
-pip3 install --upgrade -r requirements.txt
+pip install --upgrade pip
+pip install --upgrade -r requirements.txt
 
 echo "making symlink"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira

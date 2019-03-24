@@ -1,18 +1,24 @@
 FROM ubuntu:16.04
 
-# prepare packages in env
-RUN apt-get update && apt-get -y install build-essential debootstrap debian-archive-keyring libjpeg-dev zlib1g-dev unzip wget graphviz curl python-dev python-pip python-virtualenv git wget flex bison libtool automake autoconf autotools-dev pkg-config libglib2.0-dev
+# minimal system basics
+RUN apt-get update
+RUN apt-get -y install git curl
 
 # fetch qira
 RUN git clone https://github.com/geohot/qira.git
 WORKDIR /qira
 
 # build qemu
+RUN apt-get -y install python build-essential pkg-config zlib1g-dev libglib2.0-dev libpixman-1-dev
 RUN cd tracers && ./qemu_build.sh
 
 # install python packages and link qira
+RUN apt-get -y install python python-virtualenv python-dev
 RUN virtualenv venv
 RUN bash -c 'source venv/bin/activate && pip install --upgrade pip'
 RUN bash -c 'source venv/bin/activate && pip install --upgrade -r requirements.txt'
 RUN ln -sf /qira/qira /usr/local/bin/qira
+
+# test will build Cython qiradb
+RUN ./run_tests.sh
 
