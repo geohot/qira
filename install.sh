@@ -1,40 +1,14 @@
 #!/bin/bash -e
 
-unamestr=$(uname)
-arch=$(uname -p)
-
-if [[ "$unamestr" == 'Linux' ]]; then
-  # we need pip to install python stuff
-  # build for building qiradb and stuff for flask like gevent
-  if [ $(which apt-get) ]; then
-    echo "running apt-get update"
-    sudo apt-get update -qq
-    echo "installing apt packages"
-    sudo apt-get -y install build-essential debootstrap debian-archive-keyring libjpeg-dev zlib1g-dev unzip wget graphviz curl python-dev python-pip python-virtualenv git wget flex bison libtool automake autoconf autotools-dev pkg-config libglib2.0-dev
-  elif [ $(which pacman) ]; then
-    sudo pacman -S --needed --noconfirm base-devel python2-pip python2-virtualenv
-  elif [ $(which dnf) ]; then
-    sudo dnf install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
-  elif [ $(which yum) ]; then
-    sudo yum install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
-  elif [ $(which zypper) ]; then
-    sudo zypper install -y python-pip python-devel gcc gcc-c++ python-virtualenv glib2-devel
-  fi
-
-elif [[ "$unamestr" == 'Darwin' ]]; then
-  if [ $(which brew) ]; then
-    echo "Installing OS X dependencies"
-    brew update
-    brew install python capstone graphviz
-    pip install virtualenv
-    cd tracers
-    ./pin_build.sh
-    cd ../
-  else
-    echo "build script only supports Homebrew"
-  fi
+# install system deps
+if [ $(which apt-get) ]; then
+  echo "installing deps for ubuntu"
+  sudo apt-get -y install git curl python python-virtualenv python-dev build-essential pkg-config zlib1g-dev libglib2.0-dev libpixman-1-dev
+else
+  echo "*** You'll need to install Ubuntu or get a working build env for qemu and python yourself ***"
 fi
 
+# build qemu
 if [ $(tracers/qemu/qira-i386 > /dev/null; echo $?) == 1 ]; then
   echo "QIRA QEMU appears to run okay"
 else
@@ -44,14 +18,16 @@ else
   cd ../
 fi
 
-echo "installing pip packages"
-
+echo "building python venv"
 virtualenv venv
 source venv/bin/activate
 pip install --upgrade pip
 pip install --upgrade -r requirements.txt
 
-echo "making symlink"
+echo "running tests"
+./run_tests.sh
+
+echo "making systemwide symlink"
 sudo ln -sf $(pwd)/qira /usr/local/bin/qira
 
 echo "***************************************"
@@ -60,3 +36,4 @@ echo "  Check out README for more info"
 echo "  Or just dive in with 'qira /bin/ls'"
 echo "  And point Chrome to localhost:3002"
 echo "    ~geohot"
+

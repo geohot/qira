@@ -2,14 +2,14 @@ FROM ubuntu:16.04
 
 # minimal system basics
 RUN apt-get update
-RUN apt-get -y install git curl
+RUN apt-get -y install git curl python
 
 # fetch qira
 RUN git clone https://github.com/geohot/qira.git
 WORKDIR /qira
 
 # build qemu
-RUN apt-get -y install python build-essential pkg-config zlib1g-dev libglib2.0-dev libpixman-1-dev
+RUN apt-get -y install build-essential pkg-config zlib1g-dev libglib2.0-dev libpixman-1-dev
 RUN cd tracers && ./qemu_build.sh
 
 # install python packages and link qira
