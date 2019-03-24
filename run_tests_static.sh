@@ -10,5 +10,4 @@ cd tests_auto
 python autogen.py --dwarf
 cd ../
 cd static2
-python testing.py
-
+python3 testing.py

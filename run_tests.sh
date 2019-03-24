@@ -24,4 +24,3 @@ sleep 2
 curl http://localhost:3002/ | grep "<title>qira</title>"
 
 echo "tests pass"
-

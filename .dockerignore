@@ -1,0 +1,4 @@
+.git
+tracers/qemu
+tracers/pin/obj*
+tracers/pin/pin-*
