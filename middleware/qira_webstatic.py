@@ -3,6 +3,7 @@
 # these calls don't have to be included for qira to work
 from __future__ import print_function
 
+import sys
 import qira_config
 
 from qira_webserver import socketio
@@ -76,11 +77,11 @@ def settags(tags):
 def graph_dot():
   req = request.data
   #print "DOT REQUEST", req
-  f = open("/tmp/in.dot", "w")
+  f = open("/tmp/in.dot", "wb")
   f.write(req)
   f.close()
   os.system("dot /tmp/in.dot > /tmp/out.dot")
-  ret = open("/tmp/out.dot").read()
+  ret = open("/tmp/out.dot", "rb").read()
   #print "DOT RESPONSE", ret
   return ret
 
@@ -97,6 +98,12 @@ if qira_config.WITH_STATIC:
       if 'instruction' in stat:
         bbb['instruction'] = str(stat['instruction'])
 
+    def nl(dat):
+      if (sys.version_info > (3, 0)):
+        return list(map(int, dat))
+      else:
+        return map(ord, dat)
+
     fxn = program.static[fhex(haddr)]['function']
     if fxn == None or flat == True:
       addr = fhex(haddr)
@@ -112,14 +119,14 @@ if qira_config.WITH_STATIC:
           if 'len' in program.static[i-j] and program.static[i-j]['len'] == j:
             i -= j
             bbb = {'address': ghex(i)}
-            bbb['bytes'] = map(ord, program.static.memory(i, j))
+            bbb['bytes'] = nl(program.static.memory(i, j))
             ret.append(bbb)
             did_append = True
             break
         if not did_append:
           i -= 1
           bbb = {'address': ghex(i)}
-          bbb['bytes'] = map(ord, program.static.memory(i, 1))
+          bbb['bytes'] = nl(program.static.memory(i, 1))
           ret.append(bbb)
       ret = ret[::-1]
 
@@ -134,7 +141,7 @@ if qira_config.WITH_STATIC:
             l = 1
         else:
           l = 1
-        bbb['bytes'] = map(ord, program.static.memory(i, l))
+        bbb['bytes'] = nl(program.static.memory(i, l))
         i += l
         ret.append(bbb)
 
@@ -151,7 +158,7 @@ if qira_config.WITH_STATIC:
         for i in sorted(b.addresses):
           bbb = {'address': ghex(i)}
           copy_fields(bbb, program.static[i])
-          bbb['dests'] = map(lambda x: (ghex(x[0]), x[1]), program.static[i]['instruction'].dests())
+          bbb['dests'] = list(map(lambda x: (ghex(x[0]), x[1]), program.static[i]['instruction'].dests()))
           bb.append(bbb)
         blocks.append(bb)
 

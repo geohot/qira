@@ -48,11 +48,6 @@ import threading
 import sys
 if 'threading' in sys.modules:
   del sys.modules['threading']
-import gevent
-import gevent.socket
-import gevent.monkey
-gevent.monkey.patch_all()
-# done with that
 
 app = Flask(__name__)
 #app.config['DEBUG'] = True
@@ -69,7 +64,6 @@ def push_trace_update(i):
   t.needs_update = False
 
 def push_updates(full = True):
-
   socketio.emit('pmaps', program.get_pmaps(), namespace='/qira')
   socketio.emit('maxclnum', program.get_maxclnum(), namespace='/qira')
   socketio.emit('arch', list(program.tregs), namespace='/qira')
