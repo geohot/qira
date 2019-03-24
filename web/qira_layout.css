@@ -139,6 +139,7 @@ td {
   min-height: 18px;
   position: absolute;
   top: 0;
+  background-color: #BBBBBB;
 }
 
 #itags-static {

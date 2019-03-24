@@ -128,16 +128,16 @@ function zoom_out_max(dontforce) {
   push_history("zoom out cview");
 }
 
-function sync_tags_request(addrs) {
+function sync_tags_request(addrs, call='gettagsa') {
   var req = new XMLHttpRequest();
-  req.open('POST', '/gettagsa', false);
+  req.open('POST', '/'+call, false);
   req.send(JSON.stringify(addrs));
   return JSON.parse(req.response);
 }
 
-function async_tags_request(addrs, cb) {
+function async_tags_request(addrs, cb, call='gettagsa') {
   var req = new XMLHttpRequest();
-  req.open('POST', '/gettagsa', true);
+  req.open('POST', '/'+call, true);
   req.onreadystatechange = function() {
     if (req.readyState == 4 && req.status == 200) {
       cb(JSON.parse(req.response));

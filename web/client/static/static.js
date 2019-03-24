@@ -37,14 +37,14 @@ Deps.autorun(function() { DA("update itags view");
   var addr = Session.get('iaddr');
   async_tags_request([addr], function(x) {
     $("#itags-static").html(draw_tags(addr, x[0]));
-  }) 
+  }, 'gettagss') 
 });
 
 Deps.autorun(function() { DA("update dtags view");
   var addr = Session.get('daddr');
   async_tags_request([addr], function(x) {
     $("#dtags-static").html(draw_tags(addr, x[0]));
-  }) 
+  }, 'gettagss') 
 });
 
 // TODO: this code is replicated in idump.js

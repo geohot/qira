@@ -57,6 +57,15 @@ def gettagsa():
     ret.append(rret)
   return json.dumps(ret)
 
+@app.route('/gettagss', methods=["POST"])
+def gettagss():
+  arr = json.loads(request.data)
+  ret = []
+  for i in arr:
+    i = fhex(i)
+    ret.append(program.static[i].todict());
+  return json.dumps(ret)
+
 @socketio.on('gotoname', namespace='/qira')
 @socket_method
 def gotoname(name):

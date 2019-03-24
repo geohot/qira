@@ -503,6 +503,13 @@ class Tags:
     self.static = static
     self.address = address
 
+  def todict(self):
+    ret = {}
+    for k in self.backing:
+      # TODO: add proper type conversions as needed
+      ret[k] = str(self.backing[k])
+    return ret
+
   def __contains__(self, tag):
     return tag in self.backing
 
