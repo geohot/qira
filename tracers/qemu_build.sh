@@ -13,7 +13,7 @@ if [ ! -d qemu/qemu-latest ]; then
   rm -rf qemu
   mkdir -p qemu
   cd qemu
-  wget http://wiki.qemu-project.org/download/qemu-$QEMU_VERSION.tar.bz2
+  curl -Lo qemu-$QEMU_VERSION.tar.bz2 http://wiki.qemu-project.org/download/qemu-$QEMU_VERSION.tar.bz2
 
   HASH=`sha256sum ./qemu-"$QEMU_VERSION".tar.bz2 2>/dev/null | cut -d' ' -f1`
   if [ "$HASH" != "$QEMU_SHA256" ]; then
