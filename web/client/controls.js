@@ -105,17 +105,12 @@ $(document).ready(function() {
   });
   $('body').on('mousewheel', '.flat', function(e) {
     var cdr = $(".flat").children();
-    // TODO: HAXX!!!
+    p(e.originalEvent.wheelDelta);
     if (e.originalEvent.wheelDelta < 0) {
-      Session.set('iview', get_address_from_class(cdr[16].childNodes[0]));
-    } else if (e.originalEvent.wheelDelta > 0) {
-      Session.set('iview', get_address_from_class(cdr[14].childNodes[0]));
-    }
-    /*if (e.originalEvent.wheelDelta < 0) {
       Session.set('iview', bn_add(Session.get('iview'), -1));
     } else if (e.originalEvent.wheelDelta > 0) {
       Session.set('iview', bn_add(Session.get('iview'), 1));
-    }*/
+    }
   });
   $("#idump")[0].addEventListener("mousewheel", function(e) {
     //p("idump mousewheel");

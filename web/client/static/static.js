@@ -7,12 +7,45 @@ Deps.autorun(function() { DA("update static view");
   var flat = Session.get('flat');
   if (iview === undefined) return;
 
-  var size = get_size("#flat-static");
-  p(size);
-
+  var size = get_size("#cfg-static");
   stream.emit('getstaticview', iview, flat, [-5,size-5]);
 });
 
+function draw_tags(addr, x) {
+  var ret = "<table>"
+  var keys = [];
+  for (var key in x) { keys[keys.length] = key; }
+  keys = keys.sort();
+  for (var i = 0; i < keys.length; i++) {
+    key = keys[i];
+    if (x[key] !== null) {
+      ret += "<tr>"
+      ret += "<td>"+key+"</td>"
+      if (key == "address") {
+        ret += "<td><span class='hexnumber'>"+x[key]+"</span></td>"
+      } else {
+        ret += "<td>"+x[key]+"</td>"
+      }
+      ret += "</tr>"
+    }
+  }
+  ret += "</table>"
+  return ret;
+}
+
+Deps.autorun(function() { DA("update itags view");
+  var addr = Session.get('iaddr');
+  async_tags_request([addr], function(x) {
+    $("#itags-static").html(draw_tags(addr, x[0]));
+  }) 
+});
+
+Deps.autorun(function() { DA("update dtags view");
+  var addr = Session.get('daddr');
+  async_tags_request([addr], function(x) {
+    $("#dtags-static").html(draw_tags(addr, x[0]));
+  }) 
+});
 
 // TODO: this code is replicated in idump.js
 function instruction_html_from_tags(ins) {
@@ -55,7 +88,7 @@ function display_flat(addrs) {
     idump += instruction_html_from_tags(addrs[i]);
   }
   idump += '</div>';
-  $("#flat-static").html(idump);
+  $("#cfg-static").html(idump);
 }
 
 function on_flat(addrs) { DS("flat");

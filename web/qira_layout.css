@@ -131,3 +131,23 @@ td {
   top: 0;
 }
 
+.tags {
+  border: 1px solid grey;
+  width: 49.8%;
+  display: inline-block;
+  height: 100%;
+  min-height: 18px;
+  position: absolute;
+  top: 0;
+}
+
+#itags-static {
+  border-color: #cc0000;
+}
+
+#dtags-static {
+  border-color: #888800;
+  left: 50%;
+}
+
+
