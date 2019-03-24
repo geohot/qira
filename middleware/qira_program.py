@@ -429,10 +429,12 @@ class Trace:
         dat[i] = mem[i]&0xFF
       else:
         try:
-          dat[i] = ord(self.program.static.memory(ri, 1)[0])
-        except:
+          if (sys.version_info > (3, 0)):
+            dat[i] = self.program.static.memory(ri, 1)[0]
+          else:
+            dat[i] = ord(self.program.static.memory(ri, 1)[0])
+        except IndexError:
           pass
-          #dat[i] = 0 #XXX is this correct behavior?
     return dat
 
   def read_strace_file(self):
