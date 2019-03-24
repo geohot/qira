@@ -4,7 +4,7 @@ FROM ubuntu:16.04
 RUN apt-get update && apt-get -y install build-essential debootstrap debian-archive-keyring libjpeg-dev zlib1g-dev unzip wget graphviz curl python-dev python-pip python-virtualenv git wget flex bison libtool automake autoconf autotools-dev pkg-config libglib2.0-dev
 
 # fetch qira
-RUN git clone https://github.com/geohot/qira.git -b cython
+RUN git clone https://github.com/geohot/qira.git
 WORKDIR /qira
 
 # build qemu
