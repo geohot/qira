@@ -1,3 +1,4 @@
+from __future__ import print_function
 from capstone import *
 import capstone # for some unexported (yet) symbols in Capstone 3.0
 import qira_config
@@ -25,7 +26,7 @@ class Instruction(object):
       try:
         return BapInsn(*args, **kwargs)
       except Exception as exn:
-        print "bap failed", type(exn).__name__, exn
+        print("bap failed", type(exn).__name__, exn)
         return CsInsn(*args, **kwargs)
     else:
       return CsInsn(*args, **kwargs)
@@ -208,7 +209,7 @@ if qira_config.WITH_BAP:
     else:
       if offset != offset & 0xFFFFFFFF:
         if debug_level >= 1:
-          print "[!] Warning: supplied offset 0x{:x} is not 32 bits.".format(offset)
+          print("[!] Warning: supplied offset 0x{:x} is not 32 bits.".format(offset))
       offset = offset & 0xFFFFFFFF
       if (offset >> 31) & 1 == 1:
         offset_fixed = -(0xFFFFFFFF-offset+1)
@@ -227,7 +228,7 @@ if qira_config.WITH_BAP:
       v_prime = calc_offset(*k)
       if v_prime != v:
         k_fmt = (k[0],hex(k[1]),k[2])
-        print "{0} -> {1:x} expected, got {0} -> {2:x}".format(k_fmt,v,v_prime)
+        print("{0} -> {1:x} expected, got {0} -> {2:x}".format(k_fmt,v,v_prime))
 
 class UnknownRegister(Exception):
   def __init__(self, reg):
@@ -264,7 +265,7 @@ class CsInsn(object):
       raise Exception('arch "{}" not supported by capstone'.format(arch))
     self.md.detail = True
     try:
-      self.i = self.md.disasm(self.raw, self.address).next()
+      self.i = next(self.md.disasm(self.raw, self.address))
       self.decoded = True
       self.regs_read = self.i.regs_read
       self.regs_write = self.i.regs_write
@@ -445,7 +446,7 @@ class CsInsn(object):
       #[a, +, b, -, c] -> sum(a, +b, -c)
       if len(spl) > 2:
         addr = _eval_op_x86(spl[0])
-        for i in xrange(1, len(spl), 2):
+        for i in range(1, len(spl), 2):
           if spl[i] == "+":
             addr += _eval_op_x86(spl[i+1])
           else:
@@ -504,10 +505,10 @@ class CsInsn(object):
     try:
       fmt, ref = self._get_ref_square_bracket()
     except AssertionError:
-      print "*** Warning: assumption in _get_ref_square_bracket violated"
+      print("*** Warning: assumption in _get_ref_square_bracket violated")
       return self.i.op_str
     except Exception as e:
-      print "unknown exception in _get_operand_s"
+      print("unknown exception in _get_operand_s")
       return self.i.op_str
 
     try:
@@ -516,9 +517,9 @@ class CsInsn(object):
     except IgnoredRegister as e:
       pass
     except UnknownRegister as e:
-      print "_get_operand_s: unknown register {} at clnum {}".format(e.reg, clnum)
+      print("_get_operand_s: unknown register {} at clnum {}".format(e.reg, clnum))
     except Exception as e:
-      print "unknown exception in _get_operand_s", e
+      print("unknown exception in _get_operand_s", e)
 
     return self.i.op_str
 

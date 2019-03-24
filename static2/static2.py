@@ -1,4 +1,5 @@
 #!/usr/bin/env python2.7
+from __future__ import print_function
 
 # NO MORE RADARE
 # tags should be dynamically generated
@@ -98,7 +99,7 @@ class Static:
         @staticmethod
         def analyze_functions(x):
           dat = ida.fetch_tags()
-          print dat
+          print(dat)
     else:
       # run the elf loader
       sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "builtin"))
@@ -108,7 +109,7 @@ class Static:
     loader.load_binary(self)
 
     if self.debug >= 1:
-      print "*** elf loaded"
+      print("*** elf loaded")
 
     """
     # check the cache
@@ -233,6 +234,11 @@ class Static:
   # TODO: refactor this! 
   def memory(self, address, ln):
     dat = []
+    def ret():
+      if (sys.version_info > (3, 0)):
+        return bytes(dat)
+      else:
+        return ''.join(dat)
     for i in range(ln):
       ri = address+i
 
@@ -243,8 +249,8 @@ class Static:
             dat.append(self.base_memory[(ss,se)][ri-ss])
             break
           except:
-            return ''.join(dat)
-    return ''.join(dat)
+            return ret()
+    return ret()
 
   def add_memory_chunk(self, address, dat):
     #print "add segment",hex(address),len(dat)
@@ -252,7 +258,7 @@ class Static:
     for (laddress, llength) in self.base_memory:
       if address == laddress:
         if self.base_memory[(laddress, llength)] != dat:
-          print "*** WARNING, changing segment",hex(laddress),llength
+          print("*** WARNING, changing segment",hex(laddress),llength)
         return
 
     # segments should have an idea of segment permission
@@ -262,14 +268,14 @@ class Static:
   def process(self):
     self.analyzer.analyze_functions(self)
     if self.debug >= 1:
-      print "*** found %d functions" % len(self['functions'])
+      print("*** found %d functions" % len(self['functions']))
 
 
 # *** STATIC TEST STUFF ***
 
 if __name__ == "__main__":
   static = Static(sys.argv[1],debug=1)
-  print "arch:",static['arch']
+  print("arch:",static['arch'])
 
   # find main
   static.process()
@@ -285,18 +291,18 @@ if __name__ == "__main__":
 
   # function printer
   for f in sorted(static['functions']):
-    print static[f.start]['name'] or hex(f.start), f
+    print(static[f.start]['name'] or hex(f.start), f)
     for b in sorted(f.blocks):
-      print "  ",b
+      print("  ",b)
       for a in sorted(b.addresses):
-        print "    ",hex(a),static._insert_names(static[a]['instruction'])
+        print("    ",hex(a),static._insert_names(static[a]['instruction']))
 
 
   # print symbols
-  print "symbols"
+  print("symbols")
   names = static.get_tags(['name'])
   for addr in names:
-    print "%8x: %s" % (addr, names[addr]['name'])
+    print("%8x: %s" % (addr, names[addr]['name']))
 
   #print static['functions']
 

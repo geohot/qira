@@ -32,7 +32,7 @@ void *thread_entry(void *trace_class) {
   return NULL;
 }
 
-Trace::Trace(unsigned int trace_index) {
+Trace::Trace() {
   entries_done_ = 1;
   fd_ = 0;
   backing_ = NULL;
@@ -40,7 +40,7 @@ Trace::Trace(unsigned int trace_index) {
   max_clnum_ = 0;
   min_clnum_ = INVALID_CLNUM;
   backing_size_ = 0;
-  trace_index_ = trace_index;
+  trace_index_ = 0;
   is_running_ = true;
 }
 
@@ -129,7 +129,8 @@ bool Trace::remap_backing(uint64_t new_size) {
   return (backing_ != NULL);
 }
 
-bool Trace::ConnectToFileAndStart(char *filename, int register_size, int register_count, bool is_big_endian) {
+bool Trace::ConnectToFileAndStart(char *filename, unsigned int trace_index, int register_size, int register_count, bool is_big_endian) {
+  trace_index_ = trace_index;
   is_big_endian_ = is_big_endian;
   register_size_ = register_size;
   register_count_ = register_count;
@@ -142,10 +143,16 @@ bool Trace::ConnectToFileAndStart(char *filename, int register_size, int registe
   fd_ = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 #else
   fd_ = open(filename, O_RDONLY);
-  if (fd_ <= 0) return false;
+  if (fd_ == -1) {
+    printf("ERROR: file open failed\n");
+    return false;
+  }
 #endif
 
-  if (!remap_backing(sizeof(struct change))) return false;
+  if (!remap_backing(sizeof(struct change))) {
+    printf("ERROR: remap backing failed\n");
+    return false;
+  }
 
   THREAD_CREATE(thread, thread_entry, this);
   return true;
