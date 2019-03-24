@@ -21,7 +21,7 @@ sleep 2
 
 # replace phantomjs test with this
 #phantomjs qira_tests/load_page.js
-curl http://localhost:3002/ | grep "<title>qira</title>kk"
+curl http://localhost:3002/ | grep "<title>qira</title>"
 
 echo "tests pass"
 
