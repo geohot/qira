@@ -168,7 +168,7 @@ def hook_syscall(mu, user_data):
   rip = mu.reg_read(UC_X86_REG_RIP)
 
   print("%8x syscall %4d : %-20s %x %x %x" %
-    (rip, num, lk.lib.syscall_number_mapping['amd64'][num], args[0], args[1], args[2]))
+    (rip, num, lk.lib.syscall_number_mapping['amd64'][num], args[0], args[1], args[2]), end=" ")
 
   if num == 231 or num == 60:
     print("fake exit(%d)" % args[0])
@@ -176,12 +176,11 @@ def hook_syscall(mu, user_data):
 
   # do syscall in shell process 
   ret = shell_syscall(num, args, rip)
-
   mu.reg_write(UC_X86_REG_RAX, ret)
 
   if num == 9:
     found = False
-    pmaps()
+    #pmaps()
     #os.system("ls -l /proc/%d/map_files" % child)
     for x in os.listdir("/proc/%d/map_files" % child):
       if "%x"%ret in x:
@@ -189,13 +188,13 @@ def hook_syscall(mu, user_data):
         size = int("0x"+x.split("-")[1], 16) - ret
         nm = "/proc/%d/map_files/%s" % (child, x)
         nm = os.path.realpath(nm)
-        print("opening %s" % nm)
+        print("\nopening %s" % nm)
         fd = os.open(nm, os.O_RDONLY)
         wrapped_mem_map(ret, size, fd, prot=mmap.PROT_READ)
         break
     assert found == True
 
-  print("  returned %x" % ret)
+  print("    returned %x" % ret)
 
 mu.hook_add(UC_HOOK_INSN, hook_syscall, None, 1, 0, UC_X86_INS_SYSCALL)
 
@@ -203,7 +202,6 @@ mu.hook_add(UC_HOOK_INSN, hook_syscall, None, 1, 0, UC_X86_INS_SYSCALL)
 [shell_unmap(*x) for x in stub_segs]
 print("shell process")
 pmaps()
-
 
 # for debugging
 def hook_code(uc, address, size, user_data):
