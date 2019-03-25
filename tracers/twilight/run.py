@@ -50,7 +50,9 @@ def shell_syscall(num, args, rip=stub_location):
     exit(0)
 
   # return rax
+  old_rip = regs.rip
   assert os_ptrace(PTRACE_GETREGS, child, None, ctypes.pointer(regs)) == 0
+  assert (regs.rip-old_rip) == 2
   return regs.rax
 
 def shell_unmap(addr, endaddr):
@@ -76,8 +78,6 @@ ok_segs = filter(lambda x: not
   ((x[0] <= stub_location and stub_location < x[1]) or 
     x[0] == 0xffffffffff600000), segs) 
 [shell_unmap(*x) for x in ok_segs]
-#pmaps()
-#exit(0)
 
 # loading time
 import cle
@@ -116,6 +116,7 @@ def wrapped_mem_map(address, size, fd=None, prot=mmap.PROT_READ | mmap.PROT_WRIT
 
   nm = b"/dev/shm/twilight-%x-%x" % (address, dsize)
   fd = os.open(nm, os.O_CREAT | os.O_RDWR)
+  os.ftruncate(fd, 0)
   os.ftruncate(fd, dsize)
 
   # mmap in shell process
@@ -226,6 +227,7 @@ def hook_syscall(mu, user_data):
 mu.hook_add(UC_HOOK_INSN, hook_syscall, None, 1, 0, UC_X86_INS_SYSCALL)
 
 # confirm munmap and mmap
+#stub_location = 0x400001a3f7
 #[shell_unmap(*x) for x in stub_segs]
 print("shell process")
 pmaps()
