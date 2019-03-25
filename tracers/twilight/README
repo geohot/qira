@@ -1,0 +1,13 @@
+What is twilight?
+===
+
+twilight uses unicorn to exec Linux user space programs
+But unlike usercorn, it actually uses the real Linux kernel to run syscalls
+twilight + CLE + unicorn = qemu-user
+
+1. Use cle (from angr) to load binary
+2. Use unicorn to emulate binary
+3. Use <<<shell process>>> to run syscalls
+
+./run.py /bin/cat /etc/rc.local
+
