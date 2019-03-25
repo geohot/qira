@@ -19,6 +19,9 @@ stub_location = regs.rip
 print("stub:%x" % stub_location)
 assert os_ptrace(PTRACE_POKETEXT, child, stub_location, 0xf4050f) == 0
 
+def pmaps():
+  print(open("/proc/%d/maps" % child).read().strip())
+
 def shell_syscall(num, args, rip=stub_location):
   regs = Regs()
   assert os_ptrace(PTRACE_GETREGS, child, None, ctypes.pointer(regs)) == 0
@@ -39,8 +42,11 @@ def shell_syscall(num, args, rip=stub_location):
   assert os_ptrace(PTRACE_SETREGS, child, None, ctypes.pointer(regs)) == 0
 
   # run syscall stub
-  assert os_ptrace(PTRACE_CONT, child, None, None) == 0
-  os.wait()
+  assert os_ptrace(PTRACE_SINGLESTEP, child, None, None) == 0
+  _, wait_reason = os.wait()
+  if wait_reason != 0x57f:
+    print("shell process exited (num:%d rip:%x) : %x" % (num, rip, wait_reason))
+    exit(0)
 
   # return rax
   assert os_ptrace(PTRACE_GETREGS, child, None, ctypes.pointer(regs)) == 0
@@ -68,6 +74,8 @@ ok_segs = filter(lambda x: not
   ((x[0] <= stub_location and stub_location < x[1]) or 
     x[0] == 0xffffffffff600000), segs) 
 [shell_unmap(*x) for x in ok_segs]
+#pmaps()
+#exit(0)
 
 # loading time
 import cle
@@ -159,6 +167,13 @@ def hook_syscall(mu, user_data):
   args = [mu.reg_read(x) for x in rargs]
   rip = mu.reg_read(UC_X86_REG_RIP)
 
+  print("%8x syscall %4d : %-20s %x %x %x" %
+    (rip, num, lk.lib.syscall_number_mapping['amd64'][num], args[0], args[1], args[2]))
+
+  if num == 231 or num == 60:
+    print("fake exit(%d)" % args[0])
+    return
+
   # do syscall in shell process 
   ret = shell_syscall(num, args, rip)
 
@@ -166,7 +181,7 @@ def hook_syscall(mu, user_data):
 
   if num == 9:
     found = False
-    print(open("/proc/%d/maps" % child).read().strip())
+    pmaps()
     #os.system("ls -l /proc/%d/map_files" % child)
     for x in os.listdir("/proc/%d/map_files" % child):
       if "%x"%ret in x:
@@ -180,15 +195,14 @@ def hook_syscall(mu, user_data):
         break
     assert found == True
 
-  print("%8x syscall %4d : %-20s %x %x %x -- %x" %
-    (rip, num, lk.lib.syscall_number_mapping['amd64'][num], args[0], args[1], args[2], ret))
+  print("  returned %x" % ret)
 
 mu.hook_add(UC_HOOK_INSN, hook_syscall, None, 1, 0, UC_X86_INS_SYSCALL)
 
 # confirm munmap and mmap
 [shell_unmap(*x) for x in stub_segs]
 print("shell process")
-print(open("/proc/%d/maps" % child).read().strip())
+pmaps()
 
 
 # for debugging
