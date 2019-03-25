@@ -5,6 +5,7 @@ import sys
 import mmap
 import struct
 import ctypes
+from hexdump import hexdump
 from helpers import *
 
 # start the <<<shell process>>>
@@ -54,7 +55,7 @@ def shell_syscall(num, args, rip=stub_location):
 
 def shell_unmap(addr, endaddr):
   ret = shell_syscall(11, [addr, endaddr-addr])
-  print("unmapping 0x%x-0x%x : %d" % (addr, endaddr, ret))
+  #print("unmapping 0x%x-0x%x : %d" % (addr, endaddr, ret))
 
 def shell_map_file(addr, name, size, prot):
   # copy name into shell process
@@ -107,37 +108,45 @@ def wrapped_mem_map(address, size, fd=None, prot=mmap.PROT_READ | mmap.PROT_WRIT
 
     # mmap in shell process
     shell_map_file(address, nm, size, 7)
+    flags = mmap.MAP_SHARED
+  else:
+    flags = mmap.MAP_PRIVATE
+    assert False
 
   # mmap locally
   ptr = os_mmap(None, size,
-                prot,
-                mmap.MAP_SHARED,
+                mmap.PROT_READ | mmap.PROT_WRITE,
+                flags,
                 fd, 0)
   print("mapping %x sz %x fd %d at %x" % (address, size, fd, ptr))
-  if prot == mmap.PROT_READ:
-    mu.mem_map_ptr(address, size, UC_PROT_READ, ptr)
-  else:
-    mu.mem_map_ptr(address, size, UC_PROT_ALL, ptr)
+  #if prot == mmap.PROT_READ:
+  #  mu.mem_map_ptr(address, size, UC_PROT_READ, ptr)
+  #else:
+  size += 0xFFF
+  size &= ~0xFFF
+  print("mu.mem_map_ptr %x %x %x" % (address, size, ptr))
+  mu.mem_map_ptr(address, size, UC_PROT_ALL, ptr)
 
 # load the stack into unicorn
 # https://www.win.tue.nl/~aeb/linux/hh/stack-layout.html
 STACK_TOP = 0xaaa0000
 STACK_SIZE = 0x8000
 wrapped_mem_map(STACK_TOP-STACK_SIZE, STACK_SIZE)  # fake stack
-argv = sys.argv[1]
-stack = "/lib/x86_64-linux-gnu/ld-2.23.so\x00"+argv+"\x00"
+argv = sys.argv[1].encode('utf-8')
+stack = b"/lib/x86_64-linux-gnu/ld-2.23.so\x00"+argv+b"\x00"
 stack = struct.pack("QQQQQQ",
    # argc
    2,
    # argv
-   STACK_TOP-len(stack)+stack.index("/lib/x86_64-linux-gnu/ld-2.23.so"),
+   STACK_TOP-len(stack)+stack.index(b"/lib/x86_64-linux-gnu/ld-2.23.so"),
    STACK_TOP-len(stack)+stack.index(argv),
    0,
    # envp
    0,
    # ELF Auxiliary Table
    0
-   )
+   ) + stack
+#hexdump(stack)
 mu.mem_write(STACK_TOP-len(stack), stack)
 mu.reg_write(UC_X86_REG_RSP, STACK_TOP-len(stack))
 
@@ -182,27 +191,39 @@ def hook_syscall(mu, user_data):
   mu.reg_write(UC_X86_REG_RAX, ret)
 
   if num == 9:
-    found = False
     #pmaps()
     #os.system("ls -l /proc/%d/map_files" % child)
+    dat = None
     for x in os.listdir("/proc/%d/map_files" % child):
-      if "%x"%ret in x:
-        found = True
+      if "%x-"%ret in x:
         size = int("0x"+x.split("-")[1], 16) - ret
         nm = "/proc/%d/map_files/%s" % (child, x)
         nm = os.path.realpath(nm)
         print("\nopening %s" % nm)
-        fd = os.open(nm, os.O_RDONLY)
-        wrapped_mem_map(ret, size, fd, prot=mmap.PROT_READ)
-        break
-    assert found == True
+        with open(nm, "rb") as f:
+          f.seek(args[-1])
+          dat = f.read(size)
+          break
+        #if args[2] & mmap.PROT_WRITE:
+        #else:
+        #  fd = os.open(nm, os.O_RDONLY)
+        #  wrapped_mem_map(ret, size, fd, prot=args[2])
+        #break
+
+    # it's not a file, anon mmap is good
+    print("map")
+    shell_unmap(ret, ret+args[1])
+    wrapped_mem_map(ret, args[1])
+    if dat is not None:
+      print("%x %x" % (ret, len(dat)))
+      mu.mem_write(ret, dat)
 
   print("    returned %x" % ret)
 
 mu.hook_add(UC_HOOK_INSN, hook_syscall, None, 1, 0, UC_X86_INS_SYSCALL)
 
 # confirm munmap and mmap
-[shell_unmap(*x) for x in stub_segs]
+#[shell_unmap(*x) for x in stub_segs]
 print("shell process")
 pmaps()
 
@@ -237,9 +258,16 @@ def hook_code_qlog(uc, address, size, user_data):
   for i in range(0, len(regs)):
     dat = struct.pack("QQII", i*8, aa[i], clnum, IS_VALID | IS_WRITE)
     qlog.write(dat)
-mu.hook_add(UC_HOOK_CODE, hook_code_qlog)
+#mu.hook_add(UC_HOOK_CODE, hook_code_qlog)
 
 # run
 print("emulation started")
-mu.emu_start(OFFSET + obj.entry, 0)
+try:
+  mu.emu_start(OFFSET + obj.entry, 0)
+except unicorn.UcError:
+  print("issue")
+
+pmaps()
+print("exiting")
+qlog.close()
 
