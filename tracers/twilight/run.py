@@ -122,6 +122,8 @@ def wrapped_mem_map(address, size, fd=None, prot=mmap.PROT_READ | mmap.PROT_WRIT
   #if prot == mmap.PROT_READ:
   #  mu.mem_map_ptr(address, size, UC_PROT_READ, ptr)
   #else:
+  if size == 0x3c99a0:
+    size = 0x3c0000
   size += 0xFFF
   size &= ~0xFFF
   print("mu.mem_map_ptr %x %x %x" % (address, size, ptr))
@@ -156,7 +158,8 @@ obj = ld.main_object
 print("entry point: %x" % obj.entry)
 
 # real ish
-OFFSET = 0x4000000000 - 0x400000
+#OFFSET = 0x4000000000 - 0x400000
+OFFSET = 0
 
 for seg in obj.segments:
   print("%x sz %x -> %x sz %x" % (seg.offset, seg.filesize, seg.vaddr, seg.memsize))
