@@ -57,7 +57,7 @@ def shell_unmap(addr, endaddr):
   ret = shell_syscall(11, [addr, endaddr-addr])
   #print("unmapping 0x%x-0x%x : %d" % (addr, endaddr, ret))
 
-def shell_map_file(addr, name, size, prot):
+def shell_map_file(addr, name, size, prot, offset=0):
   # copy name into shell process
   name += b"\x00"*(8-len(name)%8)
   for i in range(0, len(name), 8):
@@ -66,7 +66,8 @@ def shell_map_file(addr, name, size, prot):
 
   # open file
   fd = shell_syscall(2, [stub_location+8, os.O_RDWR, 0])
-  assert shell_syscall(9, [addr, size, prot, mmap.MAP_SHARED, fd, 0])
+  assert shell_syscall(9, [addr, size, prot, mmap.MAP_SHARED, fd, offset])
+  shell_syscall(3, [fd])
 
 segs = [[int("0x"+y, 16) for y in x.split(" ")[0].split("-")] \
         for x in open("/proc/%d/maps" % child).read().strip().split("\n")]
@@ -100,34 +101,34 @@ for i in md.disasm(struct.pack("Q", ret), stub_location):
   print("  0x%x:\t%s\t%s" %(i.address, i.mnemonic, i.op_str))
 """
 
-def wrapped_mem_map(address, size, fd=None, prot=mmap.PROT_READ | mmap.PROT_WRITE):
-  if fd is None:
-    nm = b"/dev/shm/twilight-%x-%x" % (address, size)
-    fd = os.open(nm, os.O_CREAT | os.O_RDWR)
-    os.ftruncate(fd, size)
+maps = []
 
-    # mmap in shell process
-    shell_map_file(address, nm, size, 7)
-    flags = mmap.MAP_SHARED
-  else:
-    flags = mmap.MAP_PRIVATE
-    assert False
+def wrapped_mem_map(address, size, fd=None, prot=mmap.PROT_READ | mmap.PROT_WRITE):
+  dsize = size + 0xfff
+  dsize &= ~0xfff
+
+  for am,asm,nm,ptr in maps:
+    if am <= address and address < (am+asm):
+      # reuse
+      print("reuse %s" % nm)
+      shell_map_file(address, nm, size, 7, offset=address-am)
+      return
+
+  nm = b"/dev/shm/twilight-%x-%x" % (address, dsize)
+  fd = os.open(nm, os.O_CREAT | os.O_RDWR)
+  os.ftruncate(fd, dsize)
+
+  # mmap in shell process
+  shell_map_file(address, nm, size, 7)
 
   # mmap locally
   ptr = os_mmap(None, size,
                 mmap.PROT_READ | mmap.PROT_WRITE,
-                flags,
+                mmap.MAP_SHARED,
                 fd, 0)
   print("mapping %x sz %x fd %d at %x" % (address, size, fd, ptr))
-  #if prot == mmap.PROT_READ:
-  #  mu.mem_map_ptr(address, size, UC_PROT_READ, ptr)
-  #else:
-  if size == 0x3c99a0:
-    size = 0x3c0000
-  size += 0xFFF
-  size &= ~0xFFF
-  print("mu.mem_map_ptr %x %x %x" % (address, size, ptr))
-  mu.mem_map_ptr(address, size, UC_PROT_ALL, ptr)
+  mu.mem_map_ptr(address, dsize, UC_PROT_ALL, ptr)
+  maps.append([address, dsize, nm, ptr])
 
 # load the stack into unicorn
 # https://www.win.tue.nl/~aeb/linux/hh/stack-layout.html
@@ -158,8 +159,8 @@ obj = ld.main_object
 print("entry point: %x" % obj.entry)
 
 # real ish
-#OFFSET = 0x4000000000 - 0x400000
-OFFSET = 0
+OFFSET = 0x4000000000 - 0x400000
+#OFFSET = 0
 
 for seg in obj.segments:
   print("%x sz %x -> %x sz %x" % (seg.offset, seg.filesize, seg.vaddr, seg.memsize))
@@ -214,7 +215,6 @@ def hook_syscall(mu, user_data):
         #break
 
     # it's not a file, anon mmap is good
-    print("map")
     shell_unmap(ret, ret+args[1])
     wrapped_mem_map(ret, args[1])
     if dat is not None:
