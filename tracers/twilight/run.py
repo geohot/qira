@@ -146,6 +146,9 @@ ld = cle.Loader("/lib/x86_64-linux-gnu/ld-2.23.so")
 obj = ld.main_object
 print("entry point: %x" % obj.entry)
 
+# real ish
+OFFSET = 0x4000000000 - 0x400000
+
 for seg in obj.segments:
   print("%x sz %x -> %x sz %x" % (seg.offset, seg.filesize, seg.vaddr, seg.memsize))
   vaddr = seg.vaddr
@@ -154,8 +157,8 @@ for seg in obj.segments:
   memsize += 0xFFF
   memsize -= memsize%0x1000
 
-  wrapped_mem_map(vaddr, memsize)
-  mu.mem_write(seg.vaddr, ld.memory.load(seg.vaddr, seg.memsize))
+  wrapped_mem_map(OFFSET + vaddr, memsize)
+  mu.mem_write(OFFSET + seg.vaddr, ld.memory.load(seg.vaddr, seg.memsize))
 print("loaded file")
 
 # hook interrupts for syscall
@@ -210,7 +213,33 @@ def hook_code(uc, address, size, user_data):
     print("  0x%x:\t%s\t%s" %(i.address, i.mnemonic, i.op_str))
 #mu.hook_add(UC_HOOK_CODE, hook_code)
 
+# QIRA tracer
+qlog_base = open("/tmp/qira_logs/1_base", "w")
+qlog_base.write("%016X-%016X %X /lib/x86_64-linux-gnu/ld-2.23.so\n" % (OFFSET + 0x400000, OFFSET + 0x428000, 0))
+qlog_base.close()
+qlog = open("/tmp/qira_logs/1", "wb")
+qlog.write(open("/tmp/qira_logs/0", "rb").read(0x18))
+
+regs = ['RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI', "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15", 'RIP']
+ucregs = [eval("UC_X86_REG_"+x) for x in regs]
+IS_VALID = 0x80000000
+IS_WRITE = 0x40000000
+IS_MEM = 0x20000000
+IS_START = 0x10000000
+IS_SYSCALL = 0x08000000
+clnum = 0
+def hook_code_qlog(uc, address, size, user_data):
+  global clnum
+  clnum += 1
+  aa = [mu.reg_read(x) for x in ucregs]
+  dat = struct.pack("QQII", aa[-1], 0, clnum, IS_VALID | IS_START)
+  qlog.write(dat)
+  for i in range(0, len(regs)):
+    dat = struct.pack("QQII", i*8, aa[i], clnum, IS_VALID | IS_WRITE)
+    qlog.write(dat)
+mu.hook_add(UC_HOOK_CODE, hook_code_qlog)
+
 # run
 print("emulation started")
-mu.emu_start(obj.entry, 0)
+mu.emu_start(OFFSET + obj.entry, 0)
 
