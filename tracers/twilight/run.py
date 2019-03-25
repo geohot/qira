@@ -5,7 +5,44 @@ import sys
 import mmap
 import struct
 import ctypes
+from helpers import *
 
+# start the <<<shell process>>>
+child = os.fork()
+if child == 0:
+  traceme = os_ptrace(PTRACE_TRACEME, 0, None, None)
+  os.execl("/bin/true", "true")
+print("wait:", os.wait(), child)
+regs = Regs()
+assert os_ptrace(PTRACE_GETREGS, child, None, ctypes.pointer(regs)) == 0
+stub_location = regs.rip
+print("stub:%x" % stub_location)
+assert os_ptrace(PTRACE_POKETEXT, child, stub_location, 0xf4050f) == 0
+
+def shell_unmap(addr, endaddr):
+  print("unmapping 0x%x-0x%x" % (addr, endaddr))
+  regs = Regs()
+  assert os_ptrace(PTRACE_GETREGS, child, None, ctypes.pointer(regs)) == 0
+  regs.rax = 11 # munmap syscall
+  regs.rdi = addr
+  regs.rsi = endaddr-addr
+  regs.rip = stub_location
+  assert os_ptrace(PTRACE_SETREGS, child, None, ctypes.pointer(regs)) == 0
+
+  # run syscall stub
+  assert os_ptrace(PTRACE_CONT, child, None, None) == 0
+  os.wait()
+
+segs = [[int("0x"+y, 16) for y in x.split(" ")[0].split("-")] \
+        for x in open("/proc/%d/maps" % child).read().strip().split("\n")]
+stub_segs = filter(lambda x: (x[0] <= stub_location and stub_location < x[1]), segs)
+ok_segs = filter(lambda x: not 
+  (x[0] <= stub_location and stub_location < x[1]) or 
+   x[0] == 0xffffffffff600000, segs) 
+[shell_unmap(*x) for x in ok_segs]
+[shell_unmap(*x) for x in stub_segs]
+
+# loading time
 import cle
 from unicorn import *
 from unicorn.x86_const import *
@@ -15,27 +52,29 @@ from capstone import *
 mu = Uc(UC_ARCH_X86, UC_MODE_64)
 md = Cs(CS_ARCH_X86, CS_MODE_64)
 
-# load mmap function
-libc = ctypes.cdll.LoadLibrary(None)
+# confirm syscall stub
+regs = Regs()
+assert os_ptrace(PTRACE_GETREGS, child, None, ctypes.pointer(regs)) == 0
+print(hex(regs.rip))
+print(hex(regs.rax))
+ret = os_ptrace(PTRACE_PEEKTEXT, child, stub_location, None)
+print(ret)
+for i in md.disasm(struct.pack("Q", ret), stub_location):
+  print("  0x%x:\t%s\t%s" %(i.address, i.mnemonic, i.op_str))
 
-_ptrace = libc.ptrace
-_ptrace.restype = ctypes.c_long
-_ptrace.argtypes = (ctypes.c_int, ctypes.c_long,
-                    ctypes.c_void_p, ctypes.c_void_p)
+# confirm munmap
+os.system("cat /proc/%d/maps" % child)
 
-_mmap = libc.mmap
-_mmap.restype = ctypes.c_void_p
-_mmap.argtypes = (ctypes.c_void_p, ctypes.c_size_t,
-                          ctypes.c_int, ctypes.c_int,
-                          ctypes.c_int, ctypes.c_size_t)
+exit(0)
+
 
 def wrapped_mem_map(address, size):
   fd = os.open("/dev/shm/twilight-%x-%x" % (address, size), os.O_CREAT | os.O_RDWR)
   os.ftruncate(fd, size)
-  ptr = _mmap(None, size,
-              mmap.PROT_READ | mmap.PROT_WRITE,
-              mmap.MAP_SHARED,
-              fd, 0)
+  ptr = os_mmap(None, size,
+                mmap.PROT_READ | mmap.PROT_WRITE,
+                mmap.MAP_SHARED,
+                fd, 0)
   mu.mem_map_ptr(address, size, UC_PROT_ALL, ptr)
 
 # load the stack into unicorn
@@ -95,17 +134,6 @@ def hook_syscall(mu, user_data):
     (rax, lk.lib.syscall_number_mapping['amd64'][rax], rdi, rsi))
   return False
 mu.hook_add(UC_HOOK_INSN, hook_syscall, None, 1, 0, UC_X86_INS_SYSCALL)
-
-# start the <<<shell process>>>
-PTRACE_TRACEME = 0
-PTRACE_PEEKUSER = 3
-child = os.fork()
-if child == 0:
-  traceme = _ptrace(PTRACE_TRACEME, 0, None, None)
-  os.execl("/bin/true", "true")
-print("wait:", os.wait(), child)
-
-os.system("cat /proc/%d/maps" % child)
 
 # run
 print("emulation started")
