@@ -11,6 +11,7 @@
 
 <pre>
 Ubuntu 14.04 and 16.04 supported out of the box.
+- Link: http://releases.ubuntu.com/14.04/
 18.04 is having a problem with building QEMU
 See forked QEMU source at https://github.com/geohot/qemu/tree/qira to fix.
 
