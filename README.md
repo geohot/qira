@@ -145,3 +145,6 @@ User input and the actual traces of the program should drive creation of the sta
 
 The basic idea of static is that it exists at change -1 and doesn't change ever. Each address has a set of tags, including things like name.
 
+***Browser test***
+- Working well: `google-chrome`
+- Not working well `firefox, IE`
