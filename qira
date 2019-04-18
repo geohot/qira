@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 unamestr=$(uname)
 if [[ "$unamestr" == 'Linux' ]]; then
   DIR=$(dirname $(readlink -f $0))
@@ -14,5 +14,6 @@ else
 fi
 
 unset PYTHONPATH
-source $DIR/venv/bin/activate
-exec /usr/bin/env python $DIR/middleware/qira.py $*
+# Please put your full path to your environment
+source /root/qira-1.3/venv/bin/activate
+exec /usr/bin/env python2.7 $DIR/middleware/qira.py $*
