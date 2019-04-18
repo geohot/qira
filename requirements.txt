@@ -26,3 +26,7 @@ socketIO-client==0.7.2
 urllib3==1.24.1
 websocket-client==0.56.0
 Werkzeug==0.15.1
+
+Direct command: pip install capstone certifi Werkzeug websocket-client urllib3 socketIO-client six requests python-socketio python-engineio pyparsing pyelftools pydot Pillow nose MarkupSafe Jinja2 itsdangerous ipaddr idna html hexdump greenlet gevent Flask-SocketIO Flask Click chardet certifi capstone
+
+pip install --upgrade pip
