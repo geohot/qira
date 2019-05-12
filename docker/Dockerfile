@@ -4,20 +4,25 @@ FROM ubuntu:16.04
 RUN apt-get update
 RUN apt-get -y install build-essential git curl python python-virtualenv python-dev
 
-# fetch qira
-RUN git clone https://github.com/geohot/qira.git --depth=1
+# qemu deps
+RUN apt-get -y install pkg-config zlib1g-dev libglib2.0-dev libpixman-1-dev
+
 WORKDIR /qira
 
-# build qemu
-RUN apt-get -y install pkg-config zlib1g-dev libglib2.0-dev libpixman-1-dev
-RUN cd tracers && ./qemu_build.sh
-
-# install python packages and link qira
+# install python venv
 RUN virtualenv venv
 RUN bash -c 'source venv/bin/activate && pip install --upgrade pip'
+
+# install python deps, this step will be cached
+COPY ./requirements.txt ./requirements.txt
 RUN bash -c 'source venv/bin/activate && pip install --upgrade -r requirements.txt'
+
+#build qemu and link qira
+COPY ./tracers ./tracers
+RUN cd tracers && ./qemu_build.sh
 RUN ln -sf /qira/qira /usr/local/bin/qira
+
+COPY . .
 
 # test will build Cython qiradb
 RUN ./run_tests.sh
-
