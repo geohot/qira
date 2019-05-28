@@ -193,8 +193,6 @@ static inline void mmap_close(MMAPFILE fd) {
 	close(fd);
 }
 static void *mmap_map(MMAPFILE fd, size_t size, size_t offset = 0) {
-	//struct stat st;
-	//fstat(fd, &st);
 	USIZE thesize=0;
 	OS_FileSizeFD(fd,&thesize);
 	if(static_cast<size_t>(thesize) < offset+size)
@@ -444,7 +442,7 @@ public:
 #ifndef TARGET_WINDOWS
 	void fork_before(THREADID tid) {
 		PIN_GetLock(&lock, 0);
-		//sync();
+		//sync(); // commented out to be compatible with later PIN versions. Seems to work...
 		// TODO: Close all files, reopen later
 		// I think this is only required for the current tid's data structure.
 	}
