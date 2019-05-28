@@ -650,6 +650,11 @@ VOID Instruction(INS ins, VOID *v) {
 		// TODO: Bitch at the PIN folks.
 		return;
 	}
+	if(INS_Mnemonic(ins) == "XSAVEC") {
+		// Avoids "Cannot use IARG_MEMORYWRITE_SIZE on non-standard memory access of instruction at 0xfoo: xsavec ptr [rsp]"
+		// TODO: Bitch at the PIN folks.
+		return;
+	}
 
 	for(UINT32 i = 0; i < memOps; i++) {
 		if(!filtered && INS_MemoryOperandIsRead(ins, i)) {
@@ -969,4 +974,3 @@ int main(int argc, char *argv[]) {
 	process_state.init(PIN_GetPid());
 	PIN_StartProgram(); // Note that this unwinds the stack!
 }
-
