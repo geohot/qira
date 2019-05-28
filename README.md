@@ -1,5 +1,3 @@
-# I forked this to experiment with changes and be able to send improvement pull reqs. Use the main geohot version....
-
 # QIRA
 
 [![Build Status](https://travis-ci.org/geohot/qira.svg?branch=master)](https://travis-ci.org/geohot/qira)
