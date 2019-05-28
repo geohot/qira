@@ -442,7 +442,7 @@ public:
 #ifndef TARGET_WINDOWS
 	void fork_before(THREADID tid) {
 		PIN_GetLock(&lock, 0);
-		//sync(); // commented out to be compatible with later PIN versions. Seems to work...
+		//sync();// commented out to be compatible with later PIN versions. Seems to work...
 		// TODO: Close all files, reopen later
 		// I think this is only required for the current tid's data structure.
 	}
