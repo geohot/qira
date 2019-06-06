@@ -20,7 +20,7 @@ cdef extern from "Trace.h":
     uint32_t flags
 
   cdef cppclass Trace:
-    Trace()
+    Trace(bool quiet)
     bool ConnectToFileAndStart(char *filename, unsigned int trace_index, int register_size, int register_count, bool is_big_endian)
     Clnum GetMaxClnum()
     Clnum GetMinClnum()

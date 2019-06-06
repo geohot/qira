@@ -4,6 +4,8 @@ from elftools.elf.sections import SymbolTableSection
 from elftools.elf.relocation import RelocationSection
 from elftools.common.exceptions import ELFError
 import struct
+import logging
+from qira_config import log
 
 def get_arch(fb):
   if fb == 0x28:
@@ -26,7 +28,7 @@ def load_binary(static):
   try:
     elf = ELFFile(open(static.path, "rb"))
   except ELFError:
-    print("*** loader error: non-ELF detected")
+    log.info("*** loader error: non-ELF detected")
     return
 
   # TODO: replace with elf['e_machine']
@@ -44,7 +46,7 @@ def load_binary(static):
 
   for section in elf.iter_sections():
     if static.debug >= 2:
-      print("** found section", section.name, type(section))
+      log.info("** found section %s %s", section.name, type(section))
 
     if isinstance(section, RelocationSection):
       symtable = elf.get_section(section['sh_link'])
@@ -54,7 +56,7 @@ def load_binary(static):
       for rel in section.iter_relocations():
         symbol = symtable.get_symbol(rel['r_info_sym'])
         if static.debug >= 2: #suppress output for testing
-          print("Relocation",rel, symbol.name)
+          log.info("Relocation %s %s",rel, symbol.name)
         if rel['r_offset'] != 0 and symbol.name != "":
           static[rel['r_offset']]['name'] = "__"+symbol.name
           ncount += 1
@@ -86,12 +88,12 @@ def load_binary(static):
         #print symbol['st_info'], symbol.name, hex(symbol['st_value'])
         if symbol['st_value'] != 0 and symbol.name != "" and symbol['st_info']['type'] == "STT_FUNC":
           if static.debug >= 2:
-            print("Symbol",hex(symbol['st_value']), symbol.name)
+            log.info("Symbol %s %s",hex(symbol['st_value']), symbol.name)
           static[symbol['st_value']]['name'] = symbol.name
           ncount += 1
 
     # parse the DynamicSection to get the libraries
     #if isinstance(section, DynamicSection):
   if static.debug >= 1:
-    print("** found %d names" % ncount)
+    log.info("** found %d names", ncount)
 

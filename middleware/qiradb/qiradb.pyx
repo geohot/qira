@@ -11,8 +11,8 @@ MAXINT = 2**32-1
 cdef class PyTrace:
   cdef Trace *t
 
-  def __cinit__(self, filename, trace_index, register_size, register_count, is_big_endian):
-    self.t = new Trace()
+  def __cinit__(self, filename, trace_index, register_size, register_count, is_big_endian, quiet=False):
+    self.t = new Trace(quiet)
     assert self.t.ConnectToFileAndStart(filename.encode('utf-8'), trace_index, register_size, register_count, is_big_endian)
 
   def __dealloc__(self):

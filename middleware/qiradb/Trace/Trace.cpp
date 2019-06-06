@@ -32,7 +32,7 @@ void *thread_entry(void *trace_class) {
   return NULL;
 }
 
-Trace::Trace() {
+Trace::Trace(bool quiet) {
   entries_done_ = 1;
   fd_ = 0;
   backing_ = NULL;
@@ -42,6 +42,7 @@ Trace::Trace() {
   backing_size_ = 0;
   trace_index_ = 0;
   is_running_ = true;
+  quiet_ = quiet;
 }
 
 // the destructor isn't thread safe wrt to the accessor functions
@@ -79,7 +80,7 @@ inline void Trace::commit_memory(Clnum clnum, Address a, uint8_t d) {
 }
 
 inline MemoryWithValid Trace::get_byte(Clnum clnum, Address a) {
-  //printf("get_byte %u %llx\n", clnum, a);
+  ////printf("get_byte %u %llx\n", clnum, a);
   map<Address, MemoryCell>::iterator it = memory_.find(a);
   if (it == memory_.end()) return 0;
 
@@ -95,7 +96,7 @@ bool Trace::remap_backing(uint64_t new_size) {
   while (1) {
     DWORD fs = GetFileSize(fd_, NULL);
     if (fs < new_size) {
-      printf("WARNING: requested %" PRIu64 " bytes, but only %llx are in the file...waiting\n", new_size, fs);
+      if (!quiet_) printf("WARNING: requested %" PRIu64 " bytes, but only %llx are in the file...waiting\n", new_size, fs);
       usleep(100 * 1000);
     } else {
       break;
@@ -110,7 +111,7 @@ bool Trace::remap_backing(uint64_t new_size) {
   while (1) {
     off_t fs = lseek(fd_, 0, SEEK_END);
     if ((unsigned int)fs < new_size) {
-      printf("WARNING: requested %" PRIu64 " bytes, but only %" PRIx64 " are in the file...waiting\n", new_size, fs);
+      if (!quiet_) printf("WARNING: requested %" PRIu64 " bytes, but only %" PRIx64 " are in the file...waiting\n", new_size, fs);
       usleep(100 * 1000);
     } else {
       break;
@@ -124,7 +125,7 @@ bool Trace::remap_backing(uint64_t new_size) {
 #endif
 
   if (backing_ == NULL) {
-    printf("ERROR: remap_backing is about to return NULL\n");
+    //printf("ERROR: remap_backing is *** WARNINGabout to return NULL\n");
   }
   return (backing_ != NULL);
 }
@@ -144,13 +145,13 @@ bool Trace::ConnectToFileAndStart(char *filename, unsigned int trace_index, int 
 #else
   fd_ = open(filename, O_RDONLY);
   if (fd_ == -1) {
-    printf("ERROR: file open failed\n");
+    if (!quiet_) printf("ERROR: file open failed\n");
     return false;
   }
 #endif
 
   if (!remap_backing(sizeof(struct change))) {
-    printf("ERROR: remap backing failed\n");
+    if (!quiet_) printf("ERROR: remap backing failed\n");
     return false;
   }
 
@@ -167,7 +168,7 @@ void Trace::process() {
 
   remap_backing(sizeof(struct change)*entry_count); // what if this fails?
 
-  printf("on %u going from %u to %u...", trace_index_, entries_done_, entry_count);
+  if (!quiet_) printf("on %u going from %u to %u...", trace_index_, entries_done_, entry_count);
   fflush(stdout);
 
 #ifndef _WIN32
@@ -250,9 +251,9 @@ void Trace::process() {
   gettimeofday(&tv_end, NULL);
   double t = (tv_end.tv_usec-tv_start.tv_usec)/1000.0 +
              (tv_end.tv_sec-tv_start.tv_sec)*1000.0;
-  printf("done %f ms\n", t);
+  if (!quiet_) printf("done %f ms\n", t);
 #else
-  printf("done\n");
+  if (!quiet_) printf("done\n");
 #endif
 
   // set this at the end

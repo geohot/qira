@@ -1,8 +1,10 @@
 from __future__ import print_function
+import logging
 import os
 import socket
 import signal
 import qira_config
+from qira_config import log
 
 def get_next_run_id():
   ret = -1
@@ -28,7 +30,7 @@ def start_bindserver(program, port, parent_id, start_cl, loop = False):
     return
   # bindserver runs in a fork
   while 1:
-    print("**** listening on",myss)
+    log.info("**** listening on %s", myss)
     (cs, address) = myss.accept()
 
     # fork off the child if we are looping
@@ -37,7 +39,7 @@ def start_bindserver(program, port, parent_id, start_cl, loop = False):
         cs.close()
         continue
     run_id = get_next_run_id()
-    print("**** ID",run_id,"CLIENT",cs, address, cs.fileno())
+    log.info("**** ID %d CLIENT %s %s %d",run_id, cs, address, cs.fileno())
 
     fd = cs.fileno()
     # python nonblocking is a lie...

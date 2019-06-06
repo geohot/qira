@@ -5,6 +5,7 @@ import sys
 basedir = os.path.dirname(os.path.realpath(__file__))
 import argparse
 import ipaddr
+import logging
 import socket
 import threading
 import time
@@ -13,6 +14,8 @@ import qira_config
 import qira_socat
 import qira_program
 import qira_webserver
+from qira_config import log
+
 
 if __name__ == '__main__':
   # define arguments
@@ -28,6 +31,7 @@ if __name__ == '__main__':
   parser.add_argument("--web-port", metavar="PORT", help="listen port for web interface. 3002 by default", type=int, default=qira_config.WEB_PORT)
   parser.add_argument("--socat-port", metavar="PORT", help="listen port for socat. 4000 by default", type=int, default=qira_config.SOCAT_PORT)
   parser.add_argument('-S', '--static', help="enable static2", action="store_true")
+  parser.add_argument('-q', '--quiet', help="disable qira olgging", action="store_true")
   #capstone flag in qira_config for now
 
   # parse arguments, first try
@@ -40,6 +44,12 @@ if __name__ == '__main__':
   args = parser.parse_args()
 
   # validate arguments
+  if not args.quiet:
+    log.setLevel(logging.INFO)
+    log.addHandler(logging.StreamHandler())
+  else:
+    qira_config.quiet = True
+
   if args.web_port < 1 or args.web_port > 65535:
     raise Exception("--web-port must be a valid port number (1-65535)")
   if args.socat_port < 1 or args.socat_port > 65534:
@@ -51,7 +61,7 @@ if __name__ == '__main__':
 
   # handle arguments
   if sys.platform == "darwin":
-    print("*** running on darwin, defaulting to --pin")
+    log.info("*** running on darwin, defaulting to --pin")
     qira_config.USE_PIN = True
   else:
     qira_config.USE_PIN = args.pin
@@ -66,10 +76,10 @@ if __name__ == '__main__':
     qira_config.TRACE_LIBRARIES = True
 
   if args.static:
-    print("*** using static")
+    log.info("*** using static")
     qira_config.WITH_STATIC = True
   if args.flush_cache:
-    print("*** flushing caches")
+    log.info("*** flushing caches")
     os.system("rm -rfv /tmp/qira*")
 
   # qemu args from command line
@@ -88,14 +98,14 @@ if __name__ == '__main__':
       raise Exception("can't run as server if QIRA is already running")
   except:
     is_qira_running = 0
-    print("no qira server found, starting it")
+    log.info("no qira server found, starting it")
     program.clear()
 
   # start the binary runner
   if args.server:
     qira_socat.start_bindserver(program, qira_config.SOCAT_PORT, -1, 1, True)
   else:
-    print("**** running",program.program)
+    log.info("**** running %s",program.program)
     program.execqira(shouldfork=not is_qira_running)
 
   if not is_qira_running:

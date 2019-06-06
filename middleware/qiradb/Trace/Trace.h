@@ -98,7 +98,7 @@ void *thread_entry(void *);
 
 class Trace {
 public:
-  Trace();
+  Trace(bool quiet);
   ~Trace();
   bool ConnectToFileAndStart(char *filename, unsigned int trace_index, int register_size, int register_count, bool is_big_endian);
 
@@ -145,6 +145,7 @@ private:
 
   bool did_update_;
   unsigned int trace_index_;
+  bool quiet_;
 };
 
 #endif
