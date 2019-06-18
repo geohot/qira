@@ -80,7 +80,7 @@ inline void Trace::commit_memory(Clnum clnum, Address a, uint8_t d) {
 }
 
 inline MemoryWithValid Trace::get_byte(Clnum clnum, Address a) {
-  ////printf("get_byte %u %llx\n", clnum, a);
+  //printf("get_byte %u %llx\n", clnum, a);
   map<Address, MemoryCell>::iterator it = memory_.find(a);
   if (it == memory_.end()) return 0;
 
@@ -125,7 +125,7 @@ bool Trace::remap_backing(uint64_t new_size) {
 #endif
 
   if (backing_ == NULL) {
-    //printf("ERROR: remap_backing is *** WARNINGabout to return NULL\n");
+    if (!quiet_) printf("ERROR: remap_backing is *** WARNINGabout to return NULL\n");
   }
   return (backing_ != NULL);
 }
