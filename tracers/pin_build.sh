@@ -5,14 +5,14 @@ cd "$(dirname "$0")/pin"
 case "`uname`" in
 Linux)
   if test -d pin-latest; then true; else
-    curl -L https://software.intel.com/sites/landingpage/pintool/downloads/pin-2.14-71313-gcc.4.4.7-linux.tar.gz | tar xz
-    ln -s pin-2.14-71313-gcc.4.4.7-linux pin-latest
+    curl -L https://software.intel.com/sites/landingpage/pintool/downloads/pin-3.7-97619-g0d0c92f4f-gcc-linux.tar.gz | tar xz
+    ln -s pin-3.7-97619-g0d0c92f4f-gcc-linux pin-latest
   fi
 
   # pin build deps, good?
   if which apt-get; then
     echo "apt-getting pin tool building deps"
-    sudo apt-get -qq -y install g++-4.9 gcc-4.9-multilib g++-4.9-multilib || echo "WARNING: apt-get failed"
+    sudo apt-get -qq -y install g++-7 gcc-7-multilib g++-7-multilib || echo "WARNING: apt-get failed"
   else
     echo "WARNING: you don't have apt-get, you are required to fetch pin tool building deps (e.g. 32 bit libs) on your own"
   fi

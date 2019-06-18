@@ -1,8 +1,7 @@
 FROM ubuntu:16.04
 
 # system basics
-RUN apt-get update
-RUN apt-get -y install build-essential git curl python python-virtualenv python-dev
+RUN apt-get update && apt-get -y install build-essential gcc-multilib g++-multilib lib32z1 git curl python python-virtualenv python-dev
 
 # qemu deps
 RUN apt-get -y install pkg-config zlib1g-dev libglib2.0-dev libpixman-1-dev

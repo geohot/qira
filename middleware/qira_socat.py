@@ -25,23 +25,23 @@ def start_bindserver(program, port, parent_id, start_cl, loop = False):
     bound_ports[port] = myss
   else:
     myss = bound_ports[port]
-    
+
   if os.fork() != 0:
     return
+  log.info("**** socat listening on %s:%s" % myss.getsockname())
+
   # bindserver runs in a fork
   while 1:
-    log.info("**** listening on %s", myss)
     (cs, address) = myss.accept()
-
     # fork off the child if we are looping
     if loop:
       if os.fork() != 0:
         cs.close()
         continue
     run_id = get_next_run_id()
-    log.info("**** ID %d CLIENT %s %s %d",run_id, cs, address, cs.fileno())
-
     fd = cs.fileno()
+    log.info("**** ID %s CLIENT %s:%s fd: %s" % (run_id, address[0], address[1], fd))
+
     # python nonblocking is a lie...
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
     try:
@@ -49,9 +49,9 @@ def start_bindserver(program, port, parent_id, start_cl, loop = False):
       fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL, 0) & ~os.O_NONBLOCK)
     except:
       pass
-    os.dup2(fd, 0) 
-    os.dup2(fd, 1) 
-    os.dup2(fd, 2) 
+    os.dup2(fd, 0)
+    os.dup2(fd, 1)
+    os.dup2(fd, 2)
     for i in range(3, fd+1):
       try:
         os.close(i)
