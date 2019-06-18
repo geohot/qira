@@ -543,7 +543,7 @@ class Trace:
       log.info("*** using base %d for %d", forkbase, self.forknum)
       f = open(qira_config.TRACE_FILE_BASE+str(forkbase)+"_base", 'r')
     except Exception as e:
-      log.info("*** base file issue")
+      log.info("*** base file issue %s", e)
       # done
       return
 
