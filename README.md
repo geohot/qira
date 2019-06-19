@@ -15,8 +15,7 @@ Ubuntu 14.04 and 16.04 supported out of the box.
 See forked QEMU source at https://github.com/geohot/qemu/tree/qira to fix.
 
 Non Linux hosts may run the rest of QIRA, but cannot run the QEMU tracer.
-Very limited support for Mac OS X and Windows natively.
-The Docker image in docker should work everywhere.
+Very limited support for Windows. Mac Os works except for running a Mach-O binary.
 </pre>
 
 ## Installing release
@@ -26,12 +25,21 @@ See instructions on [qira.me](http://qira.me/) to install 1.3
 ## Installing trunk
 
 <pre>
+#For Ubuntu
 cd ~/
 git clone https://github.com/geohot/qira.git
 cd qira/
 ./install.sh
 </pre>
 
+## Install on Mac Os 
+First, download the older compatible command line tools. From [here](https://download.developer.apple.com/Developer_Tools/Command_Line_Tools_macOS_10.13_for_Xcode_9.4/Command_Line_Tools_macOS_10.13_for_Xcode_9.4.dmg) :
+<pre>
+cd ~/
+git clone https://github.com/geohot/qira.git
+cd qira/
+./install.sh
+</pre>
 ## Installation Extras
 
 * ./fetchlibs.sh will fetch the libraries for i386, armhf, armel, aarch64, mips, mipsel, and ppc
