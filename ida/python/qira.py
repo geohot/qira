@@ -24,7 +24,7 @@ def handle_message_queue():
 
     if dat[0] == "setaddress" and dat[1] != "undefined":
       try:
-        a = ida_ida.toEA(0, int(str(dat[1][2:]),16))
+        a = ida_ida.to_ea(0, int(str(dat[1][2:]),16))
         jump_to(a)
       except e:
         ida_kernwin.msg("[QIRA Plugin] Error processing the address\n")
@@ -40,7 +40,7 @@ def set_qira_address(la):
   global qira_address
   ea = 0
   if qira_address is not None and qira_address != ida_idaapi.BADADDR:
-    ea = ida_ida.toEA(0, qira_address)
+    ea = ida_ida.to_ea(0, qira_address)
     ida_dbg.del_bpt(ea)
 
   qira_address = la
