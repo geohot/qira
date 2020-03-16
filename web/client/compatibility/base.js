@@ -79,6 +79,7 @@ function update_iaddr(addr, dirty) {
   addr = hexify(addr);
   if (dirty === undefined) dirty = true;
   Session.set("iaddr", addr);
+  Session.set("ida_iaddr", false);
   if (dirty) {
     Session.set("dirtyiaddr", true);
     Session.set("iview", addr);

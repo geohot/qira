@@ -16,6 +16,7 @@ function do_ida_socket(callme) {
       if (dat[0] == "setiaddr") {
         Session.set("iaddr", dat[1]);
         Session.set("dirtyiaddr", true);
+        Session.set("ida_iaddr", true);
       }
       else if (dat[0] == "setdaddr") {
         if (get_data_type(dat[1]) != "datainstruction") {
@@ -54,6 +55,11 @@ function send_cmd(cmd) {
 
 Deps.autorun(function() { DA("send setaddress to ida");
   var iaddr = Session.get('iaddr');
+  var ida_iaddr = Session.get('ida_iaddr');
+  if (ida_iaddr) {
+    DS("not streaming iaddr back to ida")
+    return;
+  }
   send_cmd('setaddress '+iaddr);
 });
 

@@ -30,19 +30,18 @@ def start_server():
 
 def set_qira_address(la):
   global qira_address
-  ea = 0
-  if qira_address is not None and qira_address != BADADDR:
-    ea = idaapi.toEA(0, qira_address)
-    idaapi.del_bpt(ea)
+
+  if qira_address is not None and qira_address != idaapi.BADADDR:
+    idaapi.set_item_color(qira_address, 0xFFFFFFFF)
 
   qira_address = la
-  idaapi.add_bpt(qira_address, 0, BPT_SOFT)
-  EnableBpt(qira_address, False)
+  idaapi.set_item_color(qira_address, 0xff72D586)
+
 
 def jump_to(a):
   global qira_address
   if a is not None:
-    if (a != qira_address) and (a != BADADDR):
+    if (a != qira_address) and (a != idaapi.BADADDR):
       set_qira_address(a)
       idaapi.jumpto(qira_address, -1, 0)
     else:
@@ -156,6 +155,8 @@ class qiraplugin_t(idaapi.plugin_t):
     global wsserver
     if wsserver is not None:
       wsserver.close()
+    if qira_address is not None and qira_address != idaapi.BADADDR:
+      idaapi.set_item_color(qira_address, 0xFFFFFFFF)
     idaapi.msg("[QIRA Plugin] Plugin uninstalled!\n")
 
 
