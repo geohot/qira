@@ -146,7 +146,9 @@ def deletefork(forknum):
   global program
   print("deletefork", forknum)
   os.unlink(qira_config.TRACE_FILE_BASE+str(int(forknum)))
-  del program.traces[forknum]
+  if forknum in program.traces:
+    program.traces[forknum].keep_analysis_thread = False
+    del program.traces[forknum]
   push_updates()
 
 @socketio.on('doslice', namespace='/qira')
