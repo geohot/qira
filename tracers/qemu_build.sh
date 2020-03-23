@@ -2,7 +2,7 @@
 
 if [ ! -d qemu/qemu ]; then
   cd qemu
-  git clone https://github.com/geohot/qemu.git --depth 1 --branch qira
+  git clone https://github.com/janbbeck/qemu.git --depth 1 --branch v4.0.0-qira
   cd ..
 fi
 
