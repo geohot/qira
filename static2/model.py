@@ -372,7 +372,10 @@ class CsInsn(object):
         raise IgnoredRegister(exp)
 
       if exp in reginfo: #it's a register
-        return reginfo[exp]
+        if exp == 'rip':
+          return reginfo[exp] + self.i.size
+        else:
+          return reginfo[exp]
 
       try:
         return int(exp, 16)
