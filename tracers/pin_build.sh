@@ -17,8 +17,8 @@ Linux)
     echo "WARNING: you don't have apt-get, you are required to fetch pin tool building deps (e.g. 32 bit libs) on your own"
   fi
 
-  PIN_ROOT=./pin-latest TARGET=intel64 make CXX=g++-4.9
-  PIN_ROOT=./pin-latest TARGET=ia32 make CXX=g++-4.9
+  PIN_ROOT=./pin-latest TARGET=intel64 make CXX=g++-7
+  PIN_ROOT=./pin-latest TARGET=ia32 make CXX=g++-7
   ;;
 
 Darwin)
