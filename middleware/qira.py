@@ -28,6 +28,8 @@ if __name__ == '__main__':
   parser.add_argument("--web-port", metavar="PORT", help="listen port for web interface. 3002 by default", type=int, default=qira_config.WEB_PORT)
   parser.add_argument("--socat-port", metavar="PORT", help="listen port for socat. 4000 by default", type=int, default=qira_config.SOCAT_PORT)
   parser.add_argument('-S', '--static', help="enable static2", action="store_true")
+  parser.add_argument('-q5', '--qemu-v5', help="use qemu 5", action="store_true")
+  parser.add_argument('--no-clear', help="do not remove files in /tmp/qira_logs ", action="store_true")
   #capstone flag in qira_config for now
 
   # parse arguments, first try
@@ -78,8 +80,13 @@ if __name__ == '__main__':
     qemu_args.append("-gatetrace")
     qemu_args.append(args.gate_trace)
 
+
+  if args.qemu_v5:
+    qemu_version = 5
+  else:
+    qemu_version = 2
   # creates the file symlink, program is constant through server run
-  program = qira_program.Program(args.binary, args.args, qemu_args)
+  program = qira_program.Program(args.binary, args.args, qemu_args, qemu_version)
 
   is_qira_running = 1
   try:
@@ -89,7 +96,9 @@ if __name__ == '__main__':
   except:
     is_qira_running = 0
     print("no qira server found, starting it")
-    program.clear()
+    if not args.no_clear:
+      program.clear()
+    program.create_asm_file()
 
   # start the binary runner
   if args.server:

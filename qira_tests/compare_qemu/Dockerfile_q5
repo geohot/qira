@@ -1,0 +1,26 @@
+FROM ubuntu:18.04
+
+
+RUN apt-get update && apt-get -y install git make gcc python3 ninja-build
+RUN apt-get -y install pkg-config zlib1g-dev libglib2.0-dev libpixman-1-dev
+
+
+
+RUN git clone https://github.com/korniltsev/qemu.git --depth 1 --branch qira_5.2 /qemu_build/
+
+WORKDIR /qemu_build/
+
+
+
+RUN ./configure --target-list=x86_64-linux-user \
+     --enable-tcg-interpreter                \
+     --enable-debug-tcg                      \
+     --cpu=x86_64                            \
+     --enable-capstone                       \
+     --python=python3 && make -j$(getconf _NPROCESSORS_ONLN)
+
+
+COPY  q5.patch q5.patch
+RUN git apply q5.patch
+RUN make -j$(getconf _NPROCESSORS_ONLN)
+

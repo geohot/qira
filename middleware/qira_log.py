@@ -61,5 +61,5 @@ if __name__ == "__main__":
   import sys
   # standalone this can dump a log
   for (address, data, clnum, flags) in read_log(open(sys.argv[1])):
-    print("%4d: %X -> %X  %X" % (clnum, address, data, flags))
+    print("%4d: %X -> %X  %X %s" % (clnum, address, data, flags, flag_to_type(flags)))
 

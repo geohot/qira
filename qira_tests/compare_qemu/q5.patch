@@ -1,0 +1,102 @@
+diff --git a/linux-user/elfload.c b/linux-user/elfload.c
+index 689e63605b..86bc4b4487 100644
+--- a/linux-user/elfload.c
++++ b/linux-user/elfload.c
+@@ -1584,7 +1584,7 @@ struct exec
+                                  ~(abi_ulong)(TARGET_ELF_EXEC_PAGESIZE-1))
+ #define TARGET_ELF_PAGEOFFSET(_v) ((_v) & (TARGET_ELF_EXEC_PAGESIZE-1))
+ 
+-#define DLINFO_ITEMS 16
++#define DLINFO_ITEMS 14
+ 
+ static inline void memcpy_fromfs(void * to, const void * from, unsigned long n)
+ {
+@@ -2036,9 +2036,21 @@ static abi_ulong create_elf_tables(abi_ulong p, int argc, int envc,
+     /* There must be exactly DLINFO_ITEMS entries here, or the assert
+      * on info->auxv_len will trigger.
+      */
+-    NEW_AUX_ENT(AT_PHDR, (abi_ulong)(info->load_addr + exec->e_phoff));
+-    NEW_AUX_ENT(AT_PHENT, (abi_ulong)(sizeof (struct elf_phdr)));
+-    NEW_AUX_ENT(AT_PHNUM, (abi_ulong)(exec->e_phnum));
++    // NEW_AUX_ENT(AT_EXECFN, info->file_string);
++    // NEW_AUX_ENT(AT_SECURE, (abi_ulong) qemu_getauxval(AT_SECURE));
++    if (u_platform) {
++        NEW_AUX_ENT(AT_PLATFORM, u_platform);
++    }
++    NEW_AUX_ENT(AT_RANDOM, (abi_ulong) u_rand_bytes);
++    NEW_AUX_ENT(AT_CLKTCK, (abi_ulong) sysconf(_SC_CLK_TCK));
++    NEW_AUX_ENT(AT_HWCAP, (abi_ulong) ELF_HWCAP);
++    NEW_AUX_ENT(AT_EGID, (abi_ulong) getegid());
++    NEW_AUX_ENT(AT_GID, (abi_ulong) getgid());
++    NEW_AUX_ENT(AT_EUID, (abi_ulong) geteuid());
++    NEW_AUX_ENT(AT_UID, (abi_ulong) getuid());
++    NEW_AUX_ENT(AT_ENTRY, info->entry);
++    NEW_AUX_ENT(AT_FLAGS, (abi_ulong)0);
++    NEW_AUX_ENT(AT_BASE, (abi_ulong)(interp_info ? interp_info->load_addr : 0));
+     if ((info->alignment & ~qemu_host_page_mask) != 0) {
+         /* Target doesn't support host page size alignment */
+         NEW_AUX_ENT(AT_PAGESZ, (abi_ulong)(TARGET_PAGE_SIZE));
+@@ -2046,26 +2058,14 @@ static abi_ulong create_elf_tables(abi_ulong p, int argc, int envc,
+         NEW_AUX_ENT(AT_PAGESZ, (abi_ulong)(MAX(TARGET_PAGE_SIZE,
+                                                qemu_host_page_size)));
+     }
+-    NEW_AUX_ENT(AT_BASE, (abi_ulong)(interp_info ? interp_info->load_addr : 0));
+-    NEW_AUX_ENT(AT_FLAGS, (abi_ulong)0);
+-    NEW_AUX_ENT(AT_ENTRY, info->entry);
+-    NEW_AUX_ENT(AT_UID, (abi_ulong) getuid());
+-    NEW_AUX_ENT(AT_EUID, (abi_ulong) geteuid());
+-    NEW_AUX_ENT(AT_GID, (abi_ulong) getgid());
+-    NEW_AUX_ENT(AT_EGID, (abi_ulong) getegid());
+-    NEW_AUX_ENT(AT_HWCAP, (abi_ulong) ELF_HWCAP);
+-    NEW_AUX_ENT(AT_CLKTCK, (abi_ulong) sysconf(_SC_CLK_TCK));
+-    NEW_AUX_ENT(AT_RANDOM, (abi_ulong) u_rand_bytes);
+-    NEW_AUX_ENT(AT_SECURE, (abi_ulong) qemu_getauxval(AT_SECURE));
+-    NEW_AUX_ENT(AT_EXECFN, info->file_string);
+-
++    NEW_AUX_ENT(AT_PHNUM, (abi_ulong)(exec->e_phnum));
++    NEW_AUX_ENT(AT_PHENT, (abi_ulong)(sizeof (struct elf_phdr)));
++    NEW_AUX_ENT(AT_PHDR, (abi_ulong)(info->load_addr + exec->e_phoff));
+ #ifdef ELF_HWCAP2
+     NEW_AUX_ENT(AT_HWCAP2, (abi_ulong) ELF_HWCAP2);
+ #endif
+ 
+-    if (u_platform) {
+-        NEW_AUX_ENT(AT_PLATFORM, u_platform);
+-    }
++
+     NEW_AUX_ENT (AT_NULL, 0);
+ #undef NEW_AUX_ENT
+ 
+diff --git a/target/i386/cpu.c b/target/i386/cpu.c
+index 5a8c96072e..3e50eb6b4c 100644
+--- a/target/i386/cpu.c
++++ b/target/i386/cpu.c
+@@ -336,6 +336,7 @@ static void encode_cache_cpuid80000006(CPUCacheInfo *l2,
+     } else {
+         *edx = 0;
+     }
++    *edx = 0;
+ }
+ 
+ /* Encode cache info for CPUID[8000001D] */
+diff --git a/tcg/qira.c b/tcg/qira.c
+index 280e8dd3c1..24ff8ce2b8 100644
+--- a/tcg/qira.c
++++ b/tcg/qira.c
+@@ -559,16 +559,6 @@ void qira_hook_before_op_call(
+             }
+ #endif
+ #if defined(TARGET_X86_64)
+-            if ((void*)t0 == helper_syscall) {
+-              if (GLOBAL_logstate->is_filtered == 1) {
+-                commit_pending_changes();
+-                // syscalls always get a change?
+-                /*GLOBAL_logstate->changelist_number++;
+-                add_change(tb->pc, tb->size, IS_START);*/
+-              }
+-              a = track_syscall_begin(env, env->regs[R_EAX]);
+-              GLOBAL_last_was_syscall = 1;
+-            }
+ #endif
+ // todo TARGET_AARCH
+ #ifdef TARGET_ARM

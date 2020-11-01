@@ -1,0 +1,16 @@
+diff --git a/linux-user/elfload.c b/linux-user/elfload.c
+index 57f1cd6560..2407f34ed0 100644
+--- a/linux-user/elfload.c
++++ b/linux-user/elfload.c
+@@ -1610,9 +1610,10 @@ static abi_ulong create_elf_tables(abi_ulong p, int argc, int envc,
+      * cryptically secure but it's not the aim of QEMU).
+      */
+     for (i = 0; i < 16; i++) {
+-        k_rand_bytes[i] = rand();
++        k_rand_bytes[i] = 0xca;
+     }
+     sp -= 16;
++    sp = (sp >> 4) << 4;
+     u_rand_bytes = sp;
+     /* FIXME - check return value of memcpy_to_target() for failure */
+     memcpy_to_target(sp, k_rand_bytes, 16);

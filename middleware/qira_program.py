@@ -40,7 +40,9 @@ def which(prog):
 
 # things that don't cross the fork
 class Program:
-  def __init__(self, prog, args=[], qemu_args=[]):
+  def __init__(self, prog, args=[], qemu_args=[], qemu_version=5):
+    print('qira::Program qemu_version = ', qemu_version)
+    self.qemu_version = qemu_version
     # create the logs dir
     try:
       os.mkdir(qira_config.TRACE_FILE_BASE)
@@ -182,6 +184,8 @@ class Program:
       else:
         raise Exception("binary type "+hex(self.fb)+" not supported")
 
+      if self.qemu_version == 5:
+        self.qirabinary = self.qirabinary.replace('qira-', 'qira-v5-')
       self.qirabinary = os.path.realpath(self.qirabinary)
       print("**** using",self.qirabinary,"for",hex(self.fb))
 
