@@ -465,7 +465,7 @@ class Trace:
       try:
         return_code = int(sc.split(") = ")[1].split(" ")[0], 0)
         fxn = sc.split("(")[0]
-        if fxn == "open" and return_code != -1:
+        if (fxn == "open" or fxn == "openat") and return_code != -1:
           firststr = sc.split('\"')[1]
           files[return_code] = firststr
         elif fxn[0:4] == "mmap":
