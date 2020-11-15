@@ -1,0 +1,14 @@
+# -*- makefile -*- : Force emacs to use Makefile mode
+
+# EFI probably doesn't guarantee us a red zone, so let's not rely on it.
+#
+CFLAGS		+= -mno-red-zone
+
+# Specify EFI image builder
+#
+ELF2EFI		= $(ELF2EFI64)
+
+# Include generic EFI Makefile
+#
+MAKEDEPS	+= arch/x86/Makefile.efi
+include arch/x86/Makefile.efi

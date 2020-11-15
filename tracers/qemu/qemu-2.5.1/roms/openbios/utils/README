@@ -1,0 +1,52 @@
+Here you find utilities useful for development and debugging of Open
+Firmware systems.
+
+ofclient
+--------
+
+Sample OpenFirmware client. Can be booted directly from OpenFirmware
+and demonstrates how an operating system can use the OpenFirmware
+client interface. This example should work on PPC and x86 without
+changes.
+
+romheaders
+----------
+Romheaders is a small utility that dumps PCI expansion rom header
+information in human readable form. It knows about Images with
+multiple platform support and prints platform dependant information
+for x86 and open firmware roms.
+
+
+detok
+-----
+Detok is a GPLed FCode detokenizer. It can detokenize (disassemble)
+fcode bytecode files as described by the IEEE 1275-1994 standard. This
+program aims towards IEEE 1275-1994 compliancy, but there is no
+warranty that it is actually compliant. bytecode files normally
+contain Open Firmware drivers or other packages for use with an Open
+Firmware compliant system.
+See http://www.openbios.org/development/detok.html for more
+information.
+
+devbios
+-------
+This is a kernel driver for different kind of (Flash)BIOSs that are
+available in today's x86, ia64 (Itantium) or Alpha based hardware. 
+
+fccc
+----
+initial, incomplete implementation of an C to forth compiler.
+
+
+dist
+----
+rpm specfile and debian files for packing openbios with various
+distributions. Changes/addons from distributors are explicitly 
+welcome.
+
+
+
+
+
+
+

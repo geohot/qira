@@ -1,0 +1,1 @@
+tests/qapi-schema/include-non-file.json:1: Value of 'include' must be a string

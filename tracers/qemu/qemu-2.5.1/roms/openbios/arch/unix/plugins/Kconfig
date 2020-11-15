@@ -1,0 +1,16 @@
+config PLUGINS
+	depends HOST_UNIX
+	bool "Plugin system (obsolete)"
+	default n
+	
+config PLUGIN_PCI
+	depends HOST_UNIX && PLUGINS
+	bool "PCI Emulation"
+	default n
+
+config PLUGIN_QT
+	bool "QT Display Emulation"
+	depends HOST_UNIX && PLUGINS && PLUGIN_PCI
+	default n
+	help
+	  This plugin needs qt installed. Disable if you don't have qt.

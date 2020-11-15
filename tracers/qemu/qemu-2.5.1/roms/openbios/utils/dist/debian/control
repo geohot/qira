@@ -1,0 +1,16 @@
+Source: openbios
+Maintainer: Patrick Mauritz <oxygene@studentenbude.ath.cx>
+Section: devel
+Priority: optional
+Standards-Version: 3.5.2
+Build-Depends: grep-dctrl, yada (>= 0.9.9)
+
+Package: openbios
+Architecture: any
+Depends: ${openbios:Depends}
+Description: OpenBIOS - OpenFirmware development tools
+ It contains:
+  - toke: tokenizer for fcode programs
+  - detok: decompiler for fcode programs
+  - paflof: (yet) incomplete forth environment which will be
+    _the_ core of OpenBIOS

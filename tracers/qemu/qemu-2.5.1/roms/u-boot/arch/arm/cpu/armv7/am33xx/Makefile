@@ -1,0 +1,21 @@
+#
+# Copyright (C) 2011, Texas Instruments, Incorporated - http://www.ti.com/
+#
+# SPDX-License-Identifier:	GPL-2.0+
+#
+
+obj-$(CONFIG_AM33XX)	+= clock_am33xx.o
+obj-$(CONFIG_TI814X)	+= clock_ti814x.o
+obj-$(CONFIG_AM43XX)	+= clock_am43xx.o
+
+ifneq ($(CONFIG_AM43XX)$(CONFIG_AM33XX),)
+obj-y	+= clock.o
+endif
+
+obj-$(CONFIG_TI816X)	+= clock_ti816x.o
+obj-y	+= sys_info.o
+obj-y	+= mem.o
+obj-y	+= ddr.o
+obj-y	+= emif4.o
+obj-y	+= board.o
+obj-y	+= mux.o

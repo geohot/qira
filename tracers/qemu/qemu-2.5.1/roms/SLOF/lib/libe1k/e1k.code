@@ -1,0 +1,75 @@
+/******************************************************************************
+ * Copyright (c) 2013 IBM Corporation
+ * All rights reserved.
+ * This program and the accompanying materials
+ * are made available under the terms of the BSD License
+ * which accompanies this distribution, and is available at
+ * http://www.opensource.org/licenses/bsd-license.php
+ *
+ * Contributors:
+ *     IBM Corporation - initial implementation
+ *****************************************************************************/
+
+/*
+ * libe1k Forth wrapper
+ */
+
+#include <e1k.h>
+
+// : e1k-open  ( baseaddr -- false | [ driver true ] )
+PRIM(E1K_X2d_OPEN)
+{
+	uint64_t baseaddr = TOS.u; POP;
+	net_driver_t *net_driver = e1k_open(baseaddr);
+	if (net_driver) {
+		PUSH;
+		TOS.u = (unsigned long)net_driver; PUSH;
+		TOS.n = -1;
+	} else {
+		PUSH;
+		TOS.n = 0;
+	}
+}
+MIRP
+
+// : e1k-close  ( driver -- )
+PRIM(E1K_X2d_CLOSE)
+{
+	net_driver_t *driver = TOS.a; POP;
+	e1k_close(driver);
+}
+MIRP
+
+
+// : e1k-read  ( addr len -- actual )
+PRIM(E1K_X2d_READ)
+{
+	int len = TOS.u; POP;
+	TOS.n = e1k_read(TOS.a, len);
+}
+MIRP
+
+// : e1k-write  ( addr len -- actual )
+PRIM(E1K_X2d_WRITE)
+{
+	int len = TOS.u; POP;
+	TOS.n = e1k_write(TOS.a, len);
+}
+MIRP
+
+// : e1k-mac-setup  ( vendor-id device-id baseaddr addr -- false | [ mac-addr len true ] )
+PRIM(E1K_X2d_MAC_X2d_SETUP)
+{
+	char *mac_addr = TOS.a; POP;
+	uint64_t baseaddr = TOS.u; POP;
+	unsigned int device_id = TOS.u; POP;
+
+	int ret = e1k_mac_setup(TOS.u, device_id, baseaddr, mac_addr);
+	if (!ret) {
+		TOS.a = mac_addr; PUSH;
+		TOS.n = 6; PUSH;
+		TOS.n = -1;
+	} else
+		TOS.n = 0;
+}
+MIRP

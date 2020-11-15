@@ -1,0 +1,12 @@
+ifeq ($(CONFIG_VIRTIO)$(CONFIG_VIRTFS)$(CONFIG_PCI),yyy)
+# Lots of the fsdev/9pcode is pulled in by vl.c via qemu_fsdev_add.
+# only pull in the actual virtio-9p device if we also enabled virtio.
+common-obj-y = qemu-fsdev.o virtio-9p-marshal.o
+else
+common-obj-y = qemu-fsdev-dummy.o
+endif
+common-obj-y += qemu-fsdev-opts.o
+
+# Toplevel always builds this; targets without virtio will put it in
+# common-obj-y
+common-obj-$(CONFIG_ALL) += qemu-fsdev-dummy.o

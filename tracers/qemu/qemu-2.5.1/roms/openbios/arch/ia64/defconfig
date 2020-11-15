@@ -1,0 +1,65 @@
+#
+# Automatically generated make config: don't edit
+#
+CONFIG_IPF=y
+CONFIG_LITTLE_ENDIAN=y
+
+#
+# Kernel binaries (x86)
+#
+# CONFIG_IMAGE_ELF is not set
+# CONFIG_IMAGE_ELF_EMBEDDED is not set
+# CONFIG_IMAGE_ELF_MULTIBOOT is not set
+
+#
+# Build hosted UNIX Binary
+#
+CONFIG_HOST_UNIX=y
+# CONFIG_PLUGIN_PCI is not set
+
+#
+# Kernel Debugging
+#
+# CONFIG_DEBUG is not set
+CONFIG_DEBUG_CONSOLE=y
+CONFIG_DEBUG_CONSOLE_SERIAL=y
+CONFIG_SERIAL_PORT=1
+CONFIG_SERIAL_SPEED=115200
+CONFIG_DEBUG_CONSOLE_VGA=y
+
+#
+# Module Configuration
+#
+CONFIG_CMDLINE=y
+CONFIG_DEBLOCKER=y
+
+#
+# Filesystem Configuration
+#
+CONFIG_DISK_LABEL=y
+CONFIG_PART_SUPPORT=y
+CONFIG_PC_PARTS=y
+CONFIG_FS=y
+CONFIG_GRUBFS=y
+CONFIG_FSYS_EXT2FS=y
+CONFIG_FSYS_FAT=y
+CONFIG_FSYS_JFS=y
+# CONFIG_FSYS_MINIX is not set
+CONFIG_FSYS_REISERFS=y
+CONFIG_FSYS_XFS=y
+CONFIG_FSYS_ISO9660=y
+# CONFIG_FSYS_FFS is not set
+# CONFIG_FSYS_VSTAFS is not set
+# CONFIG_DEBUG_FS is not set
+
+#
+# Miscellaneous
+#
+CONFIG_LINUXBIOS=y
+
+#
+# Drivers
+#
+CONFIG_DRIVER_PCI=y
+CONFIG_DRIVER_IDE=y
+# CONFIG_DEBUG_IDE is not set

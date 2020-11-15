@@ -1,0 +1,8 @@
+# tag: contains a description of the dictionary format
+
+name | length of name in bytes + 0x80 | align with 0's | flags (bit 7 set) | LFA | CFA | PFA
+
+LFA == link field address (backlink)
+CFA == code field address ("word type")
+PFA == program field address (definitions)
+

@@ -1,0 +1,48 @@
+mainmenu "OpenBIOS Configuration"
+
+config PPC
+	bool
+	default y
+	help
+	  Building for PPC hardware.
+
+config BIG_ENDIAN
+	bool
+	default y
+	help
+	  PPC hardware is big endian (per default)
+
+choice
+	prompt "Platform Type"
+	default MOL
+
+config MOL
+	bool "Mac-on-Linux"
+	help
+	  Build an image for Mac-on-Linux
+
+config MPC107
+	bool "MPC107 board (Crescendo)"
+	help
+	  Build for Crescendo board.
+
+config BRIQ
+	bool "Total Impact briQ"
+	help
+	  Build an image for the Total Impact briQ
+
+config NO_ARCH
+	bool "None"
+	help
+	  Don't build any images.
+
+endchoice
+
+menu "Build hosted UNIX Binary"
+source "arch/unix/Kconfig"
+endmenu
+
+source "kernel/Kconfig"
+source "forth/Kconfig"
+source "libopenbios/Kconfig"
+source "drivers/Kconfig"

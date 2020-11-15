@@ -1,0 +1,1112 @@
+= How to use the QAPI code generator =
+
+Copyright IBM Corp. 2011
+Copyright (C) 2012-2015 Red Hat, Inc.
+
+This work is licensed under the terms of the GNU GPL, version 2 or
+later. See the COPYING file in the top-level directory.
+
+== Introduction ==
+
+QAPI is a native C API within QEMU which provides management-level
+functionality to internal and external users. For external
+users/processes, this interface is made available by a JSON-based wire
+format for the QEMU Monitor Protocol (QMP) for controlling qemu, as
+well as the QEMU Guest Agent (QGA) for communicating with the guest.
+The remainder of this document uses "Client JSON Protocol" when
+referring to the wire contents of a QMP or QGA connection.
+
+To map Client JSON Protocol interfaces to the native C QAPI
+implementations, a JSON-based schema is used to define types and
+function signatures, and a set of scripts is used to generate types,
+signatures, and marshaling/dispatch code. This document will describe
+how the schemas, scripts, and resulting code are used.
+
+
+== QMP/Guest agent schema ==
+
+A QAPI schema file is designed to be loosely based on JSON
+(http://www.ietf.org/rfc/rfc7159.txt) with changes for quoting style
+and the use of comments; a QAPI schema file is then parsed by a python
+code generation program.  A valid QAPI schema consists of a series of
+top-level expressions, with no commas between them.  Where
+dictionaries (JSON objects) are used, they are parsed as python
+OrderedDicts so that ordering is preserved (for predictable layout of
+generated C structs and parameter lists).  Ordering doesn't matter
+between top-level expressions or the keys within an expression, but
+does matter within dictionary values for 'data' and 'returns' members
+of a single expression.  QAPI schema input is written using 'single
+quotes' instead of JSON's "double quotes" (in contrast, Client JSON
+Protocol uses no comments, and while input accepts 'single quotes' as
+an extension, output is strict JSON using only "double quotes").  As
+in JSON, trailing commas are not permitted in arrays or dictionaries.
+Input must be ASCII (although QMP supports full Unicode strings, the
+QAPI parser does not).  At present, there is no place where a QAPI
+schema requires the use of JSON numbers or null.
+
+Comments are allowed; anything between an unquoted # and the following
+newline is ignored.  Although there is not yet a documentation
+generator, a form of stylized comments has developed for consistently
+documenting details about an expression and when it was added to the
+schema.  The documentation is delimited between two lines of ##, then
+the first line names the expression, an optional overview is provided,
+then individual documentation about each member of 'data' is provided,
+and finally, a 'Since: x.y.z' tag lists the release that introduced
+the expression.  Optional fields are tagged with the phrase
+'#optional', often with their default value; and extensions added
+after the expression was first released are also given a '(since
+x.y.z)' comment.  For example:
+
+    ##
+    # @BlockStats:
+    #
+    # Statistics of a virtual block device or a block backing device.
+    #
+    # @device: #optional If the stats are for a virtual block device, the name
+    #          corresponding to the virtual block device.
+    #
+    # @stats:  A @BlockDeviceStats for the device.
+    #
+    # @parent: #optional This describes the file block device if it has one.
+    #
+    # @backing: #optional This describes the backing block device if it has one.
+    #           (Since 2.0)
+    #
+    # Since: 0.14.0
+    ##
+    { 'struct': 'BlockStats',
+      'data': {'*device': 'str', 'stats': 'BlockDeviceStats',
+               '*parent': 'BlockStats',
+               '*backing': 'BlockStats'} }
+
+The schema sets up a series of types, as well as commands and events
+that will use those types.  Forward references are allowed: the parser
+scans in two passes, where the first pass learns all type names, and
+the second validates the schema and generates the code.  This allows
+the definition of complex structs that can have mutually recursive
+types, and allows for indefinite nesting of Client JSON Protocol that
+satisfies the schema.  A type name should not be defined more than
+once.  It is permissible for the schema to contain additional types
+not used by any commands or events in the Client JSON Protocol, for
+the side effect of generated C code used internally.
+
+There are seven top-level expressions recognized by the parser:
+'include', 'command', 'struct', 'enum', 'union', 'alternate', and
+'event'.  There are several groups of types: simple types (a number of
+built-in types, such as 'int' and 'str'; as well as enumerations),
+complex types (structs and two flavors of unions), and alternate types
+(a choice between other types).  The 'command' and 'event' expressions
+can refer to existing types by name, or list an anonymous type as a
+dictionary. Listing a type name inside an array refers to a
+single-dimension array of that type; multi-dimension arrays are not
+directly supported (although an array of a complex struct that
+contains an array member is possible).
+
+Types, commands, and events share a common namespace.  Therefore,
+generally speaking, type definitions should always use CamelCase for
+user-defined type names, while built-in types are lowercase. Type
+definitions should not end in 'Kind', as this namespace is used for
+creating implicit C enums for visiting union types, or in 'List', as
+this namespace is used for creating array types.  Command names,
+and field names within a type, should be all lower case with words
+separated by a hyphen.  However, some existing older commands and
+complex types use underscore; when extending such expressions,
+consistency is preferred over blindly avoiding underscore.  Event
+names should be ALL_CAPS with words separated by underscore.  Field
+names cannot start with 'has-' or 'has_', as this is reserved for
+tracking optional fields.
+
+Any name (command, event, type, field, or enum value) beginning with
+"x-" is marked experimental, and may be withdrawn or changed
+incompatibly in a future release.  Downstream vendors may add
+extensions; such extensions should begin with a prefix matching
+"__RFQDN_" (for the reverse-fully-qualified-domain-name of the
+vendor), even if the rest of the name uses dash (example:
+__com.redhat_drive-mirror).  Other than downstream extensions (with
+leading underscore and the use of dots), all names should begin with a
+letter, and contain only ASCII letters, digits, dash, and underscore.
+Names beginning with 'q_' are reserved for the generator: QMP names
+that resemble C keywords or other problematic strings will be munged
+in C to use this prefix.  For example, a field named "default" in
+qapi becomes "q_default" in the generated C code.
+
+In the rest of this document, usage lines are given for each
+expression type, with literal strings written in lower case and
+placeholders written in capitals.  If a literal string includes a
+prefix of '*', that key/value pair can be omitted from the expression.
+For example, a usage statement that includes '*base':STRUCT-NAME
+means that an expression has an optional key 'base', which if present
+must have a value that forms a struct name.
+
+
+=== Built-in Types ===
+
+The following types are predefined, and map to C as follows:
+
+  Schema    C          JSON
+  str       char *     any JSON string, UTF-8
+  number    double     any JSON number
+  int       int64_t    a JSON number without fractional part
+                       that fits into the C integer type
+  int8      int8_t     likewise
+  int16     int16_t    likewise
+  int32     int32_t    likewise
+  int64     int64_t    likewise
+  uint8     uint8_t    likewise
+  uint16    uint16_t   likewise
+  uint32    uint32_t   likewise
+  uint64    uint64_t   likewise
+  size      uint64_t   like uint64_t, except StringInputVisitor
+                       accepts size suffixes
+  bool      bool       JSON true or false
+  any       QObject *  any JSON value
+
+
+=== Includes ===
+
+Usage: { 'include': STRING }
+
+The QAPI schema definitions can be modularized using the 'include' directive:
+
+ { 'include': 'path/to/file.json' }
+
+The directive is evaluated recursively, and include paths are relative to the
+file using the directive. Multiple includes of the same file are
+idempotent.  No other keys should appear in the expression, and the include
+value should be a string.
+
+As a matter of style, it is a good idea to have all files be
+self-contained, but at the moment, nothing prevents an included file
+from making a forward reference to a type that is only introduced by
+an outer file.  The parser may be made stricter in the future to
+prevent incomplete include files.
+
+
+=== Struct types ===
+
+Usage: { 'struct': STRING, 'data': DICT, '*base': STRUCT-NAME }
+
+A struct is a dictionary containing a single 'data' key whose
+value is a dictionary.  This corresponds to a struct in C or an Object
+in JSON. Each value of the 'data' dictionary must be the name of a
+type, or a one-element array containing a type name.  An example of a
+struct is:
+
+ { 'struct': 'MyType',
+   'data': { 'member1': 'str', 'member2': 'int', '*member3': 'str' } }
+
+The use of '*' as a prefix to the name means the member is optional in
+the corresponding JSON protocol usage.
+
+The default initialization value of an optional argument should not be changed
+between versions of QEMU unless the new default maintains backward
+compatibility to the user-visible behavior of the old default.
+
+With proper documentation, this policy still allows some flexibility; for
+example, documenting that a default of 0 picks an optimal buffer size allows
+one release to declare the optimal size at 512 while another release declares
+the optimal size at 4096 - the user-visible behavior is not the bytes used by
+the buffer, but the fact that the buffer was optimal size.
+
+On input structures (only mentioned in the 'data' side of a command), changing
+from mandatory to optional is safe (older clients will supply the option, and
+newer clients can benefit from the default); changing from optional to
+mandatory is backwards incompatible (older clients may be omitting the option,
+and must continue to work).
+
+On output structures (only mentioned in the 'returns' side of a command),
+changing from mandatory to optional is in general unsafe (older clients may be
+expecting the field, and could crash if it is missing), although it can be done
+if the only way that the optional argument will be omitted is when it is
+triggered by the presence of a new input flag to the command that older clients
+don't know to send.  Changing from optional to mandatory is safe.
+
+A structure that is used in both input and output of various commands
+must consider the backwards compatibility constraints of both directions
+of use.
+
+A struct definition can specify another struct as its base.
+In this case, the fields of the base type are included as top-level fields
+of the new struct's dictionary in the Client JSON Protocol wire
+format. An example definition is:
+
+ { 'struct': 'BlockdevOptionsGenericFormat', 'data': { 'file': 'str' } }
+ { 'struct': 'BlockdevOptionsGenericCOWFormat',
+   'base': 'BlockdevOptionsGenericFormat',
+   'data': { '*backing': 'str' } }
+
+An example BlockdevOptionsGenericCOWFormat object on the wire could use
+both fields like this:
+
+ { "file": "/some/place/my-image",
+   "backing": "/some/place/my-backing-file" }
+
+
+=== Enumeration types ===
+
+Usage: { 'enum': STRING, 'data': ARRAY-OF-STRING }
+       { 'enum': STRING, '*prefix': STRING, 'data': ARRAY-OF-STRING }
+
+An enumeration type is a dictionary containing a single 'data' key
+whose value is a list of strings.  An example enumeration is:
+
+ { 'enum': 'MyEnum', 'data': [ 'value1', 'value2', 'value3' ] }
+
+Nothing prevents an empty enumeration, although it is probably not
+useful.  The list of strings should be lower case; if an enum name
+represents multiple words, use '-' between words.  The string 'max' is
+not allowed as an enum value, and values should not be repeated.
+
+The enum constants will be named by using a heuristic to turn the
+type name into a set of underscore separated words. For the example
+above, 'MyEnum' will turn into 'MY_ENUM' giving a constant name
+of 'MY_ENUM_VALUE1' for the first value. If the default heuristic
+does not result in a desirable name, the optional 'prefix' field
+can be used when defining the enum.
+
+The enumeration values are passed as strings over the Client JSON
+Protocol, but are encoded as C enum integral values in generated code.
+While the C code starts numbering at 0, it is better to use explicit
+comparisons to enum values than implicit comparisons to 0; the C code
+will also include a generated enum member ending in _MAX for tracking
+the size of the enum, useful when using common functions for
+converting between strings and enum values.  Since the wire format
+always passes by name, it is acceptable to reorder or add new
+enumeration members in any location without breaking clients of Client
+JSON Protocol; however, removing enum values would break
+compatibility.  For any struct that has a field that will only contain
+a finite set of string values, using an enum type for that field is
+better than open-coding the field to be type 'str'.
+
+
+=== Union types ===
+
+Usage: { 'union': STRING, 'data': DICT }
+or:    { 'union': STRING, 'data': DICT, 'base': STRUCT-NAME,
+         'discriminator': ENUM-MEMBER-OF-BASE }
+
+Union types are used to let the user choose between several different
+variants for an object.  There are two flavors: simple (no
+discriminator or base), flat (both discriminator and base).  A union
+type is defined using a data dictionary as explained in the following
+paragraphs.
+
+A simple union type defines a mapping from automatic discriminator
+values to data types like in this example:
+
+ { 'struct': 'FileOptions', 'data': { 'filename': 'str' } }
+ { 'struct': 'Qcow2Options',
+   'data': { 'backing-file': 'str', 'lazy-refcounts': 'bool' } }
+
+ { 'union': 'BlockdevOptions',
+   'data': { 'file': 'FileOptions',
+             'qcow2': 'Qcow2Options' } }
+
+In the Client JSON Protocol, a simple union is represented by a
+dictionary that contains the 'type' field as a discriminator, and a
+'data' field that is of the specified data type corresponding to the
+discriminator value, as in these examples:
+
+ { "type": "file", "data" : { "filename": "/some/place/my-image" } }
+ { "type": "qcow2", "data" : { "backing-file": "/some/place/my-image",
+                               "lazy-refcounts": true } }
+
+The generated C code uses a struct containing a union. Additionally,
+an implicit C enum 'NameKind' is created, corresponding to the union
+'Name', for accessing the various branches of the union.  No branch of
+the union can be named 'max', as this would collide with the implicit
+enum.  The value for each branch can be of any type.
+
+A flat union definition specifies a struct as its base, and
+avoids nesting on the wire.  All branches of the union must be
+complex types, and the top-level fields of the union dictionary on
+the wire will be combination of fields from both the base type and the
+appropriate branch type (when merging two dictionaries, there must be
+no keys in common).  The 'discriminator' field must be the name of an
+enum-typed member of the base struct.
+
+The following example enhances the above simple union example by
+adding a common field 'readonly', renaming the discriminator to
+something more applicable, and reducing the number of {} required on
+the wire:
+
+ { 'enum': 'BlockdevDriver', 'data': [ 'file', 'qcow2' ] }
+ { 'struct': 'BlockdevCommonOptions',
+   'data': { 'driver': 'BlockdevDriver', 'readonly': 'bool' } }
+ { 'union': 'BlockdevOptions',
+   'base': 'BlockdevCommonOptions',
+   'discriminator': 'driver',
+   'data': { 'file': 'FileOptions',
+             'qcow2': 'Qcow2Options' } }
+
+Resulting in these JSON objects:
+
+ { "driver": "file", "readonly": true,
+   "filename": "/some/place/my-image" }
+ { "driver": "qcow2", "readonly": false,
+   "backing-file": "/some/place/my-image", "lazy-refcounts": true }
+
+Notice that in a flat union, the discriminator name is controlled by
+the user, but because it must map to a base member with enum type, the
+code generator can ensure that branches exist for all values of the
+enum (although the order of the keys need not match the declaration of
+the enum).  In the resulting generated C data types, a flat union is
+represented as a struct with the base member fields included directly,
+and then a union of structures for each branch of the struct.
+
+A simple union can always be re-written as a flat union where the base
+class has a single member named 'type', and where each branch of the
+union has a struct with a single member named 'data'.  That is,
+
+ { 'union': 'Simple', 'data': { 'one': 'str', 'two': 'int' } }
+
+is identical on the wire to:
+
+ { 'enum': 'Enum', 'data': ['one', 'two'] }
+ { 'struct': 'Base', 'data': { 'type': 'Enum' } }
+ { 'struct': 'Branch1', 'data': { 'data': 'str' } }
+ { 'struct': 'Branch2', 'data': { 'data': 'int' } }
+ { 'union': 'Flat', 'base': 'Base', 'discriminator': 'type',
+   'data': { 'one': 'Branch1', 'two': 'Branch2' } }
+
+
+=== Alternate types ===
+
+Usage: { 'alternate': STRING, 'data': DICT }
+
+An alternate type is one that allows a choice between two or more JSON
+data types (string, integer, number, or object, but currently not
+array) on the wire.  The definition is similar to a simple union type,
+where each branch of the union names a QAPI type.  For example:
+
+ { 'alternate': 'BlockRef',
+   'data': { 'definition': 'BlockdevOptions',
+             'reference': 'str' } }
+
+Just like for a simple union, an implicit C enum 'NameKind' is created
+to enumerate the branches for the alternate 'Name'.
+
+Unlike a union, the discriminator string is never passed on the wire
+for the Client JSON Protocol.  Instead, the value's JSON type serves
+as an implicit discriminator, which in turn means that an alternate
+can only express a choice between types represented differently in
+JSON.  If a branch is typed as the 'bool' built-in, the alternate
+accepts true and false; if it is typed as any of the various numeric
+built-ins, it accepts a JSON number; if it is typed as a 'str'
+built-in or named enum type, it accepts a JSON string; and if it is
+typed as a complex type (struct or union), it accepts a JSON object.
+Two different complex types, for instance, aren't permitted, because
+both are represented as a JSON object.
+
+The example alternate declaration above allows using both of the
+following example objects:
+
+ { "file": "my_existing_block_device_id" }
+ { "file": { "driver": "file",
+             "readonly": false,
+             "filename": "/tmp/mydisk.qcow2" } }
+
+
+=== Commands ===
+
+Usage: { 'command': STRING, '*data': COMPLEX-TYPE-NAME-OR-DICT,
+         '*returns': TYPE-NAME,
+         '*gen': false, '*success-response': false }
+
+Commands are defined by using a dictionary containing several members,
+where three members are most common.  The 'command' member is a
+mandatory string, and determines the "execute" value passed in a
+Client JSON Protocol command exchange.
+
+The 'data' argument maps to the "arguments" dictionary passed in as
+part of a Client JSON Protocol command.  The 'data' member is optional
+and defaults to {} (an empty dictionary).  If present, it must be the
+string name of a complex type, or a dictionary that declares an
+anonymous type with the same semantics as a 'struct' expression, with
+one exception noted below when 'gen' is used.
+
+The 'returns' member describes what will appear in the "return" field
+of a Client JSON Protocol reply on successful completion of a command.
+The member is optional from the command declaration; if absent, the
+"return" field will be an empty dictionary.  If 'returns' is present,
+it must be the string name of a complex or built-in type, a
+one-element array containing the name of a complex or built-in type,
+with one exception noted below when 'gen' is used.  Although it is
+permitted to have the 'returns' member name a built-in type or an
+array of built-in types, any command that does this cannot be extended
+to return additional information in the future; thus, new commands
+should strongly consider returning a dictionary-based type or an array
+of dictionaries, even if the dictionary only contains one field at the
+present.
+
+All commands in Client JSON Protocol use a dictionary to report
+failure, with no way to specify that in QAPI.  Where the error return
+is different than the usual GenericError class in order to help the
+client react differently to certain error conditions, it is worth
+documenting this in the comments before the command declaration.
+
+Some example commands:
+
+ { 'command': 'my-first-command',
+   'data': { 'arg1': 'str', '*arg2': 'str' } }
+ { 'struct': 'MyType', 'data': { '*value': 'str' } }
+ { 'command': 'my-second-command',
+   'returns': [ 'MyType' ] }
+
+which would validate this Client JSON Protocol transaction:
+
+ => { "execute": "my-first-command",
+      "arguments": { "arg1": "hello" } }
+ <= { "return": { } }
+ => { "execute": "my-second-command" }
+ <= { "return": [ { "value": "one" }, { } ] }
+
+In rare cases, QAPI cannot express a type-safe representation of a
+corresponding Client JSON Protocol command.  You then have to suppress
+generation of a marshalling function by including a key 'gen' with
+boolean value false, and instead write your own function.  Please try
+to avoid adding new commands that rely on this, and instead use
+type-safe unions.  For an example of this usage:
+
+ { 'command': 'netdev_add',
+   'data': {'type': 'str', 'id': 'str'},
+   'gen': false }
+
+Normally, the QAPI schema is used to describe synchronous exchanges,
+where a response is expected.  But in some cases, the action of a
+command is expected to change state in a way that a successful
+response is not possible (although the command will still return a
+normal dictionary error on failure).  When a successful reply is not
+possible, the command expression should include the optional key
+'success-response' with boolean value false.  So far, only QGA makes
+use of this field.
+
+
+=== Events ===
+
+Usage: { 'event': STRING, '*data': COMPLEX-TYPE-NAME-OR-DICT }
+
+Events are defined with the keyword 'event'.  It is not allowed to
+name an event 'MAX', since the generator also produces a C enumeration
+of all event names with a generated _MAX value at the end.  When
+'data' is also specified, additional info will be included in the
+event, with similar semantics to a 'struct' expression.  Finally there
+will be C API generated in qapi-event.h; when called by QEMU code, a
+message with timestamp will be emitted on the wire.
+
+An example event is:
+
+{ 'event': 'EVENT_C',
+  'data': { '*a': 'int', 'b': 'str' } }
+
+Resulting in this JSON object:
+
+{ "event": "EVENT_C",
+  "data": { "b": "test string" },
+  "timestamp": { "seconds": 1267020223, "microseconds": 435656 } }
+
+
+== Client JSON Protocol introspection ==
+
+Clients of a Client JSON Protocol commonly need to figure out what
+exactly the server (QEMU) supports.
+
+For this purpose, QMP provides introspection via command
+query-qmp-schema.  QGA currently doesn't support introspection.
+
+While Client JSON Protocol wire compatibility should be maintained
+between qemu versions, we cannot make the same guarantees for
+introspection stability.  For example, one version of qemu may provide
+a non-variant optional member of a struct, and a later version rework
+the member to instead be non-optional and associated with a variant.
+Likewise, one version of qemu may list a member with open-ended type
+'str', and a later version could convert it to a finite set of strings
+via an enum type; or a member may be converted from a specific type to
+an alternate that represents a choice between the original type and
+something else.
+
+query-qmp-schema returns a JSON array of SchemaInfo objects.  These
+objects together describe the wire ABI, as defined in the QAPI schema.
+There is no specified order to the SchemaInfo objects returned; a
+client must search for a particular name throughout the entire array
+to learn more about that name, but is at least guaranteed that there
+will be no collisions between type, command, and event names.
+
+However, the SchemaInfo can't reflect all the rules and restrictions
+that apply to QMP.  It's interface introspection (figuring out what's
+there), not interface specification.  The specification is in the QAPI
+schema.  To understand how QMP is to be used, you need to study the
+QAPI schema.
+
+Like any other command, query-qmp-schema is itself defined in the QAPI
+schema, along with the SchemaInfo type.  This text attempts to give an
+overview how things work.  For details you need to consult the QAPI
+schema.
+
+SchemaInfo objects have common members "name" and "meta-type", and
+additional variant members depending on the value of meta-type.
+
+Each SchemaInfo object describes a wire ABI entity of a certain
+meta-type: a command, event or one of several kinds of type.
+
+SchemaInfo for commands and events have the same name as in the QAPI
+schema.
+
+Command and event names are part of the wire ABI, but type names are
+not.  Therefore, the SchemaInfo for types have auto-generated
+meaningless names.  For readability, the examples in this section use
+meaningful type names instead.
+
+To examine a type, start with a command or event using it, then follow
+references by name.
+
+QAPI schema definitions not reachable that way are omitted.
+
+The SchemaInfo for a command has meta-type "command", and variant
+members "arg-type" and "ret-type".  On the wire, the "arguments"
+member of a client's "execute" command must conform to the object type
+named by "arg-type".  The "return" member that the server passes in a
+success response conforms to the type named by "ret-type".
+
+If the command takes no arguments, "arg-type" names an object type
+without members.  Likewise, if the command returns nothing, "ret-type"
+names an object type without members.
+
+Example: the SchemaInfo for command query-qmp-schema
+
+    { "name": "query-qmp-schema", "meta-type": "command",
+      "arg-type": ":empty", "ret-type": "SchemaInfoList" }
+
+    Type ":empty" is an object type without members, and type
+    "SchemaInfoList" is the array of SchemaInfo type.
+
+The SchemaInfo for an event has meta-type "event", and variant member
+"arg-type".  On the wire, a "data" member that the server passes in an
+event conforms to the object type named by "arg-type".
+
+If the event carries no additional information, "arg-type" names an
+object type without members.  The event may not have a data member on
+the wire then.
+
+Each command or event defined with dictionary-valued 'data' in the
+QAPI schema implicitly defines an object type.
+
+Example: the SchemaInfo for EVENT_C from section Events
+
+    { "name": "EVENT_C", "meta-type": "event",
+      "arg-type": ":obj-EVENT_C-arg" }
+
+    Type ":obj-EVENT_C-arg" is an implicitly defined object type with
+    the two members from the event's definition.
+
+The SchemaInfo for struct and union types has meta-type "object".
+
+The SchemaInfo for a struct type has variant member "members".
+
+The SchemaInfo for a union type additionally has variant members "tag"
+and "variants".
+
+"members" is a JSON array describing the object's common members, if
+any.  Each element is a JSON object with members "name" (the member's
+name), "type" (the name of its type), and optionally "default".  The
+member is optional if "default" is present.  Currently, "default" can
+only have value null.  Other values are reserved for future
+extensions.  The "members" array is in no particular order; clients
+must search the entire object when learning whether a particular
+member is supported.
+
+Example: the SchemaInfo for MyType from section Struct types
+
+    { "name": "MyType", "meta-type": "object",
+      "members": [
+          { "name": "member1", "type": "str" },
+          { "name": "member2", "type": "int" },
+          { "name": "member3", "type": "str", "default": null } ] }
+
+"tag" is the name of the common member serving as type tag.
+"variants" is a JSON array describing the object's variant members.
+Each element is a JSON object with members "case" (the value of type
+tag this element applies to) and "type" (the name of an object type
+that provides the variant members for this type tag value).  The
+"variants" array is in no particular order, and is not guaranteed to
+list cases in the same order as the corresponding "tag" enum type.
+
+Example: the SchemaInfo for flat union BlockdevOptions from section
+Union types
+
+    { "name": "BlockdevOptions", "meta-type": "object",
+      "members": [
+          { "name": "driver", "type": "BlockdevDriver" },
+          { "name": "readonly", "type": "bool"} ],
+      "tag": "driver",
+      "variants": [
+          { "case": "file", "type": "FileOptions" },
+          { "case": "qcow2", "type": "Qcow2Options" } ] }
+
+Note that base types are "flattened": its members are included in the
+"members" array.
+
+A simple union implicitly defines an enumeration type for its implicit
+discriminator (called "type" on the wire, see section Union types).
+
+A simple union implicitly defines an object type for each of its
+variants.
+
+Example: the SchemaInfo for simple union BlockdevOptions from section
+Union types
+
+    { "name": "BlockdevOptions", "meta-type": "object",
+      "members": [
+          { "name": "kind", "type": "BlockdevOptionsKind" } ],
+      "tag": "type",
+      "variants": [
+          { "case": "file", "type": ":obj-FileOptions-wrapper" },
+          { "case": "qcow2", "type": ":obj-Qcow2Options-wrapper" } ] }
+
+    Enumeration type "BlockdevOptionsKind" and the object types
+    ":obj-FileOptions-wrapper", ":obj-Qcow2Options-wrapper" are
+    implicitly defined.
+
+The SchemaInfo for an alternate type has meta-type "alternate", and
+variant member "members".  "members" is a JSON array.  Each element is
+a JSON object with member "type", which names a type.  Values of the
+alternate type conform to exactly one of its member types.  There is
+no guarantee on the order in which "members" will be listed.
+
+Example: the SchemaInfo for BlockRef from section Alternate types
+
+    { "name": "BlockRef", "meta-type": "alternate",
+      "members": [
+          { "type": "BlockdevOptions" },
+          { "type": "str" } ] }
+
+The SchemaInfo for an array type has meta-type "array", and variant
+member "element-type", which names the array's element type.  Array
+types are implicitly defined.  For convenience, the array's name may
+resemble the element type; however, clients should examine member
+"element-type" instead of making assumptions based on parsing member
+"name".
+
+Example: the SchemaInfo for ['str']
+
+    { "name": "[str]", "meta-type": "array",
+      "element-type": "str" }
+
+The SchemaInfo for an enumeration type has meta-type "enum" and
+variant member "values".  The values are listed in no particular
+order; clients must search the entire enum when learning whether a
+particular value is supported.
+
+Example: the SchemaInfo for MyEnum from section Enumeration types
+
+    { "name": "MyEnum", "meta-type": "enum",
+      "values": [ "value1", "value2", "value3" ] }
+
+The SchemaInfo for a built-in type has the same name as the type in
+the QAPI schema (see section Built-in Types), with one exception
+detailed below.  It has variant member "json-type" that shows how
+values of this type are encoded on the wire.
+
+Example: the SchemaInfo for str
+
+    { "name": "str", "meta-type": "builtin", "json-type": "string" }
+
+The QAPI schema supports a number of integer types that only differ in
+how they map to C.  They are identical as far as SchemaInfo is
+concerned.  Therefore, they get all mapped to a single type "int" in
+SchemaInfo.
+
+As explained above, type names are not part of the wire ABI.  Not even
+the names of built-in types.  Clients should examine member
+"json-type" instead of hard-coding names of built-in types.
+
+
+== Code generation ==
+
+Schemas are fed into four scripts to generate all the code/files that,
+paired with the core QAPI libraries, comprise everything required to
+take JSON commands read in by a Client JSON Protocol server, unmarshal
+the arguments into the underlying C types, call into the corresponding
+C function, and map the response back to a Client JSON Protocol
+response to be returned to the user.
+
+As an example, we'll use the following schema, which describes a single
+complex user-defined type (which will produce a C struct, along with a list
+node structure that can be used to chain together a list of such types in
+case we want to accept/return a list of this type with a command), and a
+command which takes that type as a parameter and returns the same type:
+
+    $ cat example-schema.json
+    { 'struct': 'UserDefOne',
+      'data': { 'integer': 'int', 'string': 'str' } }
+
+    { 'command': 'my-command',
+      'data':    {'arg1': 'UserDefOne'},
+      'returns': 'UserDefOne' }
+
+    { 'event': 'MY_EVENT' }
+
+=== scripts/qapi-types.py ===
+
+Used to generate the C types defined by a schema. The following files are
+created:
+
+$(prefix)qapi-types.h - C types corresponding to types defined in
+                        the schema you pass in
+$(prefix)qapi-types.c - Cleanup functions for the above C types
+
+The $(prefix) is an optional parameter used as a namespace to keep the
+generated code from one schema/code-generation separated from others so code
+can be generated/used from multiple schemas without clobbering previously
+created code.
+
+Example:
+
+    $ python scripts/qapi-types.py --output-dir="qapi-generated" \
+    --prefix="example-" example-schema.json
+    $ cat qapi-generated/example-qapi-types.c
+[Uninteresting stuff omitted...]
+
+    void qapi_free_UserDefOne(UserDefOne *obj)
+    {
+        QapiDeallocVisitor *qdv;
+        Visitor *v;
+
+        if (!obj) {
+            return;
+        }
+
+        qdv = qapi_dealloc_visitor_new();
+        v = qapi_dealloc_get_visitor(qdv);
+        visit_type_UserDefOne(v, &obj, NULL, NULL);
+        qapi_dealloc_visitor_cleanup(qdv);
+    }
+
+    void qapi_free_UserDefOneList(UserDefOneList *obj)
+    {
+        QapiDeallocVisitor *qdv;
+        Visitor *v;
+
+        if (!obj) {
+            return;
+        }
+
+        qdv = qapi_dealloc_visitor_new();
+        v = qapi_dealloc_get_visitor(qdv);
+        visit_type_UserDefOneList(v, &obj, NULL, NULL);
+        qapi_dealloc_visitor_cleanup(qdv);
+    }
+    $ cat qapi-generated/example-qapi-types.h
+[Uninteresting stuff omitted...]
+
+    #ifndef EXAMPLE_QAPI_TYPES_H
+    #define EXAMPLE_QAPI_TYPES_H
+
+[Built-in types omitted...]
+
+    typedef struct UserDefOne UserDefOne;
+
+    typedef struct UserDefOneList UserDefOneList;
+
+    struct UserDefOne {
+        int64_t integer;
+        char *string;
+    };
+
+    void qapi_free_UserDefOne(UserDefOne *obj);
+
+    struct UserDefOneList {
+        union {
+            UserDefOne *value;
+            uint64_t padding;
+        };
+        UserDefOneList *next;
+    };
+
+    void qapi_free_UserDefOneList(UserDefOneList *obj);
+
+    #endif
+
+=== scripts/qapi-visit.py ===
+
+Used to generate the visitor functions used to walk through and convert
+a QObject (as provided by QMP) to a native C data structure and
+vice-versa, as well as the visitor function used to dealloc a complex
+schema-defined C type.
+
+The following files are generated:
+
+$(prefix)qapi-visit.c: visitor function for a particular C type, used
+                       to automagically convert QObjects into the
+                       corresponding C type and vice-versa, as well
+                       as for deallocating memory for an existing C
+                       type
+
+$(prefix)qapi-visit.h: declarations for previously mentioned visitor
+                       functions
+
+Example:
+
+    $ python scripts/qapi-visit.py --output-dir="qapi-generated"
+    --prefix="example-" example-schema.json
+    $ cat qapi-generated/example-qapi-visit.c
+[Uninteresting stuff omitted...]
+
+    static void visit_type_UserDefOne_fields(Visitor *v, UserDefOne **obj, Error **errp)
+    {
+        Error *err = NULL;
+
+        visit_type_int(v, &(*obj)->integer, "integer", &err);
+        if (err) {
+            goto out;
+        }
+        visit_type_str(v, &(*obj)->string, "string", &err);
+        if (err) {
+            goto out;
+        }
+
+    out:
+        error_propagate(errp, err);
+    }
+
+    void visit_type_UserDefOne(Visitor *v, UserDefOne **obj, const char *name, Error **errp)
+    {
+        Error *err = NULL;
+
+        visit_start_struct(v, (void **)obj, "UserDefOne", name, sizeof(UserDefOne), &err);
+        if (!err) {
+            if (*obj) {
+                visit_type_UserDefOne_fields(v, obj, errp);
+            }
+            visit_end_struct(v, &err);
+        }
+        error_propagate(errp, err);
+    }
+
+    void visit_type_UserDefOneList(Visitor *v, UserDefOneList **obj, const char *name, Error **errp)
+    {
+        Error *err = NULL;
+        GenericList *i, **prev;
+
+        visit_start_list(v, name, &err);
+        if (err) {
+            goto out;
+        }
+
+        for (prev = (GenericList **)obj;
+             !err && (i = visit_next_list(v, prev, &err)) != NULL;
+             prev = &i) {
+            UserDefOneList *native_i = (UserDefOneList *)i;
+            visit_type_UserDefOne(v, &native_i->value, NULL, &err);
+        }
+
+        error_propagate(errp, err);
+        err = NULL;
+        visit_end_list(v, &err);
+    out:
+        error_propagate(errp, err);
+    }
+    $ cat qapi-generated/example-qapi-visit.h
+[Uninteresting stuff omitted...]
+
+    #ifndef EXAMPLE_QAPI_VISIT_H
+    #define EXAMPLE_QAPI_VISIT_H
+
+[Visitors for built-in types omitted...]
+
+    void visit_type_UserDefOne(Visitor *v, UserDefOne **obj, const char *name, Error **errp);
+    void visit_type_UserDefOneList(Visitor *v, UserDefOneList **obj, const char *name, Error **errp);
+
+    #endif
+
+=== scripts/qapi-commands.py ===
+
+Used to generate the marshaling/dispatch functions for the commands defined
+in the schema. The following files are generated:
+
+$(prefix)qmp-marshal.c: command marshal/dispatch functions for each
+                        QMP command defined in the schema. Functions
+                        generated by qapi-visit.py are used to
+                        convert QObjects received from the wire into
+                        function parameters, and uses the same
+                        visitor functions to convert native C return
+                        values to QObjects from transmission back
+                        over the wire.
+
+$(prefix)qmp-commands.h: Function prototypes for the QMP commands
+                         specified in the schema.
+
+Example:
+
+    $ python scripts/qapi-commands.py --output-dir="qapi-generated"
+    --prefix="example-" example-schema.json
+    $ cat qapi-generated/example-qmp-marshal.c
+[Uninteresting stuff omitted...]
+
+    static void qmp_marshal_output_UserDefOne(UserDefOne *ret_in, QObject **ret_out, Error **errp)
+    {
+        Error *err = NULL;
+        QmpOutputVisitor *qov = qmp_output_visitor_new();
+        QapiDeallocVisitor *qdv;
+        Visitor *v;
+
+        v = qmp_output_get_visitor(qov);
+        visit_type_UserDefOne(v, &ret_in, "unused", &err);
+        if (err) {
+            goto out;
+        }
+        *ret_out = qmp_output_get_qobject(qov);
+
+    out:
+        error_propagate(errp, err);
+        qmp_output_visitor_cleanup(qov);
+        qdv = qapi_dealloc_visitor_new();
+        v = qapi_dealloc_get_visitor(qdv);
+        visit_type_UserDefOne(v, &ret_in, "unused", NULL);
+        qapi_dealloc_visitor_cleanup(qdv);
+    }
+
+    static void qmp_marshal_my_command(QDict *args, QObject **ret, Error **errp)
+    {
+        Error *err = NULL;
+        UserDefOne *retval;
+        QmpInputVisitor *qiv = qmp_input_visitor_new_strict(QOBJECT(args));
+        QapiDeallocVisitor *qdv;
+        Visitor *v;
+        UserDefOne *arg1 = NULL;
+
+        v = qmp_input_get_visitor(qiv);
+        visit_type_UserDefOne(v, &arg1, "arg1", &err);
+        if (err) {
+            goto out;
+        }
+
+        retval = qmp_my_command(arg1, &err);
+        if (err) {
+            goto out;
+        }
+
+        qmp_marshal_output_UserDefOne(retval, ret, &err);
+
+    out:
+        error_propagate(errp, err);
+        qmp_input_visitor_cleanup(qiv);
+        qdv = qapi_dealloc_visitor_new();
+        v = qapi_dealloc_get_visitor(qdv);
+        visit_type_UserDefOne(v, &arg1, "arg1", NULL);
+        qapi_dealloc_visitor_cleanup(qdv);
+    }
+
+    static void qmp_init_marshal(void)
+    {
+        qmp_register_command("my-command", qmp_marshal_my_command, QCO_NO_OPTIONS);
+    }
+
+    qapi_init(qmp_init_marshal);
+    $ cat qapi-generated/example-qmp-commands.h
+[Uninteresting stuff omitted...]
+
+    #ifndef EXAMPLE_QMP_COMMANDS_H
+    #define EXAMPLE_QMP_COMMANDS_H
+
+    #include "example-qapi-types.h"
+    #include "qapi/qmp/qdict.h"
+    #include "qapi/error.h"
+
+    UserDefOne *qmp_my_command(UserDefOne *arg1, Error **errp);
+
+    #endif
+
+=== scripts/qapi-event.py ===
+
+Used to generate the event-related C code defined by a schema. The
+following files are created:
+
+$(prefix)qapi-event.h - Function prototypes for each event type, plus an
+                        enumeration of all event names
+$(prefix)qapi-event.c - Implementation of functions to send an event
+
+Example:
+
+    $ python scripts/qapi-event.py --output-dir="qapi-generated"
+    --prefix="example-" example-schema.json
+    $ cat qapi-generated/example-qapi-event.c
+[Uninteresting stuff omitted...]
+
+    void qapi_event_send_my_event(Error **errp)
+    {
+        QDict *qmp;
+        Error *err = NULL;
+        QMPEventFuncEmit emit;
+        emit = qmp_event_get_func_emit();
+        if (!emit) {
+            return;
+        }
+
+        qmp = qmp_event_build_dict("MY_EVENT");
+
+        emit(EXAMPLE_QAPI_EVENT_MY_EVENT, qmp, &err);
+
+        error_propagate(errp, err);
+        QDECREF(qmp);
+    }
+
+    const char *const example_QAPIEvent_lookup[] = {
+        [EXAMPLE_QAPI_EVENT_MY_EVENT] = "MY_EVENT",
+        [EXAMPLE_QAPI_EVENT_MAX] = NULL,
+    };
+    $ cat qapi-generated/example-qapi-event.h
+[Uninteresting stuff omitted...]
+
+    #ifndef EXAMPLE_QAPI_EVENT_H
+    #define EXAMPLE_QAPI_EVENT_H
+
+    #include "qapi/error.h"
+    #include "qapi/qmp/qdict.h"
+    #include "example-qapi-types.h"
+
+
+    void qapi_event_send_my_event(Error **errp);
+
+    typedef enum example_QAPIEvent {
+        EXAMPLE_QAPI_EVENT_MY_EVENT = 0,
+        EXAMPLE_QAPI_EVENT_MAX = 1,
+    } example_QAPIEvent;
+
+    extern const char *const example_QAPIEvent_lookup[];
+
+    #endif
+
+=== scripts/qapi-introspect.py ===
+
+Used to generate the introspection C code for a schema. The following
+files are created:
+
+$(prefix)qmp-introspect.c - Defines a string holding a JSON
+                            description of the schema.
+$(prefix)qmp-introspect.h - Declares the above string.
+
+Example:
+
+    $ python scripts/qapi-introspect.py --output-dir="qapi-generated"
+    --prefix="example-" example-schema.json
+    $ cat qapi-generated/example-qmp-introspect.c
+[Uninteresting stuff omitted...]
+
+    const char example_qmp_schema_json[] = "["
+        "{\"arg-type\": \"0\", \"meta-type\": \"event\", \"name\": \"MY_EVENT\"}, "
+        "{\"arg-type\": \"1\", \"meta-type\": \"command\", \"name\": \"my-command\", \"ret-type\": \"2\"}, "
+        "{\"members\": [], \"meta-type\": \"object\", \"name\": \"0\"}, "
+        "{\"members\": [{\"name\": \"arg1\", \"type\": \"2\"}], \"meta-type\": \"object\", \"name\": \"1\"}, "
+        "{\"members\": [{\"name\": \"integer\", \"type\": \"int\"}, {\"name\": \"string\", \"type\": \"str\"}], \"meta-type\": \"object\", \"name\": \"2\"}, "
+        "{\"json-type\": \"int\", \"meta-type\": \"builtin\", \"name\": \"int\"}, "
+        "{\"json-type\": \"string\", \"meta-type\": \"builtin\", \"name\": \"str\"}]";
+    $ cat qapi-generated/example-qmp-introspect.h
+[Uninteresting stuff omitted...]
+
+    #ifndef EXAMPLE_QMP_INTROSPECT_H
+    #define EXAMPLE_QMP_INTROSPECT_H
+
+    extern const char example_qmp_schema_json[];
+
+    #endif

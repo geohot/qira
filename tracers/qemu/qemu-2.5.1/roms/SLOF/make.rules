@@ -1,0 +1,80 @@
+# *****************************************************************************
+# * Copyright (c) 2004, 2008 IBM Corporation
+# * All rights reserved.
+# * This program and the accompanying materials
+# * are made available under the terms of the BSD License
+# * which accompanies this distribution, and is available at
+# * http://www.opensource.org/licenses/bsd-license.php
+# *
+# * Contributors:
+# *     IBM Corporation - initial implementation
+# ****************************************************************************/
+
+#############################################################################
+# BUILD ENV SETTINGS
+#############################################################################
+
+# CROSS is the prefix of your cross-compiler.
+# You can override this variable in your environment (export CROSS=...).
+ARCH := $(shell uname -p)
+
+# Auto-detect ppc64
+ifeq (ppc64,$(findstring ppc64,$(ARCH)))
+  ifeq ($(ARCH), ppc64le)
+    EXTRA_CC	= -mbig -mabi=elfv1
+    EXTRA_LD	= -mbig
+  endif
+CROSS		?=
+else
+CROSS		?= powerpc64-linux-
+endif
+
+CELLSIZE	?= 64
+
+HOSTCC		?= gcc
+HOSTCFLAGS	= -g -Wall -W -O2 -I. -I../include
+DD		= dd
+
+ONLY_CC 	= $(CROSS)gcc -m$(CELLSIZE) $(EXTRA_CC)
+ONLY_AS 	= $(CROSS)as -m$(CELLSIZE) $(EXTRA_LD)
+ONLY_LD 	= $(CROSS)ld -melf$(CELLSIZE)ppc
+
+# Verbose level:
+#   V=0 means completely silent
+#   V=1 means brief output
+#   V=2 means full output
+V		?= 1
+
+ifeq ($(V),0)
+Q		:= @
+MAKEFLAGS	+= --silent
+MAKE		+= -s
+endif
+
+ifeq ($(V),1)
+MAKEFLAGS	+= --silent
+MAKE		+= -s
+CC		= printf "\t[CC]\t%s\n" `basename "$@"`; $(ONLY_CC)
+AS		= printf "\t[AS]\t%s\n" `basename "$@"`; $(ONLY_AS)
+LD		= printf "\t[LD]\t%s\n" `basename "$@"`; $(ONLY_LD)
+CLEAN		= printf "\t[CLEAN]\t%s\n" "$(DIRECTORY)$$dir"
+else
+CC		= $(ONLY_CC)
+AS		= $(ONLY_AS)
+LD		= $(ONLY_LD)
+CLEAN		= echo -n
+endif
+
+OBJCOPY 	?= $(CROSS)objcopy
+OBJDUMP 	?= $(CROSS)objdump
+STRIP		?= $(CROSS)strip
+AR		?= $(CROSS)ar
+RANLIB		?= $(CROSS)ranlib
+CPP		?= $(CROSS)cpp
+
+WARNFLAGS = -Wall -Wmissing-prototypes -Wstrict-prototypes
+CFLAGS ?= -g -O2 -fno-builtin -ffreestanding -nostdinc -msoft-float -fno-strict-aliasing \
+	  -mno-altivec -mabi=no-altivec -fno-stack-protector $(WARNFLAGS)
+
+export CC AS LD CLEAN OBJCOPY OBJDUMP STRIP AR RANLIB CFLAGS
+

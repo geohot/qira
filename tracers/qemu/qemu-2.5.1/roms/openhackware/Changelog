@@ -1,0 +1,165 @@
+#
+#  <Changelog>
+#     
+#  Changelog for Open Hack'Ware.
+#  
+#  Copyright (C) 2004-2005 Jocelyn Mayer (l_indien@magic.fr)
+#  
+#   This program is free software; you can redistribute it and/or
+#   modify it under the terms of the GNU General Public License V2
+#   as published by the Free Software Foundation
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program; if not, write to the Free Software
+#   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+2005-04-06:
+* Change 2nd MacIO ide controller IRQ, in coordination with Qemu patch.
+
+2005-03-18:
+* Added Mandrake 10.1 CHRP script CRC.
+
+2005-03-17:
+* Start bloc device / partition management APIs cleanup.
+* Fix PREP boot
+* Fix memory image boot
+
+2005-03-15:
+* Tested rock linux, then updated README
+
+2005-03-14:
+* Yet another fix for CHRP boot file load.
+* Add more CHRP boot scripts CRCs.
+* Make all debug printf be printed on the serial port (ie debug console).
+* Build 04-pre2 preview.
+
+2005-03-11:
+* Fix foolish license informations: this code is clearly distributed under
+  the GNU GPL V2.
+
+2005-03-06:
+* CHRP boot file loader:
+  - yet another boot file path fix
+  - add Debian sarge on hard-drive yaboot start script signature
+* enable FPU at startup (may compile with -msoft float as well...)
+
+2005-03-01:
+* Add dprintf/vdprintf routines for debug console.
+* Fix CHRP boot file path resolution
+* Fix OF PCI devices reg properties
+  (bug reported by Thayne Harbaugh <thayne@realmsys.com>)
+* Fix OF property with no value (value len is zero).
+* Update TODO list
+
+2005-02-18:
+* Merge HFS rework by Thayne Harbaugh <thayne@realmsys.com>
+* Merge generic and new ADB keyboard driver
+* Add '\b' support in VGA console.
+* Disable xcoff embedded binary support to make NetBSD start booting again.
+* Register VGA console when a PCI VGA device is found
+* Register and initialise CUDA when device is found
+
+2005-02-15:
+* Bugfix in toupper by Thayne Harbaugh <thayne@realmsys.com>
+
+2005-02-11:
+* Hack OF_serial_read to use console_read
+* Add '\r' support in vga_putchar.
+* Remove old console code and activate new one.
+* Register PC serial port.
+* Show OHW prompt after all hardware has been initialized.
+* New PC kbd code, reworked from Matthew Wood <mwood@realmsys.com>'s proposal
+
+2005-02-10:
+* Merge Motorola Raven PCI bridge support on PREP
+  by Thayne Harbaugh <thayne@realmsys.com>
+* Bugfix in pci code: pci_main was not initialized to NULL.
+
+2005-02-09:
+* Merge fixes reported by Thayne Harbaugh <thayne@realmsys.com>
+  and Matthew S. Wood <mwood@realmsys.com>:
+  - many typos
+  - bugfix in pci.c:pci_check_host (bad returned value)
+  - bugfix in of.c:OF_lds (debug message)
+  - Improve serial code + add serial_readb
+  - Add error message if parent node if NULL in of.c:OF_node_create
+  - Avoid duplication of properties if of.c:OF_blockdev_set_boot_device
+    is called twice
+  - Use console_read in of.c:OF_serial_read instead of using a harcoded
+    "answer" string.
+  - comment "Apple_patition_map" match
+    in libpart/apple.c:Apple_probe_partitions (was a mistake ?)
+    + more precise message if no bootable partition was found
+  - Never try to register multiple boot partitions (bloc.c:bd_set_boot_part)
+  - Do most of OF tree initialisation before parsing bloc devices (main.c:main)
+* Commit a TODO list.
+
+2005-02-08:
+* Update BIOS version (should have been done before...).
+* A few HFS fixes (still more needed)
+* new xcoff embedded file loader.
+* New OF "forth" function for Mac OS X 10.3
+* cosmetics & typos
+* update copyright infos.
+
+2004-12-20:
+* Great API and structure rework:
+ - add libc subset (to be completed)
+ - split part.c into libpart
+ - split fs.c into libfs
+ - split exec.c into libexec
+ - add preliminary version of memory management routines
+ - add more consistency checks (NULL pointers, ...)
+* partition management:
+ - Fixes in apple partition management with new API
+* filesystems support:
+ - Fixes in HFS/HFS+ support
+* boot file formats support:
+ - extract CHRP boot file format from HFS code + fixes
+ - add PEF file loader (untested)
+ - add Mach-O file loader.
+* OpenFirmware emulation:
+ - Fix some (of the) OF bugs
+ - Fix machine name in OF tree: "Qemu" wasn't recognized by OSes.
+* misc:
+ - avoid gcc compilation time warnings
+
+2004-07-14:
+* More sanity checks.
+* First version of character devices drivers.
+
+2004-07-07: version 0.3:
+* OpenFirmware emulation:
+ - Fix OF_lds and OF_sts
+ - Fix OF_env initialisation.
+ - Add more run-time checks in OF management.
+ - Fix OF naming scheme.
+ - Add OF methods arguments.
+ - Change Copyright string to make Mac OS 9 happy.
+ - New mmu_map method
+ - Fix serial_write & serial_read methods.
+ - Add block devices package.
+ - New OF_interpret hashes for yaboot support.
+* partition management:
+ - hide part_t structure.
+ - improve partitions registration
+* filesystems support:
+ - Fix inode cache management.
+ - Fix special inodes management.
+ - HFS support rework.
+* misc:
+ - keep OF private pointer in PCI IDE structures.
+ - change all xxx_DEBUG defines into DEBUG_xxx
+ - add missing copyright and license in pci.c
+
+2004-05-22:
+ - cleanup Makefile
+ - add COPYING
+ - fix license informations
+ - discard unwanted output sections in bootloaders linker scripts
+ - created Changelog

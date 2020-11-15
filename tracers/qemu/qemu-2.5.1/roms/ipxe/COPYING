@@ -1,0 +1,12 @@
+In general iPXE files are licensed under the GPL.  For historical
+reasons, individual files may contain their own licence declarations.
+Most builds of iPXE do not contain all iPXE code (in particular, most
+builds will include only one driver), and so the overall licence can
+vary depending on what target you are building.
+
+The resultant applicable licence(s) for any particular build can be
+determined by using "make bin/xxxxxxx.yyy.licence"; for example:
+
+  make bin/rtl8139.rom.licence
+
+to determine the resultant licence(s) for the build bin/rtl8139.rom

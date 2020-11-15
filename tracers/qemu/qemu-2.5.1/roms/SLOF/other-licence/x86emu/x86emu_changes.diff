@@ -1,0 +1,877 @@
+Index: debug.c
+===================================================================
+RCS file: /cvs/osdf/cvs/host/other-licence/x86emu/debug.c,v
+retrieving revision 1.1
+retrieving revision 1.3
+diff -u -u -r1.1 -r1.3
+--- debug.c	7 Sep 2007 10:01:21 -0000	1.1
++++ debug.c	15 Jan 2008 13:49:25 -0000	1.3
+@@ -52,7 +52,11 @@
+ void X86EMU_trace_regs (void)
+ {
+     if (DEBUG_TRACE()) {
+-        x86emu_dump_regs();
++	if (M.x86.mode & (SYSMODE_PREFIX_DATA | SYSMODE_PREFIX_ADDR)) {
++	        x86emu_dump_xregs();
++	} else {
++	        x86emu_dump_regs();
++	}
+     }
+     if (DEBUG_DECODE() && ! DEBUG_DECODE_NOPRINT()) {
+         printk("%04x:%04x ",M.x86.saved_cs, M.x86.saved_ip);
+@@ -185,7 +189,7 @@
+     for (i=0; i< M.x86.enc_pos; i++) {
+         sprintf(buf1+2*i,"%02x", fetch_data_byte_abs(s,o+i));
+     }
+-    printk("%-20s",buf1);
++    printk("%-20s ",buf1);
+ }
+ 
+ static void print_decoded_instruction (void)
+Index: ops2.c
+===================================================================
+RCS file: /cvs/osdf/cvs/host/other-licence/x86emu/ops2.c,v
+retrieving revision 1.1
+retrieving revision 1.3
+diff -u -u -r1.1 -r1.3
+--- ops2.c	7 Sep 2007 10:01:21 -0000	1.1
++++ ops2.c	20 Mar 2008 15:48:34 -0000	1.3
+@@ -149,8 +149,69 @@
+     target += (s16) M.x86.R_IP;
+     DECODE_PRINTF2("%04x\n", target);
+     TRACE_AND_STEP();
+-    if (cond)
++    if (cond) {
+         M.x86.R_IP = (u16)target;
++	JMP_TRACE(M.x86.saved_cs, M.x86.saved_ip, M.x86.R_CS, M.x86.R_IP, " LONG COND ");
++    }
++    DECODE_CLEAR_SEGOVR();
++    END_OF_INSTR();
++}
++
++/****************************************************************************
++REMARKS:
++Handles opcode 0x0f,0xC8-0xCF
++****************************************************************************/
++s32 x86emu_bswap(s32 reg)
++{
++   // perform the byte swap
++   s32 temp = reg;
++   reg = (temp & 0xFF000000) >> 24;
++   reg |= (temp & 0xFF0000) >> 8;
++   reg |= (temp & 0xFF00) << 8;
++   reg |= (temp & 0xFF) << 24;
++   return reg;
++}
++
++void x86emuOp2_bswap(u8 op2)
++{
++    /* byte swap 32 bit register */
++    START_OF_INSTR();
++    DECODE_PRINTF("BSWAP\t");
++    switch (op2) {
++      case 0xc8:
++        DECODE_PRINTF("EAX\n");
++        M.x86.R_EAX = x86emu_bswap(M.x86.R_EAX);
++        break;
++      case 0xc9:
++        DECODE_PRINTF("ECX\n");
++        M.x86.R_ECX = x86emu_bswap(M.x86.R_ECX);
++        break;
++      case 0xca:
++        DECODE_PRINTF("EDX\n");
++        M.x86.R_EDX = x86emu_bswap(M.x86.R_EDX);
++        break;
++      case 0xcb:
++        DECODE_PRINTF("EBX\n");
++        M.x86.R_EBX = x86emu_bswap(M.x86.R_EBX);
++        break;
++      case 0xcc:
++        DECODE_PRINTF("ESP\n");
++        M.x86.R_ESP = x86emu_bswap(M.x86.R_ESP);
++        break;
++      case 0xcd:
++        DECODE_PRINTF("EBP\n");
++        M.x86.R_EBP = x86emu_bswap(M.x86.R_EBP);
++        break;
++      case 0xce:
++        DECODE_PRINTF("ESI\n");
++        M.x86.R_ESI = x86emu_bswap(M.x86.R_ESI);
++        break;
++      case 0xcf:
++        DECODE_PRINTF("EDI\n");
++        M.x86.R_EDI = x86emu_bswap(M.x86.R_EDI);
++        break;
++    }
++    TRACE_AND_STEP();
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+ }
+@@ -1702,14 +1763,14 @@
+ /*  0xc5 */ x86emuOp2_illegal_op,
+ /*  0xc6 */ x86emuOp2_illegal_op,
+ /*  0xc7 */ x86emuOp2_illegal_op,
+-/*  0xc8 */ x86emuOp2_illegal_op,  /* TODO: bswap */
+-/*  0xc9 */ x86emuOp2_illegal_op,  /* TODO: bswap */
+-/*  0xca */ x86emuOp2_illegal_op,  /* TODO: bswap */
+-/*  0xcb */ x86emuOp2_illegal_op,  /* TODO: bswap */
+-/*  0xcc */ x86emuOp2_illegal_op,  /* TODO: bswap */
+-/*  0xcd */ x86emuOp2_illegal_op,  /* TODO: bswap */
+-/*  0xce */ x86emuOp2_illegal_op,  /* TODO: bswap */
+-/*  0xcf */ x86emuOp2_illegal_op,  /* TODO: bswap */
++/*  0xc8 */ x86emuOp2_bswap,
++/*  0xc9 */ x86emuOp2_bswap,
++/*  0xca */ x86emuOp2_bswap,
++/*  0xcb */ x86emuOp2_bswap,
++/*  0xcc */ x86emuOp2_bswap,
++/*  0xcd */ x86emuOp2_bswap,
++/*  0xce */ x86emuOp2_bswap,
++/*  0xcf */ x86emuOp2_bswap,
+ 
+ /*  0xd0 */ x86emuOp2_illegal_op,
+ /*  0xd1 */ x86emuOp2_illegal_op,
+Index: ops.c
+===================================================================
+RCS file: /cvs/osdf/cvs/host/other-licence/x86emu/ops.c,v
+retrieving revision 1.1
+diff -u -u -r1.1 ops.c
+--- ops.c	7 Sep 2007 10:01:21 -0000	1.1
++++ ops.c	20 Mar 2008 16:52:00 -0000
+@@ -1061,7 +1061,11 @@
+     imm = (s8)fetch_byte_imm();
+     DECODE_PRINTF2("PUSH\t%d\n", imm);
+     TRACE_AND_STEP();
+-    push_word(imm);
++    if (M.x86.mode & SYSMODE_PREFIX_DATA) {
++        push_long(imm);
++    } else {
++        push_word(imm);
++    }
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+ }
+@@ -1256,8 +1260,10 @@
+     target = (u16)(M.x86.R_IP + (s16)offset);
+     DECODE_PRINTF2("%x\n", target);
+     TRACE_AND_STEP();
+-    if (cond)
++    if (cond) {
+         M.x86.R_IP = target;
++	JMP_TRACE(M.x86.saved_cs, M.x86.saved_ip, M.x86.R_CS, M.x86.R_IP, " NEAR COND ");
++    }
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+ }
+@@ -2516,9 +2522,11 @@
+     count = 1;
+     if (M.x86.mode & (SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE)) {
+         /* dont care whether REPE or REPNE */
+-        /* move them until CX is ZERO. */
+-        count = M.x86.R_CX;
++        /* move them until (E)CX is ZERO. */
++        count = (M.x86.mode & SYSMODE_32BIT_REP) ? M.x86.R_ECX : M.x86.R_CX;
+         M.x86.R_CX = 0;
++	if (M.x86.mode & SYSMODE_32BIT_REP)
++            M.x86.R_ECX = 0;
+         M.x86.mode &= ~(SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE);
+     }
+     while (count--) {
+@@ -2526,6 +2534,8 @@
+         store_data_byte_abs(M.x86.R_ES, M.x86.R_DI, val);
+         M.x86.R_SI += inc;
+         M.x86.R_DI += inc;
++        if (M.x86.intr & INTR_HALTED)
++            break;
+     }
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+@@ -2559,9 +2569,11 @@
+     count = 1;
+     if (M.x86.mode & (SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE)) {
+         /* dont care whether REPE or REPNE */
+-        /* move them until CX is ZERO. */
+-        count = M.x86.R_CX;
++        /* move them until (E)CX is ZERO. */
++        count = (M.x86.mode & SYSMODE_32BIT_REP) ? M.x86.R_ECX : M.x86.R_CX;
+         M.x86.R_CX = 0;
++	if (M.x86.mode & SYSMODE_32BIT_REP)
++            M.x86.R_ECX = 0;
+         M.x86.mode &= ~(SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE);
+     }
+     while (count--) {
+@@ -2574,6 +2586,8 @@
+         }
+         M.x86.R_SI += inc;
+         M.x86.R_DI += inc;
++        if (M.x86.intr & INTR_HALTED)
++            break;
+     }
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+@@ -2598,16 +2612,21 @@
+ 
+     if (M.x86.mode & (SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE)) {
+         /* REPE  */
+-        /* move them until CX is ZERO. */
+-        while (M.x86.R_CX != 0) {
++        /* move them until (E)CX is ZERO. */
++        while (((M.x86.mode & SYSMODE_32BIT_REP) ? M.x86.R_ECX : M.x86.R_CX) != 0) {
+             val1 = fetch_data_byte(M.x86.R_SI);
+             val2 = fetch_data_byte_abs(M.x86.R_ES, M.x86.R_DI);
+                      cmp_byte(val1, val2);
+-            M.x86.R_CX -= 1;
++            if (M.x86.mode & SYSMODE_32BIT_REP)
++                M.x86.R_ECX -= 1;
++            else
++                M.x86.R_CX -= 1;
+             M.x86.R_SI += inc;
+             M.x86.R_DI += inc;
+             if ( (M.x86.mode & SYSMODE_PREFIX_REPE) && (ACCESS_FLAG(F_ZF) == 0) ) break;
+             if ( (M.x86.mode & SYSMODE_PREFIX_REPNE) && ACCESS_FLAG(F_ZF) ) break;
++            if (M.x86.intr & INTR_HALTED)
++                break;
+         }
+         M.x86.mode &= ~(SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE);
+     } else {
+@@ -2644,8 +2663,8 @@
+     TRACE_AND_STEP();
+     if (M.x86.mode & (SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE)) {
+         /* REPE  */
+-        /* move them until CX is ZERO. */
+-        while (M.x86.R_CX != 0) {
++        /* move them until (E)CX is ZERO. */
++        while (((M.x86.mode & SYSMODE_32BIT_REP) ? M.x86.R_ECX : M.x86.R_CX) != 0) {
+             if (M.x86.mode & SYSMODE_PREFIX_DATA) {
+                 val1 = fetch_data_long(M.x86.R_SI);
+                 val2 = fetch_data_long_abs(M.x86.R_ES, M.x86.R_DI);
+@@ -2655,11 +2674,16 @@
+                 val2 = fetch_data_word_abs(M.x86.R_ES, M.x86.R_DI);
+                 cmp_word((u16)val1, (u16)val2);
+             }
+-            M.x86.R_CX -= 1;
++            if (M.x86.mode & SYSMODE_32BIT_REP)
++                M.x86.R_ECX -= 1;
++            else
++                M.x86.R_CX -= 1;
+             M.x86.R_SI += inc;
+             M.x86.R_DI += inc;
+             if ( (M.x86.mode & SYSMODE_PREFIX_REPE) && ACCESS_FLAG(F_ZF) == 0 ) break;
+             if ( (M.x86.mode & SYSMODE_PREFIX_REPNE) && ACCESS_FLAG(F_ZF) ) break;
++            if (M.x86.intr & INTR_HALTED)
++                break;
+         }
+         M.x86.mode &= ~(SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE);
+     } else {
+@@ -2741,11 +2765,16 @@
+     TRACE_AND_STEP();
+     if (M.x86.mode & (SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE)) {
+         /* dont care whether REPE or REPNE */
+-        /* move them until CX is ZERO. */
+-        while (M.x86.R_CX != 0) {
++        /* move them until (E)CX is ZERO. */
++        while (((M.x86.mode & SYSMODE_32BIT_REP) ? M.x86.R_ECX : M.x86.R_CX) != 0) {
+             store_data_byte_abs(M.x86.R_ES, M.x86.R_DI, M.x86.R_AL);
+-            M.x86.R_CX -= 1;
++            if (M.x86.mode & SYSMODE_32BIT_REP)
++                M.x86.R_ECX -= 1;
++            else
++                M.x86.R_CX -= 1;
+             M.x86.R_DI += inc;
++            if (M.x86.intr & INTR_HALTED)
++                break;
+         }
+         M.x86.mode &= ~(SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE);
+     } else {
+@@ -2783,9 +2812,11 @@
+     count = 1;
+     if (M.x86.mode & (SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE)) {
+         /* dont care whether REPE or REPNE */
+-        /* move them until CX is ZERO. */
+-        count = M.x86.R_CX;
++        /* move them until (E)CX is ZERO. */
++        count = (M.x86.mode & SYSMODE_32BIT_REP) ? M.x86.R_ECX : M.x86.R_CX;
+         M.x86.R_CX = 0;
++	if (M.x86.mode & SYSMODE_32BIT_REP)
++            M.x86.R_ECX = 0;
+         M.x86.mode &= ~(SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE);
+     }
+     while (count--) {
+@@ -2795,6 +2826,8 @@
+             store_data_word_abs(M.x86.R_ES, M.x86.R_DI, M.x86.R_AX);
+         }
+         M.x86.R_DI += inc;
++        if (M.x86.intr & INTR_HALTED)
++            break;
+     }
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+@@ -2817,11 +2850,16 @@
+         inc = 1;
+     if (M.x86.mode & (SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE)) {
+         /* dont care whether REPE or REPNE */
+-        /* move them until CX is ZERO. */
+-        while (M.x86.R_CX != 0) {
++        /* move them until (E)CX is ZERO. */
++        while (((M.x86.mode & SYSMODE_32BIT_REP) ? M.x86.R_ECX : M.x86.R_CX) != 0) {
+             M.x86.R_AL = fetch_data_byte(M.x86.R_SI);
+-            M.x86.R_CX -= 1;
++            if (M.x86.mode & SYSMODE_32BIT_REP)
++                M.x86.R_ECX -= 1;
++            else
++                M.x86.R_CX -= 1;
+             M.x86.R_SI += inc;
++            if (M.x86.intr & INTR_HALTED)
++                break;
+         }
+         M.x86.mode &= ~(SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE);
+     } else {
+@@ -2859,9 +2897,11 @@
+     count = 1;
+     if (M.x86.mode & (SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE)) {
+         /* dont care whether REPE or REPNE */
+-        /* move them until CX is ZERO. */
+-        count = M.x86.R_CX;
++        /* move them until (E)CX is ZERO. */
++        count = (M.x86.mode & SYSMODE_32BIT_REP) ? M.x86.R_ECX : M.x86.R_CX;
+         M.x86.R_CX = 0;
++	if (M.x86.mode & SYSMODE_32BIT_REP)
++            M.x86.R_ECX = 0;
+         M.x86.mode &= ~(SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE);
+     }
+     while (count--) {
+@@ -2871,6 +2911,8 @@
+             M.x86.R_AX = fetch_data_word(M.x86.R_SI);
+         }
+         M.x86.R_SI += inc;
++        if (M.x86.intr & INTR_HALTED)
++            break;
+     }
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+@@ -2894,26 +2936,36 @@
+         inc = 1;
+     if (M.x86.mode & SYSMODE_PREFIX_REPE) {
+         /* REPE  */
+-        /* move them until CX is ZERO. */
+-        while (M.x86.R_CX != 0) {
++        /* move them until (E)CX is ZERO. */
++        while (((M.x86.mode & SYSMODE_32BIT_REP) ? M.x86.R_ECX : M.x86.R_CX) != 0) {
+             val2 = fetch_data_byte_abs(M.x86.R_ES, M.x86.R_DI);
+             cmp_byte(M.x86.R_AL, val2);
+-            M.x86.R_CX -= 1;
++            if (M.x86.mode & SYSMODE_32BIT_REP)
++                M.x86.R_ECX -= 1;
++            else
++                M.x86.R_CX -= 1;
+             M.x86.R_DI += inc;
+             if (ACCESS_FLAG(F_ZF) == 0)
+                 break;
++            if (M.x86.intr & INTR_HALTED)
++                break;
+         }
+         M.x86.mode &= ~SYSMODE_PREFIX_REPE;
+     } else if (M.x86.mode & SYSMODE_PREFIX_REPNE) {
+         /* REPNE  */
+-        /* move them until CX is ZERO. */
+-        while (M.x86.R_CX != 0) {
++        /* move them until (E)CX is ZERO. */
++        while (((M.x86.mode & SYSMODE_32BIT_REP) ? M.x86.R_ECX : M.x86.R_CX) != 0) {
+             val2 = fetch_data_byte_abs(M.x86.R_ES, M.x86.R_DI);
+             cmp_byte(M.x86.R_AL, val2);
+-            M.x86.R_CX -= 1;
++            if (M.x86.mode & SYSMODE_32BIT_REP)
++                M.x86.R_ECX -= 1;
++            else
++                M.x86.R_CX -= 1;
+             M.x86.R_DI += inc;
+             if (ACCESS_FLAG(F_ZF))
+                 break;          /* zero flag set means equal */
++            if (M.x86.intr & INTR_HALTED)
++                break;
+         }
+         M.x86.mode &= ~SYSMODE_PREFIX_REPNE;
+     } else {
+@@ -2951,8 +3003,8 @@
+     TRACE_AND_STEP();
+     if (M.x86.mode & SYSMODE_PREFIX_REPE) {
+         /* REPE  */
+-        /* move them until CX is ZERO. */
+-        while (M.x86.R_CX != 0) {
++        /* move them until (E)CX is ZERO. */
++        while (((M.x86.mode & SYSMODE_32BIT_REP) ? M.x86.R_ECX : M.x86.R_CX) != 0) {
+             if (M.x86.mode & SYSMODE_PREFIX_DATA) {
+                 val = fetch_data_long_abs(M.x86.R_ES, M.x86.R_DI);
+                 cmp_long(M.x86.R_EAX, val);
+@@ -2960,16 +3012,21 @@
+                 val = fetch_data_word_abs(M.x86.R_ES, M.x86.R_DI);
+                 cmp_word(M.x86.R_AX, (u16)val);
+             }
+-            M.x86.R_CX -= 1;
++            if (M.x86.mode & SYSMODE_32BIT_REP)
++                M.x86.R_ECX -= 1;
++            else
++                M.x86.R_CX -= 1;
+             M.x86.R_DI += inc;
+             if (ACCESS_FLAG(F_ZF) == 0)
+                 break;
++            if (M.x86.intr & INTR_HALTED)
++                break;
+         }
+         M.x86.mode &= ~SYSMODE_PREFIX_REPE;
+     } else if (M.x86.mode & SYSMODE_PREFIX_REPNE) {
+         /* REPNE  */
+-        /* move them until CX is ZERO. */
+-        while (M.x86.R_CX != 0) {
++        /* move them until (E)CX is ZERO. */
++        while (((M.x86.mode & SYSMODE_32BIT_REP) ? M.x86.R_ECX : M.x86.R_CX) != 0) {
+             if (M.x86.mode & SYSMODE_PREFIX_DATA) {
+                 val = fetch_data_long_abs(M.x86.R_ES, M.x86.R_DI);
+                 cmp_long(M.x86.R_EAX, val);
+@@ -2977,10 +3034,15 @@
+                 val = fetch_data_word_abs(M.x86.R_ES, M.x86.R_DI);
+                 cmp_word(M.x86.R_AX, (u16)val);
+             }
+-            M.x86.R_CX -= 1;
++            if (M.x86.mode & SYSMODE_32BIT_REP)
++                M.x86.R_ECX -= 1;
++            else
++                M.x86.R_CX -= 1;
+             M.x86.R_DI += inc;
+             if (ACCESS_FLAG(F_ZF))
+                 break;          /* zero flag set means equal */
++            if (M.x86.intr & INTR_HALTED)
++                break;
+         }
+         M.x86.mode &= ~SYSMODE_PREFIX_REPNE;
+     } else {
+@@ -3238,9 +3300,9 @@
+     DECODE_PRINTF("RET\t");
+     imm = fetch_word_imm();
+     DECODE_PRINTF2("%x\n", imm);
+-	RETURN_TRACE("RET",M.x86.saved_cs,M.x86.saved_ip);
+ 	TRACE_AND_STEP();
+     M.x86.R_IP = pop_word();
++	RETURN_TRACE(M.x86.saved_cs,M.x86.saved_ip, M.x86.R_CS, M.x86.R_IP, "NEAR");
+     M.x86.R_SP += imm;
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+@@ -3254,9 +3316,9 @@
+ {
+     START_OF_INSTR();
+     DECODE_PRINTF("RET\n");
+-	RETURN_TRACE("RET",M.x86.saved_cs,M.x86.saved_ip);
+ 	TRACE_AND_STEP();
+     M.x86.R_IP = pop_word();
++	RETURN_TRACE(M.x86.saved_cs,M.x86.saved_ip, M.x86.R_CS, M.x86.R_IP, "NEAR");
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+ }
+@@ -3471,10 +3533,10 @@
+     DECODE_PRINTF("RETF\t");
+     imm = fetch_word_imm();
+     DECODE_PRINTF2("%x\n", imm);
+-	RETURN_TRACE("RETF",M.x86.saved_cs,M.x86.saved_ip);
+ 	TRACE_AND_STEP();
+     M.x86.R_IP = pop_word();
+     M.x86.R_CS = pop_word();
++	RETURN_TRACE(M.x86.saved_cs,M.x86.saved_ip, M.x86.R_CS, M.x86.R_IP, "FAR");
+     M.x86.R_SP += imm;
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+@@ -3488,10 +3550,10 @@
+ {
+     START_OF_INSTR();
+     DECODE_PRINTF("RETF\n");
+-	RETURN_TRACE("RETF",M.x86.saved_cs,M.x86.saved_ip);
+ 	TRACE_AND_STEP();
+     M.x86.R_IP = pop_word();
+     M.x86.R_CS = pop_word();
++	RETURN_TRACE(M.x86.saved_cs,M.x86.saved_ip, M.x86.R_CS, M.x86.R_IP, "FAR");
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+ }
+@@ -4020,8 +4082,11 @@
+     ip += (s16) M.x86.R_IP;
+     DECODE_PRINTF2("%04x\n", ip);
+     TRACE_AND_STEP();
+-    M.x86.R_CX -= 1;
+-    if (M.x86.R_CX != 0 && !ACCESS_FLAG(F_ZF))      /* CX != 0 and !ZF */
++    if (M.x86.mode & SYSMODE_PREFIX_ADDR)
++        M.x86.R_ECX -= 1;
++    else
++        M.x86.R_CX -= 1;
++    if (((M.x86.mode & SYSMODE_PREFIX_ADDR) ? M.x86.R_ECX : M.x86.R_CX) != 0 && !ACCESS_FLAG(F_ZF))      /* (E)CX != 0 and !ZF */
+         M.x86.R_IP = ip;
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+@@ -4041,8 +4106,11 @@
+     ip += (s16) M.x86.R_IP;
+     DECODE_PRINTF2("%04x\n", ip);
+     TRACE_AND_STEP();
+-    M.x86.R_CX -= 1;
+-    if (M.x86.R_CX != 0 && ACCESS_FLAG(F_ZF))       /* CX != 0 and ZF */
++    if (M.x86.mode & SYSMODE_PREFIX_ADDR)
++        M.x86.R_ECX -= 1;
++    else
++        M.x86.R_CX -= 1;
++    if (((M.x86.mode & SYSMODE_PREFIX_ADDR) ? M.x86.R_ECX : M.x86.R_CX) != 0 && ACCESS_FLAG(F_ZF))      /* (E)CX != 0 and ZF */
+         M.x86.R_IP = ip;
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+@@ -4062,8 +4130,11 @@
+     ip += (s16) M.x86.R_IP;
+     DECODE_PRINTF2("%04x\n", ip);
+     TRACE_AND_STEP();
+-    M.x86.R_CX -= 1;
+-    if (M.x86.R_CX != 0)
++    if (M.x86.mode & SYSMODE_PREFIX_ADDR)
++        M.x86.R_ECX -= 1;
++    else
++        M.x86.R_CX -= 1;
++    if (((M.x86.mode & SYSMODE_PREFIX_ADDR) ? M.x86.R_ECX : M.x86.R_CX) != 0)      /* (E)CX != 0 */
+         M.x86.R_IP = ip;
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+@@ -4085,8 +4156,10 @@
+     target = (u16)(M.x86.R_IP + offset);
+     DECODE_PRINTF2("%x\n", target);
+     TRACE_AND_STEP();
+-    if (M.x86.R_CX == 0)
++    if (M.x86.R_CX == 0) {
+         M.x86.R_IP = target;
++	JMP_TRACE(M.x86.saved_cs, M.x86.saved_ip, M.x86.R_CS, M.x86.R_IP, " CXZ ");
++    }
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+ }
+@@ -4213,6 +4286,7 @@
+     ip = (s16)fetch_word_imm();
+     ip += (s16)M.x86.R_IP;
+     DECODE_PRINTF2("%04x\n", ip);
++    JMP_TRACE(M.x86.saved_cs, M.x86.saved_ip, M.x86.R_CS, ip, " NEAR ");
+     TRACE_AND_STEP();
+     M.x86.R_IP = (u16)ip;
+     DECODE_CLEAR_SEGOVR();
+@@ -4233,6 +4307,7 @@
+     cs = fetch_word_imm();
+     DECODE_PRINTF2("%04x:", cs);
+     DECODE_PRINTF2("%04x\n", ip);
++    JMP_TRACE(M.x86.saved_cs, M.x86.saved_ip, cs, ip, " FAR ");
+     TRACE_AND_STEP();
+     M.x86.R_IP = ip;
+     M.x86.R_CS = cs;
+@@ -4254,6 +4329,7 @@
+     offset = (s8)fetch_byte_imm();
+     target = (u16)(M.x86.R_IP + offset);
+     DECODE_PRINTF2("%x\n", target);
++    JMP_TRACE(M.x86.saved_cs, M.x86.saved_ip, M.x86.R_CS, target, " BYTE ");
+     TRACE_AND_STEP();
+     M.x86.R_IP = target;
+     DECODE_CLEAR_SEGOVR();
+@@ -4357,6 +4433,8 @@
+     DECODE_PRINTF("REPNE\n");
+     TRACE_AND_STEP();
+     M.x86.mode |= SYSMODE_PREFIX_REPNE;
++    if (M.x86.mode & SYSMODE_PREFIX_ADDR)
++        M.x86.mode |= SYSMODE_32BIT_REP;
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+ }
+@@ -4371,6 +4449,8 @@
+     DECODE_PRINTF("REPE\n");
+     TRACE_AND_STEP();
+     M.x86.mode |= SYSMODE_PREFIX_REPE;
++    if (M.x86.mode & SYSMODE_PREFIX_ADDR)
++        M.x86.mode |= SYSMODE_32BIT_REP;
+     DECODE_CLEAR_SEGOVR();
+     END_OF_INSTR();
+ }
+@@ -5013,12 +5093,14 @@
+             break;
+         case 4:         /* jmp word ptr ... */
+             destval = fetch_data_word(destoffset);
++            JMP_TRACE(M.x86.saved_cs, M.x86.saved_ip, M.x86.R_CS, destval, " WORD ");
+             TRACE_AND_STEP();
+             M.x86.R_IP = destval;
+             break;
+         case 5:         /* jmp far ptr ... */
+             destval = fetch_data_word(destoffset);
+             destval2 = fetch_data_word(destoffset + 2);
++            JMP_TRACE(M.x86.saved_cs, M.x86.saved_ip, destval2, destval, " FAR ");
+             TRACE_AND_STEP();
+             M.x86.R_IP = destval;
+             M.x86.R_CS = destval2;
+Index: prim_ops.c
+===================================================================
+RCS file: /cvs/osdf/cvs/host/other-licence/x86emu/prim_ops.c,v
+retrieving revision 1.1
+retrieving revision 1.3
+diff -u -u -r1.1 -r1.3
+--- prim_ops.c	7 Sep 2007 10:01:21 -0000	1.1
++++ prim_ops.c	16 Jan 2008 14:18:15 -0000	1.3
+@@ -1921,7 +1921,7 @@
+ void imul_long_direct(u32 *res_lo, u32* res_hi,u32 d, u32 s)
+ {
+ #ifdef  __HAS_LONG_LONG__
+-    s64 res = (s64)d * (s64)s;
++    s64 res = (s64)(s32)d * (s64)(s32)s;
+ 
+     *res_lo = (u32)res;
+     *res_hi = (u32)(res >> 32);
+@@ -2013,7 +2013,7 @@
+ void mul_long(u32 s)
+ {
+ #ifdef  __HAS_LONG_LONG__
+-    u64 res = (u32)M.x86.R_EAX * (u32)s;
++    u64 res = (u64)M.x86.R_EAX * s;
+ 
+     M.x86.R_EAX = (u32)res;
+     M.x86.R_EDX = (u32)(res >> 32);
+@@ -2312,16 +2312,15 @@
+     }
+     if (M.x86.mode & (SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE)) {
+         /* dont care whether REPE or REPNE */
+-        /* in until CX is ZERO. */
+-        u32 count = ((M.x86.mode & SYSMODE_PREFIX_DATA) ?
++        /* in until (E)CX is ZERO. */
++        u32 count = ((M.x86.mode & SYSMODE_32BIT_REP) ?
+                      M.x86.R_ECX : M.x86.R_CX);
+-
+         while (count--) {
+           single_in(size);
+           M.x86.R_DI += inc;
+           }
+         M.x86.R_CX = 0;
+-        if (M.x86.mode & SYSMODE_PREFIX_DATA) {
++        if (M.x86.mode & SYSMODE_32BIT_REP) {
+             M.x86.R_ECX = 0;
+         }
+         M.x86.mode &= ~(SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE);
+@@ -2355,15 +2354,15 @@
+     }
+     if (M.x86.mode & (SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE)) {
+         /* dont care whether REPE or REPNE */
+-        /* out until CX is ZERO. */
+-        u32 count = ((M.x86.mode & SYSMODE_PREFIX_DATA) ?
++        /* out until (E)CX is ZERO. */
++        u32 count = ((M.x86.mode & SYSMODE_32BIT_REP) ?
+                      M.x86.R_ECX : M.x86.R_CX);
+         while (count--) {
+           single_out(size);
+           M.x86.R_SI += inc;
+           }
+         M.x86.R_CX = 0;
+-        if (M.x86.mode & SYSMODE_PREFIX_DATA) {
++        if (M.x86.mode & SYSMODE_32BIT_REP) {
+             M.x86.R_ECX = 0;
+         }
+         M.x86.mode &= ~(SYSMODE_PREFIX_REPE | SYSMODE_PREFIX_REPNE);
+Index: sys.c
+===================================================================
+RCS file: /cvs/osdf/cvs/host/other-licence/x86emu/sys.c,v
+retrieving revision 1.1
+retrieving revision 1.2
+diff -u -u -r1.1 -r1.2
+--- sys.c	7 Sep 2007 10:01:21 -0000	1.1
++++ sys.c	7 Sep 2007 10:03:13 -0000	1.2
+@@ -45,11 +45,6 @@
+ #include <x86emu/regs.h>
+ #include "debug.h"
+ #include "prim_ops.h"
+-#ifdef LINUXBIOS_VERSION
+-#include "io.h"
+-#else
+-#include <sys/io.h>
+-#endif
+ 
+ #ifdef IN_MODULE
+ #include "xf86_ansic.h"
+@@ -220,7 +215,7 @@
+ {
+ 	DB(if (DEBUG_IO_TRACE())
+ 		printk("inb %#04x \n", addr);)
+-	return inb(addr);
++	return 0;
+ }
+ 
+ /****************************************************************************
+@@ -235,7 +230,7 @@
+ {
+ 	DB(if (DEBUG_IO_TRACE())
+ 		printk("inw %#04x \n", addr);)
+-	return inw(addr);
++	return 0;
+ }
+ 
+ /****************************************************************************
+@@ -250,7 +245,7 @@
+ {
+ 	DB(if (DEBUG_IO_TRACE())
+ 		printk("inl %#04x \n", addr);)
+-	return inl(addr);
++	return 0;
+ }
+ 
+ /****************************************************************************
+@@ -264,7 +259,6 @@
+ {
+ 	DB(if (DEBUG_IO_TRACE())
+ 		printk("outb %#02x -> %#04x \n", val, addr);)
+-	outb(val, addr);
+ 	return;
+ }
+ 
+@@ -279,7 +273,6 @@
+ {
+ 	DB(if (DEBUG_IO_TRACE())
+ 		printk("outw %#04x -> %#04x \n", val, addr);)
+-	outw(val, addr);
+ 	return;
+ }
+ 
+@@ -295,7 +288,6 @@
+ 	DB(if (DEBUG_IO_TRACE())
+ 	       printk("outl %#08x -> %#04x \n", val, addr);)
+ 
+-	outl(val, addr);
+ 	return;
+ }
+ 
+@@ -405,6 +397,6 @@
+ 
+ void X86EMU_setMemBase(void *base, size_t size)
+ {
+-	M.mem_base = (int) base;
++	M.mem_base = (unsigned long) base;
+ 	M.mem_size = size;
+ }
+Index: include/x86emu/debug.h
+===================================================================
+RCS file: /cvs/osdf/cvs/host/other-licence/x86emu/include/x86emu/debug.h,v
+retrieving revision 1.1
+retrieving revision 1.4
+diff -u -u -r1.1 -r1.4
+--- include/x86emu/debug.h	7 Sep 2007 10:01:21 -0000	1.1
++++ include/x86emu/debug.h	20 Mar 2008 15:25:27 -0000	1.4
+@@ -40,8 +40,6 @@
+ #ifndef __X86EMU_DEBUG_H
+ #define __X86EMU_DEBUG_H
+ 
+-//#define DEBUG 0
+-#undef DEBUG
+ /*---------------------- Macros and type definitions ----------------------*/
+ 
+ /* checks to be enabled for "runtime" */
+@@ -78,6 +76,8 @@
+ # define DEBUG_SYSINT()        	(M.x86.debug & DEBUG_SYSINT_F)
+ # define DEBUG_TRACECALL()     	(M.x86.debug & DEBUG_TRACECALL_F)
+ # define DEBUG_TRACECALLREGS() 	(M.x86.debug & DEBUG_TRACECALL_REGS_F)
++# define DEBUG_TRACEJMP()       (M.x86.debug & DEBUG_TRACEJMP_F)
++# define DEBUG_TRACEJMPREGS()   (M.x86.debug & DEBUG_TRACEJMP_REGS_F)
+ # define DEBUG_SYS()           	(M.x86.debug & DEBUG_SYS_F)
+ # define DEBUG_MEM_TRACE()     	(M.x86.debug & DEBUG_MEM_TRACE_F)
+ # define DEBUG_IO_TRACE()      	(M.x86.debug & DEBUG_IO_TRACE_F)
+@@ -96,6 +96,8 @@
+ # define DEBUG_SYSINT()        	0
+ # define DEBUG_TRACECALL()     	0
+ # define DEBUG_TRACECALLREGS() 	0
++# define DEBUG_TRACEJMP()       0
++# define DEBUG_TRACEJMPREGS()   0
+ # define DEBUG_SYS()           	0
+ # define DEBUG_MEM_TRACE()     	0
+ # define DEBUG_IO_TRACE()      	0
+@@ -169,14 +171,20 @@
+ 		x86emu_dump_regs();                                     \
+ 	if (DEBUG_TRACECALL())                                     	\
+ 		printk("%04x:%04x: CALL %s%04x:%04x\n", u , v, s, w, x);
+-# define RETURN_TRACE(n,u,v)                                    \
++# define RETURN_TRACE(u,v,w,x,s)                                    \
+ 	if (DEBUG_TRACECALLREGS())									\
+ 		x86emu_dump_regs();                                     \
+ 	if (DEBUG_TRACECALL())                                     	\
+-		printk("%04x:%04x: %s\n",u,v,n);
++		printk("%04x:%04x: RET %s %04x:%04x\n",u,v,s,w,x);
++# define  JMP_TRACE(u,v,w,x,s)                                 \
++   if (DEBUG_TRACEJMPREGS()) \
++      x86emu_dump_regs(); \
++   if (DEBUG_TRACEJMP()) \
++      printk("%04x:%04x: JMP %s%04x:%04x\n", u , v, s, w, x);
+ #else
+ # define CALL_TRACE(u,v,w,x,s)
+-# define RETURN_TRACE(n,u,v)
++# define RETURN_TRACE(u,v,w,x,s)
++# define  JMP_TRACE(u,v,w,x,s)
+ #endif
+ 
+ #ifdef DEBUG
+Index: include/x86emu/regs.h
+===================================================================
+RCS file: /cvs/osdf/cvs/host/other-licence/x86emu/include/x86emu/regs.h,v
+retrieving revision 1.1
+retrieving revision 1.4
+diff -u -u -r1.1 -r1.4
+--- include/x86emu/regs.h	7 Sep 2007 10:01:21 -0000	1.1
++++ include/x86emu/regs.h	15 Jan 2008 13:46:40 -0000	1.4
+@@ -231,6 +231,9 @@
+ #define SYSMODE_PREFIX_REPNE    0x00000100
+ #define SYSMODE_PREFIX_DATA     0x00000200
+ #define SYSMODE_PREFIX_ADDR     0x00000400
++//phueper: for REP(E|NE) Instructions, we need to decide wether it should be using
++//the 32bit ECX register as or the 16bit CX register as count register
++#define SYSMODE_32BIT_REP       0x00000800
+ #define SYSMODE_INTR_PENDING    0x10000000
+ #define SYSMODE_EXTRN_INTR      0x20000000
+ #define SYSMODE_HALTED          0x40000000
+@@ -250,7 +253,8 @@
+ 						 SYSMODE_SEGOVR_GS      | \
+ 						 SYSMODE_SEGOVR_SS      | \
+ 						 SYSMODE_PREFIX_DATA    | \
+-						 SYSMODE_PREFIX_ADDR)
++						 SYSMODE_PREFIX_ADDR    | \
++						 SYSMODE_32BIT_REP)
+ 
+ #define  INTR_SYNCH           0x1
+ #define  INTR_ASYNCH          0x2
+@@ -274,9 +278,9 @@
+      */
+     u32                         mode;
+     volatile int                intr;   /* mask of pending interrupts */
+-	int                         debug;
++    volatile int                         debug;
+ #ifdef DEBUG
+-	int                         check;
++    int                         check;
+     u16                         saved_ip;
+     u16                         saved_cs;
+     int                         enc_pos;
+Index: include/x86emu/x86emu.h
+===================================================================
+RCS file: /cvs/osdf/cvs/host/other-licence/x86emu/include/x86emu/x86emu.h,v
+retrieving revision 1.1
+retrieving revision 1.3
+diff -u -u -r1.1 -r1.3
+--- include/x86emu/x86emu.h	7 Sep 2007 10:01:21 -0000	1.1
++++ include/x86emu/x86emu.h	19 Oct 2007 08:42:15 -0000	1.3
+@@ -47,6 +47,7 @@
+ #include <console.h>
+ #define printk(x...) printk(BIOS_DEBUG, x)
+ #else
++#include <stdio.h>
+ #define printk printf
+ #endif
+ 
+@@ -189,6 +181,8 @@
+ #define DEBUG_TRACECALL_REGS_F  0x004000
+ #define DEBUG_DECODE_NOPRINT_F  0x008000 
+ #define DEBUG_SAVE_IP_CS_F      0x010000
++#define DEBUG_TRACEJMP_F        0x020000
++#define DEBUG_TRACEJMP_REGS_F   0x040000
+ #define DEBUG_SYS_F             (DEBUG_SVC_F|DEBUG_FS_F|DEBUG_PROC_F)
+ 
+ void 	X86EMU_trace_regs(void);
+@@ -200,5 +194,4 @@
+ #ifdef  __cplusplus
+ }                       			/* End of "C" linkage for C++   	*/
+ #endif
+-
+ #endif /* __X86EMU_X86EMU_H */

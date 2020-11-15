@@ -1,0 +1,128 @@
+===============================================================================
+
+OpenHackWare started as a tiny BIOS that I wrote to launch Linux
+under Qemu-PPC for PREP emulation.
+Then I merged some work I some times ago, which was able to emulate
+some OpenFirmware functionalities to be able to launch some other
+Linux kernels.
+I then tried to improve it to be able to launch MacOSX.
+
+It's released under the GNU General Public License version 2
+
+===============================================================================
+STATUS:
+PowerMac emulation:
+* Linux:
+ - Debian:
+  x 3.0-r1:
+    install & install_safe crash at startup
+    install24 & install24_safe boot but installer crashes.
+  x same goes for 3.0-r4.
+  x same goes for woody.
+  x sarge_netinstall installs with some limitations:
+    if you don't have a DHCP server, expert installation type is needed
+    linux 2.6 framebuffer driver is buggy, so you'd better use a 2.4 kernel
+    top is buggy: it complains it can't read /proc/stat
+     => this seems to be a known propcps bug:
+        "old" top used with recent kernels misunderstand "/proc/stat" format.
+    mol does not display anything
+   + of course, Power3 & Power4 install crashes (unsupported opcodes).
+ - Gentoo:
+  x 1.2-r1 ISO CDROM boots and runs
+  x 1.4.1 live CDROM boots with no problem.
+  x 2004.1 & 2004.3 CROMs use Linux 2.6, then have frame-buffer problems.
+ - Mandrake
+  x 9.1 boots and installer starts
+    Seems to get stuck during some hardware probe
+  x 10.1 starts booting, using 2.6 kernel.
+    Seems to get stuck somewhere inside the kernel.
+  x 10.2 acts the same way.
+ - crux
+  x 1.3 boot but crashes: looks like an i386-only ISOFS bootable CDROM.
+  x 1.3.1 uses Linux 2.6. I guess I'm stuck during hardware probe or
+    it panics.
+  x 2.0 seems to react the same way as 1.3.1.
+ - knoppix
+  x 2003-07-13_4 boots but does not detect the hardware the right way:
+    it wants to use the VESA driver for X. If you are patient,
+    after a few tries, it will fallback to fbdev driver.
+    But then, the mouse is broken (uses the Microsoft serial protocol)
+    and the keyboard is set to german.
+  x k-mib-ppc-beta uses 2.6 kernel.
+ - gnoppix hoary boots kernel 2.6, then framebuffer is buggy
+   (colors are broken: should detect 15 bpp fb, but uses 16 bpp).
+ - sysrescue boots kernel 2.6 so framebuffer is buggy
+   (no output but the penguin).
+ - Fedora Core 3 uses 2.6 kernel then ...
+   ... seems to stay stuck into a small infinite loop inside the kernel.
+ - Fedora Core 4 does the same.
+ - unbuntu does not load: we don't find any bootable file on the HFS partition.
+ - yellow dog 4.0 boots with 2.6 kernel.
+ - rock linux: it boots and installs. Unfortunatelly, there seem to be some
+   bugs in this distribution: I did select the minimal installation,
+   then it forgot the "hfsutils" package and so yaboot did not install itself.
+* NetBSD:
+ - 1.5.2 fails to boot.
+ - 1.6.1, 1.6.2 & 2.0 boot-loader loads but stops
+  (missing available memory property).
+* OpenBSD:
+ - boot-loader cannot run because it's a gzipped ELF file.
+  (tried 3.4, 3.5 & 3.6 macppc CDROMs).
+* Darwin:
+ - Darwin 7.01 and gnuDarwin 2.3 beta dont run: boot-loader crashes:
+   seems to rely on special values in registers (or entry point is false...).
+   looks like Mach-O embedded in XCOFF (?).
+ - Darwin 6.02 and OpenDarwin 6.6.1, 6.6.2 & 20030212 load
+   but seem not to like the OF tree as it's shown then crash.
+ - Darwin 1.41, MacOS X 10.2 & gnuDarwin 2.3 boot
+   but fail to mount the boot device. Seems related to the OF tree.
+ - gnuDarwin 7.01 does not boot at all (cannot find the boot file).
+ - OpenDarwin 7.2.1 does not boot (no boot partition found).
+* MacOS:
+ - Mac OS X 10.2: fails to mount its root device.
+ - Mac OS X 10.3 crashes:
+   seems to try to use Altivec instructions. As my CDROM is one for G5,
+   this may be normal.
+ - Mac OS 9.2 installation CDROM starts to load then crashes.
+ - Ibook Restore CDROM loads & starts booting but crashes
+ - Ibook OS Restore CDROM does not boot (Mac OS X 10.2):
+   does not find any boot partition.
+ - Ibook hw check CDROM boots but crashes:
+   boot loader need its relocations to be resolved by OHW.
+ - IMac G5 hw check CDROM does not boot:
+   OHW is unable to find any boot file in the boot directory.
+* BeOS:
+ - not tested for now. Should not load, as fs may be ISOFS.
+
+PREP emulation:
+* Linux:
+ XXX: to be completed
+* Windows NT 4:
+ - XCoff file loader merges to be done for Microsoft format to be understood.
+* AIX:
+ - The PREP boot image is well located at startup but it seems there are
+   "magic" values to put in registers. Then, for now, it crashes.
+   Seeking for informations about this executable format (starting with
+   "AIXM").
+   Tested 4.3.3 and 5.1. I don't even know if they would run on a real PREP ;-)
+
+CHRP emulation:
+ TODO (no support in qemu).
+
+MVME emulation:
+ TODO (no support in qemu).
+
+Pegasos emulation:
+ TODO (no support in qemu).
+
+===============================================================================
+
+Known problems:
+
+---
+RedHat make 3.79 is fully buggy. You may have several problems trying to build
+OpenHackWare using it. You'd better update to make 3.80 or recompile it from
+regular sources (ie not RedHat sources). Please don't complain if you aren't
+able to build the BIOS using this package.
+
+===============================================================================

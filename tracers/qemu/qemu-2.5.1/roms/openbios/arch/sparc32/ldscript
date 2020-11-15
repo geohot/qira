@@ -1,0 +1,73 @@
+OUTPUT_FORMAT(elf32-sparc)
+OUTPUT_ARCH(sparc)
+
+/* QEMU ELF loader can't handle very complex files, so we put ELFBoot
+info to rodata and put initctx to data.*/
+
+ENTRY(trap_table)
+
+/* Initial load address
+ */
+BASE_ADDR = 0xffd00000;
+
+/* 16KB stack */
+STACK_SIZE = 16384;
+VMEM_SIZE = 128 * 1024;
+IOMEM_SIZE = 256 * 1024 + 768 * 1024;
+
+SECTIONS
+{
+    . = BASE_ADDR;
+
+    /* Start of the program.
+     * Now the version string is in the note, we must include it
+     * in the program. Otherwise we lose the string after relocation. */
+    _start = .;
+
+    /* Normal sections */
+    .text ALIGN(4096): {
+        *(.text.vectors)
+        *(.text)
+        *(.text.*)
+    }
+    .rodata ALIGN(4096): {
+        _rodata = .;
+	sound_drivers_start = .;
+	*(.rodata.sound_drivers)
+	sound_drivers_end = .;
+	*(.rodata)
+	*(.rodata.*)
+        *(.note.ELFBoot)
+    }
+    .data ALIGN(4096): {
+        _data = .;
+        *(.data)
+        *(.data.*)
+    }
+
+    .bss ALIGN(4096): {
+        _bss = .;
+	*(.bss)
+	*(.bss.*)
+	*(COMMON)
+
+	. = ALIGN(4096);
+	_vmem = .;
+	. += VMEM_SIZE;
+        _evmem = .;
+
+	_stack = .;
+	. += STACK_SIZE;
+	. = ALIGN(16);
+	_estack = .;
+    }
+
+    . = ALIGN(4096);
+    _end = .;
+    _iomem = _end + IOMEM_SIZE;
+
+    /* We discard .note sections other than .note.ELFBoot,
+     * because some versions of GCC generates useless ones. */
+
+    /DISCARD/ : { *(.comment*) *(.note.*) }
+}

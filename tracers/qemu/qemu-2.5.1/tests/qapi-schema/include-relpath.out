@@ -1,0 +1,2 @@
+object :empty
+enum Status ['good', 'bad', 'ugly']

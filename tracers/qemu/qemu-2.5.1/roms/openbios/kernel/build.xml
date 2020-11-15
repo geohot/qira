@@ -1,0 +1,16 @@
+<build>
+
+ <executable name="forthstrap" target="host">
+  <object source="dict.c"/>
+  <object source="bootstrap.c"/>
+  <object source="forth.c"/>
+  <object source="stack.c"/>
+ </executable>
+ 
+ <library name="bootstrap" type="static" target="target">
+  <object source="dict.c"/>
+  <object source="forth.c"/>
+  <object source="stack.c"/>
+ </library>
+  
+</build>

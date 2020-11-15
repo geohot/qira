@@ -1,0 +1,542 @@
+/******************************************************************************
+ * Copyright (c) 2004, 2008 IBM Corporation
+ * All rights reserved.
+ * This program and the accompanying materials
+ * are made available under the terms of the BSD License
+ * which accompanies this distribution, and is available at
+ * http://www.opensource.org/licenses/bsd-license.php
+ *
+ * Contributors:
+ *     IBM Corporation - initial implementation
+ *****************************************************************************/
+// ============================================================================
+// ============================================================================
+
+
+//
+// Copyright 2002,2003,2004  Segher Boessenkool  <segher@kernel.crashing.org>
+//
+
+// This is the core engine of Paflof.  It is almost ANS Forth compatible.
+// There are two possibilities why an aspect would not be:
+//   a) Open Firmware requires different semantics;
+//   b) bugs.
+// Most of the "extended" semantics defined in the OF specification are
+// not implemented; just the bare essentials.  For example, you can't
+// use structural words (IF, THEN, BEGIN, etc.) or return-stack
+// manipulation words (R> etc.) in the interpreter.
+
+// The data stack pointer.
+raw(HERE DOVAL _A(the_mem))
+
+// Some common constant numbers; smaller and faster if they are defined
+// as constants, than when inlined as a literal.
+con(-1 -1)
+con(0 0)
+con(1 1)
+con(2 2)
+con(3 3)
+con(4 4)
+con(8 8)
+con(H#10 0x10)
+con(H#20 0x20)
+con(H#FF 0xff)
+con(H#FFFF 0xffff)
+con(H#FFFFFFFF 0xffffffff)
+con(D#10 0x0a)
+
+
+// Manipulating different kinds of addresses.
+con(/C 1)
+con(/W 2)
+con(/L 4)
+con(/X 8)
+con(/N CELLSIZE)
+con(CELL CELLSIZE)
+col(/C* /C *)
+col(/W* /W *)
+col(/L* /L *)
+col(/X* /X *)
+col(/N* /N *)
+col(CA+ /C* +)
+col(WA+ /W* +)
+col(LA+ /L* +)
+col(XA+ /X* +)
+col(NA+ /N* +)
+col(CA1+ /C +)
+col(WA1+ /W +)
+col(LA1+ /L +)
+col(XA1+ /X +)
+col(NA1+ /N +)
+col(CHAR+ CA1+)
+col(CELL+ NA1+)
+col(CHAR- /C -)
+col(CELL- /N -)
+col(CHARS /C*)
+col(CELLS /N*)
+col(CHARS+ CA+)
+col(CELLS+ NA+)
+
+
+// Run-time words for TO and for string literals.
+col(DOTO R> CELL+ DUP >R @ CELL+ !)
+col(SLITERAL R> CELL+ DUP DUP C@ + LIT(-CELLSIZE) AND >R)
+
+
+// Stack manipulation.
+col(?DUP DUP 0BRANCH(1) DUP)
+col(TUCK SWAP OVER)
+col(2DUP OVER OVER)
+col(3DUP 2 PICK 2 PICK 2 PICK)
+col(2OVER 3 PICK 3 PICK)
+col(2DROP DROP DROP)
+col(3DROP DROP DROP DROP)
+col(NIP SWAP DROP)
+col(CLEAR 0 DEPTH!)
+col(ROT >R SWAP R> SWAP)
+col(-ROT SWAP >R SWAP R>)
+col(2SWAP >R -ROT R> -ROT)
+col(2ROT >R >R 2SWAP R> R> 2SWAP)
+col(ROLL DUP ?DUP 0BRANCH(6) ROT >R 1 - BRANCH(-9) ?DUP 0BRANCH(6) R> -ROT 1 - BRANCH(-9))
+col(-ROLL DUP ?DUP 0BRANCH(9) >R ROT R> SWAP >R 1 - BRANCH(-12) ?DUP 0BRANCH(6) R> SWAP 1 - BRANCH(-9))
+col(2>R R> ROT >R SWAP >R >R)
+col(2R> R> R> R> ROT >R SWAP)
+col(2R@ R> R> R@ OVER >R ROT >R SWAP)
+cod(?PICK)
+
+// Arithmetic.
+col(2* 1 LSHIFT)
+col(U2/ 1 RSHIFT)
+col(2/ 1 ASHIFT)
+col(<< LSHIFT)
+col(>> RSHIFT)
+col(>>A ASHIFT)
+col(INVERT -1 XOR)
+col(NOT INVERT)
+
+
+// Booleans.
+con(TRUE -1)
+con(FALSE 0)
+
+
+// Comparisons.
+col(> SWAP <)
+col(U> SWAP U<)
+col(<= > 0=)
+col(<> = 0=)
+col(>= < 0=)
+col(0<= 0 <=)
+col(0<> 0 <>)
+col(0> 0 >)
+col(0>= 0 >=)
+col(U<= U> 0=)
+col(U>= U< 0=)
+col(WITHIN ROT DUP ROT >= 0BRANCH(3) 2DROP FALSE EXIT > 0BRANCH(2) FALSE EXIT TRUE)
+col(BETWEEN 1 + WITHIN)
+
+// Double-cell single-bit shifts.
+col(D2* 2* OVER 0< - >R 2* R>)
+col(UD2/ >R U2/ R@ LIT(8*CELLSIZE-1) LSHIFT OR R> U2/)
+col(D2/ >R U2/ R@ LIT(8*CELLSIZE-1) LSHIFT OR R> 2/)
+
+
+// More arithmetic.
+col(NEGATE 0 SWAP -)
+col(ABS DUP 0< 0BRANCH(1) NEGATE)
+col(MAX 2DUP < 0BRANCH(1) SWAP DROP)
+col(MIN 2DUP > 0BRANCH(1) SWAP DROP)
+col(U* *)
+col(1+ 1 +)
+col(1- 1 -)
+col(2+ 2 +)
+col(2- 2 -)
+col(EVEN 1+ -1 AND)
+col(BOUNDS OVER + SWAP)
+
+
+// Double-cell and mixed-size arithmetic.
+col(S>D DUP 0<)
+col(DNEGATE INVERT >R NEGATE DUP 0= R> SWAP -)
+col(DABS DUP 0< 0BRANCH(1) DNEGATE)
+col(M+ SWAP >R DUP >R + DUP R> U< R> SWAP -)
+col(D+ >R M+ R> +)
+col(D- DNEGATE D+)
+col(*' >R DUP 0< >R D2* R> 0BRANCH(2) R@ M+ R>)
+col(UM* 0 -ROT LIT(8*CELLSIZE) 0 DODO *' DOLOOP(-3) DROP)
+col(M* 2DUP XOR >R >R ABS R> ABS UM* R> 0< 0BRANCH(1) DNEGATE)
+col(/' >R DUP 0< >R D2* R> OVER R@ U>= OR 0BRANCH(6) >R 1 OR R> R@ - R>)
+col(UM/MOD LIT(8*CELLSIZE) 0 DODO /' DOLOOP(-3) DROP SWAP)
+col(SM/REM OVER >R >R DABS R@ ABS UM/MOD R> 0< 0BRANCH(1) NEGATE R> 0< 0BRANCH(4) NEGATE SWAP NEGATE SWAP)
+col(FM/MOD DUP >R 2DUP XOR 0< >R SM/REM OVER 0<> R> AND 0BRANCH(6) 1- SWAP R> + SWAP EXIT R> DROP)
+
+
+// Division.
+col(U/MOD 0 SWAP UM/MOD)
+col(/MOD >R S>D R> FM/MOD)
+col(/ /MOD NIP)
+col(MOD /MOD DROP)
+col(*/MOD >R M* R> FM/MOD)
+col(*/ */MOD NIP)
+
+
+// Splitting, joining, flipping the components of a number.
+col(WBSPLIT DUP H#FF AND SWAP 8 RSHIFT)
+col(LWSPLIT DUP H#FFFF AND SWAP H#10 RSHIFT)
+col(XLSPLIT DUP H#FFFFFFFF AND SWAP H#20 RSHIFT)
+col(LBSPLIT LWSPLIT >R WBSPLIT R> WBSPLIT)
+col(XWSPLIT XLSPLIT >R LWSPLIT R> LWSPLIT)
+col(XBSPLIT XLSPLIT >R LBSPLIT R> LBSPLIT)
+col(BWJOIN 8 LSHIFT OR)
+col(WLJOIN H#10 LSHIFT OR)
+col(BLJOIN BWJOIN >R BWJOIN R> WLJOIN)
+col(WBFLIP WBSPLIT SWAP BWJOIN)
+col(LWFLIP LWSPLIT SWAP WLJOIN)
+col(LXJOIN H#20 LSHIFT OR)
+col(XLFLIP XLSPLIT SWAP LXJOIN)
+col(LBFLIP LBSPLIT SWAP 2SWAP SWAP BLJOIN)
+col(WXJOIN WLJOIN >R WLJOIN R> LXJOIN)
+col(XWFLIP XWSPLIT SWAP 2SWAP SWAP WXJOIN)
+col(BXJOIN BLJOIN >R BLJOIN R> LXJOIN)
+col(XBFLIP XLSPLIT LBFLIP SWAP LBFLIP LXJOIN)
+
+// Aligning to cell size.
+col(ALIGNED /N 1- + /N NEGATE AND)
+
+
+// Counted loop stuff.
+col(I R> R@ SWAP >R)
+col(J R> R> R> R@ SWAP >R SWAP >R SWAP >R)
+col(UNLOOP R> R> R> 2DROP >R)
+
+
+// Memory accesses.
+col(+! TUCK @ + SWAP !)
+cod(COMP)
+col(OFF FALSE SWAP !)
+col(ON TRUE SWAP !)
+col(<W@ W@ DUP LIT(0x8000) >= 0BRANCH(3) LIT(0x10000) -)
+col(2@ DUP CELL+ @ SWAP @)
+col(2! DUP >R ! R> CELL+ !)
+col(WBFLIPS BOUNDS DO?DO(8) I W@ WBFLIP I W! /W DO+LOOP(-8))
+col(LWFLIPS BOUNDS DO?DO(8) I L@ LWFLIP I L! /L DO+LOOP(-8))
+col(LBFLIPS BOUNDS DO?DO(8) I L@ LBFLIP I L! /L DO+LOOP(-8))
+col(XBFLIPS BOUNDS DO?DO(8) I X@ XBFLIP I X! /X DO+LOOP(-8))
+col(XWFLIPS BOUNDS DO?DO(8) I X@ XWFLIP I X! /X DO+LOOP(-8))
+col(XLFLIPS BOUNDS DO?DO(8) I X@ XLFLIP I X! /X DO+LOOP(-8))
+cod(FILL)
+col(BLANK LIT(0x20) FILL)
+col(ERASE LIT(0x00) FILL)
+
+
+// Exception handling.
+var(CATCHER 0)
+var(ABORT"-STR 0)
+col(CATCH DEPTH >R CATCHER @ >R RDEPTH CATCHER ! EXECUTE R> CATCHER ! R> DROP 0)
+col(THROW ?DUP 0BRANCH(12) CATCHER @ RDEPTH! R> CATCHER ! R> SWAP >R DEPTH! DROP R>)
+col(ABORT -1 THROW)
+
+
+// Text input.
+var(#TIB TIBSIZE)
+val(IB 0)
+var(#IB 0)
+val(SOURCE-ID 0)
+col(SOURCE IB #IB @)
+var(>IN 0)
+col(TERMINAL TIB DOTO IB #TIB @ #IB ! 0 DOTO SOURCE-ID)
+
+
+// ASCII codes.
+con(BL 0x20)
+con(BELL 7)
+con(BS 8)
+con(CARRET 0x0d)
+con(LINEFEED 0x0a)
+
+
+// Text output.
+dfr(EMIT)
+dfr(CR)
+col(TYPE BOUNDS DO?DO(5) I C@ EMIT DOLOOP(-5))
+col(LL-CR CARRET EMIT LINEFEED EMIT)
+col(SPACE BL EMIT)
+col(SPACES 0 DO?DO(3) SPACE DOLOOP(-3))
+
+
+// Text manipulation.
+col(COUNT DUP CHAR+ SWAP C@)
+col(PACK DUP >R 1+ SWAP DUP R@ C! MOVE R>)
+col(UPC DUP LIT('a') LIT('z') BETWEEN 0BRANCH(3) LIT(0x20) - )
+col(LCC DUP LIT('A') LIT('Z') BETWEEN 0BRANCH(3) LIT(0x20) + )
+
+
+// Text input.
+dfr(KEY)
+dfr(KEY?)
+dfr(ACCEPT)
+var(SPAN 0)
+col(EXPECT ACCEPT SPAN !)
+col(REFILL SOURCE-ID 0= 0BRANCH(7) SOURCE EXPECT 0 >IN ! TRUE EXIT SOURCE-ID -1 = 0BRANCH(2) FALSE EXIT LIT(0x6502) THROW)
+
+
+// Number base.
+var(BASE 16)
+col(DECIMAL D#10 BASE !)
+col(HEX H#10 BASE !)
+col(OCTAL 8 BASE !)
+
+
+// Pictured numeric output.
+col(PAD HERE LIT(256) +)
+col(TODIGIT DUP LIT(9) > 0BRANCH(3) LIT(0x27) + LIT(0x30) +)
+col(MU/MOD DUP >R U/MOD R> SWAP >R UM/MOD R>)
+col(<# PAD DUP !)
+col(HOLD PAD DUP @ 1- TUCK SWAP ! C!)
+col(SIGN 0< 0BRANCH(3) LIT('-') HOLD)
+col(# BASE @ MU/MOD ROT TODIGIT HOLD)
+col(#S # 2DUP OR 0BRANCH(2) BRANCH(-7))
+col(#> 2DROP PAD DUP @ TUCK -)
+col((.) <# DUP >R ABS 0 #S R> SIGN #>)
+col(U# BASE @ U/MOD SWAP TODIGIT HOLD)
+col(U#S U# DUP 0BRANCH(2) BRANCH(-6))
+col(U#> DROP PAD DUP @ TUCK -)
+col((U.) <# U#S U#>)
+col(. (.) TYPE SPACE)
+col(S. .)
+col(U. (U.) TYPE SPACE)
+col(.R SWAP (.) ROT 2DUP < 0BRANCH(5) OVER - SPACES BRANCH(1) DROP TYPE)
+col(U.R SWAP (U.) ROT 2DUP < 0BRANCH(5) OVER - SPACES BRANCH(1) DROP TYPE)
+col(.D BASE @ SWAP DECIMAL . BASE !)
+col(.H BASE @ SWAP HEX . BASE !)
+col(.S DEPTH DUP 0< 0BRANCH(2) DROP EXIT 0 DO?DO(8) DEPTH I - 1- PICK . DOLOOP(-8))
+col(? @ .)
+
+
+// Numeric input.
+col(DIGIT OVER UPC DUP LIT('A') LIT('Z') BETWEEN 0BRANCH(3) LIT(7) - LIT(0x30) - DUP ROT 0 SWAP WITHIN 0BRANCH(4) NIP TRUE BRANCH(2) DROP FALSE)
+col(>NUMBER DUP 0= 0BRANCH(1) EXIT OVER C@ BASE @ DIGIT 0BRANCH(23) SWAP >R SWAP >R >R BASE @ U* SWAP BASE @ UM* ROT + R> 0 D+ R> CHAR+ R> 1- BRANCH(-35) DROP)
+col($NUMBER DUP 0= 0BRANCH(4) DROP DROP TRUE EXIT >R DUP >R C@ LIT('-') = DUP 0BRANCH(15) R> CHAR+ R> 1- DUP 0= 0BRANCH(5) DROP DROP DROP TRUE EXIT >R >R 0 0 R> R> >NUMBER NIP 0= 0BRANCH(7) DROP SWAP 0BRANCH(1) NEGATE FALSE EXIT DROP DROP DROP TRUE)
+
+
+// Data space allocation.
+col(ALLOT HERE + DOTO HERE)
+col(, HERE ! /N ALLOT)
+col(C, HERE C! /C ALLOT)
+col(W, HERE W! /W ALLOT)
+col(L, HERE L! /L ALLOT)
+col(X, HERE X! /X ALLOT)
+col(ALIGN HERE /N 1- AND 0BRANCH(4) 0 C, BRANCH(-10))
+col(PLACE 2DUP C! CHAR+ SWAP CHARS BOUNDS DO?DO(9) DUP C@ I C! CHAR+ 1 CHARS DO+LOOP(-9) DROP)
+col(STRING, HERE OVER 1+ CHARS ALLOT PLACE)
+
+
+// Every language needs a no-op.
+col(NOOP)
+
+
+// Now it gets ugly: search-order and word-lisst infrastructure.
+
+raw(FORTH-WORDLIST DODOES _A(xt_NOOP+2+(8/sizeof(long))) _A(0) _A(0))
+	// Engine initialisation will set this last cell to the xt of LASTWORD.
+
+// compilation dictionary
+raw(CURRENT DOVAL _A(xt_FORTH_X2d_WORDLIST+3+(16/sizeof(long))))
+	// +7 for 32-bit, +5 for 64-bit
+
+col(LAST CURRENT CELL+)
+
+// for context dictionaries
+raw(SEARCH-ORDER DOVAR _A(xt_FORTH_X2d_WORDLIST+3+(16/sizeof(long))) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0))
+	// +7 for 32-bit, +5 for 64-bit
+// for context dictionaries
+//raw(SEARCH-ORDER DOVAR _A(xt_FORTH_X2d_WORDLIST+3+(sizeof("  FORTH-WORDLIST")/sizeof(long))) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0) _A(0))
+// +7 for 32-bit, +5 for 64-bit
+raw(CONTEXT DOVAL _A(xt_SEARCH_X2d_ORDER+2+(16/sizeof(long))))
+//raw(CONTEXT DOVAL _A(xt_SEARCH_X2d_ORDER+6))
+// +6 for 32-bit, +4 for 64-bit
+
+// Dictionary structure.
+col(LINK>NAME CELL+)
+col(NAME> CHAR+ DUP C@ 1+ CHARS+ ALIGNED)
+col(LINK> LINK>NAME NAME>)
+col(NAME>STRING CHAR+ COUNT)
+
+// Creating word headers.
+var(LATEST 0)
+dfr((REVEAL))
+col(HEADER ALIGN HERE LAST @ , LATEST ! 0 C, STRING, ALIGN)
+col(REVEAL   LATEST @ LINK>NAME NAME>STRING (REVEAL) LATEST @ LAST !)
+
+
+// Finding words.
+cod(STRING=CI)
+// (find) ( str len head -- 0 | link )
+dfr((FIND))
+col(((FIND)) DUP 0BRANCH(15) >R 2DUP R@ LINK>NAME NAME>STRING STRING=CI 0BRANCH(3) 2DROP R> EXIT R> @ BRANCH(-18) 3DROP FALSE)
+col((FIND-ORDER) CONTEXT DUP >R SEARCH-ORDER U>= 0BRANCH(18) 2DUP R@ @ CELL+ @ (FIND) ?DUP 0BRANCH(5) NIP NIP R> DROP EXIT R> CELL- BRANCH(-24) R> 3DROP 0)
+col(($FIND) (FIND-ORDER) DUP 0BRANCH(6) LINK>NAME DUP NAME> SWAP C@ TRUE)
+col($FIND 2DUP ($FIND) 0BRANCH(6) DROP NIP NIP TRUE BRANCH(1) FALSE)
+
+// Flags on words.
+con('IMMEDIATE 1)
+col(IMMEDIATE? 'IMMEDIATE AND 0<>)
+col(IMMEDIATE LAST @ CELL+ DUP C@ 'IMMEDIATE OR SWAP C!)
+
+// Parsing.
+col(FINDCHAR SWAP 0 DO?DO(24) OVER I + C@ OVER DUP BL = 0BRANCH(3) <= BRANCH(1) = 0BRANCH(6) I UNLOOP NIP NIP TRUE EXIT DOLOOP(-24) DROP DROP FALSE)
+col(PARSE >R IB >IN @ + SPAN @ >IN @ - 2DUP R> FINDCHAR 0BRANCH(6) NIP DUP 1 + BRANCH(1) DUP >IN +!)
+col(SKIPWS IB SPAN @ DUP >IN @ > 0BRANCH(14) OVER >IN @ + C@ BL <= 0BRANCH(5) 1 >IN +! BRANCH(-20) DROP DROP)
+col(PARSE-WORD SKIPWS BL PARSE)
+var(WHICHPOCKET 0)
+// We reserved 0x1000 for the pockets. So we have 16 pockets a 0x100
+col(POCKET POCKETS WHICHPOCKET @ LIT(POCKETSIZE) * + WHICHPOCKET @ 1 + DUP LIT(NUMPOCKETS) = 0BRANCH(2) DROP 0 WHICHPOCKET !)
+
+col(WORD POCKET >R PARSE DUP R@ C! BOUNDS R> DUP 2SWAP DO?DO(7) CHAR+ I C@ OVER C! DOLOOP(-7) DROP)
+
+// Some simple parsing words.
+col(CHAR PARSE-WORD DROP C@)
+imm(( LIT(')') PARSE 2DROP)
+// Removing comments out of the code, the code from the backslash to the next \n is removed.
+// We need to start from cursor -1 (the backslash) to handle the case backslash+linefeed correctly 0x5c0a
+imm(\ >IN @ 1- >IN ! LINEFEED PARSE 2DROP)
+
+// The compiler infrastructure.
+var(STATE 0)
+imm([ STATE OFF)
+col(] LIT(0x100) STATE !)
+col(?COMP STATE @ 0BRANCH(1) EXIT LIT(-134) THROW)
+
+col(COMPILE, ,)
+col(: PARSE-WORD HEADER DOTICK DOCOL COMPILE, ])
+col(:NONAME ALIGN HERE DOTICK DOCOL COMPILE, ])
+imm(; ?COMP DOTICK SEMICOLON COMPILE, REVEAL [)
+
+// Compiling strings.
+imm(C" ?COMP LIT('"') PARSE DOTICK SLITERAL COMPILE, DUP C, BOUNDS DO?DO(5) I C@ C, DOLOOP(-5) ALIGN)
+imm(S" STATE @ 0BRANCH(5) C" DOTICK COUNT COMPILE, EXIT LIT('"') PARSE DUP >R POCKET DUP >R SWAP MOVE R> R>)
+imm(Z" S" 2DUP + 0 SWAP C! DROP)
+imm(." STATE @ 0BRANCH(5) S" DOTICK TYPE COMPILE, EXIT  LIT('"') PARSE TYPE)
+imm(.( LIT(')') PARSE TYPE)
+
+col(COMPILE R> CELL+ DUP @ COMPILE, >R)
+
+var(THERE 0)
+col(+COMP STATE @ 1 STATE +! 0BRANCH(1) EXIT HERE THERE ! COMP-BUFFER DOTO HERE COMPILE DOCOL)
+col(-COMP -1 STATE +! STATE @ 0BRANCH(1) EXIT COMPILE EXIT THERE @ DOTO HERE COMP-BUFFER EXECUTE)
+
+// Structure words.
+col(RESOLVE-ORIG HERE OVER CELL+ - SWAP !)
+imm(AHEAD +COMP DOTICK DOBRANCH COMPILE, HERE 0 COMPILE,)
+imm(IF +COMP DOTICK DO0BRANCH COMPILE, HERE 0 COMPILE,)
+imm(THEN ?COMP RESOLVE-ORIG -COMP)
+imm(ELSE ?COMP DOTICK DOBRANCH COMPILE, HERE 0 COMPILE, SWAP RESOLVE-ORIG)
+
+imm(CASE +COMP 0)
+imm(ENDCASE ?COMP DOTICK DROP COMPILE, ?DUP 0BRANCH(5) 1- SWAP THEN BRANCH(-8) -COMP)
+imm(OF ?COMP 1+ >R DOTICK OVER COMPILE, DOTICK = COMPILE, IF DOTICK DROP COMPILE, R>)
+imm(ENDOF ?COMP >R ELSE R>)
+
+col(RESOLVE-DEST HERE CELL+ - COMPILE,)
+imm(BEGIN +COMP HERE)
+imm(AGAIN ?COMP DOTICK DOBRANCH COMPILE, RESOLVE-DEST -COMP)
+imm(UNTIL ?COMP DOTICK DO0BRANCH COMPILE, RESOLVE-DEST -COMP)
+imm(WHILE ?COMP IF SWAP)
+imm(REPEAT ?COMP AGAIN THEN)
+
+// Counted loops.
+var(LEAVES 0)
+col(RESOLVE-LOOP LEAVES @ ?DUP 0BRANCH(10) DUP @ SWAP HERE OVER - SWAP ! BRANCH(-13) HERE - COMPILE, LEAVES !)
+imm(DO +COMP LEAVES @ HERE DOTICK DODO COMPILE, 0 LEAVES !)
+imm(?DO +COMP LEAVES @ DOTICK DODO?DO COMPILE, HERE HERE LEAVES ! 0 COMPILE,)
+imm(LOOP ?COMP DOTICK DODOLOOP COMPILE, RESOLVE-LOOP -COMP)
+imm(+LOOP ?COMP DOTICK DODO+LOOP COMPILE, RESOLVE-LOOP -COMP)
+imm(LEAVE ?COMP DOTICK DODOLEAVE COMPILE, LEAVES @ HERE LEAVES ! COMPILE,)
+imm(?LEAVE ?COMP DOTICK DODO?LEAVE COMPILE, LEAVES @ HERE LEAVES ! COMPILE,)
+
+// Interpreter nesting.
+col(SAVE-SOURCE R> IB >R #IB @ >R SOURCE-ID >R SPAN @ >R >IN @ >R >R)
+col(RESTORE-SOURCE R> R> >IN ! R> SPAN ! R> DOTO SOURCE-ID R> #IB ! R> DOTO IB >R)
+
+// System replies.
+str(OK-STR "ok")
+str(ABORTED-STR "Aborted")
+str(EXCEPTION-STR "Exception #")
+str(UNKNOWN-STR "Undefined word")
+dfr(HW-EXCEPTION-HANDLER)
+val(SHOW-STACK? 0)
+col(SHOWSTACK -1 DOTO  SHOW-STACK?)
+col(NOSHOWSTACK 0 DOTO  SHOW-STACK?)
+col(PRINT-STACK SHOW-STACK? 0BRANCH(5) >R >R .S R> R> )
+col(PRINT-EXCEPTION DUP LIT(-99) = 0BRANCH(7) DOTICK UNKNOWN-STR COUNT TYPE CR DROP EXIT DUP LIT(0x100) = 0BRANCH(2) DROP EXIT HW-EXCEPTION-HANDLER )
+col(PRINT-STATUS SPACE DUP 0= 0BRANCH(5) PRINT-STACK DOTICK OK-STR BRANCH(7) DUP -1 = 0BRANCH(6) DOTICK ABORTED-STR COUNT TYPE BRANCH(10) DUP LIT(-2) = 0BRANCH(7) ABORT"-STR @ COUNT TYPE DROP BRANCH(1) PRINT-EXCEPTION CR)
+
+// The compiler and interpreter.
+col(COMPILE-WORD 2DUP ($FIND) 0BRANCH(10) IMMEDIATE? 0BRANCH(4) NIP NIP EXECUTE EXIT COMPILE, 2DROP EXIT 2DUP $NUMBER 0BRANCH(4) TYPE LIT(-99) THROW DOTICK DOLIT COMPILE, COMPILE, 2DROP)
+col(INTERPRET-WORD 2DUP ($FIND) 0BRANCH(5) DROP NIP NIP EXECUTE EXIT 2DUP $NUMBER 0BRANCH(4) TYPE LIT(-99) THROW >R 2DROP R>)
+col(INTERPRET 0 >IN ! PARSE-WORD DUP 0BRANCH(10) STATE @ 0BRANCH(3) COMPILE-WORD BRANCH(1) INTERPRET-WORD BRANCH(-14) 2DROP)
+
+// Evaluate, the one word to rule them all.  It is evil, btw.
+col(EVALUATE SAVE-SOURCE -1 DOTO SOURCE-ID DUP #IB ! SPAN ! DOTO IB DOTICK INTERPRET CATCH RESTORE-SOURCE THROW)
+col(EVAL EVALUATE)
+
+// Abort with a message.
+col(DOABORT" SWAP 0BRANCH(5) ABORT"-STR ! LIT(-2) THROW DROP)
+imm(ABORT" C" DOTICK DOABORT" COMPILE,)
+
+// Tick.
+str(UNDEFINED-STR "undefined word ")
+col(SET-UNDEFINED-WORD POCKET >R DOTICK UNDEFINED-STR DUP C@ 1+ R@ SWAP MOVE R@ DUP C@ 1+ + SWAP DUP R@ C@ + R@ C! MOVE R>)
+col(' PARSE-WORD $FIND 0= 0BRANCH(4) SET-UNDEFINED-WORD TRUE SWAP DOABORT")
+
+// The outer interpreter.
+col(QUIT 0 RDEPTH! [ TERMINAL DEPTH . LIT('>') EMIT SPACE REFILL 0BRANCH(10) SPACE DOTICK INTERPRET CATCH DUP PRINT-STATUS 0BRANCH(-17) BRANCH(-23))
+
+// Reading and writing to/from file; including files.
+dfr(MAP-FILE)
+dfr(UNMAP-FILE)
+dfr(WRITE-FILE)
+col(INCLUDED MAP-FILE 2DUP >R >R BOUNDS DO?DO(21) R> R@ SWAP >R R@ - R@ SWAP 2DUP LINEFEED FINDCHAR 0BRANCH(1) NIP DUP >R EVALUATE R> 1+ DO+LOOP(-21) R> R> UNMAP-FILE)
+col(INCLUDE PARSE-WORD INCLUDED)
+
+// CREATE ... DOES> ...
+col($CREATE HEADER DOTICK DODOES COMPILE, DOTICK NOOP CELL+ COMPILE, REVEAL)
+col(CREATE PARSE-WORD $CREATE)
+col(DODOES> R> CELL+ LATEST @ LINK> CELL+ !)
+imm(DOES> DOTICK DODOES> COMPILE,)
+
+// Defining words.
+col(CONSTANT PARSE-WORD HEADER DOTICK DOCON COMPILE, COMPILE, REVEAL)
+col(VALUE PARSE-WORD HEADER DOTICK DOVAL COMPILE, COMPILE, REVEAL)
+col(VARIABLE PARSE-WORD HEADER DOTICK DOVAR COMPILE, 0 COMPILE, REVEAL)
+col(BUFFER: PARSE-WORD HEADER DOTICK DOBUFFER: COMPILE, ALLOT REVEAL)
+col(DEFER PARSE-WORD HEADER DOTICK DODEFER COMPILE, DOTICK ABORT COMPILE, REVEAL)
+col(ALIAS PARSE-WORD HEADER DOTICK DOALIAS COMPILE, ' COMPILE, REVEAL)
+col(STRUCT 0)
+col(END-STRUCT DROP)
+col(FIELD PARSE-WORD HEADER DOTICK DOFIELD COMPILE, OVER , + REVEAL)
+
+// Words with (mostly) non-standard compilation behaviour.
+imm(LITERAL DOTICK DOLIT COMPILE, COMPILE,)
+imm([COMPILE] ' COMPILE,)
+imm(POSTPONE PARSE-WORD 2DUP ($FIND) 0= 0BRANCH(4) SET-UNDEFINED-WORD TRUE SWAP DOABORT" IMMEDIATE? 0= 0BRANCH(6) DOTICK DOTICK COMPILE, COMPILE, DOTICK COMPILE, COMPILE, 2DROP)
+imm([CHAR] CHAR LITERAL)
+imm(['] ' DOTICK DOTICK COMPILE, COMPILE,)
+
+// FIND.
+col(FIND DUP COUNT ($FIND) 0BRANCH(9) ROT DROP TRUE SWAP IMMEDIATE? 0BRANCH(1) NEGATE EXIT FALSE EXIT)
+
+// Accessing data in CREATE'd words.
+imm(TO ' STATE @ 0BRANCH(5) DOTICK DOTO COMPILE, COMPILE, EXIT CELL+ !)
+col(BEHAVIOR CELL+ @)
+col(>BODY 2 CELLS +)
+col(BODY> 2 CELLS -)
+
+// Making words recursive.
+imm(RECURSIVE REVEAL)
+imm(RECURSE LATEST @ LINK> COMPILE,)
+
+// Numeric input.
+imm(d# PARSE-WORD BASE @ >R DECIMAL EVALUATE R> BASE !)
+imm(h# PARSE-WORD BASE @ >R HEX EVALUATE R> BASE !)
+imm(o# PARSE-WORD BASE @ >R OCTAL EVALUATE R> BASE !)

@@ -1,0 +1,25 @@
+/******************************************************************************
+ * Copyright (c) 2004, 2008 IBM Corporation
+ * All rights reserved.
+ * This program and the accompanying materials
+ * are made available under the terms of the BSD License
+ * which accompanies this distribution, and is available at
+ * http://www.opensource.org/licenses/bsd-license.php
+ *
+ * Contributors:
+ *     IBM Corporation - initial implementation
+ *****************************************************************************/
+
+/* There are 970 implementations. If we are ever to run native IOs
+ * on Power7 in hypervisor mode, these will have to change to use
+ * the new CI-load/store instructions
+ */
+PRIM(RB_X40) GET_CHAR1; SET_CI; GET_CHAR2; CLR_CI; GET_CHAR3; MIRP
+PRIM(RB_X21) PUT_CHAR1; SET_CI; PUT_CHAR2; CLR_CI; MIRP
+PRIM(RW_X40) GET_WORD1; SET_CI; GET_WORD2; CLR_CI; GET_WORD3; MIRP
+PRIM(RW_X21) PUT_WORD1; SET_CI; PUT_WORD2; CLR_CI; MIRP
+PRIM(RL_X40) GET_LONG1; SET_CI; GET_LONG2; CLR_CI; GET_LONG3; MIRP
+PRIM(RL_X21) PUT_LONG1; SET_CI; PUT_LONG2; CLR_CI; MIRP
+PRIM(RX_X40) GET_XONG1; SET_CI; GET_XONG2; CLR_CI; GET_XONG3; MIRP
+PRIM(RX_X21) PUT_XONG1; SET_CI; PUT_XONG2; CLR_CI; MIRP
+

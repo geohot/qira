@@ -1,0 +1,256 @@
+NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE!
+
+/dev/bios is obsolete and no longer under development. Please adapt all 
+changes to the "flashrom" utility of LinuxBIOS. This utility can be found
+at LinuxBIOSv2/utils/flashrom in the LinuxBIOS v2 repository. LinuxBIOS
+is available at http://www.linuxbios.org/
+
+I'm also looking for volunteers to port all features available in /dev/bios
+to flashrom so /dev/bios can be dropped from the OpenBIOS tree. These features
+include
+
+- block information about flash chips
+- block wise writing of flash chips
+- lots of supported flash chips and vendors.
+
+If you have questions, contact Stefan Reinauer <stepan@coresystems.de>
+
+NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE!
+
+
+/dev/bios documentation						  2002/02/19
+
+Table of contents
+------------------
+
+  1. What is /dev/bios?
+  2. What hardware/software do I need to run /dev/bios?
+  3. Where to get the latest release of /dev/bios
+  4. How to get /dev/bios work
+  5. Writing to the devices
+  6. About PCI chipsets (ix86 only)
+  7. About APM Powermanagement (ix86 only)
+  8. About different flashchips.
+  9. Hints for BIOS flashing
+
+If you want better information on this driver, read the ChangeLog,
+mail me or read the source, Luke :-)
+
+1. What is /dev/bios?
+----------------------
+
+This is a kernel driver for different kinds of (Flash)BIOSs that are
+available in today's hardware.
+
+There are well known BIOSs for
+ - System BIOS (resides at 0xe0000 on Intel PCs)
+ - graphics hardware
+ - SCSI host adapters
+ - networking interfaces with 'BOOT ROM'
+ - ...
+
+While in former times these BIOSs were implemented by using ROM or
+EPROM (both can't be updated without opening your computer) today's
+PC hardware is often delivered with so called FLASH ROMs. These
+can simply be updated by software. This driver has the approach to
+make Linux read and write flash roms.
+
+One word before you read ahead: This is still alpha software and
+writing to your flash roms may destroy them. So if you notice anything
+strange, don't even think about going on, but write some mail to:
+
+		Stefan Reinauer <stepan@openbios.org>
+
+Please note that I am not responsible in any way for what you
+do with this code or for what this code does with your computer.
+
+2. What hardware/software do I need to run /dev/bios?
+------------------------------------------------------
+
+Currently this driver supports ix86 (mainly Pentium,
+PPro, PII/III, Athlon, but some 486s), Itanium and Alpha 
+architecture.
+It supports all flash chips from 32k to 2M (theoretically). 
+Minimum kernel version is v2.2.x, but it's wise to use a
+2.4.x kernel.
+
+3. Where to get the latest release of /dev/bios?
+-------------------------------------------------
+
+/dev/bios was recently integrated into the OpenBIOS CVS
+tree for easier maintainance. General information can be
+found on the /dev/bios status page:
+http://www.freiburg.linux.de/OpenBIOS/status/devbios.html
+Latest releases of /dev/bios can be found at the download page:
+http://www.freiburg.linux.de/OpenBIOS/dev/download.html
+Latest development trees of /dev/bios can be found in the
+OpenBIOS CVS. For information how to access it, go to
+http://www.freiburg.linux.de/OpenBIOS/dev/cvs.html
+
+4. How do I get /dev/bios work
+-------------------------------
+
+Create the system bios device with
+
+	mknod /dev/bios c 104 0
+
+Now you can add devices for the other BIOSs (often known as option
+roms) in your Computer, i.e. like this:
+
+	mknod /dev/gfxbios c 104 1
+	mknod /dev/hddbios c 104 2
+	mknod /dev/netbios c 104 3
+
+The order of the devices may vary on your computer, maybe you even don't
+have a flash bios on your network card or on your scsi host adapter. You will
+have to decide this after playing  around a bit.
+
+Now you have to compile and insert the kernel driver module:
+
+	cd devbios
+	make clean && make
+	insmod bios.o
+
+Now you have a new device, /dev/bios and, if you have
+your kernel configured to have the /proc/ interface,
+you have a status file /proc/bios.
+
+Since this driver is in an early state, you should have
+a look at dmesg very often.
+
+5. Writing to the devices
+--------------------------
+
+If you insert bios.o without any options, you are not able
+to write any of the devices. To enable writing, you should
+use
+	insmod bios.o write=1
+
+Writing is now possible with i.e.
+   dd if=yourbios.bin of=/dev/bios bs=128k count=1
+or 
+   dd if=yourbios.bin of=/dev/bios bs=256k count=1
+
+depending on the size of your flash chip.
+
+You can use 'cat' for flashing as well. Note: Many flashchips are
+sectored and the whole sector has to be rewritten, the 4k clusters
+of cat may be very slow (and an 112 kb sector has to be written 28
+times completely instead of 1 time with dd)
+
+Make sure that your file "yourbios.bin" is a valid bios image for
+your motherboard and that it is not pkzipped or exe-pkzipped.
+(Usually, a 128kb bios images consist of 112kb lha-compressed data,
+2*4kb ESCD and DMI (PnP) Data and an 8 kb emergency boot block.)
+
+Writing to /dev/bios does not work for many chips right now. Write
+accesses are ignored in this case. If you want an unsupported flash 
+rom supported, please mail me. 
+WARNING: Setting an unsupported chip to "supported" without changing
+the rest of the code will *very likely* destroy the contents of your 
+chip.
+
+On machines with an AWARD bios you can test whether writing works
+safely by only deleting the ESCD/DMI memory on the flash chip.
+This data is rewritten by the bios when empty, corrupted or when
+you put in a new expansion device. In that case you should see a
+message stating "Updating ESCD" during the next boot.
+
+Please have a close look at the size of your flash chip. For 128k 
+flash chips, try
+
+	dd if=/dev/zero of=/dev/bios bs=4096 seek=28 count=2
+
+For 256k flash chips, you _MUST_ use the following line instead, 
+or your system bios is going byebye:
+
+	dd if=/dev/zero of=/dev/bios bs=4096 seek=56 count=2
+
+Attention: I found other machines with their ESCD memory in the
+first sectors of the flash chip. These are afaics 512k+ chips
+often connected via a firmware hub.
+Behaviour of other BIOSs may be similar, but I can't give you
+any warranty it works.
+
+NOTE: If you listen to music from your soundcard while flashing,
+you may get errors like this:
+	Sound: DMA (output) timed out - IRQ/DRQ config error?
+	
+Second, sound switches off while flashing. This is because all
+IRQs are blocked while the write procedure to ensure it doesn't
+get disturbed by any other hardware.
+
+6. About PCI chipsets
+----------------------
+
+Because this driver uses direct PCI accesses to switch shadowing
+and write protection of the bios off on PC architecture, each PCI
+chipset (or at least chipset group) has to be implemented and 
+tested seperately. Successfully tested PCI chipsets are
+
+	* Intel 430HX/TX, 440BX/ZX, 460, 8x0
+	* UMC 486 (8881F/8886A)
+	* VIA (M)VP3
+	* AMD Irongate and others
+	* ServerWorks chipsets
+	* NSC CS5530 (geode companion)
+
+Any success/error reports are highly welcome. If you need a certain
+system type supported, contact me.
+
+
+7. About APM Power Management (ix86 only)
+------------------------------------------
+
+This driver is known to cause kernel oopses with some of the chipset 
+drivers when APM is enabled. Reason is that the flash chip is mapped
+to the low bios address space which makes the unpacked bios image vanish
+so all pointers to APM functions are invalid. 
+Nowadays most of the chipset drivers only map the high bios area, so
+this problem should not occur on any but old UMC/SiS chipsets. If you
+encounter oopses while reading/probing flash devices, disable power 
+management before any write attempts. To achieve so, please pass "apm=off" 
+as a kernel option, if your kernel is compiled with APM support.
+
+
+
+8. About different flashchips
+------------------------------
+
+Flash chips, /dev/bios has been successfully tested (writing) on:
+
+	* Winbond 29EE011
+        * Intel 28F008(SA)
+	* Atmel AT29C512
+	* SST 29EE010, 39SF020
+
+It *should* work, if you see a "Supported: yes"  in /proc/bios, but 
+I am not responsible in any way for what you do.. Please be careful.
+Please report any working flash chips so that this list can be completed.
+Currently many more flash chips than mentioned here will work.
+If you need a certain flash device supported, contact me.
+
+9. Hints for BIOS-Flashing
+---------------------------
+
+* Always try to write to the ESCD/DMI Memory before you overwrite the rest
+  of a bios (ix86) If you get ANY errors in dmesg output, DO NOT CONTINUE!
+* Always "diff" the new bios with the written image before rebooting
+* You may use comp, a little utility in the devbios source tree instead
+  of diff. It has a nicer output for binary files.
+* on Intel, only write the first 120k of an image to the System ROM, this keeps
+  the emergency bootblock working.
+
+************** FINAL NOTE *****************************
+
+If you want to help this project, send me 
+
+ * /proc/bios-output
+ * dmesg-output (after insmodding the driver)
+ * your system-configuration 
+   (e.g. output of lspci or /proc/bus/pci/devices)
+ * any comments
+ * any ideas
+
+			Stefan Reinauer <stepan@openbios.org>
+

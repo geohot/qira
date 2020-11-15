@@ -1,0 +1,274 @@
+/******************************************************************************
+ * Copyright (c) 2004, 2008 IBM Corporation
+ * All rights reserved.
+ * This program and the accompanying materials
+ * are made available under the terms of the BSD License
+ * which accompanies this distribution, and is available at
+ * http://www.opensource.org/licenses/bsd-license.php
+ *
+ * Contributors:
+ *     IBM Corporation - initial implementation
+ *****************************************************************************/
+
+
+// This file contains the implementation of the Forth code words specific
+// to PowerPC64.  Some of this is 970-only.
+
+// 970-specific CPU registers.
+// Don't use on P7 !
+PRIM(HID0_X21)
+	unsigned long hid0 = TOS.u;
+	asm volatile("sync ; mtspr 1008,%0 ; mfspr %0,1008 ; mfspr %0,1008 ; mfspr %0,1008 ; mfspr %0,1008 ; mfspr %0,1008 ; mfspr %0,1008" : "+r"(hid0));
+	POP;
+MIRP
+
+PRIM(HID0_X40)
+	PUSH;
+	asm volatile("mfspr %0,1008" : "=r"(TOS));
+MIRP
+
+PRIM(HID1_X21)
+	unsigned long hid1 = TOS.u;
+	asm volatile("mtspr 1009,%0 ; mtspr 1009,%0 ; isync" : : "r"(hid1));
+	POP;
+MIRP
+
+PRIM(HID1_X40)
+	PUSH;
+	asm volatile("mfspr %0,1009" : "=r"(TOS));
+MIRP
+
+PRIM(HID4_X21)
+	unsigned long hid4 = TOS.u;
+	asm volatile("sync ; mtspr 1012,%0 ; isync" : : "r"(hid4));
+	POP;
+MIRP
+
+PRIM(HID4_X40)
+	PUSH;
+	asm volatile("mfspr %0,1012" : "=r"(TOS));
+MIRP
+
+PRIM(HID5_X21)
+	unsigned long hid5 = TOS.u;
+	asm volatile("mtspr 1014,%0" : : "r"(hid5));
+	POP;
+MIRP
+
+PRIM(HID5_X40)
+	PUSH;
+	asm volatile("mfspr %0,1014" : "=r"(TOS));
+MIRP
+
+// PowerPC special registers.
+PRIM(MSR_X21)
+	unsigned long msr = TOS.u;
+	asm volatile("mtmsrd %0" : : "r"(msr));
+	POP;
+MIRP
+
+PRIM(MSR_X40)
+	PUSH;
+	asm volatile("mfmsr %0" : "=r"(TOS));
+MIRP
+
+PRIM(SDR1_X21)
+	unsigned long sdr1 = TOS.u;
+	asm volatile("mtsdr1 %0" : : "r"(sdr1));
+	POP;
+MIRP
+
+PRIM(SDR1_X40)
+	PUSH;
+	asm volatile("mfsdr1 %0" : "=r"(TOS));
+MIRP
+
+PRIM(PVR_X40)
+	PUSH;
+	asm volatile("mfpvr %0" : "=r"(TOS));
+MIRP
+
+PRIM(PIR_X40)
+	PUSH;
+	asm volatile("mfspr %0,1023" : "=r"(TOS));
+MIRP
+
+PRIM(TBL_X40)
+	PUSH;
+	asm volatile("mftbl %0" : "=r"(TOS));
+MIRP
+
+PRIM(TBU_X40)
+	PUSH;
+	asm volatile("mftbu %0" : "=r"(TOS));
+MIRP
+
+PRIM(DABR_X21)
+	unsigned long dabr = TOS.u;
+	asm volatile("mtspr 1013,%0" : : "r"(dabr));
+	POP;
+MIRP
+
+PRIM(DABR_X40)
+	PUSH;
+	asm volatile("mfspr %0,1013" : "=r"(TOS));
+MIRP
+
+PRIM(HIOR_X21)
+	unsigned long dabr = TOS.u;
+	asm volatile("mtspr 311,%0" : : "r"(dabr));
+	POP;
+MIRP
+
+PRIM(HIOR_X40)
+	PUSH;
+	asm volatile("mfspr %0,311" : "=r"(TOS));
+MIRP
+
+
+
+PRIM(SPRG0_X21)
+	unsigned long sprg0 = TOS.u;
+	asm volatile("mtsprg0 %0" : "+r"(sprg0));
+	POP;
+MIRP
+
+PRIM(SPRG0_X40)
+	PUSH;
+	asm volatile("mfsprg0 %0" : "=r"(TOS));
+MIRP
+
+PRIM(SPRG1_X21)
+	unsigned long sprg1 = TOS.u;
+	asm volatile("mtsprg1 %0" : "+r"(sprg1));
+	POP;
+MIRP
+
+PRIM(SPRG1_X40)
+	PUSH;
+	asm volatile("mfsprg1 %0" : "=r"(TOS));
+MIRP
+
+PRIM(SPRG2_X21)
+	unsigned long sprg2 = TOS.u;
+	asm volatile("mtsprg2 %0" : "+r"(sprg2));
+	POP;
+MIRP
+
+PRIM(SPRG2_X40)
+	PUSH;
+	asm volatile("mfsprg2 %0" : "=r"(TOS));
+MIRP
+
+PRIM(SPRG3_X21)
+	unsigned long sprg3 = TOS.u;
+	asm volatile("mtsprg3 %0" : "+r"(sprg3));
+	POP;
+MIRP
+
+PRIM(SPRG3_X40)
+	PUSH;
+	asm volatile("mfsprg3 %0" : "=r"(TOS));
+MIRP
+
+PRIM(HSPRG0_X21)
+	unsigned long hsprg0 = TOS.u;
+	asm volatile("mtspr 304,%0" : "+r"(hsprg0));
+	POP;
+MIRP
+
+PRIM(HSPRG0_X40)
+	PUSH;
+	asm volatile("mfspr %0,304" : "=r"(TOS));
+MIRP
+
+PRIM(HSPRG1_X21)
+	unsigned long hsprg1 = TOS.u;
+	asm volatile("mtspr 305,%0" : "+r"(hsprg1));
+	POP;
+MIRP
+
+PRIM(HSPRG1_X40)
+	PUSH;
+	asm volatile("mfspr %0,305" : "=r"(TOS));
+MIRP
+
+
+PRIM(MMCR0_X21)
+	unsigned long mmcr0 = TOS.u;
+	asm volatile("sync ; mtspr 795,%0 ; isync" : : "r"(mmcr0));
+	POP;
+MIRP
+
+PRIM(PMC1_X40)
+	PUSH;
+	asm volatile("sync ; mfspr %0,787" : "=r"(TOS));
+MIRP
+
+PRIM(ICBI)
+	asm volatile("dcbst 0,%0 ; sync ; icbi 0,%0 ; sync ; isync" : : "r"(TOS));
+	POP;
+MIRP
+
+// Call into the client program.
+PRIM(JUMP_X2d_CLIENT)
+	TOS.u = call_client(TOS);
+MIRP
+
+
+// Hang.  Useful for debugging, believe it or not.
+PRIM(CRASH)
+	for (;;) ;
+MIRP
+
+PRIM(START_X2d_RTAS)
+	cell e = TOS; POP;
+	cell p1 = TOS; POP;
+	cell p0 = TOS;
+	TOS.u = call_c(p0, p1, (cell)0UL, e);
+MIRP
+
+PRIM(CALL_X2d_C)
+	cell e = TOS; POP;
+	cell p2 = TOS; POP;
+	cell p1 = TOS; POP;
+	cell p0 = TOS;
+	TOS.u = call_c(p0, p1, p2, e);
+MIRP
+
+PRIM(FLUSHCACHE)
+	type_u n = TOS.u; POP;
+	unsigned char* p = TOS.a; POP;
+	flush_cache(p, n);	
+MIRP
+
+PRIM(DEC_X21)
+	unsigned long dec = TOS.u;
+	asm volatile("mtdec %0" : "+r"(dec));
+	POP;
+MIRP
+
+PRIM(DEC_X40)
+	PUSH;
+	asm volatile("mfdec %0" : "=r"(TOS));
+MIRP
+
+PRIM(BM_X2d_ALLOCATOR_X2d_INIT)
+	unsigned long blocksize = TOS.u; POP;
+	unsigned long size = TOS.u; POP;
+	unsigned long start = TOS.u;
+	TOS.u = SLOF_bm_allocator_init(start, size, blocksize);
+MIRP
+
+PRIM(BM_X2d_ALLOC)
+	unsigned long size = TOS.u; POP;
+	unsigned long handle = TOS.u;
+	TOS.u = SLOF_bm_alloc(handle, size);
+MIRP
+
+PRIM(BM_X2d_FREE)
+	unsigned long size = TOS.u; POP;
+	unsigned long addr = TOS.u; POP;
+	unsigned long handle = TOS.u; POP;
+	SLOF_bm_free(handle, addr, size);
+MIRP

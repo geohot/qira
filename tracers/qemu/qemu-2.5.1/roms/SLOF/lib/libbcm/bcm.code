@@ -1,0 +1,57 @@
+/******************************************************************************
+ * Copyright (c) 2013 IBM Corporation
+ * All rights reserved.
+ * This program and the accompanying materials
+ * are made available under the terms of the BSD License
+ * which accompanies this distribution, and is available at
+ * http://www.opensource.org/licenses/bsd-license.php
+ *
+ * Contributors:
+ *     IBM Corporation - initial implementation
+ *****************************************************************************/
+
+/*
+ * libbcm Forth wrapper
+ */
+
+#include <bcm57xx.h>
+
+// : bcm57xx-open  ( -- false | [ driver true ] )
+PRIM(BCM57XX_X2d_OPEN)
+{
+	net_driver_t *net_driver = bcm57xx_open();
+	if (net_driver) {
+		PUSH;
+		TOS.u = (unsigned long)net_driver; PUSH;
+		TOS.n = -1;
+	} else {
+		PUSH;
+		TOS.n = 0;
+	}
+}
+MIRP
+
+// : bcm57xx-close  ( driver -- )
+PRIM(BCM57XX_X2d_CLOSE)
+{
+	net_driver_t *driver = TOS.a; POP;
+	bcm57xx_close(driver);
+}
+MIRP
+
+
+// : bcm57xx-read  ( addr len -- actual )
+PRIM(BCM57XX_X2d_READ)
+{
+	int len = TOS.u; POP;
+	TOS.n = bcm57xx_read(TOS.a, len);
+}
+MIRP
+
+// : bcm57xx-write  ( addr len -- actual )
+PRIM(BCM57XX_X2d_WRITE)
+{
+	int len = TOS.u; POP;
+	TOS.n = bcm57xx_write(TOS.a, len);
+}
+MIRP

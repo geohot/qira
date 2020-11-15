@@ -1,0 +1,295 @@
+NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE!
+
+/dev/bios is obsolete and no longer under development. Please adapt all
+changes to the "flashrom" utility of LinuxBIOS. This utility can be found
+at LinuxBIOSv2/utils/flashrom in the LinuxBIOS v2 repository. LinuxBIOS
+is available at http://www.linuxbios.org/
+
+I'm also looking for volunteers to port all features available in /dev/bios
+to flashrom so /dev/bios can be dropped from the OpenBIOS tree. These features
+include
+
+- block information about flash chips
+- block wise writing of flash chips
+- lots of supported flash chips and vendors.
+
+If you have questions, contact Stefan Reinauer <stepan@coresystems.de>
+
+NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE!
+
+
+ChangeLog for /dev/bios 
+
+** 2004/03/31 ********************************************************
+
+ * Added fix from Alex Beregszaszi to remove global *bios
+
+** 2004/03/05 ********************************************************
+
+ * fix compiling for 2.6 kernels.
+
+** 03/06/04 **********************************************************
+
+ * add SST49LF080A
+ * small 2.5 fix.
+
+** 02/06/10 **********************************************************
+
+ * some changes to detect pci cards firmware.
+ * pci cards firmware can be read even if flashing is not possible. 
+   This is a new feature and might cause problems on some systems.
+
+** 02/04/16 **********************************************************
+
+ * reorganize Makefile, include .config from kernel.
+ * platform fixes for clean compilation.
+
+** 02/04/12 **********************************************************
+
+ * proprietary x86-64 support.
+ * change ruffian probe address
+
+** 02/03/28 **********************************************************
+
+ * proper implementation of system firmware detection on LX164 Alphas
+ * partly include jedec command cleanup patch from Pierrick Hascoet
+   <pierrick.hascoet@hydromel.net>
+
+** 02/03/11 **********************************************************
+
+ * only probe 512k on CS5530(A)
+ * add EON EN29F002 chips.
+
+** 02/02/22 **********************************************************
+
+ * rewrite major parts of bridge probing to make driver more generic.
+ * add Ali chipset support
+ * Saner iounmap() of flash devices.
+
+** 02/02/18 * 0.3.2 **************************************************
+
+ * change cs5530 driver to map high rom range instead of low one
+   and don't use positive decode.
+ * remove ruffian flag. Alpha (164LX/UX) almost works with pc code.
+ * don't rely on register defaults in intel 8xx driver.
+ * updated pci device list. more entries, join amd and via entry.
+ * fix error handling in chipset detection.
+ * add support for Reliance/ServerWorks chipsets
+ * enable 1M 512k on intel 4x0 chips where it's possible
+ * cleanup proc file handling
+
+** 02/02/17 **********************************************************
+
+ * rewrote chipset initialisation skeleton.
+ * fix pci bios (un)mapping.
+ * experimental support for AlphaPC 164UX (Ruffian)
+   (probes at 0xfffffffffffc0000 instead of 0xfffffc87C0000000
+ * initial code for FWH mode chips
+ * Fix Toggle-Until-Ready code.
+
+** 02/02/16 **********************************************************
+
+ * iounmapping fixed. no more address space wasted.
+ * /proc/bios shows physical address now. dmesg shows 
+   physical address and virtual memory area and offset.
+
+** 02/02/13 **********************************************************
+
+ * added i820/i830 chipset support
+ * added AMD 751/760MP(X) support
+ * added support for Itanium and 84460GX chipset
+ * added experimental support for some flash chips (ST, Intel, 
+   Winbond)
+ * use spinlocks instead of hard cli()
+ 
+** 02/02/11 **********************************************************
+
+ * added GPL licence tag 
+ * remove low bios area access tweaking for intel drivers
+ * speed up SST 39SF020 write
+ * fix compilation for 2.5 kernels
+
+** 02/02/05 **********************************************************
+
+ * added support for cs5530 (nsc/cyrix mediagx) chipset
+ * reorganized shadow/wp handling
+ * probe for 2mb high memory area instead of 256k only 
+ 
+** 01/08/01 * 0.3.1 **************************************************
+
+ * compiles and works with Linux kernel 2.4
+ * rewrote flash chip probing
+ * always use ioremap now
+ * flash chips above 128k should work transparent
+ * Support for newer VIA chipsets
+
+** 00/10/15 * 0.3.0pre1 **********************************************
+
+ * added patch from Eric Estabrook
+ * support for 256k flash chips on intel 430/440 chipsets and via vp3
+ * split up source into several files
+ * Changes for Ruffian AXP machines. Does not work (yet).
+
+** 99/07/29 * 0.2.101 ************************************************
+
+ * Oh well.. 11 months? Impossible. I am a lazy guy. Implemented
+   some support for VIA Apollo VP3. Don't know whether it works, since
+   I don't have one.
+
+** 98/09/06 **********************************************************
+
+patches by prumpf@jcsbs.lanobis.de:
+ * The pointer to bios_release in bios.c was on the flush pointer's
+   position. This caused Oopses.
+ * When bios_read was called with a file position after the actual end
+   of bios, it tried to read non-existant memory positions due to size
+   being unsigned (it isn't anymore) , causing spontaneous reboots on
+   my system
+
+** 98/08/22 **********************************************************
+
+ * Well,.. The diskless spectacle (0.2.100) was caused by a little bug
+   in in handling Intel PCI chipsets. Works now.
+ * Threw out the chipset_backout stuff. the PCI chipset handling should
+   always leave the machine in the same state it was before. ALWAYS.
+
+** 98/08/18 * 0.2.100 ************************************************
+
+ * Threw out the mem_type stuff. There are more important things than
+   this.
+ * Argh! After flashing fine on an Intel 28F001BT, the computer kept
+   hanging in an endless loop and refused writing the emergency boot
+   block to the end :-( There's some work until 0.3 is ready.
+   Implemented a timeout so that the system will not hang forever if
+   the flashchip behaves unexpected.
+ * Removed x86 probing in a loop. I think it never found anything else
+   but the system bios and *maybe* the graphics adapter bios. On the
+   other hand, it reconfigures some networking cards to silence.
+   Bad thing on diskless Linux boxes :)
+
+** 98/08/15 **********************************************************
+
+ * added some changes for intel to compile without warnings..
+
+** 98/08/02 **********************************************************
+
+ * What a boring job! Checked some dozen of flash chip entries today
+   and added a lot of new ones. I bet it gets hard to find anything
+   this driver does not know.
+
+** 98/07/28 **********************************************************
+
+  * Yeah! Atmel Chips finally work.. These Atmel guys are really weird.
+  * Testing last instead of first written byte now, when polling for the
+    end of a write access.
+
+** 98/07/28 **********************************************************
+
+  * Well, I am definitely spending too much time in IRC, but detecting
+    PCI cards' bioses works now (at least for me)
+  * Thrown out some obsolete stuff.
+  * Declared PCI and Flash reading/writing __inline__. Don't know,
+    whether this is a good idea. But let's try it for a while.
+  * Aaaargh! Some major mistakes in handling whether a flash has to
+    be erased before programming. FIXED!
+  * Even worse. An endless loop made it into writing in 0.2.99. Sorry!
+    I had no chance to test writing on an intel board with that release.
+    At least my warning, not to write, made sense.
+  * Intel flashchips are supported now!! It's at least tested on my
+    Alpha AXP LX164 Board (1MByte i28f008 chip) But all Intel flash chips
+    seem to work in the same way. 
+  * Atmel 64kByte flash chips supported.
+
+** 98/07/27 **********************************************************
+
+  * Split up flash_probe in 2 parts to be able to expand probing on
+    PCI bioses and others correctly.
+  * Turned around 1st and 2nd probing codes. This is funny, Atmel 
+    Flashroms give some wrong numbers if they are probed with the
+    0x80/0x60 way. I only hope that no flashchips react on the
+    0x90 method with wrong values.
+
+** 98/07/19 * V0.2.99 ************************************************
+
+  * Reading the flashchip works now on Alpha AXP (at least on my LX164
+    Board)
+    Writing ought to work, too, but Intel Flashchips are not supported
+    yet. This should be done until 0.3.0.
+    NOTE: I have no idea whether this driver still works on intel
+    boards or not. There have been too many changes. Please try, but
+    do not flash with this release of the driver.
+  * Minor Changes and fixes. Naming scheme changed a bit. This version
+    might work on James Mastros' machine again ?!?
+
+** 98/07/11 **********************************************************
+
+  * Started porting stuff to Alpha AXP architecture to continue testing
+    the flashing routines. We have a lot of tests next week, so I
+    won't get much stuff done..
+    Porting to AXP seems to be much more work than I thought. It may
+    take some time until the next version is released.
+  * Moved major number again. This time we have an official major
+    number for /dev/bios. Thanks to Hans Peter Anvin.
+    (Well, we have this one since May 1st, sorry for the delay)
+
+** 98/06/26 * V0.2.95 ************************************************
+
+  * added all Manufacturer IDs from the JEDEC standards publication.
+  * sorry for not having released a new version since months, but
+    my x86 machine died and I have no chance to do any testing right
+    now. I guess I must get a new Intel box, as Alpha AXP are all
+    delivered with the same Intel flash chips.
+
+** 98/04/30 * V0.2.9 *************************************************
+
+  * removed ioctls. They have been really unneccesary and did not fit
+    into the new driver layout.
+  * cleaned up the code. Hey, it should be readable again.
+  * Moved device minors from 10+ to 0+
+  * Rewrote most of the documentation
+  * changed intel shadowing routines. Now original values are saved
+    and shadowing is turned off for 0xc0000 to 0xdffff, too (This
+    was needed to support 2MBit system bios flash chips. Thanks again
+    to Matthew Harrell for intensive testing.
+  * Removed dirty hacks from bios_read_proc()
+  * Added some fields to struct flashdevice to support all ROM types,
+    not only flash roms. Probing for other types still missing.
+  * Implemented probing for some strange Winbond chips (0x80/0x20).
+
+** 98/04/27 * V0.2.8 *************************************************
+
+	*** Attention *** This version has a lot of changes since
+            0.2.7, so be very careful, when testing. Things may 
+                        be broken that used to work.
+
+  * Rewrote big parts of the driver to (theoretically) support
+    multiple flash chips and/or ROM areas.
+  * Tried to implement support for 2MBit System BIOS chips, but
+    I have no idea, whether it works. I don't have one.
+  * added some more OPTi, SiS and VIA PCI chipsets to chipset list.
+    They have no function yet, though.
+  * Some weird computers have an ISA bridge, but don't have it declared
+    as one. Now probing for known ISA bridge IDs. (Thanks to Matthew 
+    Harrell for reporting this.)
+  * Added some new flashchip IDs and made some old ones work.
+
+** 98/04/24 * V0.2.7 *************************************************
+
+  * rewrote shadowing and wp functions to use a pci_functions structure
+    This makes it very easy to include new PCI chipsets.
+  * function chipset_init() detects PCI chipset.
+  * modversions support. Thanks to Matthew Harrell.
+  * moved PCI bridge detection to chipset_init()
+
+** 98/04/23 * V0.2.6 *************************************************
+
+  * repaired flashchip_ready_toggle and flashchip_ready_poll.
+  * Set WRITE_DELAY to 300 as it should be (works now)
+  * NOTE: These two changes make the operation of /dev/bios
+    theoretically correct, and by that quite secure.
+
+**********************************************************************
+
+There was no ChangeLog for versions prior to 0.2.6
+
+Stefan Reinauer, <stepan@openbios.org>

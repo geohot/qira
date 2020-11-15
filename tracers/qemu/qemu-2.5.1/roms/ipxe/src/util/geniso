@@ -1,0 +1,142 @@
+#!/bin/bash
+#
+# Generate a isolinux ISO boot image
+
+function help() {
+	echo "usage: ${0} [OPTIONS] foo.lkrn [bar.lkrn,...]"
+	echo
+	echo "where OPTIONS are:"
+	echo " -h       show this help"
+	echo " -l       build legacy image with floppy emulation"
+	echo " -o FILE  save iso image to file"
+}
+
+LEGACY=0
+FIRST=""
+
+while getopts "hlo:" opt; do
+	case ${opt} in
+		h)
+			help
+			exit 0
+			;;
+		l)
+			LEGACY=1
+			;;
+		o)
+			OUT="${OPTARG}"
+			;;
+	esac
+done
+
+shift $((OPTIND - 1))
+
+if [ -z "${OUT}" ]; then
+	echo "${0}: no output file given" >&2
+	help
+	exit 1
+fi
+
+# There should either be mkisofs or the compatible genisoimage program
+for command in genisoimage mkisofs; do
+	if ${command} --version >/dev/null 2>/dev/null; then
+		mkisofs=(${command})
+		break
+	fi
+done
+
+if [ -z "${mkisofs}" ]; then
+	echo "${0}: mkisofs or genisoimage not found, please install or set PATH" >&2
+	exit 1
+fi
+
+dir=$(mktemp -d bin/iso.dir.XXXXXX)
+cfg=${dir}/isolinux.cfg
+
+mkisofs+=(-quiet -l -volid "iPXE" -preparer "iPXE build system"
+	-appid "iPXE ${VERSION} - Open Source Network Boot Firmware"
+	-publisher "http://ipxe.org/" -c boot.cat)
+
+# generate the config
+cat > ${cfg} <<EOF
+# These default options can be changed in the geniso script
+SAY iPXE ISO boot image
+TIMEOUT 30
+EOF
+for f; do
+	if [ ! -r ${f} ]; then
+		echo "${f} does not exist, skipping" >&2
+		continue
+	fi
+	b=$(basename ${f})
+	g=${b%.lkrn}
+	g=${g//[^a-z0-9]}
+	g=${g:0:8}.krn
+	case "${FIRST}" in
+		"")
+			echo "DEFAULT ${b}"
+			FIRST=${g}
+			;;
+	esac
+	echo "LABEL ${b}"
+	echo " KERNEL ${g}"
+	cp ${f} ${dir}/${g}
+done >> ${cfg}
+
+case "${LEGACY}" in
+	1)
+		# check for mtools
+		case "$(mtools -V)" in
+			Mtools\ version\ 3.9.9*|Mtools\ version\ 3.9.1[0-9]*|[mM]tools\ *\ [4-9].*)
+				;;
+			*)
+				echo "Mtools version 3.9.9 or later is required" >&2
+				exit 1
+				;;
+		esac
+
+		# generate floppy image
+		img=${dir}/boot.img
+		mformat -f 1440 -C -i ${img} ::
+
+		# copy lkrn file to floppy image
+		for f in ${dir}/*.krn; do
+			mcopy -m -i ${img} ${f} ::$(basename ${g})
+			rm -f ${f}
+		done
+
+		# copy config file to floppy image
+		mcopy -i ${img} ${cfg} ::syslinux.cfg
+		rm -f ${cfg}
+
+		# write syslinux bootloader to floppy image
+		if ! syslinux ${img}; then
+			echo "${0}: failed writing syslinux to floppy image ${img}" >&2
+			exit 1
+		fi
+
+		# generate the iso image
+		"${mkisofs[@]}" -b boot.img -output ${OUT} ${dir}
+		;;
+	0)
+		# copy isolinux bootloader
+		cp ${ISOLINUX_BIN} ${dir}
+
+		# syslinux 6.x needs a file called ldlinux.c32
+		LDLINUX_C32=$(dirname ${ISOLINUX_BIN})/ldlinux.c32
+		if [ -s ${LDLINUX_C32} ]; then
+			cp ${LDLINUX_C32} ${dir}
+		fi
+
+		# generate the iso image
+		"${mkisofs[@]}" -b isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table -output ${OUT} ${dir}
+
+		# isohybrid will be used if available
+		if isohybrid --version >/dev/null 2>/dev/null; then
+			isohybrid ${OUT} >/dev/null
+		fi
+		;;
+esac
+
+# clean up temporary dir
+rm -fr ${dir}

@@ -1,0 +1,72 @@
+<build condition="SPARC64">
+
+ <dictionary name="openbios-sparc64" init="openbios">
+  <object source="tree.fs" target="forth"/>
+  <object source="init.fs" target="forth"/>
+  <object source="QEMU,VGA.bin" target="fcode" condition="DRIVER_VGA"/>
+ </dictionary>
+
+ <library name="sparc64" type="static" target="target">
+  <object source="openbios.c"/>
+  <object source="console.c"/>
+  <object source="lib.c"/>
+  <object source="boot.c"/>
+  <object source="context.c"/>
+  <object source="switch.S"/>
+  <object source="linux_load.c"/>
+  <object source="sys_info.c"/>
+  <object source="ofmem_sparc64.c"/>
+  <object source="entry.S"/>
+  <object source="vectors.S"/>
+  <object source="call-client.S"/>
+ </library>
+
+ <executable name="openbios-plain.elf" target="target" condition="IMAGE_ELF">
+  <rule>
+	$(call quiet-command,$(LD) --warn-common -T $(SRCDIR)/arch/sparc64/ldscript -o $@.nostrip --whole-archive $^,"  LINK  $(TARGET_DIR)$@")
+	$(call quiet-command,$(NM) $@.nostrip | sort > $(ODIR)/openbios-plain.syms,"  GEN   $(TARGET_DIR)$@.syms")
+	$(call quiet-command,$(STRIP) $@.nostrip -o $@,"  STRIP $(TARGET_DIR)$@")</rule>
+  <object source="plainboot.c"/>
+  <external-object source="libsparc64.a"/>
+  <external-object source="libbootstrap.a"/>
+  <external-object source="libopenbios.a"/>
+  <external-object source="libpackages.a"/>
+  <external-object source="libdrivers.a"/>
+  <external-object source="libfs.a"/>
+  <external-object source="liblibc.a"/>
+  <external-object source="libgcc.a"/>
+ </executable>
+
+ <!-- HACK ALERT -->
+
+ <executable name="target/include/static-dict.h" target="target" condition="IMAGE_ELF_EMBEDDED">
+  <rule><![CDATA[
+	$(call quiet-command,$(ODIR)/forthstrap -x -D $@ -d $< </dev/null, "  GEN   $(TARGET_DIR)$@")]]></rule>
+  <external-object source="openbios-sparc64.dict"/>
+ </executable>
+
+ <executable name="target/arch/sparc64/builtin.o" target="target" condition="IMAGE_ELF_EMBEDDED">
+  <rule><![CDATA[ $(SRCDIR)/arch/sparc64/builtin.c $(ODIR)/target/include/static-dict.h
+	$(call quiet-command,$(CC) $$EXTRACFLAGS $(CFLAGS) $(INCLUDES) -c -o $@ $(SRCDIR)/arch/sparc64/builtin.c, "  CC    $(TARGET_DIR)$@")]]></rule>
+ </executable>
+
+ <!-- END OF HACK ALERT -->
+
+ <executable name="openbios-builtin.elf" target="target" condition="IMAGE_ELF_EMBEDDED">
+ <!-- We use -N to reduce the file size by 1M -->
+  <rule>
+	$(call quiet-command,$(LD) --warn-common -N -T $(SRCDIR)/arch/sparc64/ldscript -o $@.nostrip --whole-archive $^,"  LINK  $(TARGET_DIR)$@")
+	$(call quiet-command,$(NM) $@.nostrip | sort > $(ODIR)/openbios-builtin.syms,"  GEN   $(TARGET_DIR)$@.syms")
+	$(call quiet-command,$(STRIP) $@.nostrip -o $@,"  STRIP $(TARGET_DIR)$@")</rule>
+  <external-object source="target/arch/sparc64/builtin.o"/>
+  <external-object source="libsparc64.a"/>
+  <external-object source="libbootstrap.a"/>
+  <external-object source="libopenbios.a"/>
+  <external-object source="libpackages.a"/>
+  <external-object source="libdrivers.a"/>
+  <external-object source="libfs.a"/>
+  <external-object source="liblibc.a"/>
+  <external-object source="libgcc.a"/>
+ </executable>
+
+</build>

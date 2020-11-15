@@ -1,0 +1,15 @@
+<build>
+ <library name="fs" type="static" target="target">
+  <object source="block.c" flags="-I$(SRCDIR)/fs/hfs/include -I$(SRCDIR)/fs/ -fno-strict-aliasing" condition="HFS"/>
+  <object source="btree.c" flags="-I$(SRCDIR)/fs/hfs/include -I$(SRCDIR)/fs/ -fno-strict-aliasing" condition="HFS"/>
+  <object source="data.c" flags="-I$(SRCDIR)/fs/hfs/include -I$(SRCDIR)/fs/ -fno-strict-aliasing" condition="HFS"/>
+  <object source="file.c" flags="-I$(SRCDIR)/fs/hfs/include -I$(SRCDIR)/fs/ -fno-strict-aliasing" condition="HFS"/>
+  <object source="hfs.c" flags="-I$(SRCDIR)/fs/hfs/include -I$(SRCDIR)/fs/ -fno-strict-aliasing" condition="HFS"/>
+  <object source="low.c" flags="-I$(SRCDIR)/fs/hfs/include -I$(SRCDIR)/fs/ -fno-strict-aliasing" condition="HFS"/>
+  <object source="medium.c" flags="-I$(SRCDIR)/fs/hfs/include -I$(SRCDIR)/fs/ -fno-strict-aliasing" condition="HFS"/>
+  <object source="node.c" flags="-I$(SRCDIR)/fs/hfs/include -I$(SRCDIR)/fs/ -fno-strict-aliasing" condition="HFS"/>
+  <object source="record.c" flags="-I$(SRCDIR)/fs/hfs/include -I$(SRCDIR)/fs/ -fno-strict-aliasing" condition="HFS"/>
+  <object source="volume.c" flags="-I$(SRCDIR)/fs/hfs/include -I$(SRCDIR)/fs/ -fno-strict-aliasing" condition="HFS"/>
+  <object source="hfs_fs.c" flags="-I$(SRCDIR)/fs/hfs/include -I$(SRCDIR)/fs/ -fno-strict-aliasing" condition="HFS"/>
+ </library>
+</build>

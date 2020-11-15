@@ -1,0 +1,282 @@
+#!/bin/bash
+#
+# Test command line configuration of block devices and driver-specific options
+#
+# Copyright (C) 2013 Red Hat, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# creator
+owner=kwolf@redhat.com
+
+seq=`basename $0`
+echo "QA output created by $seq"
+
+here=`pwd`
+tmp=/tmp/$$
+status=1	# failure is the default!
+
+_cleanup()
+{
+	_cleanup_test_img
+}
+trap "_cleanup; exit \$status" 0 1 2 3 15
+
+# get standard environment, filters and checks
+. ./common.rc
+. ./common.filter
+
+_supported_fmt qcow2
+_supported_proto file
+_supported_os Linux
+# A compat=0.10 image is created in this test which does not support anything
+# other than refcount_bits=16
+_unsupported_imgopts 'refcount_bits=\([^1]\|.\([^6]\|$\)\)'
+
+function do_run_qemu()
+{
+    echo Testing: "$@"
+    (
+        if ! test -t 0; then
+            while read cmd; do
+                echo $cmd
+            done
+        fi
+        echo quit
+    ) | $QEMU -nographic -monitor stdio -serial none "$@"
+    echo
+}
+
+function run_qemu()
+{
+    do_run_qemu "$@" 2>&1 | _filter_testdir | _filter_qemu
+}
+
+size=128M
+
+_make_test_img $size
+cp "$TEST_IMG" "$TEST_IMG.orig"
+mv "$TEST_IMG" "$TEST_IMG.base"
+_make_test_img -b "$TEST_IMG.base" $size
+
+echo
+echo === Unknown option ===
+echo
+
+run_qemu -drive file="$TEST_IMG",format=qcow2,unknown_opt=
+run_qemu -drive file="$TEST_IMG",format=qcow2,unknown_opt=on
+run_qemu -drive file="$TEST_IMG",format=qcow2,unknown_opt=1234
+run_qemu -drive file="$TEST_IMG",format=qcow2,unknown_opt=foo
+
+echo
+echo === Unknown protocol option ===
+echo
+
+run_qemu -drive file="$TEST_IMG",format=qcow2,file.unknown_opt=
+run_qemu -drive file="$TEST_IMG",format=qcow2,file.unknown_opt=on
+run_qemu -drive file="$TEST_IMG",format=qcow2,file.unknown_opt=1234
+run_qemu -drive file="$TEST_IMG",format=qcow2,file.unknown_opt=foo
+
+echo
+echo === Invalid format ===
+echo
+
+run_qemu -drive file="$TEST_IMG",format=foo
+run_qemu -drive file="$TEST_IMG",driver=foo
+run_qemu -drive file="$TEST_IMG",driver=raw,format=qcow2
+run_qemu -drive file="$TEST_IMG",driver=qcow2,format=qcow2
+
+echo
+echo === Device without drive ===
+echo
+
+run_qemu -device virtio-scsi-pci -device scsi-hd
+
+echo
+echo === Overriding backing file ===
+echo
+
+echo "info block" | run_qemu -drive file="$TEST_IMG",driver=qcow2,backing.file.filename="$TEST_IMG.orig" -nodefaults\
+                  | _filter_generated_node_ids
+
+# Drivers that don't support backing files
+run_qemu -drive file="$TEST_IMG",driver=raw,backing.file.filename="$TEST_IMG.orig"
+run_qemu -drive file="$TEST_IMG",file.backing.driver=file,file.backing.filename="$TEST_IMG.orig"
+run_qemu -drive file="$TEST_IMG",file.backing.driver=qcow2,file.backing.file.filename="$TEST_IMG.orig"
+
+echo
+echo === Enable and disable lazy refcounting on the command line, plus some invalid values ===
+echo
+
+run_qemu -drive file="$TEST_IMG",format=qcow2,lazy-refcounts=on
+run_qemu -drive file="$TEST_IMG",format=qcow2,lazy-refcounts=off
+run_qemu -drive file="$TEST_IMG",format=qcow2,lazy-refcounts=
+run_qemu -drive file="$TEST_IMG",format=qcow2,lazy-refcounts=42
+run_qemu -drive file="$TEST_IMG",format=qcow2,lazy-refcounts=foo
+
+
+echo
+echo === With version 2 images enabling lazy refcounts must fail ===
+echo
+
+_make_test_img -ocompat=0.10 $size
+
+run_qemu -drive file="$TEST_IMG",format=qcow2,lazy-refcounts=on
+run_qemu -drive file="$TEST_IMG",format=qcow2,lazy-refcounts=off
+
+echo
+echo === No medium ===
+echo
+
+run_qemu -drive if=floppy
+run_qemu -drive if=ide,media=cdrom
+run_qemu -drive if=scsi,media=cdrom
+
+run_qemu -drive if=ide
+run_qemu -drive if=virtio
+run_qemu -drive if=scsi
+
+run_qemu -drive if=none,id=disk -device ide-cd,drive=disk
+run_qemu -drive if=none,id=disk -device lsi53c895a -device scsi-cd,drive=disk
+
+run_qemu -drive if=none,id=disk -device ide-drive,drive=disk
+run_qemu -drive if=none,id=disk -device ide-hd,drive=disk
+run_qemu -drive if=none,id=disk -device lsi53c895a -device scsi-disk,drive=disk
+run_qemu -drive if=none,id=disk -device lsi53c895a -device scsi-hd,drive=disk
+
+echo
+echo === Read-only ===
+echo
+
+run_qemu -drive file="$TEST_IMG",if=floppy,readonly=on
+run_qemu -drive file="$TEST_IMG",if=ide,media=cdrom,readonly=on
+run_qemu -drive file="$TEST_IMG",if=scsi,media=cdrom,readonly=on
+
+run_qemu -drive file="$TEST_IMG",if=ide,readonly=on
+run_qemu -drive file="$TEST_IMG",if=virtio,readonly=on
+run_qemu -drive file="$TEST_IMG",if=scsi,readonly=on
+
+run_qemu -drive file="$TEST_IMG",if=none,id=disk,readonly=on -device ide-cd,drive=disk
+run_qemu -drive file="$TEST_IMG",if=none,id=disk,readonly=on -device lsi53c895a -device scsi-cd,drive=disk
+
+run_qemu -drive file="$TEST_IMG",if=none,id=disk,readonly=on -device ide-drive,drive=disk
+run_qemu -drive file="$TEST_IMG",if=none,id=disk,readonly=on -device ide-hd,drive=disk
+run_qemu -drive file="$TEST_IMG",if=none,id=disk,readonly=on -device lsi53c895a -device scsi-disk,drive=disk
+run_qemu -drive file="$TEST_IMG",if=none,id=disk,readonly=on -device lsi53c895a -device scsi-hd,drive=disk
+
+echo
+echo === Cache modes ===
+echo
+
+# Cannot use the test image because cache=none might not work on the host FS
+# Use cdrom so that we won't get errors about missing media
+
+run_qemu -drive media=cdrom,cache=none
+run_qemu -drive media=cdrom,cache=directsync
+run_qemu -drive media=cdrom,cache=writeback
+run_qemu -drive media=cdrom,cache=writethrough
+run_qemu -drive media=cdrom,cache=unsafe
+run_qemu -drive media=cdrom,cache=invalid_value
+
+echo
+echo === Specifying the protocol layer ===
+echo
+
+run_qemu -drive file="$TEST_IMG",file.driver=file
+
+echo
+echo === Leaving out required options ===
+echo
+
+run_qemu -drive driver=file
+run_qemu -drive driver=nbd
+run_qemu -drive driver=raw
+run_qemu -drive file.driver=file
+run_qemu -drive file.driver=nbd
+run_qemu -drive file.driver=raw
+run_qemu -drive foo=bar
+
+echo
+echo === Specifying both an option and its legacy alias ===
+echo
+
+run_qemu -drive file="$TEST_IMG",iops=1234,throttling.iops-total=5678
+run_qemu -drive file="$TEST_IMG",iops_rd=1234,throttling.iops-read=5678
+run_qemu -drive file="$TEST_IMG",iops_wr=1234,throttling.iops-write=5678
+
+run_qemu -drive file="$TEST_IMG",bps=1234,throttling.bps-total=5678
+run_qemu -drive file="$TEST_IMG",bps_rd=1234,throttling.bps-read=5678
+run_qemu -drive file="$TEST_IMG",bps_wr=1234,throttling.bps-write=5678
+
+run_qemu -drive file="$TEST_IMG",iops_max=1234,throttling.iops-total-max=5678
+run_qemu -drive file="$TEST_IMG",iops_rd_max=1234,throttling.iops-read-max=5678
+run_qemu -drive file="$TEST_IMG",iops_wr_max=1234,throttling.iops-write-max=5678
+
+run_qemu -drive file="$TEST_IMG",bps_max=1234,throttling.bps-total-max=5678
+run_qemu -drive file="$TEST_IMG",bps_rd_max=1234,throttling.bps-read-max=5678
+run_qemu -drive file="$TEST_IMG",bps_wr_max=1234,throttling.bps-write-max=5678
+
+run_qemu -drive file="$TEST_IMG",iops_size=1234,throttling.iops-size=5678
+run_qemu -drive file="$TEST_IMG",readonly=on,read-only=off
+
+echo
+echo === Parsing protocol from file name ===
+echo
+
+# Protocol strings are supposed to be parsed from traditional option strings,
+# but not when using driver-specific options. We can distinguish them by the
+# error message for non-existing files.
+
+run_qemu -hda foo:bar
+run_qemu -drive file=foo:bar
+run_qemu -drive file.filename=foo:bar
+
+run_qemu -hda "file:$TEST_IMG"
+run_qemu -drive file="file:$TEST_IMG"
+run_qemu -drive file.filename="file:$TEST_IMG"
+
+echo
+echo === Snapshot mode ===
+echo
+
+$QEMU_IO -c "write -P 0x11 0 4k" "$TEST_IMG" | _filter_qemu_io
+
+echo 'qemu-io ide0-hd0 "write -P 0x22 0 4k"' | run_qemu -drive file="$TEST_IMG" -snapshot | _filter_qemu_io
+echo 'qemu-io ide0-hd0 "write -P 0x22 0 4k"' | run_qemu -drive file="$TEST_IMG",snapshot=on | _filter_qemu_io
+echo 'qemu-io ide0-hd0 "write -P 0x22 0 4k"' | run_qemu -drive file.filename="$TEST_IMG",driver=qcow2,snapshot=on | _filter_qemu_io
+echo 'qemu-io ide0-hd0 "write -P 0x22 0 4k"' | run_qemu -drive file.filename="$TEST_IMG",driver=qcow2 -snapshot | _filter_qemu_io
+echo 'qemu-io ide0-hd0 "write -P 0x22 0 4k"' | run_qemu -drive file="file:$TEST_IMG" -snapshot | _filter_qemu_io
+echo 'qemu-io ide0-hd0 "write -P 0x22 0 4k"' | run_qemu -drive file="file:$TEST_IMG",snapshot=on | _filter_qemu_io
+
+# Opening a read-only file r/w with snapshot=on
+chmod u-w "$TEST_IMG"
+echo 'qemu-io ide0-hd0 "write -P 0x22 0 4k"' | run_qemu -drive file="$TEST_IMG" -snapshot | _filter_qemu_io
+echo 'qemu-io ide0-hd0 "write -P 0x22 0 4k"' | run_qemu -drive file="$TEST_IMG",snapshot=on | _filter_qemu_io
+chmod u+w "$TEST_IMG"
+
+$QEMU_IO -c "read -P 0x11 0 4k" "$TEST_IMG" | _filter_qemu_io
+
+echo 'qemu-io ide0-hd0 "write -P 0x22 0 4k"' | run_qemu -drive file="$TEST_IMG",snapshot=off | _filter_qemu_io
+
+$QEMU_IO -c "read -P 0x22 0 4k" "$TEST_IMG" | _filter_qemu_io
+
+echo -e 'qemu-io ide0-hd0 "write -P 0x33 0 4k"\ncommit ide0-hd0' | run_qemu -drive file="$TEST_IMG",snapshot=on | _filter_qemu_io
+
+$QEMU_IO -c "read -P 0x33 0 4k" "$TEST_IMG" | _filter_qemu_io
+
+# success, all done
+echo "*** done"
+rm -f $seq.full
+status=0

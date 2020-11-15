@@ -1,0 +1,43 @@
+/******************************************************************************
+ * Copyright (c) 2004, 2008 IBM Corporation
+ * All rights reserved.
+ * This program and the accompanying materials
+ * are made available under the terms of the BSD License
+ * which accompanies this distribution, and is available at
+ * http://www.opensource.org/licenses/bsd-license.php
+ *
+ * Contributors:
+ *     IBM Corporation - initial implementation
+ *****************************************************************************/
+#include <southbridge.h>
+#include <nvram.h>
+
+// : get-nvram-base ( -- base )
+PRIM(get_X2d_nvram_X2d_base)
+	PUSH;
+	TOS.u = SB_NVRAM_adr;
+MIRP
+
+// : get-nvram-size ( -- size )
+PRIM(get_X2d_nvram_X2d_size)
+	PUSH;
+	TOS.u = get_nvram_size();
+MIRP
+
+// : get-flash-base ( -- base )
+PRIM(get_X2d_flash_X2d_base)
+	PUSH;
+	TOS.u = SB_FLASH_adr;
+MIRP
+
+// : get-flash-size ( -- size )
+PRIM(get_X2d_flash_X2d_size)
+	PUSH;
+	TOS.u = FLASH_LENGTH;
+MIRP
+
+// : get-mbx-base ( -- base )
+PRIM(get_X2d_mbx_X2d_base)
+	PUSH;
+	TOS.u = SB_MAILBOX_adr;
+MIRP

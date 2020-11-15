@@ -1,0 +1,31 @@
+3c515.c -- 3COM 3C515 Fast Etherlink ISA 10/100BASE-TX driver for etherboot
+Copyright (C) 2002 Timothy Legge <tlegge@rogers.com>
+
+This driver is for the 3COM 3C515 Fast Etherlink ISA 10/100BASE-TX
+
+REVISION HISTORY:
+================
+v0.10 4-17-2002       TJL       Initial implementation.
+v0.11 4-17-2002       TJL       Cleanup of the code
+v0.12 4-26-2002       TJL       Added ISA Plug and Play for Non-PNP Bioses
+v0.13 3-31-2003	      TJL	Fixed issue 1 and 2 below
+
+The driver is heavily based on the work of others are referenced in the 3c515.c file.
+
+ISA Plug and Play (ISAPNP) support has been added for Non-PNP Bioses.  The ISAPNP code requires the defination of ISA_PNP as:
+
+#define ISA_PNP
+
+Issues:
+=======
+1) RESOLVED - When ISAPNP is defined, the etherboot probe is unable to find the card during the first probe.  This is true even though the ISA PNP code actually found and activated the driver.
+
+2) RESOLVED - When ISA_PNP is defined, the etherboot probe finds the incorrect MAC address for the card. However, when the linux kernel boots and loads the linux 3c515 driver the correct MAC address is found. This means that with ISA_PNP defined, you require both MAC addresses defined in the /etc/dhcpd.conf file.  The first MAC address allows the driver to load the LTSP Linux kernel.  The second allows the Linux dhclient to resolve its IP address.
+
+3) Although the ISA PNP docs specify that the IRQ, DMA and IO Address needs to be assigned to the card before it is activated, Etherboot does not seem to care.  Therefore the code does not assign the card with these values.
+
+If you can help address any of thse issues, please feel free.
+
+Timothy Legge
+timlegge@users.sourceforge.net
+April 9, 2003

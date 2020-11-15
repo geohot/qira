@@ -1,0 +1,34 @@
+<rules>
+ <!-- host compiler build rules -->
+<rule target="host" entity="executable">
+	$(call quiet-command,$(HOSTCC) $(HOSTCFLAGS) -o $@ $^," HOSTCC $(TARGET_DIR)$@")
+</rule>
+<rule target="host" entity="object">
+	$(call quiet-command,$(HOSTCC) $(HOSTCFLAGS) $(HOSTINCLUDES) -c -o $@ $&lt;," HOSTCC $(TARGET_DIR)$@")
+</rule>
+<rule target="host" entity="object" extracflags="1">
+	$(call quiet-command,$(HOSTCC) $(HOSTCFLAGS) $(HOSTINCLUDES)</rule>
+<rule target="host" entity="object" extracflags="2"> -c -o $@ $&lt;," HOSTCC $(TARGET_DIR)$@")
+</rule>
+<rule target="host" entity="library">
+	$(call quiet--command,$(AR) cru $@ $^; $(RANLIB) $@," HOSTAR $(TARGET_DIR)$@")
+</rule>
+<rule target="host" entity="fcode">
+	$(call quiet-command,$(TOKE) -o $@ $^,"  TOKE  $(TARGET_DIR)$@")
+</rule>
+
+ <!-- target/cross compiler build rules -->
+<rule target="target" entity="executable">
+	$(call quiet-command,$(CC) $(CFLAGS) -o $@ $^,"  CC    $(TARGET_DIR)$@")
+</rule>
+<rule target="target" entity="object">
+	$(call quiet-command,$(CC) $$EXTRACFLAGS $(CFLAGS) $(INCLUDES) -c -o $@ $&lt;,"  CC    $(TARGET_DIR)$@")
+</rule>
+<rule target="target" entity="object" extracflags="1">
+	$(call quiet-command,$(CC) $$EXTRACFLAGS $(CFLAGS) $(INCLUDES)</rule>
+<rule target="target" entity="object" extracflags="2"> -c -o $@ $&lt;,"  CC    $(TARGET_DIR)$@")
+</rule>
+<rule target="target" entity="library">
+	$(call quiet-command,$(AR) cru $@ $^; $(RANLIB) $@,"  AR    $(TARGET_DIR)$@")
+</rule>
+</rules>

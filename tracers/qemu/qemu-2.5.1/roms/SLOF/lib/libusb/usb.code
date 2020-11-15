@@ -1,0 +1,162 @@
+/******************************************************************************
+ * Copyright (c) 2013 IBM Corporation
+ * All rights reserved.
+ * This program and the accompanying materials
+ * are made available under the terms of the BSD License
+ * which accompanies this distribution, and is available at
+ * http://www.opensource.org/licenses/bsd-license.php
+ *
+ * Contributors:
+ *     IBM Corporation - initial implementation
+ *****************************************************************************/
+/*
+ * libusb bindings for SLOF - implementation
+ */
+
+#include <usb.h>
+
+
+/************************************************/
+/* Register with the usb-core                   */
+/* SLOF:   USB-OHCI-REGISTER  ( -- )            */
+/* LIBNEWUSB: usb_ohci_register(void)           */
+/************************************************/
+PRIM(USB_X2d_OHCI_X2d_REGISTER)
+	usb_ohci_register();
+MIRP
+
+/************************************************/
+/* Register with the usb-core                   */
+/* SLOF:   USB-EHCI-REGISTER  ( -- )            */
+/* LIBNEWUSB: usb_ehci_register(void)           */
+/************************************************/
+PRIM(USB_X2d_EHCI_X2d_REGISTER)
+	usb_ehci_register();
+MIRP
+
+/************************************************/
+/* Register with the usb-core                   */
+/* SLOF:   USB-XHCI-REGISTER  ( -- )            */
+/* LIBNEWUSB: usb_xhci_register(void)           */
+/************************************************/
+PRIM(USB_X2d_XHCI_X2d_REGISTER)
+	usb_xhci_register();
+MIRP
+
+/************************************************/
+/* Initialize hcidev with the usb-core          */
+/* SLOF:   USB-HCD-INIT  ( hcidev -- )          */
+/* LIBNEWUSB: usb_hcd_init(hcidev)              */
+/************************************************/
+PRIM(USB_X2d_HCD_X2d_INIT)
+	void *hcidev = TOS.a; POP;
+	usb_hcd_init(hcidev);
+MIRP
+
+/************************************************/
+/* Remove hcidev with the usb-core              */
+/* SLOF:   USB-HCD-EXIT  ( hcidev -- )          */
+/* LIBNEWUSB: usb_hcd_exit(hcidev)              */
+/************************************************/
+PRIM(USB_X2d_HCD_X2d_EXIT)
+	void *hcidev = TOS.a; POP;
+	usb_hcd_exit(hcidev);
+MIRP
+
+/************************************************/
+/* Initialize hid                               */
+/* SLOF:   USB-HID-INIT  ( dev -- true | false )*/
+/* LIBNEWUSB: usb_hid_init(hcidev)              */
+/************************************************/
+PRIM(USB_X2d_HID_X2d_INIT)
+	void *dev = TOS.a;
+	TOS.n = usb_hid_init(dev);
+MIRP
+
+/************************************************/
+/* Exit hid                                     */
+/* SLOF:   USB-HID-EXIT  ( dev -- true | false )*/
+/* LIBNEWUSB: usb_hid_exit(hcidev)              */
+/************************************************/
+PRIM(USB_X2d_HID_X2d_EXIT)
+	void *dev = TOS.a;
+	TOS.n = usb_hid_exit(dev);
+MIRP
+
+/************************************************/
+/* Read usb keyboard for key                    */
+/* SLOF:   USB-READ-KEYB  ( dev --              */
+/*                        ( key | false  ))     */
+/* LIBNEWUSB: usb_read_keyb                     */
+/************************************************/
+PRIM(USB_X2d_READ_X2d_KEYB)
+	void *dev = TOS.a;
+	TOS.n = usb_read_keyb(dev);
+MIRP
+
+/************************************************/
+/* Is USB KEY available                         */
+/* SLOF:   USB-KEY-AVAILABLE ( dev -- ( true |  */
+/*                                      false ))*/
+/* LIBNEWUSB: usb_key_available                 */
+/************************************************/
+PRIM(USB_X2d_KEY_X2d_AVAILABLE)
+	void *dev = TOS.a;
+	TOS.n = usb_key_available(dev);
+MIRP
+
+/************************************************/
+/* Initialize and enumerate generic hub         */
+/* SLOF: USB-HUB-INIT ( dev -- true | false )   */
+/* LIBNEWUSB: usb_hub_init                      */
+/************************************************/
+PRIM(USB_X2d_HUB_X2d_INIT)
+	void *dev = TOS.a;
+	TOS.n = usb_hub_init(dev);
+MIRP
+
+/************************************************/
+/* Initialize msc                               */
+/* SLOF:   USB-MSC-INIT  ( dev -- true | false )*/
+/* LIBNEWUSB: usb_msc_init(hcidev)              */
+/************************************************/
+PRIM(USB_X2d_MSC_X2d_INIT)
+	void *dev = TOS.a;
+	TOS.n = usb_msc_init(dev);
+MIRP
+
+/************************************************/
+/* Exit msc                                     */
+/* SLOF:   USB-MSC-EXIT  ( dev -- true | false )*/
+/* LIBNEWUSB: usb_msc_exit(hcidev)              */
+/************************************************/
+PRIM(USB_X2d_MSC_X2d_EXIT)
+	void *dev = TOS.a;
+	TOS.n = usb_msc_exit(dev);
+MIRP
+
+/*****************************************************************************/
+/* Transfer data through control endpoint                                    */
+/* SLOF:   USB-TRANSFER_CTRL ( dev req data -- true | false )                */
+/* LIBNEWUSB: int usb_transfer_ctrl(void *dev, void *req, void *data)        */
+/*****************************************************************************/
+PRIM(USB_X2d_TRANSFER_X2d_CTRL)
+	void *data = TOS.a; POP;
+	void *req = TOS.a; POP;
+	TOS.n = usb_transfer_ctrl(TOS.a, req, data);
+MIRP
+
+/*****************************************************************************/
+/* Transfer data through bulk endpoint                                       */
+/* SLOF:  USB-TRANSFER_BULK ( dev dir td td-phys data size -- true | false ) */
+/* LIBNEWUSB: int usb_transfer_bulk(void *dev, int dir, void *td,            */
+/*                                  void *td_phys, void *data, int size)     */
+/*****************************************************************************/
+PRIM(USB_X2d_TRANSFER_X2d_BULK)
+	int size = TOS.u; POP;
+	void *data = TOS.a; POP;
+	void *td_phys = TOS.a; POP;
+	void *td = TOS.a; POP;
+	int dir = TOS.u; POP;
+	TOS.n = usb_transfer_bulk(TOS.a, dir, td, td_phys, data, size);
+MIRP

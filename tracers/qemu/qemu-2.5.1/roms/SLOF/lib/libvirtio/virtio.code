@@ -1,0 +1,164 @@
+/******************************************************************************
+ * Copyright (c) 2004, 2011 IBM Corporation
+ * All rights reserved.
+ * This program and the accompanying materials
+ * are made available under the terms of the BSD License
+ * which accompanies this distribution, and is available at
+ * http://www.opensource.org/licenses/bsd-license.php
+ *
+ * Contributors:
+ *     IBM Corporation - initial implementation
+ *****************************************************************************/
+
+#include <virtio.h>
+#include <virtio-blk.h>
+#include <virtio-9p.h>
+#include <virtio-scsi.h>
+#include <virtio-net.h>
+
+/******** core virtio ********/
+
+// : virtio-vring-size  ( queuesize -- ringsize )
+PRIM(virtio_X2d_vring_X2d_size)
+	TOS.u = virtio_vring_size(TOS.u);
+MIRP
+
+// : virtio-get-qsize  ( dev queue -- queuesize )
+PRIM(virtio_X2d_get_X2d_qsize)
+	int queue = TOS.u; POP;
+	TOS.u = virtio_get_qsize(TOS.a, queue);
+MIRP
+
+// : virtio-get-config  ( dev offset size -- val )
+PRIM(virtio_X2d_get_X2d_config)
+	int size = TOS.u; POP;
+	int offset = TOS.u; POP;
+	TOS.u = virtio_get_config(TOS.a, offset, size);
+MIRP
+
+// : virtio-set-qaddr  ( dev queue qaddr --  )
+PRIM(virtio_X2d_set_X2d_qaddr)
+	unsigned int qaddr = TOS.u; POP;
+	int queue = TOS.u; POP;
+	void *dev = TOS.a; POP;
+	virtio_set_qaddr(dev, queue, qaddr);
+MIRP
+
+/******** virtio-blk ********/
+
+// : virtio-blk-init ( dev -- blk-size)
+PRIM(virtio_X2d_blk_X2d_init)
+	void *dev = TOS.a;
+	TOS.u = virtioblk_init(dev);
+MIRP
+
+// : virtio-blk-shutdown ( dev -- )
+PRIM(virtio_X2d_blk_X2d_shutdown)
+	void *dev = TOS.a; POP;
+	virtioblk_shutdown(dev);
+MIRP
+
+// : virtio-blk-read ( dev blkno cnt reg -- #read )
+PRIM(virtio_X2d_blk_X2d_read)
+	void *dev = TOS.a; POP;
+	long cnt = TOS.n; POP;
+	long blkno = TOS.n; POP;
+	void *buf = TOS.a;
+	TOS.n = virtioblk_read(dev, buf, blkno, cnt);
+MIRP
+
+/******** virtio-fs ********/
+
+// : virtio-fs-init ( dev tx rx size -- success )
+PRIM(virtio_X2d_fs_X2d_init)
+	int size = TOS.n; POP;
+	void *rx = TOS.a; POP;
+	void *tx = TOS.a; POP;
+	void *dev = TOS.a;
+
+	TOS.n = virtio_9p_init(dev, tx, rx, size) == 0 ? -1 : 0;
+MIRP
+
+// : virtio-fs-shutdown ( dev -- )
+PRIM(virtio_X2d_fs_X2d_shutdown)
+	void *dev = TOS.a; POP;
+
+	virtio_9p_shutdown(dev);
+MIRP
+
+// : virtio-fs-load ( dev buf str -- #read )
+PRIM(virtio_X2d_fs_X2d_load)
+	char *str = TOS.a; POP;
+	void *buf = TOS.a; POP;
+	void *dev = TOS.a;
+
+	TOS.n = virtio_9p_load(dev, str, buf);
+MIRP
+
+/******** virtio-scsi ********/
+
+// : virtio-scsi-init ( dev -- success )
+PRIM(virtio_X2d_scsi_X2d_init)
+	void *dev = TOS.a;
+	TOS.u = virtioscsi_init(dev);
+MIRP
+
+// : virtio-scsi-shutdown ( dev -- )
+PRIM(virtio_X2d_scsi_X2d_shutdown)
+	void *dev = TOS.a; POP;
+	virtioscsi_shutdown(dev);
+MIRP
+
+// : virtio-scsi-send ( buf_addr buf_len is_read req_ptr rsp_ptr dev -- success)
+PRIM(virtio_X2d_scsi_X2d_send)
+	void *dev	= TOS.a; POP;
+	void *resp	= TOS.a; POP;
+	void *req	= TOS.a; POP;
+	int is_read	= !!TOS.n; POP;
+	uint64_t blen	= TOS.n; POP;
+	void *buf	= TOS.a;
+	TOS.n = virtioscsi_send(dev, req, resp, is_read, buf, blen);
+MIRP
+
+/******** virtio-net ********/
+
+// : virtio-net-open ( mac-addr-str len dev -- false | [ driver true ] )
+PRIM(virtio_X2d_net_X2d_open)
+{
+	void *dev = TOS.a; POP;
+	int len = TOS.u; POP;
+        char *mac_addr = TOS.a;
+
+        net_driver_t *net_driver = virtionet_open(mac_addr, len, dev);
+
+        if (net_driver) {
+                TOS.u = (unsigned long)net_driver; PUSH;
+                TOS.n = -1;
+        } else
+                TOS.n = 0;
+}
+MIRP
+
+// : virtio-net-close ( driver -- )
+PRIM(virtio_X2d_net_X2d_close)
+{
+	net_driver_t *driver = TOS.a; POP;
+	virtionet_close(driver);
+}
+MIRP
+
+// : virtio-net-read ( addr len -- actual )
+PRIM(virtio_X2d_net_X2d_read)
+{
+	int len = TOS.u; POP;
+	TOS.n = virtionet_read(TOS.a, len);
+}
+MIRP
+
+// : virtio-net-write ( addr len -- actual )
+PRIM(virtio_X2d_net_X2d_write)
+{
+	int len = TOS.u; POP;
+	TOS.n = virtionet_write(TOS.a, len);
+}
+MIRP

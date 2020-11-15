@@ -1,0 +1,13 @@
+BOARD=js2x
+TARG=ppc64
+export FLAG="-DBIOSEMU"
+export CPUARCH=ppc970
+export CPUARCHDEF=-DCPU_PPC970
+
+ifneq ($(wildcard ../other-licence/x86emu/*.c),)
+export SNK_BIOSEMU_APPS=1
+else
+export SNK_BIOSEMU_APPS=0
+endif
+
+FLASH_SIZE=8388608

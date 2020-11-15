@@ -1,0 +1,72 @@
+#
+# (C) Copyright 2006
+# Wolfgang Denk, DENX Software Engineering, wd@denx.de.
+#
+# SPDX-License-Identifier:	GPL-2.0+
+#
+
+ifdef CONFIG_SPL_BUILD
+
+ifdef CONFIG_SPL_NAND_DRIVERS
+NORMAL_DRIVERS=y
+endif
+
+obj-$(CONFIG_SPL_NAND_AM33XX_BCH) += am335x_spl_bch.o
+obj-$(CONFIG_SPL_NAND_DOCG4) += docg4_spl.o
+obj-$(CONFIG_SPL_NAND_SIMPLE) += nand_spl_simple.o
+obj-$(CONFIG_SPL_NAND_LOAD) += nand_spl_load.o
+obj-$(CONFIG_SPL_NAND_ECC) += nand_ecc.o
+obj-$(CONFIG_SPL_NAND_BASE) += nand_base.o
+obj-$(CONFIG_SPL_NAND_INIT) += nand.o
+ifeq ($(CONFIG_SPL_ENV_SUPPORT),y)
+obj-$(CONFIG_ENV_IS_IN_NAND) += nand_util.o
+endif
+
+else # not spl
+
+NORMAL_DRIVERS=y
+
+obj-y += nand.o
+obj-y += nand_bbt.o
+obj-y += nand_ids.o
+obj-y += nand_util.o
+obj-y += nand_ecc.o
+obj-y += nand_base.o
+
+endif # not spl
+
+ifdef NORMAL_DRIVERS
+
+obj-$(CONFIG_NAND_ECC_BCH) += nand_bch.o
+
+obj-$(CONFIG_NAND_ATMEL) += atmel_nand.o
+obj-$(CONFIG_DRIVER_NAND_BFIN) += bfin_nand.o
+obj-$(CONFIG_NAND_DAVINCI) += davinci_nand.o
+obj-$(CONFIG_NAND_FSL_ELBC) += fsl_elbc_nand.o
+obj-$(CONFIG_NAND_FSL_IFC) += fsl_ifc_nand.o
+obj-$(CONFIG_NAND_FSL_UPM) += fsl_upm.o
+obj-$(CONFIG_NAND_FSMC) += fsmc_nand.o
+obj-$(CONFIG_NAND_JZ4740) += jz4740_nand.o
+obj-$(CONFIG_NAND_KB9202) += kb9202_nand.o
+obj-$(CONFIG_NAND_KIRKWOOD) += kirkwood_nand.o
+obj-$(CONFIG_NAND_KMETER1) += kmeter1_nand.o
+obj-$(CONFIG_NAND_MPC5121_NFC) += mpc5121_nfc.o
+obj-$(CONFIG_NAND_MXC) += mxc_nand.o
+obj-$(CONFIG_NAND_MXS) += mxs_nand.o
+obj-$(CONFIG_NAND_NDFC) += ndfc.o
+obj-$(CONFIG_NAND_NOMADIK) += nomadik.o
+obj-$(CONFIG_NAND_S3C2410) += s3c2410_nand.o
+obj-$(CONFIG_NAND_SPEAR) += spr_nand.o
+obj-$(CONFIG_TEGRA_NAND) += tegra_nand.o
+obj-$(CONFIG_NAND_OMAP_GPMC) += omap_gpmc.o
+obj-$(CONFIG_NAND_OMAP_ELM) += omap_elm.o
+obj-$(CONFIG_NAND_PLAT) += nand_plat.o
+obj-$(CONFIG_NAND_DOCG4) += docg4.o
+
+else  # minimal SPL drivers
+
+obj-$(CONFIG_NAND_FSL_ELBC) += fsl_elbc_spl.o
+obj-$(CONFIG_NAND_FSL_IFC) += fsl_ifc_spl.o
+obj-$(CONFIG_NAND_MXC) += mxc_nand_spl.o
+
+endif # drivers

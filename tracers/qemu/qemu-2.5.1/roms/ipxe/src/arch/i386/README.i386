@@ -1,0 +1,197 @@
+Etherboot/NILO i386 initialisation path and external call interface
+===================================================================
+
+1. Background
+
+GCC compiles 32-bit code.  It is capable of producing
+position-independent code, but the resulting binary is about 25%
+bigger than the corresponding fixed-position code.  Since one main use
+of Etherboot is as firmware to be burned into an EPROM, code size must
+be kept as small as possible.
+
+This means that we want to compile fixed-position code with GCC, and
+link it to have a predetermined start address.  The problem then is
+that we must know the address that the code will be loaded to when it
+runs.  There are several ways to solve this:
+
+1. Pick an address, link the code with this start address, then make
+   sure that the code gets loaded at that location.  This is
+   problematic, because we may pick an address that we later end up
+   wanting to use to load the operating system that we're booting.
+
+2. Pick an address, link the code with this start address, then set up
+   virtual addressing so that the virtual addresses match the
+   link-time addresses regardless of the real physical address that
+   the code is loaded to.  This enables us to relocate Etherboot to
+   the top of high memory, where it will be out of the way of any
+   loading operating system.
+
+3. Link the code with a text start address of zero and a data start
+   address also of zero.  Use 16-bit real mode and the
+   quasi-position-independence it gives you via segment addressing.
+   Doing this requires that we generate 16-bit code, rather than
+   32-bit code, and restricts us to a maximum of 64kB in each segment.
+
+There are other possible approaches (e.g. including a relocation table
+and code that performs standard dynamic relocation), but the three
+options listed above are probably the best available.
+
+Etherboot can be invoked in a variety of ways (ROM, floppy, as a PXE
+NBP, etc).  Several of these ways involve control being passed to
+Etherboot with the CPU in 16-bit real mode.  Some will involve the CPU
+being in 32-bit protected mode, and there's an outside chance that
+some may involve the CPU being in 16-bit protected mode.  We will
+almost certainly have to effect a CPU mode change in order to reach
+the mode we want to be in to execute the C code.
+
+Additionally, Etherboot may wish to call external routines, such as
+BIOS interrupts, which must be called in 16-bit real mode.  When
+providing a PXE API, Etherboot must provide a mechanism for external
+code to call it from 16-bit real mode.
+
+Not all i386 builds of Etherboot will want to make real-mode calls.
+For example, when built for LinuxBIOS rather than the standard PCBIOS,
+no real-mode calls are necessary.
+
+For the ultimate in PXE compatibility, we may want to build Etherboot
+to run permanently in real mode.
+
+There is a wide variety of potential combinations of mode switches
+that we may wish to implement.  There are additional complications,
+such as the inability to access a high-memory stack when running in
+real mode.
+
+2. Transition libraries
+
+To handle all these various combinations of mode switches, we have
+several "transition" libraries in Etherboot.  We also have the concept
+of an "internal" and an "external" environment.  The internal
+environment is the environment within which we can execute C code.
+The external environment is the environment of whatever external code
+we're trying to interface to, such as the system BIOS or a PXE NBP.
+
+As well as having a separate addressing scheme, the internal
+environment also has a separate stack.
+
+The transition libraries are:
+
+a) librm
+
+librm handles transitions between an external 16-bit real-mode
+environment and an internal 32-bit protected-mode environment with
+virtual addresses.
+
+b) libkir
+
+libkir handles transitions between an external 16-bit real-mode (or
+16:16 or 16:32 protected-mode) environment and an internal 16-bit
+real-mode (or 16:16 protected-mode) environment.
+
+c) libpm
+
+libpm handles transitions between an external 32-bit protected-mode
+environment with flat physical addresses and an internal 32-bit
+protected-mode environment with virtual addresses.
+
+The transition libraries handle the transitions required when
+Etherboot is started up for the first time, the transitions required
+to execute any external code, and the transitions required when
+Etherboot exits (if it exits).  When Etherboot provides a PXE API,
+they also handle the transitions required when a PXE client makes a
+PXE API call to Etherboot.
+
+Etherboot may use multiple transition libraries.  For example, an
+Etherboot ELF image does not require librm for its initial transitions
+from prefix to runtime, but may require librm for calling external
+real-mode functions.
+
+3. Setup and initialisation
+
+Etherboot is conceptually divided into the prefix, the decompressor,
+and the runtime image.  (For non-compressed images, the decompressor
+is a no-op.)  The complete image comprises all three parts and is
+distinct from the runtime image, which exclude the prefix and the
+decompressor.
+
+The prefix does several tasks:
+
+  Load the complete image into memory.  (For example, the floppy
+  prefix issues BIOS calls to load the remainder of the complete image
+  from the floppy disk into RAM, and the ISA ROM prefix copies the ROM
+  contents into RAM for faster access.)
+
+  Call the decompressor, if the runtime image is compressed.  This
+  decompresses the runtime image.
+
+  Call the runtime image's setup() routine.  This is a routine
+  implemented in assembly code which sets up the internal environment
+  so that C code can execute.
+
+  Call the runtime image's arch_initialise() routine.  This is a
+  routine implemented in C which does some basic startup tasks, such
+  as initialising the console device, obtaining a memory map and
+  relocating the runtime image to high memory.
+
+  Call the runtime image's arch_main() routine.  This records the exit
+  mechanism requested by the prefix and calls main().  (The prefix
+  needs to register an exit mechanism because by the time main()
+  returns, the memory occupied by the prefix has most likely been
+  overwritten.)
+
+When acting as a PXE ROM, the ROM prefix contains an UNDI loader
+routine in addition to its usual code.  The UNDI loader performs a
+similar sequence of steps:
+
+  Load the complete image into memory.
+
+  Call the decompressor.
+
+  Call the runtime image's setup() routine.
+
+  Call the runtime image's arch_initialise() routine.
+
+  Call the runtime image's install_pxe_stack() routine.
+
+  Return to caller.
+
+The runtime image's setup() routine will perform the following steps:
+
+  Switch to the internal environment using an appropriate transition
+  library.  This will record the parameters of the external
+  environment.
+
+  Set up the internal environment: load a stack, and set up a GDT for
+  virtual addressing if virtual addressing is to be used.
+
+  Switch back to the external environment using the transition
+  library.  This will record the parameters of the internal
+  environment.
+
+Once the setup() routine has returned, the internal environment has been
+set up ready for C code to run.  The prefix can call C routines using
+a function from the transition library.
+
+The runtime image's arch_initialise() routine will perform the
+following steps:
+
+  Zero the bss
+
+  Initialise the console device(s) and print a welcome message.
+
+  Obtain a memory map via the INT 15,E820 BIOS call or suitable
+  fallback mechanism. [not done if libkir is being used]
+
+  Relocate the runtime image to the top of high memory. [not done if
+  libkir is being used]
+
+  Install librm to base memory. [done only if librm is being used]
+
+  Call initialise().
+
+  Return to the prefix, setting registers to indicate to the prefix
+  the new location of the transition library, if applicable.  Which
+  registers these are is specific to the transition library being
+  used.
+
+Once the arch_initialise() routine has returned, the prefix will
+probably call arch_main().

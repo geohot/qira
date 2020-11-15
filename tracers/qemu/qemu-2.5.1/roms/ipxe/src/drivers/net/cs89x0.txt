@@ -1,0 +1,45 @@
+/**
+   Per an email message from Russ Nelson <nelson@crynwr.com> on
+   18 March 2008 the files cs89x0.[ch] are now licensed under GPL
+   Version 2.
+
+   From: Russ Nelson <nelson@crynwr.com>
+   Date: Tue, 18 Mar 2008 12:42:00 -0400
+   Subject: Re: [Etherboot-developers] cs89x0 driver in etherboot
+   -- quote from email 
+   As copyright holder, if I say it doesn't conflict with the GPL,
+   then it doesn't conflict with the GPL.
+
+   However, there's no point in causing people's brains to overheat,
+   so yes, I grant permission for the code to be relicensed under the
+   GPLv2.  Please make sure that this change in licensing makes its
+   way upstream.  -russ 
+   -- quote from email
+**/
+
+Permission is granted to distribute the enclosed cs89x0.[ch] driver
+only in conjunction with the Etherboot package.  The code is
+ordinarily distributed under the GPL.
+
+Russ Nelson, January 2000
+
+CREDITS
+
+I want to thank
+
+  Mike Cruse <mcruse@cti-ltd.com>
+     for providing an evaluation NIC and for sponsoring the
+     development of this driver.
+
+  Randall Sears <sears@crystal.cirrus.com>
+  Deva Bodas <bodas@crystal.cirrus.com>
+  Andreas Kraemer <akraemer@crystal.cirrus.com>
+  Wolfgang Krause <100303.2673@compuserve.com>
+     for excellent technical support and for providing the required
+     programming information. I appreciate Crystal Semiconductor's
+     commitment towards free software.
+
+  Russell Nelson <nelson@crynwr.com>
+     for writing the Linux device driver for the CS89x0
+     chipset. Russel's code is very well designed and simplified my
+     job a lot.

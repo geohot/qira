@@ -1,0 +1,98 @@
+QA output created by 071
+
+=== Testing blkverify through filename ===
+
+Formatting 'TEST_DIR/t.IMGFMT.base', fmt=IMGFMT size=67108864
+Formatting 'TEST_DIR/t.IMGFMT', fmt=IMGFMT size=67108864
+read 512/512 bytes at offset 0
+512 bytes, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+wrote 512/512 bytes at offset 229376
+512 bytes, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+read 512/512 bytes at offset 229376
+512 bytes, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+wrote 512/512 bytes at offset 0
+512 bytes, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+blkverify: read sector_num=0 nb_sectors=1 contents mismatch in sector 0
+
+=== Testing blkverify through file blockref ===
+
+Formatting 'TEST_DIR/t.IMGFMT.base', fmt=IMGFMT size=67108864
+Formatting 'TEST_DIR/t.IMGFMT', fmt=IMGFMT size=67108864
+read 512/512 bytes at offset 0
+512 bytes, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+wrote 512/512 bytes at offset 229376
+512 bytes, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+read 512/512 bytes at offset 229376
+512 bytes, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+wrote 512/512 bytes at offset 0
+512 bytes, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+blkverify: read sector_num=0 nb_sectors=1 contents mismatch in sector 0
+
+=== Testing blkdebug through filename ===
+
+Failed to flush the L2 table cache: Input/output error
+Failed to flush the refcount block cache: Input/output error
+read failed: Input/output error
+
+=== Testing blkdebug through file blockref ===
+
+Failed to flush the L2 table cache: Input/output error
+Failed to flush the refcount block cache: Input/output error
+read failed: Input/output error
+
+=== Testing blkdebug on existing block device ===
+
+Testing:
+QMP_VERSION
+{"return": {}}
+{"return": {}}
+{"return": {}}
+read failed: Input/output error
+{"return": ""}
+{"return": {}}
+{"timestamp": {"seconds":  TIMESTAMP, "microseconds":  TIMESTAMP}, "event": "SHUTDOWN"}
+QEMU_PROG: Failed to flush the L2 table cache: Input/output error
+QEMU_PROG: Failed to flush the refcount block cache: Input/output error
+
+
+=== Testing blkverify on existing block device ===
+
+Testing:
+QMP_VERSION
+{"return": {}}
+{"return": {}}
+{"return": {}}
+blkverify: read sector_num=0 nb_sectors=1 contents mismatch in sector 0
+
+
+=== Testing blkverify on existing raw block device ===
+
+Testing:
+QMP_VERSION
+{"return": {}}
+{"return": {}}
+{"return": {}}
+blkverify: read sector_num=0 nb_sectors=1 contents mismatch in sector 0
+
+
+=== Testing blkdebug's set-state through QMP ===
+
+Testing:
+QMP_VERSION
+{"return": {}}
+{"return": {}}
+{"return": {}}
+read 512/512 bytes at offset 0
+512 bytes, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+{"return": ""}
+wrote 512/512 bytes at offset 0
+512 bytes, X ops; XX:XX:XX.X (XXX YYY/sec and XXX ops/sec)
+{"return": ""}
+read failed: Input/output error
+{"return": ""}
+{"return": {}}
+{"timestamp": {"seconds":  TIMESTAMP, "microseconds":  TIMESTAMP}, "event": "SHUTDOWN"}
+QEMU_PROG: Failed to flush the L2 table cache: Input/output error
+QEMU_PROG: Failed to flush the refcount block cache: Input/output error
+
+*** done

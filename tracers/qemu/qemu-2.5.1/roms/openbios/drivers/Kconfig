@@ -1,0 +1,59 @@
+
+
+menu "Drivers"
+
+config DRIVER_PCI
+	bool "PCI driver"
+	default y
+	help
+	  Builtin PCI driver
+
+config DEBUG_PCI
+	bool "Debug PCI driver"
+	default n
+	help
+	  Debug PCI driver
+	  
+config DRIVER_IDE
+	depends X86 || AMD64 || PPC
+	bool "Legacy IDE"
+	default y
+	help
+	  If you want to be able to boot from IDE, enable this option.
+
+config IDE_NUM_CHANNELS
+	depends DRIVER_IDE
+	int "Number of IDE channels to be probed"
+	default 4
+	help
+	  Number of IDE channels to be probed. This should be set to
+	  one or two if you build OpenBIOS for the Total Impact BRIQ.
+
+config DEBUG_IDE
+	depends DRIVER_IDE
+        bool "Debug IDE driver"
+	default n
+	help
+	  Debug IDE driver 
+	
+config DRIVER_USB
+	bool "USB Support"
+	default n
+	help
+	  If you want to be able to use USB devices, enable this option.
+
+config DEBUG_USB
+	depends DRIVER_USB
+	bool "Debug USB driver"
+	default n
+	help
+	  Debug USB driver
+
+config USB_HID
+	depends DRIVER_USB
+	bool "USB driver for HID devices"
+	default n
+	help
+	  If you want to be able to use USB keyboard, enable this option.
+
+endmenu

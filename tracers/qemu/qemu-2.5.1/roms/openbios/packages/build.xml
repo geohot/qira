@@ -1,0 +1,23 @@
+<build>
+
+ <library name="packages" type="static" target="target">
+  <object source="bootinfo-loader.c" condition="LOADER_BOOTINFO"/>
+  <object source="cmdline.c" condition="CMDLINE"/>
+  <object source="deblocker.c" condition="DEBLOCKER"/>
+  <object source="disk-label.c" condition="DISK_LABEL"/>
+  <object source="elf-loader.c" condition="LOADER_ELF"/>
+  <object source="init.c"/>
+  <object source="mac-parts.c" condition="MAC_PARTS"/>
+  <object source="nvram.c"/>
+  <object source="pc-parts.c" condition="PC_PARTS"/>
+  <object source="sun-parts.c" condition="SUN_PARTS"/>
+  <object source="molvideo.c" condition="MOL"/>
+  <object source="xcoff-loader.c" condition="LOADER_XCOFF"/>
+ </library>
+
+ <dictionary name="openbios" target="forth">
+  <object source="cmdline.fs"/>
+  <object source="disk-label.fs"/>
+ </dictionary>
+
+</build>

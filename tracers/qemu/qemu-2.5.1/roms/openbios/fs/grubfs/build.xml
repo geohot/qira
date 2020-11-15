@@ -1,0 +1,17 @@
+<build>
+ <library name="fs" type="static" target="target">
+  <object source="grubfs_fs.c"/>
+  <object source="fsys_ext2fs.c" condition="FSYS_EXT2FS" flags="-DFSYS_EXT2FS -fno-strict-aliasing"/>
+  <object source="fsys_fat.c" condition="FSYS_FAT" flags="-DFSYS_FAT -fno-strict-aliasing"/>
+  <object source="fsys_jfs.c" condition="FSYS_JFS" flags="-DFSYS_JFS -fno-strict-aliasing"/>
+  <object source="fsys_minix.c" condition="FSYS_MINIX" flags="-DFSYS_MINIX -fno-strict-aliasing"/>
+  <object source="fsys_reiserfs.c" condition="FSYS_REISERFS" flags="-DFSYS_REISERFS -fno-strict-aliasing"/>
+  <object source="fsys_xfs.c" condition="FSYS_XFS" flags="-DFSYS_XFS -fno-strict-aliasing"/>
+  <object source="fsys_ufs.c" condition="FSYS_UFS" flags="-DFSYS_UFS -fno-strict-aliasing"/>
+  <object source="fsys_ffs.c" condition="FSYS_FFS" flags="-DFSYS_FFS -fno-strict-aliasing"/>
+  <object source="fsys_vstafs.c" condition="FSYS_VSTAFS" flags="-DFSYS_VSTAFS -fno-strict-aliasing"/>
+  <object source="fsys_iso9660.c" condition="FSYS_ISO9660" flags="-DFSYS_ISO9660 -fno-strict-aliasing"/>
+  <object source="fsys_ntfs.c" condition="FSYS_NTFS" flags="-DFSYS_NTFS -fno-strict-aliasing"/>
+  <object source="fsys_affs.c" condition="FSYS_AFFS" flags="-DFSYS_AFFS -fno-strict-aliasing"/>
+ </library>
+</build>

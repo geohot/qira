@@ -1,0 +1,19 @@
+<build>
+
+ <!--
+  build description for OpenBIOS utility functions
+  
+  Copyright (C) 2004-2005 by Stefan Reinauer
+  See the file "COPYING" for further information about
+  the copyright and warranty status of this work.
+  -->
+
+ <dictionary name="openbios" target="forth">
+  <object source="util.fs"/>
+  <object source="pci.fs"/>
+  <!-- We don't want/need these at the moment
+  <object source="apic.fs"/>
+  -->
+ </dictionary>
+
+</build>

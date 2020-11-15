@@ -1,0 +1,73 @@
+OUTPUT_FORMAT(elf32-i386)
+OUTPUT_ARCH(i386)
+
+ENTRY(entry)
+
+/* Initial load address
+ * To be loaded by GRUB, this must be >= 1MB
+ */
+BASE_ADDR = 0x100000;
+
+/* 16KB heap and stack */
+HEAP_SIZE = 16384;
+STACK_SIZE = 16384;
+
+SECTIONS
+{
+    . = BASE_ADDR;
+
+    /* Put Multiboot header near beginning of file, if any. */
+    .hdr : { *(.hdr) *(.hdr.*) }
+
+    /* Start of the program. 
+     * Now the version string is in the note, we must include it
+     * in the program. Otherwise we lose the string after relocation. */
+    . = ALIGN(16);
+    _start = .;
+
+    /* Putting ELF notes near beginning of file might help bootloaders.
+     * We discard .note sections other than .note.ELFBoot,
+     * because some versions of GCC generates useless ones. */
+    .note : { *(.note.ELFBoot) }
+
+    /* Normal sections */
+    .text : { *(.text) *(.text.*) }
+    .rodata : {
+	. = ALIGN(4);
+	sound_drivers_start = .;
+	*(.rodata.sound_drivers)
+	sound_drivers_end = .;
+	*(.rodata)
+	*(.rodata.*)
+    }
+    .data : { *(.data) *(.data.*) }
+
+    .bss : {
+	*(.bss)
+	*(.bss.*)
+	*(COMMON)
+
+	/* Put heap and stack here, so they are included in PT_LOAD segment
+	 * and the bootloader is aware of it. */
+
+	. = ALIGN(16);
+	_heap = .;
+	. += HEAP_SIZE;
+	. = ALIGN(16);
+	_eheap = .;
+
+	_stack = .;
+	. += STACK_SIZE;
+	. = ALIGN(16);
+	_estack = .;
+    }
+
+    .initctx : {
+	/* Initial contents of stack. This MUST BE just after the stack. */
+	*(.initctx)
+    }
+
+    _end = .;
+
+    /DISCARD/ : { *(.comment) *(.note) }
+}

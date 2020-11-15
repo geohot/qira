@@ -1,0 +1,105 @@
+#!/bin/sh
+
+hxtoh()
+{
+    flag=1
+    while read -r str; do
+        case $str in
+            HXCOMM*)
+            ;;
+            STEXI*|ETEXI*|SQMP*|EQMP*) flag=$(($flag^1))
+            ;;
+            *)
+            test $flag -eq 1 && printf "%s\n" "$str"
+            ;;
+        esac
+    done
+}
+
+hxtotexi()
+{
+    flag=0
+    line=1
+    while read -r str; do
+        case "$str" in
+            HXCOMM*)
+            ;;
+            STEXI*)
+            if test $flag -eq 1 ; then
+                echo "line $line: syntax error: expected ETEXI, found $str" >&2
+                exit 1
+            fi
+            flag=1
+            ;;
+            ETEXI*)
+            if test $flag -ne 1 ; then
+                echo "line $line: syntax error: expected STEXI, found $str" >&2
+                exit 1
+            fi
+            flag=0
+            ;;
+            SQMP*|EQMP*)
+            if test $flag -eq 1 ; then
+                echo "line $line: syntax error: expected ETEXI, found $str" >&2
+                exit 1
+            fi
+            ;;
+            DEFHEADING*)
+            echo "$(expr "$str" : "DEFHEADING(\(.*\))")"
+            ;;
+            ARCHHEADING*)
+            echo "$(expr "$str" : "ARCHHEADING(\(.*\),.*)")"
+            ;;
+            *)
+            test $flag -eq 1 && echo "$str"
+            ;;
+        esac
+        line=$((line+1))
+    done
+}
+
+hxtoqmp()
+{
+    IFS=
+    flag=0
+    line=1
+    while read -r str; do
+        case "$str" in
+            HXCOMM*)
+            ;;
+            SQMP*)
+            if test $flag -eq 1 ; then
+                echo "line $line: syntax error: expected EQMP, found $str" >&2
+                exit 1
+            fi
+            flag=1
+            ;;
+            EQMP*)
+            if test $flag -ne 1 ; then
+                echo "line $line: syntax error: expected SQMP, found $str" >&2
+                exit 1
+            fi
+            flag=0
+            ;;
+            STEXI*|ETEXI*)
+            if test $flag -eq 1 ; then
+                echo "line $line: syntax error: expected EQMP, found $str" >&2
+                exit 1
+            fi
+            ;;
+            *)
+            test $flag -eq 1 && echo "$str"
+            ;;
+        esac
+        line=$((line+1))
+    done
+}
+
+case "$1" in
+"-h") hxtoh ;;
+"-t") hxtotexi ;;
+"-q") hxtoqmp ;;
+*) exit 1 ;;
+esac
+
+exit 0

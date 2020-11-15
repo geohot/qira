@@ -1,0 +1,18 @@
+Build using this command line:
+
+make CONFIG=vbox bin/intel--virtio-net--pcnet32.isarom
+
+Max size of a VirtualBox ROM is 56KB, 57344 bytes. There should be no need
+to pad the image as long as the binary is smaller or equal to this size.
+
+To use the ROM in VirtualBox you need to enable it using this command:
+
+vboxmanage setextradata global \
+    VBoxInternal/Devices/pcbios/0/Config/LanBootRom \
+    /absolute/path/to/intel--virtio-net--pcnet32.isarom
+
+NB: If you build the ROM using the .rom prefix then it'll be built as a PCI
+ROM, which won't work properly in VirtualBox.  The error message you'll see
+is "No more network devices", which is somewhat confusing.  If you enter the
+shell and use the "autoboot" command things will work as intended.  Remember
+to always build as a .isarom to avoid this issue.

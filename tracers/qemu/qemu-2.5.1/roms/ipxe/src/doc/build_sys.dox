@@ -1,0 +1,419 @@
+/** @page build_sys Build system
+
+@section overview Overview
+
+Building an Etherboot image consists of three stages:
+
+  -# @ref compilation : Compiling all the source files into object files
+  -# @ref linking : Linking a particular image from selected object files
+  -# @ref finalisation : Producing the final output binary
+
+Though this is a remarkably complex process, it is important to note
+that it all happens automatically.  Whatever state your build tree is
+in, you can always type, for example
+
+@code
+
+	make bin/rtl8139.dsk
+
+@endcode
+
+and know that you will get a floppy disk image with an RTL8139 driver
+built from the current sources.
+
+@section compilation Compilation
+
+@subsection comp_overview Overview
+
+Each source file (a @c .c or a @c .S file) is compiled into a @c .o
+file in the @c bin/ directory.  Etherboot makes minimal use of
+conditional compilation (see @ref ifdef_harmful), and so you will find
+that all objects get built, even the objects that correspond to
+features that you are not intending to include in your image.  For
+example, all network card drivers will be compiled even if you are
+just building a ROM for a 3c509 card.  This is a deliberate design
+decision; please do @b not attempt to "fix" the build system to avoid
+doing this.
+
+Source files are defined to be any @c .c or @c .S files found in a
+directory listed in the Makefile variable #SRCDIRS.  You therefore do
+@b not need to edit the Makefile just because you have added a new
+source file (although you will need to edit the Makefile if you have
+added a new source directory).  To see a list of all source
+directories and source files that the build system currently knows
+about, you can use the commands
+
+@code
+
+	make srcdirs
+	make srcs
+
+@endcode
+
+Rules for compiling @c .c and @c .S files are defined in the Makefile
+variables #RULE_c and #RULE_S.  Makefile rules are automatically
+generated for each source file using these rules.  The generated rules
+can be found in the @c .d file corresponding to each source file;
+these are located in <tt>bin/deps/</tt>.  For example, the rules
+generated for <tt>drivers/net/rtl8139.c</tt> can be found in
+<tt>bin/deps/drivers/net/rtl8139.c.d</tt>.  These rules allow you to
+type, for example
+
+@code
+
+	make bin/rtl8139.o
+
+@endcode
+
+and have <tt>rtl8139.o</tt> be built from
+<tt>drivers/net/rtl8139.c</tt> using the generic rule #RULE_c for
+compiling @c .c files.
+
+You can see the full list of object files that will be built using
+
+@code
+
+	make bobjs
+
+@endcode
+
+@subsection comp_ar After compilation
+
+Once all objects have been compiled, they will be collected into a
+build library ("blib") in <tt>bin/blib.a</tt>.
+
+@subsection comp_custom Customising compilation
+
+The Makefile rules for a particular object can be customised to a
+certain extent by defining the Makefile variable CFLAGS_@<object@>.
+For example, if you were to set
+
+@code
+
+	CFLAGS_rtl8139 = -DFOO
+
+@endcode
+
+then <tt>bin/rtl8139.o</tt> would be compiled with the additional
+flags <tt>-DFOO</tt>.  To see the flags that will be used when
+compiling a particular object, you can use e.g.
+
+@code
+
+	make bin/rtl8139.flags
+
+@endcode
+
+If you need more flexibility than the CFLAGS_@<object@> mechanism
+provides, then you can exclude source files from the automatic rule
+generation process by listing them in the Makefile variable
+#NON_AUTO_SRCS.  The command
+
+@code
+
+	make autosrcs
+
+@endcode
+
+will show you which files are currently part of the automatic rule
+generation process.
+
+@subsection comp_multiobj Multiple objects
+
+A single source file can be used to generate multiple object files.
+This is used, for example, to generate the decompressing and the
+non-decompressing prefixes from the same source files.
+
+By default, a single object will be built from each source file.  To
+override the list of objects for a source file, you can define the
+Makefile variable OBJS_@<object@>.  For example, the
+<tt>arch/i386/prefix/dskprefix.S</tt> source file is built into two
+objects, <tt>bin/dskprefix.o</tt> and <tt>zdskprefix.o</tt> by
+defining the Makefile variable
+
+@code
+
+	OBJS_dskprefix = dskprefix zdskprefix
+
+@endcode
+
+Since there would be little point in building two identical objects,
+customised compilation flags (see @ref comp_custom) are defined as
+
+@code
+
+	CFLAGS_zdskprefix = -DCOMPRESS
+
+@endcode
+
+Thus, <tt>arch/i386/prefix/dskprefix.S</tt> is built into @c
+dskprefix.o using the normal set of flags, and into @c zdskprefix.o
+using the normal set of flags plus <tt>-DCOMPRESS</tt>.
+
+@subsection comp_debug Special debugging targets
+
+In addition to the basic rules #RULE_c and #RULE_S for compiling
+source files into object files, there are various other rules that can
+be useful for debugging.
+
+@subsubsection comp_debug_c_to_c Preprocessed C
+
+You can see the results of preprocessing a @c .c file (including the
+per-object flags defined via CFLAGS_@<object@> if applicable) using
+e.g.
+
+@code
+
+	make bin/rtl8139.c
+
+@endcode
+
+and examining the resulting file (<tt>bin/rtl8139.c</tt> in this
+case).
+
+@subsubsection comp_debug_x_to_s Assembler
+
+You can see the results of assembling a @c .c file, or of
+preprocessing a @c .S file, using e.g.
+
+@code
+
+	make bin/rtl8139.s
+	make bin/zdskprefix.s
+
+@endcode
+
+@subsubsection comp_debug_dbg Debugging-enabled targets
+
+You can build targets with debug messages (DBG()) enabled using e.g.
+
+@code
+
+	make bin/rtl8139.dbg.o
+	make bin/rtl8139.dbg2.o
+
+@endcode
+
+You will probably not need to use these targets directly, since a
+mechanism exists to select debugging levels at build time; see @ref
+debug.
+
+@section linking Linking
+
+@subsection link_overview Overview
+
+Etherboot is designed to be small and extremely customisable.  This is
+achieved by linking in only the features that are really wanted in any
+particular build.
+
+There are two places from which the list of desired features is
+obtained:
+
+  -# @ref link_config_h
+  -# @ref link_cmdline
+
+@subsection link_config_h config.h
+
+The config.h file is used to define global build options that are
+likely to apply to all images that you build, such as the console
+types, supported download protocols etc.  See the documentation for
+config.h for more details.
+
+@subsection link_cmdline The make command line
+
+When you type a command such as
+
+@code
+
+	make bin/dfe538.zrom
+
+@endcode
+
+it is used to derive the following information:
+
+   - We are building a compressed ROM image
+   - The DFE538 is a PCI NIC, so we need the decompressing PCI ROM prefix
+   - The PCI IDs for the DFE538 are 1186:1300
+   - The DFE538 is an rtl8139-based card, therefore we need the rtl8139 driver
+
+You can see this process in action using the command
+
+@code
+
+	make bin/dfe538.zrom.info
+
+@endcode
+
+which will print
+
+@code
+
+	Elements             : dfe538
+	Prefix               : zrom
+	Drivers              : rtl8139
+	ROM name             : dfe538
+	Media                : rom
+
+	ROM type             : pci
+	PCI vendor           : 0x1186
+	PCI device           : 0x1300
+
+	LD driver symbols    : obj_rtl8139
+	LD prefix symbols    : obj_zpciprefix
+	LD ID symbols        : pci_vendor_id=0x1186 pci_device_id=0x1300
+
+	LD target flags      :  -u obj_zpciprefix --defsym check_obj_zpciprefix=obj_zpciprefix   -u obj_rtl8139 --defsym check_obj_rtl8139=obj_rtl8139   -u obj_config --defsym check_obj_config=obj_config  --defsym pci_vendor_id=0x1186 --defsym pci_device_id=0x1300
+
+@endcode
+
+This should be interpreted as follows:
+
+@code
+
+	Elements             : dfe538
+	Prefix               : zrom
+
+@endcode
+
+"Elements" is the list of components preceding the first dot in the
+target name.  "Prefix" is the component following the first dot in the
+target name.  (It's called a "prefix" because the code that makes it a
+@c .zrom (rather than a @c .dsk, @c .zpxe or any other type of target)
+usually ends up at the start of the resulting binary image.)
+
+@code
+
+	Drivers              : rtl8139
+
+@endcode
+
+"Drivers" is the list of drivers corresponding to the "Elements".
+Most drivers support several network cards.  The PCI_ROM() and
+ISA_ROM() macros are used in the driver source files to list the cards
+that a particular driver can support.
+
+@code
+
+	ROM name             : dfe538
+
+@endcode
+
+"ROM name" is the first element in the "Elements" list.  It is used to
+select the PCI IDs for a PCI ROM.
+
+@code
+
+	Media                : rom
+
+@endcode
+
+"Media" is the "Prefix" minus the leading @c z, if any.
+
+@code
+
+	ROM type             : pci
+	PCI vendor           : 0x1186
+	PCI device           : 0x1300
+
+@endcode
+
+These are derived from the "ROM name" and the PCI_ROM() or ISA_ROM()
+macros in the driver source files.
+
+@code
+
+	LD driver symbols    : obj_rtl8139
+	LD prefix symbols    : obj_zpciprefix
+
+@endcode
+
+This is the interesting part.  At this point, we have established that
+we need the rtl8139 driver (i.e. @c rtl8139.o) and the decompressing
+PCI prefix (i.e. @c zpciprefix.o).  Our build system (via the
+compiler.h header file) arranges that every object exports a symbol
+obj_@<object@>; this can be seen by e.g.
+
+@code
+
+	objdump -t bin/rtl8139.o
+
+@endcode
+
+which will show the line
+
+@code
+
+	00000000 g       *ABS*  00000000 obj_rtl8139
+
+@endcode
+
+By instructing the linker that we need the symbols @c obj_rtl8139 and
+@c obj_zpciprefix, we can therefore ensure that these two objects are
+included in our build.  (The linker will also include any objects that
+these two objects require, since that's the whole purpose of the
+linker.)
+
+In a similar way, we always instruct the linker that we need the
+symbol @c obj_config, in order to include the object @c config.o.  @c
+config.o is used to drag in the objects that were specified via
+config.h; see @ref link_config_h.
+
+@code
+
+	LD target flags      :  -u obj_zpciprefix --defsym check_obj_zpciprefix=obj_zpciprefix   -u obj_rtl8139 --defsym check_obj_rtl8139=obj_rtl8139   -u obj_config --defsym check_obj_config=obj_config  --defsym pci_vendor_id=0x1186 --defsym pci_device_id=0x1300
+
+@endcode
+
+These are the flags that we pass to the linker in order to include the
+objects that we want in our build, and to check that they really get
+included.  (This latter check is needed to work around what seems to
+be a bug in @c ld).
+
+The linker does its job of linking all the required objects together
+into a coherent build.  The best way to see what is happening is to
+look at one of the resulting linker maps; try, for example
+
+@code
+
+	make bin/dfe538.dsk.map
+
+@endcode
+
+The linker map includes, amongst others:
+
+  - A list of which objects are included in the build, and why.
+  - The results of processing the linker script, line-by-line.
+  - A complete symbol table of the resulting build.
+
+It is worth spending time examining the linker map to see how an
+Etherboot image is assembled.
+
+Whatever format is selected, the Etherboot image is built into an ELF
+file, simply because this is the default format used by @c ld.
+
+@section finalisation Finalisation
+
+@subsection final_overview Overview
+
+The ELF file resulting from @ref linking "linking" needs to be
+converted into the final binary image.  Usually, this is just a case
+of running
+
+@code
+
+	objcopy -O binary <elf file> <output file>
+
+@endcode
+
+to convert the ELF file into a raw binary image.  Certain image
+formats require special additional treatment.
+
+@subsection final_rom ROM images
+
+ROM images must be rounded up to a suitable ROM size (e.g. 16kB or
+32kB), and certain header information such as checksums needs to be
+filled in.  This is done by the @c makerom.pl program.
+
+@section debug Debugging-enabled builds
+
+*/

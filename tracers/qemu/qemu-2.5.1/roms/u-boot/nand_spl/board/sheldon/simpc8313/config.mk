@@ -1,0 +1,5 @@
+ifdef CONFIG_NAND_LP
+PAD_TO = 0xFFF20000
+else
+PAD_TO = 0xFFF04000
+endif

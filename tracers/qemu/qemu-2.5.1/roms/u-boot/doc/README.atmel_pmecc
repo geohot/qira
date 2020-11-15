@@ -1,0 +1,29 @@
+How to enable PMECC(Programmable Multibit ECC) for nand on Atmel SoCs
+-----------------------------------------------------------
+2012-08-22 Josh Wu <josh.wu@atmel.com>
+
+The Programmable Multibit ECC (PMECC) controller is a programmable binary
+BCH(Bose, Chaudhuri and Hocquenghem) encoder and decoder. This controller
+can be used to support both SLC and MLC NAND Flash devices. It supports to
+generate ECC to correct 2, 4, 8, 12 or 24 bits of error per sector (512 or
+1024 bytes) of data.
+
+Following Atmel AT91 products support PMECC.
+- AT91SAM9X25, X35, G25, G15, G35 (tested)
+- AT91SAM9N12 (not tested, Should work)
+
+As soon as your nand flash software ECC works, you can enable PMECC.
+
+To use PMECC in this driver, the user needs to set:
+	1. the PMECC correction error bits capability: CONFIG_PMECC_CAP.
+	   It can be 2, 4, 8, 12 or 24.
+	2. The PMECC sector size: CONFIG_PMECC_SECTOR_SIZE.
+	   It only can be 512 or 1024.
+
+Take AT91SAM9X5EK as an example, the board definition file likes:
+
+/* PMECC & PMERRLOC */
+#define CONFIG_ATMEL_NAND_HWECC		1
+#define CONFIG_ATMEL_NAND_HW_PMECC	1
+#define CONFIG_PMECC_CAP		2
+#define CONFIG_PMECC_SECTOR_SIZE	512

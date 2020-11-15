@@ -1,0 +1,64 @@
+TODO-list:
+
+Sparc common:
+- Unimplemented features/bugs:
+ - Send keycode on keypress
+ - Remove compiler warnings
+ - Clean up
+
+- Optimizations/improvements:
+ - Merge allocators (lib.c malloc, romvec opb_, iommu, OF /memory, Sparc64)
+ - Warm reset detection
+ - Boot logo
+
+Sparc32:
+- Unimplemented features/bugs:
+ - Some console escape codes (Debian 3.1R1, NetBSD)
+ - Arbitrary resolution support
+ - Add cg6, bwtwo
+ - Probe devices (like Proll?)
+ - Less fixed hardware choices, conditional HW
+ - SBus slot probing, FCode ROM support
+ - Compile for least capable CPU
+ - DBRI audio (Am7930)
+ - BPP parallel
+ - Diagnostic switch
+
+Sparc64:
+- Unimplemented features/bugs:
+ - Debug direct kernel boot
+ - Boot from drive, cdrom or floppy
+
+- Optimizations/improvements:
+ - Hypervisor
+
+Sun4:
+- Support to be added
+
+Sun4c:
+- Support to be added
+
+Sun4m:
+- Unimplemented features/bugs:
+ - JavaStation machines
+ - Realistic SMP probing
+ - SS600MP ledma -> lebuffer
+
+Sun4d:
+- Support to be added
+
+Sun4u:
+- Unimplemented features/bugs:
+ - Interrupt controller setup
+ - PCI/IOMMU support (Simba, JIO, Tomatillo, Psycho, Schizo, Safari...)
+ - SMP/CMT
+ - Happy Meal Ethernet, flash, I2C, GPIO
+ - A lot of real machine types
+
+Sun4v:
+- Support to be added
+
+Ideas:
+ - Real machine test with special entry.S
+ - Unix compile with uClibc
+ - Sparc64: Emulate hypervisor so that OpenBoot image can be used

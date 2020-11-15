@@ -1,0 +1,26 @@
+# Makefile to build a KEEP_IT_REAL flavour
+# 
+# KEEP_IT_REAL, by its nature, requires a different build of every
+# single object file, since the inclusion of ".code16gcc" will
+# generate different machine code from the assembly.  Unlike the other
+# config options, there is no way that this global dependency can ever
+# be reduced, so it makes sense to be able to build both the normal
+# and the KIR versions without having to force a full rebuild each
+# time.
+
+# Add this Makefile to MAKEDEPS
+#
+MAKEDEPS	+= arch/i386/kir-Makefile
+
+# Place binaries in bin-kir
+#
+BIN		= bin-kir
+
+# Compile with -DKEEP_IT_REAL, forcibly include kir.h at the start of
+# each file to drag in ".code16gcc"
+#
+CFLAGS		+= -DKEEP_IT_REAL -include kir.h
+
+include Makefile
+
+LDSCRIPT	= arch/i386/scripts/i386-kir.lds

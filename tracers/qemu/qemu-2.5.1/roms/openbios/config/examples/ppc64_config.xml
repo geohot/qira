@@ -1,0 +1,77 @@
+  <!-- Kernel Debugging -->
+  <option name="CONFIG_DEBUG" type="boolean" value="true"/>
+  <option name="CONFIG_DEBUG_BOOT" type="boolean" value="false"/>
+  <option name="CONFIG_DEBUG_DSTACK" type="boolean" value="false"/>
+  <option name="CONFIG_DEBUG_RSTACK" type="boolean" value="false"/>
+  <option name="CONFIG_DEBUG_DICTIONARY" type="boolean" value="false"/>
+  <option name="CONFIG_DEBUG_INTERNAL" type="boolean" value="false"/>
+  <option name="CONFIG_DEBUG_INTERPRETER" type="boolean" value="false"/>
+  <option name="CONFIG_DEBUG_CONSOLE" type="boolean" value="true"/>
+  <option name="CONFIG_DEBUG_CONSOLE_SERIAL" type="boolean" value="true"/>
+  <option name="CONFIG_SERIAL_PORT" type="integer" value="0"/>
+  <option name="CONFIG_SERIAL_SPEED" type="integer" value="115200"/>
+  <option name="CONFIG_DEBUG_CONSOLE_VGA" type="boolean" value="true"/>
+  <option name="CONFIG_DEBUG_OFMEM" type="boolean" value="false"/>
+
+
+  <!-- Module Configuration -->
+  <option name="CONFIG_CMDLINE" type="boolean" value="true"/>
+  <option name="CONFIG_DEBLOCKER" type="boolean" value="true"/>
+  <option name="CONFIG_FONT_8X8" type="boolean" value="true"/>
+  <option name="CONFIG_FONT_8X16" type="boolean" value="false"/>
+  <option name="CONFIG_OFMEM" type="boolean" value="true"/>
+  <option name="CONFIG_OFMEM_MALLOC_ALIGN" type="integer" value="4"/>
+  <option name="CONFIG_VGA_WIDTH" type="integer" value="800"/>
+  <option name="CONFIG_VGA_HEIGHT" type="integer" value="600"/>
+  <option name="CONFIG_VGA_DEPTH" type="integer" value="8"/>
+  <option name="CONFIG_LOADER_AOUT" type="boolean" value="false"/>
+  <option name="CONFIG_LOADER_BOOTINFO" type="boolean" value="true"/>
+  <option name="CONFIG_LOADER_ELF" type="boolean" value="true"/>
+  <option name="CONFIG_LOADER_FCODE" type="boolean" value="false"/>
+  <option name="CONFIG_LOADER_FORTH" type="boolean" value="false"/>
+  <option name="CONFIG_LOADER_XCOFF" type="boolean" value="true"/>
+
+  <!-- Filesystem Configuration -->
+  <option name="CONFIG_DISK_LABEL" type="boolean" value="true"/>
+  <option name="CONFIG_PART_SUPPORT" type="boolean" value="true"/>
+  <option name="CONFIG_MAC_PARTS" type="boolean" value="true"/>
+  <option name="CONFIG_DEBUG_MAC_PARTS" type="boolean" value="false"/>
+  <option name="CONFIG_PC_PARTS" type="boolean" value="true"/>
+  <option name="CONFIG_HFS" type="boolean" value="true"/>
+  <option name="CONFIG_HFSP" type="boolean" value="true"/>
+  <option name="CONFIG_ISO9660" type="boolean" value="true"/>
+  <option name="CONFIG_EXT2" type="boolean" value="true"/>
+  <option name="CONFIG_GRUBFS" type="boolean" value="true"/>
+  <option name="CONFIG_FSYS_EXT2FS" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_FAT" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_JFS" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_MINIX" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_REISERFS" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_XFS" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_UFS" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_ISO9660" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_FFS" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_VSTAFS" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_NTFS" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_AFFS" type="boolean" value="false"/>
+  <option name="CONFIG_DEBUG_FS" type="boolean" value="false"/>
+
+  <!-- Miscellaneous -->
+  <option name="CONFIG_LINUXBIOS" type="boolean" value="false"/>
+  <option name="CONFIG_RTAS" type="boolean" value="false"/>
+
+  <!-- Drivers -->
+  <option name="CONFIG_DRIVER_PCI" type="boolean" value="true"/>
+  <option name="CONFIG_DEBUG_PCI" type="boolean" value="false"/>
+  <option name="CONFIG_DRIVER_IDE" type="boolean" value="true"/>
+  <option name="CONFIG_IDE_NUM_CHANNELS" type="integer" value="2"/>
+  <option name="CONFIG_IDE_FIRST_UNIT" type="integer" value="1"/>
+  <option name="CONFIG_IDE_DEV_NAME" type="string" value="ata-%d"/>
+  <option name="CONFIG_IDE_DEV_TYPE" type="string" value="ata"/>
+  <option name="CONFIG_DEBUG_IDE" type="boolean" value="false"/>
+  <option name="CONFIG_DRIVER_ADB" type="boolean" value="true"/>
+  <option name="CONFIG_DRIVER_VGA" type="boolean" value="true"/>
+  <option name="CONFIG_DRIVER_MACIO" type="boolean" value="true"/>
+  <option name="CONFIG_DRIVER_ESCC" type="boolean" value="true"/>
+  <option name="CONFIG_DRIVER_FW_CFG" type="boolean" value="true"/>
+  <option name="CONFIG_FW_CFG_ADDR" type="integer" value="0xf0000510"/>

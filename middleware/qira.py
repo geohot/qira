@@ -1,5 +1,4 @@
 #!/usr/bin/env python2.7
-from __future__ import print_function
 import os
 import sys
 basedir = os.path.dirname(os.path.realpath(__file__))
@@ -28,6 +27,7 @@ if __name__ == '__main__':
   parser.add_argument("--web-port", metavar="PORT", help="listen port for web interface. 3002 by default", type=int, default=qira_config.WEB_PORT)
   parser.add_argument("--socat-port", metavar="PORT", help="listen port for socat. 4000 by default", type=int, default=qira_config.SOCAT_PORT)
   parser.add_argument('-S', '--static', help="enable static2", action="store_true")
+  parser.add_argument("--engine", help="static engine to use with static2 (builtin or r2)", default="builtin")
   #capstone flag in qira_config for now
 
   # parse arguments, first try
@@ -51,7 +51,7 @@ if __name__ == '__main__':
 
   # handle arguments
   if sys.platform == "darwin":
-    print("*** running on darwin, defaulting to --pin")
+    print "*** running on darwin, defaulting to --pin"
     qira_config.USE_PIN = True
   else:
     qira_config.USE_PIN = args.pin
@@ -66,10 +66,11 @@ if __name__ == '__main__':
     qira_config.TRACE_LIBRARIES = True
 
   if args.static:
-    print("*** using static")
+    print "*** using static"
     qira_config.WITH_STATIC = True
+    qira_config.STATIC_ENGINE = args.engine
   if args.flush_cache:
-    print("*** flushing caches")
+    print "*** flushing caches"
     os.system("rm -rfv /tmp/qira*")
 
   # qemu args from command line
@@ -88,14 +89,14 @@ if __name__ == '__main__':
       raise Exception("can't run as server if QIRA is already running")
   except:
     is_qira_running = 0
-    print("no qira server found, starting it")
+    print "no qira server found, starting it"
     program.clear()
 
   # start the binary runner
   if args.server:
     qira_socat.start_bindserver(program, qira_config.SOCAT_PORT, -1, 1, True)
   else:
-    print("**** running",program.program)
+    print "**** running "+program.program
     program.execqira(shouldfork=not is_qira_running)
 
   if not is_qira_running:

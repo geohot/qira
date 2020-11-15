@@ -1,0 +1,300 @@
+# tag: stepan's changelog for CVS
+
+Mon Jul 14 02:16:49 CEST 2003
+ - fix segv overrun while dumping dictionary in unix.c
+ - implement first version of >number and $number
+ - add stack diagram to digit
+ - no newline after accept
+ - new version of the interpreter
+ - fix make run target
+
+Mon Jul 14 20:15:40 CEST 2003
+ - negate true value in prims 
+ - get rid of primitive word bounds. 
+ - get rid of some obsolete code.
+ - implement io[cwl][@!]
+ - reorganize [in|out][bwl]
+ - start adding stack diagrams to primitives.
+ 
+Mon Jul 14 23:57:46 CEST 2003
+ - added some more stack diagrams in forth.h
+ - move parse, parse-word, word to bootstrap.fs
+ - include memory.fs from bootstrap.fs for above.
+
+Wed Jul 16 22:57:31 CEST 2003
+ - add include guards
+ - add banner
+ - fix primitives' dependencies
+
+Sun Jul 20 03:27:40 CEST 2003
+ - remove unneeded readcell
+ - rename ' to ['] to meet specs
+
+Sun Jul 20 14:08:43 CEST 2003
+ - add rest of stack diagrams in forth.h
+ - move here and here! to forth.h (from internal.h)
+ - indent includes
+ - merge system.h into forth.h
+ - Change tag of forth.h (!) because the old one 
+   did not meet the meaning of the code.
+ - update comments in primitives.c
+
+Sun Jul 27 01:53:18 CEST 2003
+ - include great new do/?do/loop/+loop 
+   implementation from Patrick.
+ - include testsuite enhancement from Patrick
+ - include trampoline from Patrick (fixes execute)
+
+Sun Jul 27 21:11:50 CEST 2003
+ - update x86 console code to become when using
+   multiboot (vga/keyboard).
+ - fix exit properly
+ - revert to old case..endcase code
+ - fix >number and $number
+ - add number parsing to interpreter
+ - add simple stack checking to interpreter
+ - add 2 testcases (exit and case2)
+
+Mon Jul 28 14:49:31 CEST 2003
+ - move 7.3.7 Flag constants up in bootstrap.fs
+ - move 7.3.9.2.4 Miscellaneous dictionary down.
+ - add reveal, recursive, recurse, environment? to 7.3.9.2.4
+ - move (to) to bootstrap.fs
+ 
+Mon Jul 28 17:08:58 CEST 2003
+ - add stack overflow check to interpreter
+ - check parse-word result in interpreter. 
+ - add ascii and char, add helper handle-lit
+
+Tue Jul 29 09:20:18 CEST 2003
+ - add s" and ."
+ - add [char] and control
+ - heavily move around words in bootstrap.fs 
+   to get dependencies resolved.
+ - fix skipws crash
+ - rename query to refill
+ - interpreter reads several words in a line now
+ - interpreter stops now if error encountered in
+   currently parsed line.
+ - add forth definitions of ( and \
+ - change c parser/interpreter to handle comments
+   correctly.
+ - indent, clean up unix.c
+
+Tue Jul 29 18:13:27 CEST 2003
+ - add .(  (chapter 7.3.4.4)
+ - add pack, -trailing (chapter 7.3.4.8)
+ - add d#, h#, o# (chapter 7.3.5.2)
+ - let first stack element start at 1 instead of 0
+   to have a 1 cell guard band.
+ - set SA_NODEFER flag to signal handler to ensure
+   that it is entered recursively.
+
+Tue Jul 29 19:06:18 CEST 2003
+ - more simplification for unix.c
+ - add ', ['], find
+ - fix pack, count
+ - add literal, compile, [compile], compile,
+ - fix [
+
+Wed Jul 30 01:24:24 CEST 2003
+ - add >body, body>
+ - add helpers: flags?, immediate?, compile-only?, header
+ - add :, ;, constant, value, variable, buffer:
+ - parse word's flags in interpreter to make colon 
+   definitions work
+ - add "compiled" acknowledge when interpreter is in compile mode
+
+Wed Jul 30 07:27:58 CEST 2003
+ - fix flags handling in interpreter
+ - fix handle-text compile mode behaviour
+ - add defer, struct, field
+ - add behaviour, to
+ - add $create, create, does> (missing c code DODOES)
+ - add abort
+
+Thu Jul 31 07:58:35 CEST 2003
+ - fix DODOES cfa code
+ - make 2@ and 2! colon definitions instead of primitives.
+ - add word "cell" 
+ - add warning message as described in 7.3.9.1 if an already 
+   existing word is created
+
+Fri Aug  1 23:32:57 CEST 2003
+ - fix s" in C interpreter (compare case insensitive)
+ - fix forth source dependencies
+ - fix forth word sm/rem 
+
+Sat Aug  2 13:34:43 CEST 2003
+ - add band guard around input buffer
+ - make sure that "header" pads null bytes
+ - define -1,0,1,2,3 early to safe dictionary space
+
+Sat Aug  2 16:58:31 CEST 2003
+ - use getopt/getopt_long for option parsing
+ - add include path option -I to unix
+ - don't create obsolete symlink in forth/Makefile
+ - fix recurse
+ - fix prim word /
+ - implement postpone
+ - fix 2!, ['] and '
+ - implement evaluate/eval
+
+Sun Aug  3 11:48:18 CEST 2003
+ - implement "bye" to leave the engine
+ - change initial word to "initialize" and
+   make quit restart the forth engine.
+ - fix missing ; in u.
+ - fix return value of find when handling an immediate
+ - getting rid of primitives mod, /mod and /, replacing 
+   them by floored variants as IEEE 1275-1994 says.
+ - clean up primitives.
+   
+Sun Aug  3 23:06:39 CEST 2003
+ - fix >body, body>
+ - make not a synonym for invert as described in IEEE 1275
+ - todigit can now switch between capital and small letters via
+   value capital-hex?
+
+Mon Aug  4 21:57:06 CEST 2003
+ - indent unix.c
+ - reimplement do, ?do, loop, +loop with prim helpers. It now
+   passes hayes' ans forth test suite.
+ - adopt unix.c and bootstrap.fs to new (?)do..(+)loop
+ - remove unneeded if around ?do..loop in ",
+ - interpreter: clear input buffer before refilling it
+ - serialize PC changes in dobranch and do?branch
+
+Thu Aug  7 19:00:43 CEST 2003
+ - add/change missing/incomplete copyright notices
+ - implement "
+
+Sun Aug 10 19:52:20 CEST 2003
+ - reimplement catch, through
+ - implement abort"
+ - rephrase endcase
+ - change interpreter to use exception words
+ - implement forget
+ - add dummy "forth"
+
+Sun Aug 10 22:12:28 CEST 2003
+ - fix "spaces"
+ - create subdir util for types.sh and new bin2hex
+ - enable forth.html again, running hayes test suite.
+ - include dictionary in char array instead of elf section
+   when building an x86 "full" image
+ - don't newline in accept.
+ - fix " compile mode behavior.
+ - move throw/catch and use it with ' and [']
+ - add :noname
+
+Thu Aug 14 23:02:15 CEST 2003
+ - fix "field"
+ - implement second stage bootstrapping
+   NOTE: changes dictionary format!
+ - drop initxt from dictionary, since we know "last" now.
+ - output dictionary can be named on command line.
+ - make segfault handler optional
+
+Mon Sep  1 19:41:23 CEST 2003
+ - move findword() et al to dict.c (needed by openbios.c due 
+   to last dictionary change)
+ - fix findword() return values and optimize it slightly.
+ - indented some files.
+ 
+Mon Sep  8 22:43:55 CEST 2003
+ - add initial AMD64 support (cloned x86 target)
+ - get vocabulary implementation working. maybe buggy, but operable
+ - enable vocabulary support by default (vocabularies? set to true)
+ - drop duplicate "forth"
+ - fix some comments in forth files.
+ 
+Sun Sep 28 14:26:41 CEST 2003
+ - some documentation and comment fixes
+ - fix parameter passing for io words.
+
+Thu Oct  2 08:21:06 CEST 2003
+ - clean up lit
+ - inline some functions from internal.h (reduces size and execution 
+   time)
+
+Fri Oct  3 15:20:44 CEST 2003
+ - make i and j primitives. This safes a lot of time in loops.
+   i.e. the following dummy loop executes 300% faster:
+   : fbar 1000 0 do 1000 0 do j drop i drop loop loop ;
+
+Sat Oct 11 20:18:22 CEST 2003
+ - include plugin interface for unix hosted version.
+ - add plugin_pci and plugin_qt as examples.
+ - add simple set of pci functions for testing the pci plugin
+ - add state variable "runforth" to be changed by the qt plugin
+   on exit.
+
+Sun Oct 12 14:57:54 CEST 2003
+ - move internal.h and forth.h to kernel/
+ - replace make by $(MAKE) in some places.
+
+Tue Oct 14 01:06:39 CEST 2003
+ - add (immediate) and (compile-only) 
+
+Wed Oct 15 00:52:49 CEST 2003
+ - check whether dlopen() needs libdl.
+ - include BSD compile fixes from oxygene
+ - fix abort"
+ 
+Tue Oct 21 22:08:00 CEST 2003
+ - fix forth.html dependencies
+ - yet another indent orgy
+
+Thu Oct 30 16:10:01 CET 2003
+ - add "call" to execute native code functions
+ - plugin_qt: fix framebuffer address on 64bit systems
+ - plugin_pci: create position independent code.
+
+Wed Nov  5 08:38:18 CET 2003
+ - fix "comp" (from Samuel Rydh)
+ - include instance support (from Samuel Rydh)
+
+Sun Nov  9 15:53:33 CET 2003
+ - some changes for "see"
+ - apply more patches from Samuel.
+ - smaller, better implementation of handle-text
+
+Mon Nov 10 22:06:32 CET 2003
+ - increase max dictionary size from 64k to 128k
+ - add simple fcode to qt plugin
+ - fix handle-text (move null-align up)
+
+Tue Nov 11 22:53:27 CET 2003
+ - rename ?key to key?.
+ - clean up .s
+ - add (cr
+
+Tue Nov 17 22:42:54 CET 2003
+ - enterforth rstack fix (from Samuel)
+ - include latest version of qt interface 
+   fcode driver
+ - fix "header" (from Samuel)
+
+Wed Nov 26 15:12:07 CET 2003
+ - merge patches from Samuel:
+ - add $buffer:
+ - fill all of "ib", not only 80 characters
+ - interpreted conditionals support
+ - late initializers
+
+Sun Nov 30 23:04:28 CET 2003
+ - fix bug in enterforth (non-colon words would destroy PC)
+
+Sat Dec 13 00:57:01 CET 2003
+ - add initial ppc infrastructure
+ - only search current wordlist in "header"
+ - seperate unix host binary and bootstrap interpreter.
+
+Sun Dec 14 18:13:29 CET 2003
+ - add sys-debug word and use it to stop forth interpreter
+   during bootstrap if an error occurs.
+ 
+Sat Mar 13 16:30:30 CET 2004
+ - fix digit problem
+   

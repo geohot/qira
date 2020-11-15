@@ -1,4 +1,3 @@
-from __future__ import print_function
 from qira_base import *
 import qira_config
 import qira_analysis
@@ -51,7 +50,7 @@ class Program:
     self.program = which(prog)
     self.args = args
     self.proghash = sha1(open(self.program, "rb").read()).hexdigest()
-    print("*** program is",self.program,"with hash",self.proghash)
+    print "*** program is",self.program,"with hash",self.proghash
 
     # this is always initted, as it's the tag repo
     self.static = static2.Static(self.program)
@@ -91,21 +90,21 @@ class Program:
     # pmaps is global, but updated by the traces
     progdat = open(self.program, "rb").read(0x800)
 
-    CPU_TYPE_ARM = b"\x0C"
-    CPU_TYPE_ARM64 = b"\x01\x00\x00\x0C"
+    CPU_TYPE_ARM = "\x0C"
+    CPU_TYPE_ARM64 = "\x01\x00\x00\x0C"
 
-    CPU_SUBTYPE_ARM_ALL = b"\x00"
-    CPU_SUBTYPE_ARM_V4T = b"\x05"
-    CPU_SUBTYPE_ARM_V6 = b"\x06"
-    CPU_SUBTYPE_ARM_V5TEJ = b"\x07"
-    CPU_SUBTYPE_ARM_XSCALE = b"\x08"
-    CPU_SUBTYPE_ARM_V7 = b"\x09"
-    CPU_SUBTYPE_ARM_V7F = b"\x0A"
-    CPU_SUBTYPE_ARM_V7S = b"\x0B"
-    CPU_SUBTYPE_ARM_V7K = b"\x0C"
-    CPU_SUBTYPE_ARM_V6M = b"\x0E"
-    CPU_SUBTYPE_ARM_V7M = b"\x0F"
-    CPU_SUBTYPE_ARM_V7EM = b"\x10"
+    CPU_SUBTYPE_ARM_ALL = "\x00"
+    CPU_SUBTYPE_ARM_V4T = "\x05"
+    CPU_SUBTYPE_ARM_V6 = "\x06"
+    CPU_SUBTYPE_ARM_V5TEJ = "\x07"
+    CPU_SUBTYPE_ARM_XSCALE = "\x08"
+    CPU_SUBTYPE_ARM_V7 = "\x09"
+    CPU_SUBTYPE_ARM_V7F = "\x0A"
+    CPU_SUBTYPE_ARM_V7S = "\x0B"
+    CPU_SUBTYPE_ARM_V7K = "\x0C"
+    CPU_SUBTYPE_ARM_V6M = "\x0E"
+    CPU_SUBTYPE_ARM_V7M = "\x0F"
+    CPU_SUBTYPE_ARM_V7EM = "\x10"
 
     CPU_SUBTYPE_ARM = [
                          CPU_SUBTYPE_ARM_V4T,
@@ -125,17 +124,17 @@ class Program:
                          CPU_SUBTYPE_ARM_V7S
                         ]
 
-    MACHO_MAGIC = b"\xFE\xED\xFA\xCE"
-    MACHO_CIGAM = b"\xCE\xFA\xED\xFE"
-    MACHO_MAGIC_64 = b"\xFE\xED\xFA\xCF"
-    MACHO_CIGAM_64 = b"\xCF\xFA\xED\xFE"
-    MACHO_FAT_MAGIC = b"\xCA\xFE\xBA\xBE"
-    MACHO_FAT_CIGAM = b"\xBE\xBA\xFE\xCA"
-    MACHO_P200_FAT_MAGIC = b"\xCA\xFE\xD0\x0D"
-    MACHO_P200_FAT_CIGAM = b"\x0D\xD0\xFE\xCA"
+    MACHO_MAGIC = "\xFE\xED\xFA\xCE"
+    MACHO_CIGAM = "\xCE\xFA\xED\xFE"
+    MACHO_MAGIC_64 = "\xFE\xED\xFA\xCF"
+    MACHO_CIGAM_64 = "\xCF\xFA\xED\xFE"
+    MACHO_FAT_MAGIC = "\xCA\xFE\xBA\xBE"
+    MACHO_FAT_CIGAM = "\xBE\xBA\xFE\xCA"
+    MACHO_P200_FAT_MAGIC = "\xCA\xFE\xD0\x0D"
+    MACHO_P200_FAT_CIGAM = "\x0D\xD0\xFE\xCA"
 
     # Linux binaries
-    if progdat[0:4] == b"\x7FELF":
+    if progdat[0:4] == "\x7FELF":
       # get file type
       self.fb = struct.unpack("H", progdat[0x12:0x14])[0]   # e_machine
 
@@ -143,7 +142,7 @@ class Program:
         maybe_path = lib_dir+arch+"/"
         if 'QEMU_LD_PREFIX' not in os.environ and os.path.exists(maybe_path):
           os.environ['QEMU_LD_PREFIX'] = os.path.realpath(maybe_path)
-          print("**** set QEMU_LD_PREFIX to",os.environ['QEMU_LD_PREFIX'])
+          print "**** set QEMU_LD_PREFIX to",os.environ['QEMU_LD_PREFIX']
 
       if self.fb == 0x28:
         if '/lib/ld-linux.so.3' in progdat:
@@ -183,21 +182,21 @@ class Program:
         raise Exception("binary type "+hex(self.fb)+" not supported")
 
       self.qirabinary = os.path.realpath(self.qirabinary)
-      print("**** using",self.qirabinary,"for",hex(self.fb))
+      print "**** using",self.qirabinary,"for",hex(self.fb)
 
       self.runnable = True
 
     # Windows binaries
-    elif progdat[0:2] == b"MZ":
-      print("**** windows binary detected, only running the server")
+    elif progdat[0:2] == "MZ":
+      print "**** windows binary detected, only running the server"
       pe = struct.unpack("I", progdat[0x3c:0x40])[0]
       wh = struct.unpack("H", progdat[pe+4:pe+6])[0]
       if wh == 0x14c:
-        print("*** 32-bit windows")
+        print "*** 32-bit windows"
         self.tregs = arch.X86REGS
         self.fb = 0x03
       elif wh == 0x8664:
-        print("*** 64-bit windows")
+        print "*** 64-bit windows"
         self.tregs = arch.X64REGS
         self.fb = 0x3e
       else:
@@ -205,17 +204,17 @@ class Program:
 
     # MACHO FAT binaries
     elif progdat[0x0:0x04] in (MACHO_FAT_MAGIC, MACHO_FAT_CIGAM, MACHO_P200_FAT_MAGIC, MACHO_P200_FAT_CIGAM):
-      print("**** Mach-O FAT (Universal) binary detected")
+      print "**** Mach-O FAT (Universal) binary detected"
 
       if progdat[0x04:0x05] == CPU_TYPE_ARM and progdat[0x08:0x09] in CPU_SUBTYPE_ARM:
-        print("**** Mach-O ARM architecture detected")
+        print "**** Mach-O ARM architecture detected"
         self.macharch = "arm"
       elif (progdat[0x08:0x0c] == CPU_TYPE_ARM64) or (progdat[0x1c:0x20] == CPU_TYPE_ARM64) or (progdat[0x30:0x34] == CPU_TYPE_ARM64):
-        print("**** Mach-O Aarch64 architecture detected")
+        print "**** Mach-O Aarch64 architecture detected"
         self.macharch = "aarch64"
       else:
         self.macharch = ""
-        print("**** Mach-O X86/64 architecture detected")
+        print "**** Mach-O X86/64 architecture detected"
 
       if progdat[0x0:0x04] in (MACHO_P200_FAT_MAGIC, MACHO_P200_FAT_CIGAM):
         raise NotImplementedError("Pack200 compressed files are not supported yet")
@@ -237,24 +236,24 @@ class Program:
       if self.macharch == "arm" or self.macharch == "aarch64":
         raise NotImplementedError("ARM/Aarch64 Support is not implemented")
       if not os.path.isfile(self.pintool):
-        print("Running a Mach-O FAT (Universal) binary requires PIN support. See tracers/pin_build.sh")
+        print "Running a Mach-O FAT (Universal) binary requires PIN support. See tracers/pin_build.sh"
         exit()
       raise NotImplementedError("Mach-O FAT (Universal) binary not supported")
       self.runnable = True
 
     # MACHO binaries
     elif progdat[0x0:0x04] in (MACHO_MAGIC_64, MACHO_CIGAM_64, MACHO_MAGIC, MACHO_CIGAM):
-      print("**** Mach-O binary detected")
+      print "**** Mach-O binary detected"
 
       if progdat[0x04:0x05] == CPU_TYPE_ARM and progdat[0x08:0x09] in CPU_SUBTYPE_ARM:
-        print("**** Mach-O ARM architecture detected")
+        print "**** Mach-O ARM architecture detected"
         self.macharch = "arm"
       elif progdat[0x04:0x05] == CPU_TYPE_ARM and progdat[0x08:0x09] in CPU_SUBTYPE_ARM64:
-        print("**** Mach-O Aarch64 architecture detected")
+        print "**** Mach-O Aarch64 architecture detected"
         self.macharch = "aarch64"
       else:
         self.macharch = ""
-        print("**** Mach-O X86/64 architecture detected")
+        print "**** Mach-O X86/64 architecture detected"
 
       if progdat[0x0:0x04] in (MACHO_MAGIC_64, MACHO_CIGAM_64):
         if progdat[0x0:0x04] == MACHO_CIGAM_64:
@@ -279,7 +278,7 @@ class Program:
       if self.macharch == "arm" or self.macharch == "aarch64":
         raise NotImplementedError("ARM/Aarch64 Support is not implemented")
       if not os.path.isfile(self.pintool):
-        print("Running a Mach-O binary requires PIN support. See tracers/pin_build.sh")
+        print "Running a Mach-O binary requires PIN support. See tracers/pin_build.sh"
         exit()
       self.runnable = True
     else:
@@ -287,7 +286,7 @@ class Program:
 
   def clear(self):
     # probably always good to do except in development of middleware
-    print("*** deleting old runs")
+    print "*** deleting old runs"
     self.delete_old_runs()
 
     # getting asm from qemu
@@ -382,18 +381,14 @@ class Program:
   def execqira(self, args=[], shouldfork=True):
     if self.runnable == False:
       return
+    if shouldfork:
+      if os.fork() != 0:
+        return
     if qira_config.USE_PIN:
       # is "-injection child" good?
       eargs = [self.pinbinary, "-injection", "child", "-t", self.pintool, "--", self.program]+self.args
     else:
       eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
-    if not os.path.exists(eargs[0]):
-      print("\nQIRA tracer %s not found" % eargs[0])
-      print("Your install is broken. Check ./install.sh for issues")
-      exit(-1)
-    if shouldfork:
-      if os.fork() != 0:
-        return
     #print "***",' '.join(eargs)
     os.execvp(eargs[0], eargs)
 
@@ -402,7 +397,7 @@ class Trace:
   def __init__(self, fn, forknum, program, r1, r2, r3):
     self.forknum = forknum
     self.program = program
-    self.db = qiradb.PyTrace(fn, forknum, r1, r2, r3)
+    self.db = qiradb.Trace(fn, forknum, r1, r2, r3)
     self.load_base_memory()
 
     # analysis stuff
@@ -417,7 +412,6 @@ class Trace:
     self.strace = []
     self.mapped = []
 
-    self.keep_analysis_thread = True
     threading.Thread(target=self.analysis_thread).start()
 
   def fetch_raw_memory(self, clnum, address, ln):
@@ -434,12 +428,10 @@ class Trace:
         dat[i] = mem[i]&0xFF
       else:
         try:
-          if (sys.version_info > (3, 0)):
-            dat[i] = self.program.static.memory(ri, 1)[0]
-          else:
-            dat[i] = ord(self.program.static.memory(ri, 1)[0])
-        except IndexError:
+          dat[i] = ord(self.program.static.memory(ri, 1)[0])
+        except:
           pass
+          #dat[i] = 0 #XXX is this correct behavior?
     return dat
 
   def read_strace_file(self):
@@ -479,9 +471,9 @@ class Trace:
             self.mapped.append(mapp)
             try:
               try:
-                f = open(os.environ['QEMU_LD_PREFIX']+"/"+files[fil], 'rb')
+                f = open(os.environ['QEMU_LD_PREFIX']+"/"+files[fil])
               except:
-                f = open(files[fil], 'rb')
+                f = open(files[fil])
               alldat = f.read()
 
               if fxn == "mmap2":
@@ -489,12 +481,13 @@ class Trace:
                 # is it safe to assume 4096 byte pages?
 
               st = "*** mapping %s %s sz:0x%x off:0x%x @ 0x%X" % (sha1(alldat).hexdigest(), files[fil], sz, off, return_code)
-              print(st,)
+              print st,
               dat = alldat[off:off+sz]
 
               self.program.static.add_memory_chunk(return_code, dat)
-            except Exception as e:
-              print(e)
+              print "done"
+            except Exception, e:
+              print e
 
       except:
         pass
@@ -503,8 +496,8 @@ class Trace:
     self.strace = ret
 
   def analysis_thread(self):
-    print("*** started analysis_thread", self.forknum)
-    while self.keep_analysis_thread:
+    #print "*** started analysis_thread"
+    while 1:
       time.sleep(0.2)
       # so this is done poorly, analysis can be incremental
       if self.maxclnum == None or self.db.get_maxclnum() != self.maxclnum:
@@ -528,11 +521,10 @@ class Trace:
         self.needs_update = True
 
         #print "analysis is ready"
-    print("*** ended analysis_thread", self.forknum)
 
   def load_base_memory(self):
     def get_forkbase_from_log(n):
-      ret = struct.unpack("i", open(qira_config.TRACE_FILE_BASE+str(n), 'rb').read(0x18)[0x10:0x14])[0]
+      ret = struct.unpack("i", open(qira_config.TRACE_FILE_BASE+str(n)).read(0x18)[0x10:0x14])[0]
       if ret == -1:
         return n
       else:
@@ -540,10 +532,10 @@ class Trace:
 
     try:
       forkbase = get_forkbase_from_log(self.forknum)
-      print("*** using base %d for %d" % (forkbase, self.forknum))
-      f = open(qira_config.TRACE_FILE_BASE+str(forkbase)+"_base", 'r')
-    except Exception as e:
-      print("*** base file issue",e)
+      print "*** using base %d for %d" % (forkbase, self.forknum)
+      f = open(qira_config.TRACE_FILE_BASE+str(forkbase)+"_base")
+    except Exception, e:
+      print "*** base file issue",e
       # done
       return
 
@@ -572,8 +564,8 @@ class Trace:
             for offset in os.listdir(images_dir+"/"+image):
               off_map[int(offset, 16)] = images_dir+"/"+image+"/"+offset
             img_map[unquote(image)] = off_map
-      except Exception as e:
-        print("Exception while dealing with _images/:", e)
+      except Exception, e:
+        print "Exception while dealing with _images/:", e
 
     for ln in f.read().split("\n"):
       ln = ln.split(" ")
@@ -588,14 +580,14 @@ class Trace:
       try:
         if fn in img_map:
           off = max(i for i in img_map[fn].iter_keys() if i <= offset)
-          with open(img_map[fn][off], 'rb') as f:
+          with open(img_map[fn][off]) as f:
             f.seek(offset-off)
             dat = f.read(se-ss)
         else:
-          with open(fn, 'rb') as f:
+          with open(fn) as f:
             f.seek(offset)
             dat = f.read(se-ss)
-      except Exception as e:
-        print("Failed to get", fn, "offset", offset, ":", e)
+      except Exception, e:
+        print "Failed to get", fn, "offset", offset, ":", e
         continue
       self.program.static.add_memory_chunk(ss, dat)

@@ -1,0 +1,100 @@
+# -*- makefile -*- : Force emacs to use Makefile mode
+
+# The i386 linker script
+#
+LDSCRIPT	= arch/i386/scripts/i386.lds
+
+# Stop ld from complaining about our customised linker script
+#
+LDFLAGS		+= -N --no-check-sections
+
+# pcbios specific drivers
+SRCDIRS		+= arch/i386/drivers
+SRCDIRS		+= arch/i386/drivers/net
+
+# Media types.
+#
+MEDIA		+= rom
+MEDIA		+= mrom
+MEDIA		+= pcirom
+MEDIA		+= isarom
+MEDIA		+= pxe
+MEDIA		+= kpxe
+MEDIA		+= kkpxe
+MEDIA		+= kkkpxe
+MEDIA		+= lkrn
+MEDIA		+= dsk
+MEDIA		+= nbi
+MEDIA		+= hd
+MEDIA		+= raw
+MEDIA		+= exe
+
+# Padding rules
+#
+PAD_rom		= $(PERL) $(PADIMG) --blksize=512 --byte=0xff
+PAD_mrom	= $(PAD_rom)
+PAD_pcirom	= $(PAD_rom)
+PAD_isarom	= $(PAD_rom)
+PAD_dsk		= $(PERL) $(PADIMG) --blksize=512
+PAD_hd		= $(PERL) $(PADIMG) --blksize=32768
+PAD_exe		= $(PERL) $(PADIMG) --blksize=512
+
+# Finalisation rules
+#
+FINALISE_rom	= $(PERL) $(FIXROM)
+FINALISE_mrom	= $(FINALISE_rom)
+FINALISE_pcirom	= $(FINALISE_rom)
+FINALISE_isarom	= $(FINALISE_rom)
+
+# Use $(ROMS) rather than $(DRIVERS) for "allroms", "allmroms", etc.
+#
+LIST_NAME_rom := ROMS
+LIST_NAME_mrom := ROMS
+LIST_NAME_pcirom := ROMS
+LIST_NAME_isarom := ROMS
+
+# rule to make a non-emulation ISO boot image
+NON_AUTO_MEDIA	+= iso
+%iso:	%lkrn util/geniso
+	$(QM)$(ECHO) "  [GENISO] $@"
+	$(Q)ISOLINUX_BIN=$(ISOLINUX_BIN) VERSION="$(VERSION)" bash util/geniso -o $@ $<
+
+# rule to make a floppy emulation ISO boot image
+NON_AUTO_MEDIA	+= liso
+%liso:	%lkrn util/geniso
+	$(QM)$(ECHO) "  [GENISO] $@"
+	$(Q)VERSION="$(VERSION)" bash util/geniso -l -o $@ $<
+
+# rule to make a syslinux floppy image (mountable, bootable)
+NON_AUTO_MEDIA	+= sdsk
+%sdsk:	%lkrn util/gensdsk
+	$(QM)$(ECHO) "  [GENSDSK] $@"
+	$(Q)bash util/gensdsk $@ $<
+
+# rule to write disk images to /dev/fd0
+NON_AUTO_MEDIA	+= fd0
+%fd0 : %dsk
+	$(QM)$(ECHO) "  [DD] $@"
+	$(Q)dd if=$< bs=512 conv=sync of=/dev/fd0
+	$(Q)sync
+
+# Special target for building Master Boot Record binary
+$(BIN)/mbr.bin : $(BIN)/mbr.o
+	$(QM)$(ECHO) "  [OBJCOPY] $@"
+	$(Q)$(OBJCOPY) -O binary $< $@
+
+# rule to make a USB disk image
+$(BIN)/usbdisk.bin : $(BIN)/usbdisk.o
+	$(QM)$(ECHO) "  [OBJCOPY] $@"
+	$(Q)$(OBJCOPY) -O binary $< $@
+
+NON_AUTO_MEDIA	+= usb
+%usb: $(BIN)/usbdisk.bin %hd
+	$(QM)$(ECHO) "  [FINISH] $@"
+	$(Q)cat $^ > $@
+
+# Padded floppy image (e.g. for iLO)
+NON_AUTO_MEDIA += pdsk
+%pdsk : %dsk
+	$(Q)cp $< $@
+	$(Q)$(PADIMG) --blksize=1474560 $@

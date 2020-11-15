@@ -1,0 +1,65 @@
+#!/bin/bash
+#
+# Generate a syslinux floppy that loads a iPXE image
+#
+# gensdsk foo.sdsk foo.lkrn
+#
+# the floppy image is the first argument
+#   followed by list of .lkrn images
+#
+
+case $# in
+0|1)
+	echo Usage: $0 foo.sdsk foo.lkrn ...
+	exit 1
+	;;
+esac
+case "`mtools -V`" in
+Mtools\ version\ 3.9.9*|Mtools\ version\ 3.9.1[0-9]*|[mM]tools\ *\ [4-9].*)
+	;;
+*)
+	echo Mtools version 3.9.9 or later is required
+	exit 1
+	;;
+esac
+img=$1
+shift
+dir=`mktemp -d bin/sdsk.dir.XXXXXX`
+
+mformat -f 1440 -C -i $img ::
+cfg=$dir/syslinux.cfg
+cat > $cfg <<EOF
+
+# These default options can be changed in the gensdsk script
+TIMEOUT 30
+EOF
+first=
+for f
+do
+	if [ ! -r $f ]
+	then
+		echo $f does not exist, skipping 1>&2
+		continue
+	fi
+	# shorten name for 8.3 filesystem
+	b=$(basename $f)
+	g=${b%.lkrn}
+	g=${g//[^a-z0-9]}
+	g=${g:0:8}.krn
+	case "$first" in
+	"")
+		echo DEFAULT $g
+		;;
+	esac
+	first=$g
+	echo LABEL $b
+	echo "" KERNEL $g
+	mcopy -m -i $img $f ::$g
+done >> $cfg
+mcopy -i $img $cfg ::syslinux.cfg
+if ! syslinux $img
+then
+	exit 1
+fi
+
+rm -fr $dir

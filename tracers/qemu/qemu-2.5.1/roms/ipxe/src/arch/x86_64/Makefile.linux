@@ -1,0 +1,6 @@
+LDSCRIPT = arch/x86_64/scripts/linux.lds
+
+SRCDIRS += arch/x86_64/core/linux
+
+MAKEDEPS += arch/x86/Makefile.linux
+include arch/x86/Makefile.linux

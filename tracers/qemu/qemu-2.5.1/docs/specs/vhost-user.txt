@@ -1,0 +1,466 @@
+Vhost-user Protocol
+===================
+
+Copyright (c) 2014 Virtual Open Systems Sarl.
+
+This work is licensed under the terms of the GNU GPL, version 2 or later.
+See the COPYING file in the top-level directory.
+===================
+
+This protocol is aiming to complement the ioctl interface used to control the
+vhost implementation in the Linux kernel. It implements the control plane needed
+to establish virtqueue sharing with a user space process on the same host. It
+uses communication over a Unix domain socket to share file descriptors in the
+ancillary data of the message.
+
+The protocol defines 2 sides of the communication, master and slave. Master is
+the application that shares its virtqueues, in our case QEMU. Slave is the
+consumer of the virtqueues.
+
+In the current implementation QEMU is the Master, and the Slave is intended to
+be a software Ethernet switch running in user space, such as Snabbswitch.
+
+Master and slave can be either a client (i.e. connecting) or server (listening)
+in the socket communication.
+
+Message Specification
+---------------------
+
+Note that all numbers are in the machine native byte order. A vhost-user message
+consists of 3 header fields and a payload:
+
+------------------------------------
+| request | flags | size | payload |
+------------------------------------
+
+ * Request: 32-bit type of the request
+ * Flags: 32-bit bit field:
+   - Lower 2 bits are the version (currently 0x01)
+   - Bit 2 is the reply flag - needs to be sent on each reply from the slave
+ * Size - 32-bit size of the payload
+
+
+Depending on the request type, payload can be:
+
+ * A single 64-bit integer
+   -------
+   | u64 |
+   -------
+
+   u64: a 64-bit unsigned integer
+
+ * A vring state description
+   ---------------
+  | index | num |
+  ---------------
+
+   Index: a 32-bit index
+   Num: a 32-bit number
+
+ * A vring address description
+   --------------------------------------------------------------
+   | index | flags | size | descriptor | used | available | log |
+   --------------------------------------------------------------
+
+   Index: a 32-bit vring index
+   Flags: a 32-bit vring flags
+   Descriptor: a 64-bit user address of the vring descriptor table
+   Used: a 64-bit user address of the vring used ring
+   Available: a 64-bit user address of the vring available ring
+   Log: a 64-bit guest address for logging
+
+ * Memory regions description
+   ---------------------------------------------------
+   | num regions | padding | region0 | ... | region7 |
+   ---------------------------------------------------
+
+   Num regions: a 32-bit number of regions
+   Padding: 32-bit
+
+   A region is:
+   -----------------------------------------------------
+   | guest address | size | user address | mmap offset |
+   -----------------------------------------------------
+
+   Guest address: a 64-bit guest address of the region
+   Size: a 64-bit size
+   User address: a 64-bit user address
+   mmap offset: 64-bit offset where region starts in the mapped memory
+
+* Log description
+   ---------------------------
+   | log size | log offset |
+   ---------------------------
+   log size: size of area used for logging
+   log offset: offset from start of supplied file descriptor
+       where logging starts (i.e. where guest address 0 would be logged)
+
+In QEMU the vhost-user message is implemented with the following struct:
+
+typedef struct VhostUserMsg {
+    VhostUserRequest request;
+    uint32_t flags;
+    uint32_t size;
+    union {
+        uint64_t u64;
+        struct vhost_vring_state state;
+        struct vhost_vring_addr addr;
+        VhostUserMemory memory;
+        VhostUserLog log;
+    };
+} QEMU_PACKED VhostUserMsg;
+
+Communication
+-------------
+
+The protocol for vhost-user is based on the existing implementation of vhost
+for the Linux Kernel. Most messages that can be sent via the Unix domain socket
+implementing vhost-user have an equivalent ioctl to the kernel implementation.
+
+The communication consists of master sending message requests and slave sending
+message replies. Most of the requests don't require replies. Here is a list of
+the ones that do:
+
+ * VHOST_GET_FEATURES
+ * VHOST_GET_PROTOCOL_FEATURES
+ * VHOST_GET_VRING_BASE
+ * VHOST_SET_LOG_BASE (if VHOST_USER_PROTOCOL_F_LOG_SHMFD)
+
+There are several messages that the master sends with file descriptors passed
+in the ancillary data:
+
+ * VHOST_SET_MEM_TABLE
+ * VHOST_SET_LOG_BASE (if VHOST_USER_PROTOCOL_F_LOG_SHMFD)
+ * VHOST_SET_LOG_FD
+ * VHOST_SET_VRING_KICK
+ * VHOST_SET_VRING_CALL
+ * VHOST_SET_VRING_ERR
+
+If Master is unable to send the full message or receives a wrong reply it will
+close the connection. An optional reconnection mechanism can be implemented.
+
+Any protocol extensions are gated by protocol feature bits,
+which allows full backwards compatibility on both master
+and slave.
+As older slaves don't support negotiating protocol features,
+a feature bit was dedicated for this purpose:
+#define VHOST_USER_F_PROTOCOL_FEATURES 30
+
+Starting and stopping rings
+----------------------
+Client must only process each ring when it is started.
+
+Client must only pass data between the ring and the
+backend, when the ring is enabled.
+
+If ring is started but disabled, client must process the
+ring without talking to the backend.
+
+For example, for a networking device, in the disabled state
+client must not supply any new RX packets, but must process
+and discard any TX packets.
+
+If VHOST_USER_F_PROTOCOL_FEATURES has not been negotiated, the ring is initialized
+in an enabled state.
+
+If VHOST_USER_F_PROTOCOL_FEATURES has been negotiated, the ring is initialized
+in a disabled state. Client must not pass data to/from the backend until ring is enabled by
+VHOST_USER_SET_VRING_ENABLE with parameter 1, or after it has been disabled by
+VHOST_USER_SET_VRING_ENABLE with parameter 0.
+
+Each ring is initialized in a stopped state, client must not process it until
+ring is started, or after it has been stopped.
+
+Client must start ring upon receiving a kick (that is, detecting that file
+descriptor is readable) on the descriptor specified by
+VHOST_USER_SET_VRING_KICK, and stop ring upon receiving
+VHOST_USER_GET_VRING_BASE.
+
+While processing the rings (whether they are enabled or not), client must
+support changing some configuration aspects on the fly.
+
+Multiple queue support
+----------------------
+
+Multiple queue is treated as a protocol extension, hence the slave has to
+implement protocol features first. The multiple queues feature is supported
+only when the protocol feature VHOST_USER_PROTOCOL_F_MQ (bit 0) is set.
+
+The max number of queues the slave supports can be queried with message
+VHOST_USER_GET_PROTOCOL_FEATURES. Master should stop when the number of
+requested queues is bigger than that.
+
+As all queues share one connection, the master uses a unique index for each
+queue in the sent message to identify a specified queue. One queue pair
+is enabled initially. More queues are enabled dynamically, by sending
+message VHOST_USER_SET_VRING_ENABLE.
+
+Migration
+---------
+
+During live migration, the master may need to track the modifications
+the slave makes to the memory mapped regions. The client should mark
+the dirty pages in a log. Once it complies to this logging, it may
+declare the VHOST_F_LOG_ALL vhost feature.
+
+To start/stop logging of data/used ring writes, server may send messages
+VHOST_USER_SET_FEATURES with VHOST_F_LOG_ALL and VHOST_USER_SET_VRING_ADDR with
+VHOST_VRING_F_LOG in ring's flags set to 1/0, respectively.
+
+All the modifications to memory pointed by vring "descriptor" should
+be marked. Modifications to "used" vring should be marked if
+VHOST_VRING_F_LOG is part of ring's flags.
+
+Dirty pages are of size:
+#define VHOST_LOG_PAGE 0x1000
+
+The log memory fd is provided in the ancillary data of
+VHOST_USER_SET_LOG_BASE message when the slave has
+VHOST_USER_PROTOCOL_F_LOG_SHMFD protocol feature.
+
+The size of the log is supplied as part of VhostUserMsg
+which should be large enough to cover all known guest
+addresses. Log starts at the supplied offset in the
+supplied file descriptor.
+The log covers from address 0 to the maximum of guest
+regions. In pseudo-code, to mark page at "addr" as dirty:
+
+page = addr / VHOST_LOG_PAGE
+log[page / 8] |= 1 << page % 8
+
+Where addr is the guest physical address.
+
+Use atomic operations, as the log may be concurrently manipulated.
+
+Note that when logging modifications to the used ring (when VHOST_VRING_F_LOG
+is set for this ring), log_guest_addr should be used to calculate the log
+offset: the write to first byte of the used ring is logged at this offset from
+log start. Also note that this value might be outside the legal guest physical
+address range (i.e. does not have to be covered by the VhostUserMemory table),
+but the bit offset of the last byte of the ring must fall within
+the size supplied by VhostUserLog.
+
+VHOST_USER_SET_LOG_FD is an optional message with an eventfd in
+ancillary data, it may be used to inform the master that the log has
+been modified.
+
+Once the source has finished migration, rings will be stopped by
+the source. No further update must be done before rings are
+restarted.
+
+Protocol features
+-----------------
+
+#define VHOST_USER_PROTOCOL_F_MQ             0
+#define VHOST_USER_PROTOCOL_F_LOG_SHMFD      1
+#define VHOST_USER_PROTOCOL_F_RARP           2
+
+Message types
+-------------
+
+ * VHOST_USER_GET_FEATURES
+
+      Id: 1
+      Equivalent ioctl: VHOST_GET_FEATURES
+      Master payload: N/A
+      Slave payload: u64
+
+      Get from the underlying vhost implementation the features bitmask.
+      Feature bit VHOST_USER_F_PROTOCOL_FEATURES signals slave support for
+      VHOST_USER_GET_PROTOCOL_FEATURES and VHOST_USER_SET_PROTOCOL_FEATURES.
+
+ * VHOST_USER_SET_FEATURES
+
+      Id: 2
+      Ioctl: VHOST_SET_FEATURES
+      Master payload: u64
+
+      Enable features in the underlying vhost implementation using a bitmask.
+      Feature bit VHOST_USER_F_PROTOCOL_FEATURES signals slave support for
+      VHOST_USER_GET_PROTOCOL_FEATURES and VHOST_USER_SET_PROTOCOL_FEATURES.
+
+ * VHOST_USER_GET_PROTOCOL_FEATURES
+
+      Id: 15
+      Equivalent ioctl: VHOST_GET_FEATURES
+      Master payload: N/A
+      Slave payload: u64
+
+      Get the protocol feature bitmask from the underlying vhost implementation.
+      Only legal if feature bit VHOST_USER_F_PROTOCOL_FEATURES is present in
+      VHOST_USER_GET_FEATURES.
+      Note: slave that reported VHOST_USER_F_PROTOCOL_FEATURES must support
+      this message even before VHOST_USER_SET_FEATURES was called.
+
+ * VHOST_USER_SET_PROTOCOL_FEATURES
+
+      Id: 16
+      Ioctl: VHOST_SET_FEATURES
+      Master payload: u64
+
+      Enable protocol features in the underlying vhost implementation.
+      Only legal if feature bit VHOST_USER_F_PROTOCOL_FEATURES is present in
+      VHOST_USER_GET_FEATURES.
+      Note: slave that reported VHOST_USER_F_PROTOCOL_FEATURES must support
+      this message even before VHOST_USER_SET_FEATURES was called.
+
+ * VHOST_USER_SET_OWNER
+
+      Id: 3
+      Equivalent ioctl: VHOST_SET_OWNER
+      Master payload: N/A
+
+      Issued when a new connection is established. It sets the current Master
+      as an owner of the session. This can be used on the Slave as a
+      "session start" flag.
+
+ * VHOST_USER_RESET_OWNER
+
+      Id: 4
+      Master payload: N/A
+
+      This is no longer used. Used to be sent to request disabling
+      all rings, but some clients interpreted it to also discard
+      connection state (this interpretation would lead to bugs).
+      It is recommended that clients either ignore this message,
+      or use it to disable all rings.
+
+ * VHOST_USER_SET_MEM_TABLE
+
+      Id: 5
+      Equivalent ioctl: VHOST_SET_MEM_TABLE
+      Master payload: memory regions description
+
+      Sets the memory map regions on the slave so it can translate the vring
+      addresses. In the ancillary data there is an array of file descriptors
+      for each memory mapped region. The size and ordering of the fds matches
+      the number and ordering of memory regions.
+
+ * VHOST_USER_SET_LOG_BASE
+
+      Id: 6
+      Equivalent ioctl: VHOST_SET_LOG_BASE
+      Master payload: u64
+      Slave payload: N/A
+
+      Sets logging shared memory space.
+      When slave has VHOST_USER_PROTOCOL_F_LOG_SHMFD protocol
+      feature, the log memory fd is provided in the ancillary data of
+      VHOST_USER_SET_LOG_BASE message, the size and offset of shared
+      memory area provided in the message.
+
+
+ * VHOST_USER_SET_LOG_FD
+
+      Id: 7
+      Equivalent ioctl: VHOST_SET_LOG_FD
+      Master payload: N/A
+
+      Sets the logging file descriptor, which is passed as ancillary data.
+
+ * VHOST_USER_SET_VRING_NUM
+
+      Id: 8
+      Equivalent ioctl: VHOST_SET_VRING_NUM
+      Master payload: vring state description
+
+      Sets the number of vrings for this owner.
+
+ * VHOST_USER_SET_VRING_ADDR
+
+      Id: 9
+      Equivalent ioctl: VHOST_SET_VRING_ADDR
+      Master payload: vring address description
+      Slave payload: N/A
+
+      Sets the addresses of the different aspects of the vring.
+
+ * VHOST_USER_SET_VRING_BASE
+
+      Id: 10
+      Equivalent ioctl: VHOST_SET_VRING_BASE
+      Master payload: vring state description
+
+      Sets the base offset in the available vring.
+
+ * VHOST_USER_GET_VRING_BASE
+
+      Id: 11
+      Equivalent ioctl: VHOST_USER_GET_VRING_BASE
+      Master payload: vring state description
+      Slave payload: vring state description
+
+      Get the available vring base offset.
+
+ * VHOST_USER_SET_VRING_KICK
+
+      Id: 12
+      Equivalent ioctl: VHOST_SET_VRING_KICK
+      Master payload: u64
+
+      Set the event file descriptor for adding buffers to the vring. It
+      is passed in the ancillary data.
+      Bits (0-7) of the payload contain the vring index. Bit 8 is the
+      invalid FD flag. This flag is set when there is no file descriptor
+      in the ancillary data. This signals that polling should be used
+      instead of waiting for a kick.
+
+ * VHOST_USER_SET_VRING_CALL
+
+      Id: 13
+      Equivalent ioctl: VHOST_SET_VRING_CALL
+      Master payload: u64
+
+      Set the event file descriptor to signal when buffers are used. It
+      is passed in the ancillary data.
+      Bits (0-7) of the payload contain the vring index. Bit 8 is the
+      invalid FD flag. This flag is set when there is no file descriptor
+      in the ancillary data. This signals that polling will be used
+      instead of waiting for the call.
+
+ * VHOST_USER_SET_VRING_ERR
+
+      Id: 14
+      Equivalent ioctl: VHOST_SET_VRING_ERR
+      Master payload: u64
+
+      Set the event file descriptor to signal when error occurs. It
+      is passed in the ancillary data.
+      Bits (0-7) of the payload contain the vring index. Bit 8 is the
+      invalid FD flag. This flag is set when there is no file descriptor
+      in the ancillary data.
+
+ * VHOST_USER_GET_QUEUE_NUM
+
+      Id: 17
+      Equivalent ioctl: N/A
+      Master payload: N/A
+      Slave payload: u64
+
+      Query how many queues the backend supports. This request should be
+      sent only when VHOST_USER_PROTOCOL_F_MQ is set in quried protocol
+      features by VHOST_USER_GET_PROTOCOL_FEATURES.
+
+ * VHOST_USER_SET_VRING_ENABLE
+
+      Id: 18
+      Equivalent ioctl: N/A
+      Master payload: vring state description
+
+      Signal slave to enable or disable corresponding vring.
+      This request should be sent only when VHOST_USER_F_PROTOCOL_FEATURES
+      has been negotiated.
+
+ * VHOST_USER_SEND_RARP
+
+      Id: 19
+      Equivalent ioctl: N/A
+      Master payload: u64
+
+      Ask vhost user backend to broadcast a fake RARP to notify the migration
+      is terminated for guest that does not support GUEST_ANNOUNCE.
+      Only legal if feature bit VHOST_USER_F_PROTOCOL_FEATURES is present in
+      VHOST_USER_GET_FEATURES and protocol feature bit VHOST_USER_PROTOCOL_F_RARP
+      is present in VHOST_USER_GET_PROTOCOL_FEATURES.
+      The first 6 bytes of the payload contain the mac address of the guest to
+      allow the vhost user backend to construct and broadcast the fake RARP.

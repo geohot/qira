@@ -1,0 +1,67 @@
+OUTPUT_FORMAT(elf64-sparc)
+OUTPUT_ARCH(sparc:v9)
+
+/* QEMU ELF loader can't handle very complex files, so we put ELFBoot
+info to rodata and put initctx to data.*/
+
+ENTRY(trap_table)
+
+/* Initial load address
+ */
+BASE_ADDR = 0x00000000ffd00000;
+
+/* 16KB stack */
+STACK_SIZE = 16384;
+IOMEM_SIZE = 256 * 1024 + 768 * 1024;
+
+SECTIONS
+{
+    . = BASE_ADDR;
+
+    /* Start of the program.
+     * Now the version string is in the note, we must include it
+     * in the program. Otherwise we lose the string after relocation. */
+    _start = .;
+
+    /* Normal sections */
+    .text ALIGN(524288): {
+        *(.text.vectors)
+        *(.text)
+        *(.text.*)
+    }
+    .rodata ALIGN(524288): {
+        _rodata = .;
+	sound_drivers_start = .;
+	*(.rodata.sound_drivers)
+	sound_drivers_end = .;
+	*(.rodata)
+	*(.rodata.*)
+        *(.note.ELFBoot)
+    }
+    .data ALIGN(524288): {
+        _data = .;
+        *(.data)
+        *(.data.*)
+    }
+
+    .bss ALIGN(4096): {
+        _bss = .;
+	*(.bss)
+	*(.bss.*)
+	*(COMMON)
+
+	_stack = .;
+	. += STACK_SIZE;
+	. = ALIGN(16);
+	_estack = .;
+    }
+
+    . = ALIGN(4096);
+    _end = .;
+    _iomem = _end + IOMEM_SIZE;
+
+    /* We discard .note sections other than .note.ELFBoot,
+     * because some versions of GCC generates useless ones. */
+
+    /DISCARD/ : { *(.comment*) *(.note.*) }
+}

@@ -1,0 +1,41 @@
+<build>
+
+ <library name="drivers" type="static" target="target">
+  <object source="pci.c"   condition="DRIVER_PCI"/>
+  <object source="pci_database.c" condition="DRIVER_PCI"/>
+  <object source="ide.c"   condition="DRIVER_IDE"/>
+  <object source="timer.c" condition="DRIVER_IDE"/>
+  <object source="kbd.c"   condition="DRIVER_ADB"/>
+  <object source="adb_bus.c" condition="DRIVER_ADB"/>
+  <object source="adb_kbd.c" condition="DRIVER_ADB"/>
+  <object source="adb_mouse.c" condition="DRIVER_ADB"/>
+  <object source="cuda.c"  condition="DRIVER_ADB"/>
+  <object source="floppy.c" condition="DRIVER_FLOPPY"/>
+  <object source="iommu.c" condition="DRIVER_SBUS"/>
+  <object source="sbus.c"  condition="DRIVER_SBUS"/>
+  <object source="esp.c"   condition="DRIVER_ESP"/>
+  <object source="obio.c"   condition="DRIVER_OBIO"/>
+  <object source="vga_load_regs.c" condition="DRIVER_VGA"/>
+  <object source="vga_set_mode.c" condition="DRIVER_VGA"/>
+  <object source="macio.c" condition="DRIVER_MACIO"/>
+  <object source="pc_kbd.c" condition="DRIVER_PC_KBD"/>
+  <object source="pc_serial.c" condition="DRIVER_PC_SERIAL"/>
+  <object source="escc.c" condition="DRIVER_ESCC"/>
+  <object source="fw_cfg.c" condition="DRIVER_FW_CFG"/>
+  <object source="usb.c" condition="DRIVER_USB"/>
+  <object source="usbhid.c" condition="USB_HID"/>
+  <object source="usbohci.c" condition="DRIVER_USB"/>
+  <object source="usbohci_rh.c" condition="DRIVER_USB"/>
+ </library>
+
+ <dictionary name="openbios" target="forth">
+  <object source="pci.fs" condition="DRIVER_PCI"/>
+  <object source="sbus.fs" condition="DRIVER_SBUS"/>
+  <object source="esp.fs" condition="DRIVER_ESP"/>
+ </dictionary>
+
+ <fcode source="tcx.fs" name="QEMU,tcx.bin" condition="DRIVER_SBUS" />
+ <fcode source="cgthree.fs" name="QEMU,cgthree.bin" condition="DRIVER_SBUS" />
+ <fcode source="vga.fs" name="QEMU,VGA.bin" condition="DRIVER_VGA" />
+
+</build>

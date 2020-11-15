@@ -1,0 +1,12 @@
+<build>
+
+ <library name="libc" type="static" target="target">
+  <object source="ctype.c"/>
+  <object source="diskio.c"/>
+  <object source="extra.c"/>
+  <object source="misc.c"/>
+  <object source="string.c"/>
+  <object source="vsprintf.c"/>
+ </library>
+  
+</build>

@@ -1,0 +1,22 @@
+<build>
+ <!--
+  build description for openbios forth library functions
+ 
+  Copyright (C) 2003-2005 by Stefan Reinauer
+  See the file "COPYING" for further information about
+  the copyright and warranty status of this work.
+  -->
+ 
+ <dictionary name="openbios" target="forth">
+  <object source="vocabulary.fs"/>
+  <object source="string.fs"/>
+  <object source="preprocessor.fs"/>
+  <object source="preinclude.fs" /> <!-- FIXME dependencies -->
+  <object source="creation.fs"/>
+  <object source="split.fs"/>
+  <object source="lists.fs"/>
+  <object source="64bit.fs"/>
+  <object source="locals.fs"/>
+ </dictionary>
+
+</build>

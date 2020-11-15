@@ -1,6 +1,5 @@
 // Scripts to load after UI has been initialized.
-var scripts = ["/client/compatibility/base.js", "/client/compatibility/highlight.js",
-               "/client/controls.js", "/client/ida.js", "/client/idump.js", "/client/regmem.js",
+var scripts = ["/client/controls.js", "/client/ida.js", "/client/idump.js", "/client/regmem.js",
                "/client/vtimeline.js", "/client/strace.js", "/client/haddrline.js",
                "/client/static/static.js", "/client/static/graph.js"];
 
@@ -15,7 +14,7 @@ $(document).ready(function() {
   var cfgDef = $.Deferred();
   var memoryDef = $.Deferred();
   var straceDef = $.Deferred();
-  var tagsDef = $.Deferred();
+  var flatDef = $.Deferred();
   var controlDef = $.Deferred();
   var dynamicDef = $.Deferred();
   var idumpDef = $.Deferred();
@@ -64,10 +63,10 @@ $(document).ready(function() {
     },
   });
 
-  myDocker.registerPanelType('Tags', {
+  myDocker.registerPanelType('Flat', {
     onCreate: function(myPanel, options) {
-      myPanel.layout().addItem($("<div class='fill' id='tags-static'><div class='tags' id='itags-static'></div><div class='tags' id='dtags-static'></div></div>"));
-      tagsDef.resolve();
+      myPanel.layout().addItem($("<div class='fill' id='flat-static'></div>"));
+      flatDef.resolve();
     },
   });
 
@@ -88,7 +87,7 @@ $(document).ready(function() {
   controlPanel.maxSize(1000, 70);
   if (has_static) {
     var cfgPanel = myDocker.addPanel("Control Flow", wcDocker.DOCK.RIGHT, controlPanel);
-    var flatPanel = myDocker.addPanel("Tags", wcDocker.DOCK.BOTTOM, cfgPanel, {h: 120});
+    var flatPanel = myDocker.addPanel("Flat", wcDocker.DOCK.BOTTOM, cfgPanel, {h: 200});
   }
   
   var idumpPanel = myDocker.addPanel("idump", wcDocker.DOCK.BOTTOM, controlPanel);
@@ -97,6 +96,7 @@ $(document).ready(function() {
 
   var memoryPanel = myDocker.addPanel("Memory", wcDocker.DOCK.BOTTOM, dynamicPanel, {h: 400});
   var stracePanel = myDocker.addPanel("strace", wcDocker.DOCK.BOTTOM, dynamicPanel, {h: 200});
+
 
 
   // apply the panel defaults
@@ -110,16 +110,18 @@ $(document).ready(function() {
     }
   });
 
+
+  //$.when(timelineDef, dynamicDef, cfgDef, flatDef, memoryDef, straceDef)
   function is_done() {
     p("loading UI");
     $.holdReady(true);
-    // UI elements now exist in the DOM.
+    //UI elements now exist in the DOM.
     head.load(scripts);
     $.holdReady(false);
   }
 
   if (has_static) {
-    $.when(timelineDef, idumpDef, memoryDef, straceDef, controlDef, dynamicDef, cfgDef, tagsDef).done(is_done);
+    $.when(timelineDef, idumpDef, memoryDef, straceDef, controlDef, dynamicDef, cfgDef, flatDef).done(is_done);
   } else {
     $.when(timelineDef, idumpDef, memoryDef, straceDef, controlDef, dynamicDef).done(is_done);
   }

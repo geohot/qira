@@ -1,0 +1,54 @@
+This software may be used and distributed according to the terms of
+the GNU Public License, incorporated herein by reference.
+
+This is a tulip and clone driver for Etherboot.  See the revision
+history in the tulip.c file for information on changes.  This version
+of the driver incorporates changes from Bob Edwards and Paul Mackerras
+who cantributed changes to support the TRENDnet TE100-PCIA NIC which
+uses a genuine Intel 21143-PD chipset.  There are also various code
+cleanups to make time-based activities more reliable.
+
+Of course you have to have all the usual Etherboot environment
+(bootp/dhcp/NFS) set up, and you need a Linux kernel with v0.91g
+(7.16.99) or later of the tulip.c driver compiled in to support some
+MX98715 based cards.  That file is available at:
+
+  http://cesdis.gsfc.nasa.gov/linux/drivers/test/tulip.c
+
+NOTES
+
+I've tested this driver with a SOHOware Fast 10/100 Model SDA110A,
+a Linksys LNE100TX v2.0, and a Netgear FA310TX card, and it worked at
+both 10 and 100 mbits. Other cards based on the tulip family may work as
+well.
+
+These cards are about 20$US, are supported by Linux and now Etherboot,
+and being PCI, they auto-configure IRQ and IOADDR and auto-negotiate
+10/100 half/full duplex. It seems like a pretty good value compared to
+some of the pricier cards, and can lower the cost of building/adapting
+thin client workstations substantially while giving a considerable
+performance increase.
+
+On some PCI tulip clone chipsets (MX987x5, LC82C115, LC82C168) this driver 
+lets the card choose the fastest speed it can negotiate with the peer
+device.  On other cards, it chooses 10mbit half-duplex.
+
+I burned an AM27C256 (32KByte) EPROM with mx987x5.lzrom and it worked.
+According to the data sheet the MX98715A supports up to 64K (27C512)
+EPROMs, 
+
+I've liberally commented the code and header files in the hope that it
+will help the next person who hacks the code or needs to support some
+tulip clone card, or wishes to add functionality.
+
+Anyway, please test this if you can on your tulip based card, and let
+me (mdc@etherboot.org) and the Etherboot-Discuss list
+(etherboot-discuss@lists.sourceforge.net) know how things go.  I also
+would appreciate code review by people who program.  I'm a strong
+believer in "another set of eyes".
+
+Regards,
+
+Marty Connor
+mdc@etherboot.org
+http://www.etherboot.org/

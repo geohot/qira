@@ -1,0 +1,3 @@
+# LM32 boards
+obj-y += lm32_boards.o
+obj-y += milkymist.o

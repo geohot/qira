@@ -1,0 +1,278 @@
+#!/usr/bin/perl -w
+
+=head1 NAME
+
+serial-console
+
+=head1 SYNOPSIS
+
+serial-console [options]
+
+Options:
+
+    -h,--help         Display brief help message
+    -v,--verbose      Increase verbosity
+    -q,--quiet        Decrease verbosity
+    -l,--log FILE     Log output to file
+    -r,--rcfile	FILE  Modify specified bochsrc file
+
+=head1 DESCRIPTION
+
+C<serial-console> provides a virtual serial console for use with
+Bochs.  Running C<serial-console> creates a pseudo-tty.  The master
+side of this pty is made available to the user for interaction; the
+slave device is written to the Bochs configuration file
+(C<bochsrc.txt>) for use by a subsequent Bochs session.
+
+=head1 EXAMPLES
+
+=over 4
+
+=item C<serial-console>
+
+Create a virtual serial console for Bochs, modify C<bochsrc.txt>
+appropriately.
+
+=item C<serial-console -r ../.bochsrc -l serial.log>
+
+Create a virtual serial console for Bochs, modify C<../.bochsrc>
+appropriately, log output to C<serial.log>.
+
+=back
+
+=head1 INVOCATION
+
+Before starting Bochs, run C<serial-console> in a different session
+(e.g. a different xterm window).  When you subsequently start Bochs,
+anything that the emulated machine writes to its serial port will
+appear in the window running C<serial-console>, and anything typed in
+the C<serial-console> window will arrive on the emulated machine's
+serial port.
+
+You do B<not> need to rerun C<serial-console> afresh for each Bochs
+session.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<-l,--log FILE>
+
+Log all output (i.e. everything that is printed in the
+C<serial-console> window) to the specified file.
+
+=item B<-r,--rcfile FILE>
+
+Modify the specified bochsrc file.  The file will be updated to
+contain the path to the slave side of the psuedo tty that we create.
+The original file will be restored when C<serial-console> exits.  The
+default is to modify the file C<bochsrc.txt> in the current directory.
+
+To avoid modifying any bochsrc file, use C<--norcfile>.
+
+=back
+
+=cut
+
+use IO::Pty;
+use IO::Select;
+use File::Spec::Functions qw ( :ALL );
+use Getopt::Long;
+use Pod::Usage;
+use POSIX qw ( :termios_h );
+use strict;
+use warnings;
+
+my $o;
+my $restore_file = {};
+my $restore_termios;
+use constant BLOCKSIZE => 8192;
+
+##############################################################################
+#
+# Parse command line options into options hash ($o)
+#
+# $o = parse_opts();
+
+sub parse_opts {
+  # $o is the hash that will hold the options
+  my $o = {
+    verbosity => 1,
+    rcfile => 'bochsrc.txt',
+  };
+  # Special handlers for some options
+  my $opt_handlers = {
+    verbose => sub { $o->{verbosity}++; },
+    quiet => sub { $o->{verbosity}--; },
+    help => sub { pod2usage(1); },
+    norcfile => sub { delete $o->{rcfile}; },
+  };
+  # Merge handlers into main options hash (so that Getopt::Long can find them)
+  $o->{$_} = $opt_handlers->{$_} foreach keys %$opt_handlers;
+  # Option specifiers for Getopt::Long
+  my @optspec = ( 'help|h|?',
+                  'quiet|q+',
+                  'verbose|v+',
+		  'log|l=s',
+		  'rcfile|r=s',
+		  'norcfile',
+                  );
+  # Do option parsing
+  Getopt::Long::Configure ( 'bundling' );
+  pod2usage("Error parsing command-line options") unless GetOptions (
+  $o, @optspec );
+  # Clean up $o by removing the handlers
+  delete $o->{$_} foreach keys %$opt_handlers;
+  return $o;
+}
+
+##############################################################################
+#
+# Modify bochsrc file
+
+sub patch_bochsrc {
+  my $active = shift;
+  my $pty = shift;
+
+  # Rename active file to backup file
+  ( my $vol, my $dir, my $file ) = splitpath ( $active );
+  $file = '.'.$file.".serial-console";
+  my $backup = catpath ( $vol, $dir, $file );
+  rename $active, $backup
+      or die "Could not back up $active to $backup: $!\n";
+
+  # Derive line to be inserted
+  my $patch = "com1: enabled=1, mode=term, dev=$pty\n";
+
+  # Modify file
+  open my $old, "<$backup" or die "Could not open $backup: $!\n";
+  open my $new, ">$active" or die "Could not open $active: $!\n";
+  print $new <<"EOF";
+##################################################
+#
+# This file has been modified by serial-console.
+#
+# Do not modify this file; it will be erased when
+# serial-console (pid $$) exits and will be
+# replaced with the backup copy held in
+# $backup.
+#
+##################################################
+
+
+EOF
+  my $patched;
+  while ( my $line = <$old> ) {
+    if ( $line =~ /^\s*\#?\s*com1:\s*\S/ ) {
+      if ( ! $patched ) {
+	$line = $patch;
+	$patched = 1;
+      } else {
+	$line = '# '.$line unless $line =~ /^\s*\#/;
+      }
+    }
+    print $new $line;
+  }
+  print $new $patch unless $patched;
+  close $old;
+  close $new;
+
+  return $backup;
+}
+
+##############################################################################
+#
+# Attach/detach message printing and terminal settings
+
+sub bochs_attached {
+  print STDERR "Bochs attached.\n\n\n"
+      if $o->{verbosity} >= 1;
+}
+
+sub bochs_detached {
+  print STDERR "\n\nWaiting for bochs to attach...\n"
+      if $o->{verbosity} >= 1;
+}
+
+##############################################################################
+#
+# Main program
+
+$o = parse_opts();
+pod2usage(1) if @ARGV;
+
+# Catch signals
+my $sigdie = sub { die "Exiting via signal\n"; };
+$SIG{INT} = $sigdie;
+
+# Create Pty, close slave side
+my $pty = IO::Pty->new();
+$pty->close_slave();
+$pty->set_raw();
+print STDERR "Slave pty is ".$pty->ttyname."\n" if $o->{verbosity} >= 1;
+
+# Open logfile
+my $log;
+if ( $o->{log} ) {
+  open $log, ">$o->{log}" or die "Could not open $o->{log}: $!\n";
+}
+
+# Set up terminal
+my $termios;
+if ( -t STDIN ) {
+  $termios = POSIX::Termios->new;
+  $restore_termios = POSIX::Termios->new;
+  $termios->getattr ( fileno(STDIN) );
+  $restore_termios->getattr ( fileno(STDIN) );
+  $termios->setlflag ( $termios->getlflag & ~(ICANON) & ~(ECHO) );
+  $termios->setiflag ( $termios->getiflag & ~(ICRNL) );
+  $termios->setattr ( fileno(STDIN), TCSANOW );
+}
+
+# Modify bochsrc file
+$restore_file = { $o->{rcfile} =>
+		  patch_bochsrc ( $o->{rcfile}, $pty->ttyname ) }
+    if $o->{rcfile};
+
+# Start character shunt
+my $attached = 1;
+my $select = IO::Select->new ( \*STDIN, $pty );
+while ( 1 ) {
+  my %can_read = map { $_ => 1 }
+		     $select->can_read ( $attached ? undef : 1 );
+  if ( $can_read{\*STDIN} ) {
+    sysread ( STDIN, my $data, BLOCKSIZE )
+	or die "Cannot read from STDIN: $!\n";
+    $pty->syswrite ( $data );
+  }
+  if ( $can_read{$pty} ) {
+    if ( $pty->sysread ( my $data, BLOCKSIZE ) ) {
+      # Actual data available
+      bochs_attached() if $attached == 0;
+      $attached = 1;
+      syswrite ( STDOUT, $data );
+      $log->syswrite ( $data ) if $log;
+    } else {
+      # No data available but select() says we can read.  This almost
+      # certainly indicates that nothing is attached to the slave.
+      bochs_detached() if $attached == 1;
+      $attached = 0;
+      sleep ( 1 );
+    }
+  } else {
+    bochs_attached() if $attached == 0;
+    $attached = 1;
+  }
+}
+
+END {
+  # Restore bochsrc file if applicable
+  if ( ( my $orig_file, my $backup_file ) = %$restore_file ) {
+    unlink $orig_file;
+    rename $backup_file, $orig_file;
+  }
+  # Restore terminal settings if applicable
+  if ( $restore_termios ) {
+    $restore_termios->setattr ( fileno(STDIN), TCSANOW );
+  }
+}

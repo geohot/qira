@@ -1,0 +1,97 @@
+
+
+menu "Module Configuration"
+
+
+config CMDLINE
+	bool "Command Line Editing"
+	default y
+	help
+	  Improved openfirmware prompt
+
+config DEBLOCKER
+	bool "Deblocker"
+	default y
+	help
+	  Deblocker implementation
+
+endmenu
+
+menu "Filesystem Configuration"
+
+config DISK_LABEL
+	bool "Disk-Label"
+	default y
+	help
+	  Disk-label package implementation
+
+config PART_SUPPORT
+	depends on DISK_LABEL
+	bool "Partition support"
+	default y
+	help
+	  Support for partition tables
+
+config MAC_PARTS
+	depends on PART_SUPPORT && BIG_ENDIAN
+	bool "Mac partition support"
+	default y
+	help
+	  Support for Macintosh partition tables
+
+config PC_PARTS
+	depends on PART_SUPPORT
+	bool "PC style partition support"
+	default y
+	help
+	  Support for PC style partition tables
+
+config FS
+	depends on DISK_LABEL
+	bool "Filesystem Support"
+	default y
+	help
+	  Include filesystem support
+
+config HFS
+	depends on FS && BIG_ENDIAN
+	bool "HFS support"
+	default y
+	help
+	  Include HFS support
+
+config HFSP
+	depends on FS && BIG_ENDIAN
+	bool "HFS+ support"
+	default y
+	help
+	  Include HFS+ support
+
+config GRUBFS
+	depends on FS
+	bool "Additional Filesystems (from GRUB)"
+	default y
+	help
+	  Grub provides a lot of filesystem drivers. 
+
+source "fs/grubfs/Kconfig"
+
+config DEBUG_FS
+	depends on FS
+	bool "Debugging output for Filesystem code"
+	default y
+	help
+	  Say Y here if you want to debug the filesystem layer
+
+endmenu
+	  
+menu "Miscellaneous"
+
+config LINUXBIOS
+	bool "Support reading LinuxBIOS table"
+	default y
+	help
+	  If you want to boot OpenBIOS as a LinuxBIOS payload,
+	  you should say Y here.
+
+endmenu

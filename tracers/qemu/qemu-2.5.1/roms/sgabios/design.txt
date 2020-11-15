@@ -1,0 +1,296 @@
+=============================================
+Google Serial Graphics Adapter BIOS (SGABIOS)
+
+Copyright 2007 Google Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+=============================================
+Status: Implemented (as of 2007-08-08)
+
+Nathan Laredo <nil@google.com>
+Modified: 2008-02-14 13:45 PDT
+
+
+Objective
+---------
+
+The Google Serial Graphics Adapter BIOS or SGABIOS provides a means
+for legacy pc software to communicate with an attached serial console
+as if a vga card is attached.
+
+Background
+----------
+
+The headless server problem
+
+When building a lot of systems for data center use, it makes
+no sense to install hardware that will rarely if ever be used.
+Graphics adapters are not very useful even if they are installed
+in a data center environment since often the person interested in
+seeing the output is separated from the device by tens to thousands
+of miles.
+
+While it's possible to use remote management hardware that provides
+a remotely accessible display and keyboard, this hardware is much
+more expensive than the hardware that it replaces, and often this
+hardware sends only images of the display rather than something
+suitable for logging.
+
+Since most systems already have a serial port, it's an obvious
+target as a replacement for the primary display and keyboard.
+The problem is that while an operating system like Linux can
+support this arrangement, all of the output that would normally
+appear on a graphics adapter before Linux boots is lost on modern
+x86 hardware without modifications to the system firmware.
+
+While some vendors provide firmware that enables the serial port to
+be used as the primary display, this is usually a "premium" option
+and isn't universally available for all x86 platforms.  Often such
+services aren't implemented in a way that is friendly to saving logs
+of boot activity.  One particularly ugly implementation might send
+the same text hundreds of times as it tries to refresh the entire
+display each timer tick.   Others have ansi control sequences
+between every single character output which, while readable in a
+terminal, is almost unusable when referring to serial log files.
+Behavior like this slows down the serial output by up to fifteen
+times in some cases, using sometimes that many extra characters
+of control sequences for each character output.
+
+The need for detailed system logs
+
+None of the vendor-supplied serial redirection implementations
+include facilities for logging boot message for later capture by
+an operating system.  Being able to refer to the boot messages
+after an operating system has loaded, or having a history of such
+messages can be a useful debug, analysis, and management feature.
+
+Even on systems with graphics adapters attached, once the display
+is scrolled or refreshed with enough new text, the old messages
+are only available in the user's own brain, which often isn't
+very good at accurately recalling more than two or three items
+that aren't grammatically meaningful in the user's native language.
+
+Overview
+---------
+SGABIOS is designed to be inserted into a bios as an option rom
+to provide over a serial port the display and input capabilites
+normally handled by a VGA adapter and a keyboard, and additionally
+provide hooks for logging displayed characters for later collection
+after an operating system boots.
+
+It is designed to handle all text mode output sent to the legacy
+bios int 10h service routine.  Int 10h is the most common method
+for displaying characters in 16-bit legacy x86 code.
+
+Occasionally some code may write directly to the vga memory in
+the interest of "speed," and this output will be missed, but
+it's rather uncommon for any code involved in booting a system
+to be concerned with the speed of display output.  SGABIOS is not
+designed to handle these cases since those applications that make
+such assumptions generally write to an area of memory that typically
+already in use for system management mode and unusable outside of
+that mode.   Paging tricks could be used to capture such output,
+but enabling paging requires protected mode to be enabled which
+instantly breaks all segment loads in legacy 16-bit real- mode code
+(which is the traditional boot environment).
+
+Detailed Design
+----------------
+
+VGA BIOS int 10h is hooked and chained to any existing handler or
+the default handler that the BIOS previously setup.
+
+During initialization, the option rom also probes the serial port
+for reply from an attached terminal.  If the terminal replies to
+a specific sequence, the terminal size is recorded and used for
+all future display calculations.   If a VGA card is attached at
+the same time, the width of the terminal is limited to 80 columns
+in order to have sensible output on both the VGA card and on the
+serial console.  If no reply comes from the serial terminal within
+a very short timeout of about 8 milliseconds (or more accurately,
+65536 reads of the serial status port), a default size of 80x24
+is used.  The detected size is displayed at the end of option rom
+init to the serial console.
+
+Because of the way the cursor is updated, if the cursor is never
+moved upwards or more than one line down by int 10h calls, output
+will still be appear completely appropriate for whatever sized
+terminal is attached but failed to get detected.
+
+Whenever int 10h is invoked, SGABIOS gets control first and decides
+whether to act based on register state.   With the exception of
+functions for getting current mode info or the current cursor
+position, whether it acts or not, register state is ultimately
+restored to the state on entry and a far jump is made to the
+original handler.
+
+SGABIOS maintains two active cursor positions.  One contains the
+traditional VGA cursor position at the traditional location in
+the BIOS Data Area, while the other maintains the position the
+serial console's cursor is located.  The serial cursor position
+is located in a BDA location that traditionally contains the
+base io port address for LPT3, but since builtin printer ports are
+disappearing over time, this location is reused. These two values
+will often differ since serial terminal output will always move
+the cursor to the next position on the screen while many VGA
+operations don't update the cursor position at all, or some only
+at the start of the string, but leave the old value at the end.
+Keeping track of two active cursor positions means that SGABIOS
+can collapse a string of "set cursor" calls into perhaps a single
+one or none if the serial console cursor already happens to be at
+the target location.    Cursor movements are further optimized
+by sending newline characters to move the cursor down one row,
+carriage return characters to move the cursor back to column 0,
+and backspace characters to send the cursor back one or two spaces.
+
+To avoid problems when a video card is connected, any Bios Data
+Area location that would be updated by a VGA card is left alone
+to be updated by the VGA card.  SGABIOS will update the cursor
+position as usual, but just before chaining to an existing vga
+card's handler, it will restore the values to those on entry,
+and for those functions that return data, it will defer completely
+to the chained routines rather than taking those over as it does
+when no video card is detected.
+
+Cursor position updates to serial console are deferred until the
+next character of terminal output is available.   This collapses
+the cases where the cursor is updated more than one time between
+each character output (this is surprisingly common).
+
+The goal of tracking the cursor so closely and minimizing the number
+of characters required to update the cursor position is to both to
+make the display of output as efficient and fast as possible and
+to allow one to grep a raw log of serial console output for text
+(which without such optimization may be impossible or extremely
+difficult with movement escape sequences between every character).
+
+In the same way cursor position is tracked, vga character attributes
+are tracked so that it's possible to minimize the number of times
+an attribute change escape sequence is sent to the serial console.
+
+A BIOS Data Area location traditionally used for storing the
+current palette value is used to store the last attribute sent to
+the serial console.  As SGABIOS processes new calls, if the value
+is the same, after masking off bright background colors which
+aren't supported in ansi escape codes, then no attribute update
+is sent to the serial console, else an escape sequence is sent
+that gives the new background and foreground colors and whether
+the foreground is bold or not.
+
+Data communication
+
+Whenever the call is made to output text, SGABIOS first updates
+the serial terminal cursor to match the current position of
+the vga cursor (if necessary), outputs any attribute change if
+applicable to the particular int 10h call made, and finally sends
+the text character (or characters) out to the serial port, and then
+updates its own view of where the serial console cursor is located.
+After the text is sent, a logging routine is called to store that
+text in a private area of memory allocated at option rom init.
+
+For keyboard/terminal input, SGABIOS hooks bios int 16h which is
+typically called to poll for a keypress.  Before passing the call
+along, SGABIOS looks for any pending input on the serial port and
+stuffs the keyboard buffer with any pending byte after translating
+it to a compatible keyboard scancode.   If the character received
+is an escape, SGABIOS will continue to poll for up to four extra
+characters of input for several milliseconds in order to detect
+ANSI/VT100/xterm/etc cursor keys and function keys, looking up
+appropriate scancodes in a table of escape sequences for all
+known non-conflicting terminal types.
+
+SGABIOS also hooks the serial port interrupts, and on receiving
+an interrupt blocks out interrupts, calls the same polling
+routines as above, following the same processing of multi-byte
+input as well, stuffing the keyboard buffer as appropriate,
+and finally acknowledging the interrupt and returning from the
+handler. [ serial port interrupts are now DISABLED ]
+
+Optionally the serial port input/output can be replaced with
+a SMI trigger that calls into an EFI BIOS in order to tie into
+its own console input and output routines rather than directly
+hitting the serial port.   In this particular case it's assumed
+that all logging is handled in the EFI module that will be called.
+BIOS int 15h, ax = 0d042h is used to trigger SMI.  The parameters
+passed will need to be changed to be specific to the EFI or SMI
+handler put in place.   In the example in SMBIOS, for output,
+ebx = 0xf00d0000 | (char << 8), and for input, ebx = 0xfeed0000,
+with the character, if any, returned in the eax register with ZF
+set and eax=0 if no character was available.
+
+Summary of new enhancements
+---------------------------
+SGABIOS now keeps a log of the last 256 characters written to
+the screen and where they were written in the event an application
+like lilo asks for the current character under the cursor.  These
+are currently stored in a 1KB EBDA allocation which can be expanded
+as needed.  This method avoids having to store a 64KB buffer for
+the largest possible serial terminal supported (255x255).
+
+When lilo 22.6 is detected, SGABIOS now knows how to disable
+lilo's serial output in favor of its own.  This avoids having
+double character output from both serial and VGABIOS interleaved.
+
+Possible future enhancements
+----------------------------
+Previous future ideas have now been implemented.
+
+Known Bugs
+----------
+With some versions of DOS, only the last character of every line
+is displayed once dos boots since DOS will use direct access to
+the VGA framebuffer until the end of line is reached, at which
+point it will start using int 10h.  Dual cursor tracking might
+fix this issue by maintaining positions for dos that look like
+the end of line and another for internal use to know where to
+output next.
+
+Caveats
+-------
+It may be possible for someone to construct a terminal reply for
+the terminal sizing code that is completely invalid and attempts
+to either setup variables to overrun buffers or else overruns
+the input buffer itself.   This situation is currently handled
+by limiting the reply to between eight and fourteen characters
+and ignoring any values outside the range from ten to two hundred
+fifty-five for both the number of rows and the number of columns.
+In these situations a default size of 80x24 is used (unless a
+video card is present, in which case its size is used).   If the
+resize code detects several unexpected characters during the
+terminal size detection, it currently assumes that someone has
+left a loopback device plugged into the serial port and redirects
+the serial input and output to the fourth serial port at 0x2e8.
+
+
+Security considerations
+-----------------------
+None.  This is already 16-bit real-mode x86 code.  The entire
+system may be crashed or bent to do anyone's bidding at any time
+by any other running code outside of SGABIOS.
+
+
+Opensource Plan
+---------------
+This source code was approved for release to the public for use under
+the Apache License, Version 2.0 on http://code.google.com/p/sgabios
+
+
+Document History
+----------------
+Date		Author	Description
+2008-02-14	nil	fix for release
+2007-10-04	nil	new features
+2007-08-31	nil	sga+vga fixes
+2007-08-08	nil	Initial version
+
+$Id$

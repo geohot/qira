@@ -1,0 +1,605 @@
+/******************************************************************************
+ * Copyright (c) 2004, 2008 IBM Corporation
+ * All rights reserved.
+ * This program and the accompanying materials
+ * are made available under the terms of the BSD License
+ * which accompanies this distribution, and is available at
+ * http://www.opensource.org/licenses/bsd-license.php
+ *
+ * Contributors:
+ *     IBM Corporation - initial implementation
+ *****************************************************************************/
+
+
+//
+// Copyright 2002,2003,2004  Segher Boessenkool  <segher@kernel.crashing.org>
+//
+
+
+#define NEXT00	goto *cfa->a
+#define NEXT0	cfa = ip->a; NEXT00
+#define NEXT	ip++; NEXT0
+
+#define PRIM(name) code_##name: { \
+		   asm volatile ("#### " #name : : : "memory"); \
+		   void *w = (cfa = (++ip)->a)->a;
+#define MIRP	   goto *w; }
+
+
+
+	// start interpreting
+	NEXT0;
+
+
+
+// These macros could be replaced to allow for TOS caching etc.
+#define TOS (*dp)
+#define NOS (*(dp-1))
+#define POP dp--
+#define PUSH dp++
+
+#define RTOS (*rp)
+#define RNOS (*(rp-1))
+#define RPOP rp--
+#define RPUSH rp++
+
+
+
+
+// For terminal input.
+PRIM(TIB) PUSH; TOS.a = the_tib; MIRP
+
+// For pockets (temporary string buffers).
+PRIM(POCKETS) PUSH; TOS.a = the_pockets; MIRP
+
+// exception register area
+PRIM(EREGS) PUSH; TOS.a = the_exception_frame; MIRP
+
+// client register area
+PRIM(CIREGS) PUSH; TOS.a = the_client_frame; MIRP
+
+// Client stack
+//	(According to the PowerPC ABI the stack-pointer points to the
+//	 lowest **USED** value.
+//	 I.e. it is decremented before a new element is stored on the
+//	 stack.)
+PRIM(CISTACK) PUSH; TOS.a = the_client_stack
+                            + (sizeof(the_client_stack) / CELLSIZE); MIRP
+
+// compile-in-interpret buffer
+PRIM(COMP_X2d_BUFFER) PUSH; TOS.a = the_comp_buffer; MIRP
+
+// Paflof base address
+PRIM(PAFLOF_X2d_START) PUSH; TOS.a = _start_OF; MIRP
+
+// Heap pointers
+PRIM(HEAP_X2d_START) PUSH; TOS.a = the_heap_start; MIRP
+PRIM(HEAP_X2d_END) PUSH; TOS.a = the_heap_end; MIRP
+
+// FDT pointer
+PRIM(FDT_X2d_START) PUSH; TOS.u = fdt_start; MIRP
+
+// romfs-base
+PRIM(ROMFS_X2d_BASE) PUSH; TOS.u = romfs_base; MIRP
+
+// if the low level firmware is epapr compliant it will put the
+// epapr magic into r6 before starting paflof
+// epapr-magic is a copy of r6
+PRIM(EPAPR_X2d_MAGIC) PUSH; TOS.u = epapr_magic; MIRP
+
+// Initially mapped area size (for ePAPR compliant LLFW)
+PRIM(EPAPR_X2d_IMA_X2d_SIZE) PUSH; TOS.u = epapr_ima_size; MIRP
+
+// Codefields.
+code_DOCOL:
+	{
+		RPUSH; RTOS.a = ip;
+		ip = cfa;
+		NEXT;
+	}
+code_DODOES:
+	{
+		RPUSH; RTOS.a = ip;
+		ip = (cfa + 1)->a;
+		PUSH; TOS.a = cfa + 2;
+		NEXT0;
+	}
+code_DODEFER:
+	{
+		cfa = (cfa + 1)->a;
+		NEXT00;
+	}
+code_DOALIAS:
+	{
+		cfa = (cfa + 1)->a;
+		NEXT00;
+	}
+code_DOCON:
+	{
+		PUSH;
+		TOS = *(cfa + 1);
+		NEXT;
+	}
+code_DOVAL:
+	{
+		PUSH;
+		TOS = *(cfa + 1);
+		NEXT;
+	}
+code_DOFIELD:
+	{
+		dp->n += (cfa + 1)->n;
+		NEXT;
+	}
+code_DOVAR:
+	{
+		(++dp)->a = cfa + 1;
+		NEXT;
+	}
+code_DOBUFFER_X3a:
+	{
+		(++dp)->a = cfa + 1;
+		NEXT;
+	}
+
+
+
+
+
+// branching
+code_BRANCH:
+	{
+		type_n dis = (++ip)->n;
+		ip = (cell *)((type_u)ip + dis);
+		NEXT;
+	}
+code_0BRANCH:
+	{
+		type_n dis = (++ip)->n;
+		if (TOS.u == 0)
+			ip = (cell *)((type_u)ip + dis);
+		POP;
+		NEXT;
+	}
+
+// Jump to "defer BP"
+code_BREAKPOINT:
+	{
+		RPUSH; RTOS.a = ip;
+		ip = (cell * ) xt_BP+2;
+		NEXT;
+	}
+
+
+// literals
+code_LIT:
+	{
+		PUSH;
+		TOS = *++ip;
+		NEXT;
+	}
+code_DOTICK:
+	{
+		PUSH;
+		TOS = *++ip;
+		NEXT;
+	}
+
+
+
+// 1.1
+PRIM(DUP) cell x = TOS; PUSH; TOS = x; MIRP
+PRIM(OVER) cell x = NOS; PUSH; TOS = x; MIRP
+PRIM(PICK) TOS = *(dp - TOS.n - 1); MIRP
+
+// 1.2
+PRIM(DROP) POP; MIRP
+
+// 1.3
+PRIM(SWAP) cell x = NOS; NOS = TOS; TOS = x; MIRP
+
+// 1.4
+PRIM(_X3e_R) RPUSH; RTOS = TOS; POP; MIRP
+PRIM(R_X3e) PUSH; TOS = RTOS; RPOP; MIRP
+PRIM(R_X40) PUSH; TOS = RTOS; MIRP
+
+// 1.5
+PRIM(DEPTH) PUSH; TOS.u = dp - the_data_stack; MIRP
+PRIM(DEPTH_X21) dp = the_data_stack + TOS.u - 1; MIRP
+PRIM(RDEPTH) PUSH; TOS.u = rp - the_return_stack + 1; MIRP
+PRIM(RDEPTH_X21) rp = the_return_stack + TOS.u - 1; POP; MIRP
+PRIM(RPICK) TOS = *(rp - TOS.n); MIRP
+
+// 2.1
+PRIM(_X2b) NOS.u += TOS.u; POP; MIRP
+PRIM(_X2d) NOS.u -= TOS.u; POP; MIRP
+PRIM(_X2a) NOS.u *= TOS.u; POP; MIRP
+
+// 2.2
+PRIM(LSHIFT) NOS.u <<= TOS.u; POP; MIRP
+PRIM(RSHIFT) NOS.u >>= TOS.u; POP; MIRP
+PRIM(ASHIFT) NOS.n >>= TOS.u; POP; MIRP
+PRIM(AND) NOS.u &= TOS.u; POP; MIRP
+PRIM(OR) NOS.u |= TOS.u; POP; MIRP
+PRIM(XOR) NOS.u ^= TOS.u; POP; MIRP
+
+// 3.1
+#define GET_TYPE1(t) { \
+		t *restrict a = (t *restrict)(TOS.a); \
+		t b;
+
+#define GET_TYPE2(t) \
+		b = *a;
+
+#define GET_TYPE3(t) \
+		TOS.u = b; \
+}
+
+#define PUT_TYPE1(t) { \
+		t *restrict a = TOS.a; \
+		t b = NOS.u; \
+		POP; \
+		POP;
+
+#define PUT_TYPE2(t) \
+		*a = b; \
+}
+
+#define GET_CELL1 GET_TYPE1(type_u)
+#define PUT_CELL1 PUT_TYPE1(type_u)
+#define GET_CHAR1 GET_TYPE1(type_c)
+#define PUT_CHAR1 PUT_TYPE1(type_c)
+#define GET_WORD1 GET_TYPE1(type_w)
+#define PUT_WORD1 PUT_TYPE1(type_w)
+#define GET_LONG1 GET_TYPE1(type_l)
+#define PUT_LONG1 PUT_TYPE1(type_l)
+#define GET_XONG1 GET_TYPE1(type_u)
+#define PUT_XONG1 PUT_TYPE1(type_u)
+
+#define GET_CELL2 GET_TYPE2(type_u)
+#define PUT_CELL2 PUT_TYPE2(type_u)
+#define GET_CHAR2 GET_TYPE2(type_c)
+#define PUT_CHAR2 PUT_TYPE2(type_c)
+#define GET_WORD2 GET_TYPE2(type_w)
+#define PUT_WORD2 PUT_TYPE2(type_w)
+#define GET_LONG2 GET_TYPE2(type_l)
+#define PUT_LONG2 PUT_TYPE2(type_l)
+#define GET_XONG2 GET_TYPE2(type_u)
+#define PUT_XONG2 PUT_TYPE2(type_u)
+
+#define GET_CELL3 GET_TYPE3(type_u)
+#define GET_CHAR3 GET_TYPE3(type_c)
+#define GET_WORD3 GET_TYPE3(type_w)
+#define GET_LONG3 GET_TYPE3(type_l)
+#define GET_XONG3 GET_TYPE3(type_u)
+
+#define GET_CELL GET_CELL1 GET_CELL2 GET_CELL3
+#define PUT_CELL PUT_CELL1 PUT_CELL2
+#define GET_CHAR GET_CHAR1 GET_CHAR2 GET_CHAR3
+#define PUT_CHAR PUT_CHAR1 PUT_CHAR2
+#define GET_WORD GET_WORD1 GET_WORD2 GET_WORD3
+#define PUT_WORD PUT_WORD1 PUT_WORD2
+#define GET_LONG GET_LONG1 GET_LONG2 GET_LONG3
+#define PUT_LONG PUT_LONG1 PUT_LONG2
+#define GET_XONG GET_XONG1 GET_XONG2 GET_XONG3
+#define PUT_XONG PUT_XONG1 PUT_XONG2
+
+	PRIM(_X40)  GET_CELL; MIRP
+	PRIM(_X21)  PUT_CELL; MIRP
+	PRIM(C_X40) GET_CHAR; MIRP
+	PRIM(C_X21) PUT_CHAR; MIRP
+	PRIM(W_X40) GET_WORD; MIRP
+	PRIM(W_X21) PUT_WORD; MIRP
+	PRIM(L_X40) GET_LONG; MIRP
+	PRIM(L_X21) PUT_LONG; MIRP
+	PRIM(X_X40) GET_XONG; MIRP
+	PRIM(X_X21) PUT_XONG; MIRP
+
+
+#define UGET_TYPE1(t) { \
+		type_c *restrict a = (type_c *restrict)(TOS.a); \
+		t b; \
+		type_c *restrict c = (type_c *restrict)&b;
+
+#define UGET_TYPE2(t) \
+		*c++ = *a++; \
+		*c++ = *a++;
+
+#define UGET_TYPE3(t) \
+		TOS.u = b; \
+}
+
+#define UPUT_TYPE1(t) { \
+		type_c *restrict a = (type_c *restrict)(TOS.a); \
+		t b = NOS.u; \
+		type_c *restrict c = (type_c *restrict)&b; \
+		POP; \
+		POP;
+
+#define UPUT_TYPE2(t) \
+		*a++ = *c++; \
+		*a++ = *c++;
+
+#define UPUT_TYPE3(t) }
+
+#define UGET_WORD1 UGET_TYPE1(type_w)
+#define UPUT_WORD1 UPUT_TYPE1(type_w)
+#define UGET_WORD2 UGET_TYPE2(type_w)
+#define UPUT_WORD2 UPUT_TYPE2(type_w)
+#define UGET_WORD3 UGET_TYPE3(type_w)
+#define UPUT_WORD3 UPUT_TYPE3(type_w)
+#define UGET_LONG1 UGET_TYPE1(type_l)
+#define UPUT_LONG1 UPUT_TYPE1(type_l)
+#define UGET_LONG2 UGET_TYPE2(type_l)
+#define UPUT_LONG2 UPUT_TYPE2(type_l)
+#define UGET_LONG3 UGET_TYPE3(type_l)
+#define UPUT_LONG3 UPUT_TYPE3(type_l)
+
+#define UGET_WORD UGET_WORD1 UGET_WORD2 UGET_WORD3
+#define UPUT_WORD UPUT_WORD1 UPUT_WORD2 UPUT_WORD3
+#define UGET_LONG UGET_LONG1 UGET_LONG2 UGET_LONG2 UGET_LONG3
+#define UPUT_LONG UPUT_LONG1 UPUT_LONG2 UPUT_LONG2 UPUT_LONG3
+
+	PRIM(UNALIGNED_X2d_W_X40) UGET_WORD; MIRP
+	PRIM(UNALIGNED_X2d_W_X21) UPUT_WORD; MIRP
+	PRIM(UNALIGNED_X2d_L_X40) UGET_LONG; MIRP
+	PRIM(UNALIGNED_X2d_L_X21) UPUT_LONG; MIRP
+
+
+// 6
+PRIM(_X3c) NOS.n = -(NOS.n < TOS.n); POP; MIRP
+PRIM(U_X3c) NOS.n = -(NOS.u < TOS.u); POP; MIRP
+PRIM(0_X3c) TOS.n = -(TOS.n < 0); MIRP
+PRIM(_X3d) NOS.n = -(NOS.u == TOS.u); POP; MIRP
+PRIM(0_X3d) TOS.n = -(TOS.u == 0); MIRP
+
+
+
+
+
+
+// 8.4
+PRIM(DODO) RPUSH; RTOS = NOS; RPUSH; RTOS = TOS; POP; POP; MIRP
+code_DO_X3f_DO:
+	{
+		cell i = *dp--;
+		cell n = *dp--;
+		type_n dis = (++ip)->n;
+		if (i.n == n.n)
+			ip = (cell *restrict)((type_c *restrict)ip + dis);
+		else {
+			*(rp + 1) = n;
+			*(rp += 2) = i;
+		}
+		NEXT;
+	}
+code_DOLOOP:
+	{
+		type_n dis = (++ip)->n;
+		rp->n++;
+		if (rp->n == (rp - 1)->n)
+			rp -= 2;
+		else
+			ip = (cell *restrict)((type_c *restrict)ip + dis);
+		NEXT;
+	}
+code_DO_X2b_LOOP:
+	{
+		type_u lo, hi;
+		type_n inc;
+		type_n dis = (++ip)->n;
+		lo = rp->u;
+		inc = (dp--)->n;
+		rp->n += inc;
+		if (inc >= 0)
+			hi = rp->u;
+		else {
+			hi = lo;
+			lo = rp->u;
+		}
+		if ((type_u)((rp - 1)->n - 1 - lo) < hi - lo)
+			rp -= 2;
+		else
+			ip = (cell *restrict)((type_c *restrict)ip + dis);
+		NEXT;
+	}
+code_DOLEAVE:
+	{
+		type_n dis = (++ip)->n;
+		rp -= 2;
+		ip = (cell *restrict)((type_c *restrict)ip + dis);
+		NEXT;
+	}
+code_DO_X3f_LEAVE:
+	{
+		type_n dis = (++ip)->n;
+		if ((dp--)->n) {
+			rp -= 2;
+			ip = (cell *restrict)((type_c *restrict)ip + dis);
+		}
+		NEXT;
+	}
+
+
+
+
+
+
+// 8.5
+code_EXIT:
+	{
+		ip = (rp--)->a;
+		NEXT;
+	}
+
+code_SEMICOLON:
+	{
+		ip = (rp--)->a;
+		NEXT;
+	}
+
+code_EXECUTE:	// don't need this as prim
+	{
+		cfa = (dp--)->a;
+		NEXT00;
+	}
+
+
+PRIM(MOVE)
+	type_u n = TOS.u; POP;
+	unsigned char *q = TOS.a; POP;
+	unsigned char *p = TOS.a; POP;
+
+	_FASTMOVE(p, q, n);
+MIRP
+
+code_FILL:
+	{
+		unsigned char c = (dp--)->u;
+		type_n size = ((dp--)->n);
+		unsigned char *d = (unsigned char *)((dp--)->u);
+		type_u fill_v=c | c <<8;
+
+		fill_v |= fill_v << 16;
+		switch (((type_u)d | (type_u)size) & (sizeof(type_u)-1)) {
+			case 0: {
+				type_u *up = (type_u *)d;
+#if (__LONG_MAX__ > 2147483647L)
+				fill_v |= fill_v << 32;
+#endif
+				while ((size-=sizeof(type_u)) >= 0)
+					*up++ = fill_v;
+			}
+			case sizeof(type_l): {
+				type_l *lp = (type_l *)d;
+
+				while ((size-=sizeof(type_l)) >= 0)
+					*lp++ = (type_l)fill_v;
+			}
+			case sizeof(type_w): {
+				type_w *wp = (type_w *)d;
+
+				while ((size-=sizeof(type_w)) >= 0)
+					*wp++ = (type_w)fill_v;
+			}
+			default:
+				while (size-- > 0)
+					*d++ = (unsigned char)c;
+		}
+		NEXT;
+	}
+
+code_COMP:
+	{
+		type_n len = ((dp--)->n);
+		unsigned char *addr2 = (unsigned char *)((dp--)->u);
+		unsigned char *addr1 = (unsigned char *)((dp--)->u);
+
+		while (len-- > 0) {
+			if (*addr1 > *addr2) {
+				(++dp)->n = 1;
+				NEXT;
+			}
+			else if (*addr1 < *addr2) {
+				(++dp)->n = -1;
+				NEXT;
+			}
+			addr1 += 1;
+			addr2 += 1;
+		}
+		(++dp)->n = 0;
+		NEXT;
+	}
+
+
+PRIM(RMOVE)
+	type_u size = ((dp--)->u);
+	type_u *d = (type_u *)((dp--)->u);
+	type_u *s = (type_u *)((dp--)->u);
+	_FASTRMOVE(s, d, size);
+
+	MIRP
+
+PRIM(MRMOVE)
+	type_u size = TOS.u; POP;
+	void *d = TOS.a; POP;
+	void *s = TOS.a; POP;
+	FAST_MRMOVE(s, d, size);
+	MIRP
+
+PRIM(RFILL)
+	type_u pat = TOS.u; POP;
+	type_u size = TOS.u; POP;
+	void *dst = TOS.a; POP;
+	FAST_RFILL(dst, size, pat);
+	MIRP
+
+// String compare, case insensitive:
+// : string=ci  ( str1 len1 str2 len2 -- equal? )
+PRIM(STRING_X3d_CI)
+	type_u l2 = TOS.u; POP;
+	unsigned char *p2 = TOS.a; POP;
+	type_u l1 = TOS.u; POP;
+	unsigned char *p1 = TOS.a;
+
+	if (l1 == l2) {
+		TOS.n = -1;		/* Default to TRUE */
+		while (l1 > 0) {
+			if (toupper(*p1) != toupper(*p2)) {
+				TOS.n = 0;
+				break;
+			}
+			++p1;  ++p2;
+			--l1;
+		}
+	}
+	else {
+		TOS.n = 0;
+	}
+MIRP
+
+// bool dependend pick
+// ?PICK ( v1 v2 bool -- v1|v2 )
+PRIM(_X3f_PICK)
+        type_u b = TOS.u; POP;
+        if (b) { NOS = TOS; }
+        POP;
+MIRP
+
+/* zcount ( zstr -- str len ) */
+PRIM(ZCOUNT)
+	type_u len = strlen(TOS.a);
+	PUSH; TOS.u = len;
+MIRP
+
+PRIM(CLEAN_X2d_HASH)
+	memset(hash_table, 0, sizeof(hash_table));
+MIRP
+
+PRIM(HASH_X2d_TABLE)
+	PUSH;
+	TOS.a = hash_table;
+MIRP
+
+/* hash ( str len -- hash )
+ * this word is used in find-hash.fs to create
+ * a hash to accelerate word lookup */
+PRIM(HASH)
+	type_u len = TOS.u; POP;
+	unsigned char *str = TOS.a;
+	type_u tmp = len;
+	type_u hash = 0;
+	while(len--) {
+		hash <<= 1;
+		hash ^= tolower(*str);
+		hash ^= tmp;
+		str++;
+	}
+	/* we only want hash values which size is smaller
+	 * than HASHSIZE */
+	hash &= HASHSIZE - 1;
+	/* access the hash table in steps of CELLSIZE */
+	hash *= CELLSIZE;
+	/* return a pointer for this hash in the hash table */
+	TOS.a = hash_table + hash;
+MIRP

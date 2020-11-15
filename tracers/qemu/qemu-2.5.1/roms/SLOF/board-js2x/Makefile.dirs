@@ -1,0 +1,41 @@
+# *****************************************************************************
+# * Copyright (c) 2004, 2008 IBM Corporation
+# * All rights reserved.
+# * This program and the accompanying materials
+# * are made available under the terms of the BSD License
+# * which accompanies this distribution, and is available at
+# * http://www.opensource.org/licenses/bsd-license.php
+# *
+# * Contributors:
+# *     IBM Corporation - initial implementation
+# ****************************************************************************/
+#
+# This sub-Makefile contains the directory configuration variables.
+# It can be included from all board specific subdirectories.
+#
+
+# The board specific top directory:
+export TOPBRDDIR ?= $(shell while ! test -e Makefile.dirs ; do cd .. ; done ; pwd )
+
+# The board specific directories:
+export INCLBRDDIR ?= $(TOPBRDDIR)/include
+export LLFWBRDDIR ?= $(TOPBRDDIR)/llfw
+export RTASBRDDIR ?= $(TOPBRDDIR)/rtas
+export SLOFBRDDIR ?= $(TOPBRDDIR)/slof
+export ROMFSBRDDIR ?=  $(TOPBRDDIR)/romfs
+
+# The common top directory:
+export TOPCMNDIR ?= $(shell cd $(TOPBRDDIR)/.. && pwd)
+
+# The common directories:
+export INCLCMNDIR ?= $(TOPCMNDIR)/include
+export LLFWCMNDIR ?= $(TOPCMNDIR)/llfw
+export RTASCMNDIR ?= $(TOPCMNDIR)/rtas
+export SLOFCMNDIR ?= $(TOPCMNDIR)/slof
+export ROMFSCMNDIR ?=  $(TOPCMNDIR)/romfs
+
+export LIBCMNDIR ?= $(TOPCMNDIR)/lib
+
+export TOOLSDIR ?= $(TOPCMNDIR)/tools
+export CLIENTSDIR ?= $(TOPCMNDIR)/clients
+export OTHERLICENCEDIR ?= $(TOPCMNDIR)/other-licence

@@ -1,0 +1,113 @@
+#######################################################################
+# Common libraries for tools and emulators
+stub-obj-y = stubs/
+util-obj-y = util/ qobject/ qapi/
+util-obj-y += qmp-introspect.o qapi-types.o qapi-visit.o qapi-event.o
+
+#######################################################################
+# block-obj-y is code used by both qemu system emulation and qemu-img
+
+block-obj-y = async.o thread-pool.o
+block-obj-y += nbd.o block.o blockjob.o
+block-obj-y += main-loop.o iohandler.o qemu-timer.o
+block-obj-$(CONFIG_POSIX) += aio-posix.o
+block-obj-$(CONFIG_WIN32) += aio-win32.o
+block-obj-y += block/
+block-obj-y += qemu-io-cmds.o
+
+block-obj-m = block/
+
+#######################################################################
+# crypto-obj-y is code used by both qemu system emulation and qemu-img
+
+crypto-obj-y = crypto/
+crypto-aes-obj-y = crypto/
+
+#######################################################################
+# qom-obj-y is code used by both qemu system emulation and qemu-img
+
+qom-obj-y = qom/
+
+######################################################################
+# Target independent part of system emulation. The long term path is to
+# suppress *all* target specific code in case of system emulation, i.e. a
+# single QEMU executable should support all CPUs and machines.
+
+ifeq ($(CONFIG_SOFTMMU),y)
+common-obj-y = blockdev.o blockdev-nbd.o block/
+common-obj-y += iothread.o
+common-obj-y += net/
+common-obj-y += qdev-monitor.o device-hotplug.o
+common-obj-$(CONFIG_WIN32) += os-win32.o
+common-obj-$(CONFIG_POSIX) += os-posix.o
+
+common-obj-$(CONFIG_LINUX) += fsdev/
+
+common-obj-y += migration/
+common-obj-y += qemu-char.o #aio.o
+common-obj-y += page_cache.o
+common-obj-y += qjson.o
+
+common-obj-$(CONFIG_SPICE) += spice-qemu-char.o
+
+common-obj-y += audio/
+common-obj-y += hw/
+common-obj-y += accel.o
+
+common-obj-y += replay/
+
+common-obj-y += ui/
+common-obj-y += bt-host.o bt-vhci.o
+bt-host.o-cflags := $(BLUEZ_CFLAGS)
+
+common-obj-y += dma-helpers.o
+common-obj-y += vl.o
+vl.o-cflags := $(GPROF_CFLAGS) $(SDL_CFLAGS)
+common-obj-y += tpm.o
+
+common-obj-$(CONFIG_SLIRP) += slirp/
+
+common-obj-y += backends/
+
+common-obj-$(CONFIG_SECCOMP) += qemu-seccomp.o
+
+common-obj-$(CONFIG_FDT) += device_tree.o
+
+######################################################################
+# qapi
+
+common-obj-y += qmp-marshal.o
+common-obj-y += qmp-introspect.o
+common-obj-y += qmp.o hmp.o
+endif
+
+#######################################################################
+# Target-independent parts used in system and user emulation
+common-obj-y += qemu-log.o
+common-obj-y += tcg-runtime.o
+common-obj-y += hw/
+common-obj-y += qom/
+common-obj-y += disas/
+
+######################################################################
+# Resource file for Windows executables
+version-obj-$(CONFIG_WIN32) += $(BUILD_DIR)/version.o
+version-lobj-$(CONFIG_WIN32) += $(BUILD_DIR)/version.lo
+
+######################################################################
+# tracing
+util-obj-y +=  trace/
+target-obj-y += trace/
+
+######################################################################
+# guest agent
+
+# FIXME: a few definitions from qapi-types.o/qapi-visit.o are needed
+# by libqemuutil.a.  These should be moved to a separate .json schema.
+qga-obj-y = qga/
+qga-vss-dll-obj-y = qga/
+
+######################################################################
+# contrib
+ivshmem-client-obj-y = contrib/ivshmem-client/
+ivshmem-server-obj-y = contrib/ivshmem-server/

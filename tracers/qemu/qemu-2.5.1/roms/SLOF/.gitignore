@@ -1,0 +1,14 @@
+*.o
+*.fsi
+*.a
+*.dep
+*.depend
+*.bin
+*.elf
+*~
+/.target
+board.code
+dict.xt
+build_info.img
+paflof
+paflof.unstripped

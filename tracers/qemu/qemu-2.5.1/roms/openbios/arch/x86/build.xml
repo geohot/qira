@@ -1,0 +1,86 @@
+<build condition="X86">
+
+ <dictionary name="openbios-x86" init="openbios">
+  <object source="init.fs" target="forth"/>
+  <object source="QEMU,VGA.bin" target="fcode" condition="DRIVER_VGA"/>
+ </dictionary>
+
+ <library name="x86" type="static" target="target">
+  <object source="openbios.c"/>
+  <object source="exception.c"/>
+  <object source="console.c"/>
+  <object source="lib.c"/>
+  <object source="boot.c"/>
+  <object source="context.c"/>
+  <object source="linux_load.c"/>
+  <object source="segment.c"/>
+  <object source="sys_info.c"/>
+  <object source="entry.S"/>
+  <object source="xbox/console.c" condition="XBOX"/>
+  <object source="xbox/methods.c" condition="XBOX"/>
+ </library>
+
+ <executable name="openbios.multiboot" target="target" condition="IMAGE_ELF_MULTIBOOT">
+  <rule>
+	$(call quiet-command,$(LD) --warn-common -N -T $(SRCDIR)/arch/x86/ldscript -o $@.nostrip --whole-archive $^,"  LINK  $(TARGET_DIR)$@")
+	$(call quiet-command,$(NM) $@.nostrip | sort > $(ODIR)/openbios-multiboot.syms,"  GEN   $(TARGET_DIR)$@.syms")
+	$(call quiet-command,$(STRIP) $@.nostrip -o $@,"  STRIP $(TARGET_DIR)$@")</rule>
+  <object source="multiboot.c"/>
+  <external-object source="libx86.a"/>
+  <external-object source="libbootstrap.a"/>
+  <external-object source="libopenbios.a"/>
+  <external-object source="libpackages.a"/>
+  <external-object source="libdrivers.a"/>
+  <external-object source="liblibc.a"/>
+  <external-object source="libfs.a"/>
+  <external-object source="libgcc.a"/>
+ </executable>
+
+ <executable name="openbios-plain.elf" target="target" condition="IMAGE_ELF">
+  <rule>
+	$(call quiet-command,$(LD) --warn-common -N -T $(SRCDIR)/arch/x86/ldscript -o $@.nostrip --whole-archive $^,"  LINK  $(TARGET_DIR)$@")
+	$(call quiet-command,$(NM) $@.nostrip | sort > $(ODIR)/openbios-plain.syms,"  GEN   $(TARGET_DIR)$@.syms")
+	$(call quiet-command,$(STRIP) $@.nostrip -o $@,"  STRIP $(TARGET_DIR)$@")</rule>
+  <object source="plainboot.c"/>
+  <external-object source="libx86.a"/>
+  <external-object source="libbootstrap.a"/>
+  <external-object source="libopenbios.a"/>
+  <external-object source="libpackages.a"/>
+  <external-object source="libdrivers.a"/>
+  <external-object source="liblibc.a"/>
+  <external-object source="libfs.a"/>
+  <external-object source="libgcc.a"/>
+ </executable>
+
+ <!-- HACK ALERT -->
+
+ <executable name="target/include/static-dict.h" target="target" condition="IMAGE_ELF_EMBEDDED">
+  <rule><![CDATA[
+	$(call quiet-command,$(ODIR)/forthstrap -x -D $@ -d $< </dev/null, "  GEN   $(TARGET_DIR)$@")]]></rule>
+  <external-object source="openbios-x86.dict"/>
+ </executable>
+
+ <executable name="target/arch/x86/builtin.o" target="target" condition="IMAGE_ELF_EMBEDDED">
+  <rule><![CDATA[ $(SRCDIR)/arch/x86/builtin.c $(ODIR)/target/include/static-dict.h
+	$(call quiet-command,$(CC) $$EXTRACFLAGS $(CFLAGS) $(INCLUDES) -c -o $@ $(SRCDIR)/arch/x86/builtin.c, "  CC    $(TARGET_DIR)$@")]]></rule>
+ </executable>
+
+ <!-- END OF HACK ALERT -->
+
+ <executable name="openbios-builtin.elf" target="target" condition="IMAGE_ELF_EMBEDDED">
+  <rule>
+	$(call quiet-command,$(LD) --warn-common -N -T $(SRCDIR)/arch/x86/ldscript -o $@.nostrip --whole-archive $^,"  LINK  $(TARGET_DIR)$@")
+	$(call quiet-command,$(NM) $@.nostrip | sort > $(ODIR)/openbios-builtin.syms,"  GEN   $(TARGET_DIR)$@.syms")
+	$(call quiet-command,$(STRIP) $@.nostrip -o $@,"  STRIP $(TARGET_DIR)$@")</rule>
+  <external-object source="target/arch/x86/builtin.o"/>
+  <external-object source="libx86.a"/>
+  <external-object source="libbootstrap.a"/>
+  <external-object source="libopenbios.a"/>
+  <external-object source="libpackages.a"/>
+  <external-object source="libdrivers.a"/>
+  <external-object source="liblibc.a"/>
+  <external-object source="libfs.a"/>
+  <external-object source="libgcc.a"/>
+ </executable>
+
+</build>

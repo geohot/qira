@@ -1,0 +1,2 @@
+# we reject types that would conflict with implicit union enum
+{ 'enum': 'UnionKind', 'data': [ 'oops' ] }

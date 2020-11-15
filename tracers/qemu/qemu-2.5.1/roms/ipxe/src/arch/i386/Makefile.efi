@@ -1,0 +1,14 @@
+# -*- makefile -*- : Force emacs to use Makefile mode
+
+# Specify EFI image builder
+#
+ELF2EFI		= $(ELF2EFI32)
+
+# Use EFI ABI
+#
+CFLAGS		+= -malign-double
+
+# Include generic EFI Makefile
+#
+MAKEDEPS	+= arch/x86/Makefile.efi
+include arch/x86/Makefile.efi

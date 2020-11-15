@@ -1,6 +1,4 @@
-from __future__ import print_function
 from qira_base import *
-import traceback
 import qira_config
 import os
 import sys
@@ -16,7 +14,7 @@ def socket_method(func):
     # before things are initted in the js, we get this
     for i in args:
       if i == None:
-        #print "BAD ARGS TO %-20s" % (func.__name__), "with",args
+        #print "BAD ARGS TO %-20s" % (func.func_name), "with",args
         return
     try:
       start = time.time()
@@ -25,11 +23,10 @@ def socket_method(func):
 
       # print slow calls, slower than 50ms
       if tm > 50 or qira_config.WEBSOCKET_DEBUG:
-        print("SOCKET %6.2f ms in %-20s with" % (tm, func.__name__), args)
+        print "SOCKET %6.2f ms in %-20s with" % (tm, func.func_name), args
       return ret
-    except Exception as e:
-      traceback.print_exc()
-      print("ERROR",e,"in",func.__name__,"with",args)
+    except Exception, e:
+      print "ERROR",e,"in",func.func_name,"with",args
   return func_wrapper
 
 import qira_socat
@@ -48,6 +45,11 @@ import threading
 import sys
 if 'threading' in sys.modules:
   del sys.modules['threading']
+import gevent
+import gevent.socket
+import gevent.monkey
+gevent.monkey.patch_all()
+# done with that
 
 app = Flask(__name__)
 #app.config['DEBUG'] = True
@@ -64,6 +66,7 @@ def push_trace_update(i):
   t.needs_update = False
 
 def push_updates(full = True):
+
   socketio.emit('pmaps', program.get_pmaps(), namespace='/qira')
   socketio.emit('maxclnum', program.get_maxclnum(), namespace='/qira')
   socketio.emit('arch', list(program.tregs), namespace='/qira')
@@ -110,7 +113,7 @@ def mwpoller():
 @socket_method
 def forkat(forknum, clnum, pending):
   global program
-  print("forkat",forknum,clnum,pending)
+  print "forkat",forknum,clnum,pending
 
   REGSIZE = program.tregs[1]
   dat = []
@@ -144,11 +147,9 @@ def forkat(forknum, clnum, pending):
 @socket_method
 def deletefork(forknum):
   global program
-  print("deletefork", forknum)
+  print "deletefork", forknum
   os.unlink(qira_config.TRACE_FILE_BASE+str(int(forknum)))
-  if forknum in program.traces:
-    program.traces[forknum].keep_analysis_thread = False
-    del program.traces[forknum]
+  del program.traces[forknum]
   push_updates()
 
 @socketio.on('doslice', namespace='/qira')
@@ -156,7 +157,7 @@ def deletefork(forknum):
 def slice(forknum, clnum):
   trace = program.traces[forknum]
   data = qira_analysis.slice(trace, clnum)
-  print("slice",forknum,clnum, data)
+  print "slice",forknum,clnum, data
   emit('slice', forknum, data);
 
 @socketio.on('doanalysis', namespace='/qira')
@@ -172,7 +173,7 @@ def analysis(forknum):
 @socket_method
 def connect():
   global program
-  print("client connected", program.get_maxclnum())
+  print "client connected", program.get_maxclnum()
   push_updates()
 
 @socketio.on('getclnum', namespace='/qira')
@@ -428,11 +429,11 @@ def run_server(largs, lprogram):
   import qira_webstatic
   qira_webstatic.init(lprogram)
 
-  print("****** starting WEB SERVER on %s:%d" % (qira_config.HOST, qira_config.WEB_PORT))
+  print "****** starting WEB SERVER on %s:%d" % (qira_config.HOST, qira_config.WEB_PORT)
   threading.Thread(target=mwpoller).start()
   try:
     socketio.run(app, host=qira_config.HOST, port=qira_config.WEB_PORT, log_output=False)
   except KeyboardInterrupt:
-    print("*** User raised KeyboardInterrupt")
+    print "*** User raised KeyboardInterrupt"
     exit()
 

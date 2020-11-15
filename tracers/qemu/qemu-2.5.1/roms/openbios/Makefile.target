@@ -1,0 +1,86 @@
+#
+#  OpenBIOS Makefile
+# (C) 2004-2009 by the OpenBIOS team
+#
+
+include config.mak
+
+ODIR := .
+HOSTCC := gcc
+
+HOSTCFLAGS+= -O2 -g -DFCOMPILER -DBOOTSTRAP $(CROSSCFLAGS)
+HOSTCFLAGS+= -Wall -Wredundant-decls -Wshadow -Wpointer-arith
+HOSTCFLAGS+= -Wstrict-prototypes -Wmissing-declarations -Wundef -Wendif-labels
+HOSTCFLAGS+= -Wstrict-aliasing -Wwrite-strings -Wmissing-prototypes -Wnested-externs
+HOSTCFLAGS+= -W
+# Flags for dependency generation
+HOSTCFLAGS+= -MMD -MP -MT $@ -MF '$(*D)/$(*F).d'
+HOSTINCLUDES := -I$(SRCDIR)/include -I$(SRCDIR)/kernel -I$(SRCDIR)/kernel/include -I$(ODIR)/target/include
+
+CC     := $(TARGET)gcc
+AS     := $(TARGET)as
+AR     := $(TARGET)ar
+LD     := $(TARGET)ld
+NM     := $(TARGET)nm
+STRIP  := $(TARGET)strip
+RANLIB := $(TARGET)ranlib
+
+CFLAGS+= -Os -g -DNATIVE_BITWIDTH_EQUALS_HOST_BITWIDTH -USWAP_ENDIANNESS
+CFLAGS+= -Wall -Wredundant-decls -Wshadow -Wpointer-arith
+CFLAGS+= -Wstrict-prototypes -Wmissing-declarations -Wundef -Wendif-labels
+CFLAGS+= -Wstrict-aliasing -Wwrite-strings -Wmissing-prototypes -Wnested-externs
+CFLAGS+= -Werror
+# Flags for dependency generation
+CFLAGS+= -MMD -MP -MT $@ -MF '$(*D)/$(*F).d'
+INCLUDES := -I$(SRCDIR)/include -I$(SRCDIR)/kernel/include -I$(ODIR)/target/include
+AS_FLAGS+= -g
+
+# FCode tokeniser
+TOKE   := toke
+
+quiet-command = $(if $(V),$1,$(if $(2),@echo $2 && $1, @$1))
+
+VPATH_SUFFIXES = %.c %.h %.S %.fs
+set-vpath = $(if $1,$(foreach PATTERN,$(VPATH_SUFFIXES),$(eval vpath $(PATTERN) $1)))
+$(call set-vpath, $(SRCDIR))
+
+#
+# pre rules
+#
+
+all: versions dictionaries host-libraries target-libraries host-executables target-executables
+
+versions: $(ODIR)/target/include/openbios-version.h $(ODIR)/forth/version.fs
+
+$(ODIR)/forth/version.fs:
+	$(call quiet-command,true, "  GEN   $(TARGET_DIR)$@")
+	@DATE="$(shell echo `LC_ALL=C TZ=UTC date +'%b %e %Y %H:%M'`)" ;  \
+		( echo ": builddate \" $$DATE\" ; " ;     \
+		  echo ": version \" $(VERSION)\" ; " ; ) \
+		  > $(dir $@)/version.fs
+
+$(ODIR)/target/include/openbios-version.h:
+	$(call quiet-command,true, "  GEN   $(TARGET_DIR)$@")
+	@DATE="$(shell echo `LC_ALL=C TZ=UTC date +'%b %e %Y %H:%M'`)" ; \
+          ( echo "#define OPENBIOS_BUILD_DATE \"$$DATE\"" ; \
+           echo "#define OPENBIOS_VERSION_STR \"$(VERSION)\"" ; ) \
+         > $(dir $@)/openbios-version.h
+
+info:
+	@echo "Building OpenBIOS on $(HOSTARCH) for $(ARCH)"
+
+clean:
+	@printf "Cleaning up for $(ARCH)..."
+	@rm -rf forth.dict.core forthstrap *.dict openbios-*
+	@rm -f $(ODIR)/target/include/openbios-version.h $(ODIR)/forth/version.fs
+	@find . -type f \( -name "*~" -o -name '*.o' -o -name '*.d' -o -name '*.a' \) -exec rm \{\} \;
+	@echo " ok"
+
+build-verbose: info build
+
+build: all
+
+include rules.mak
+
+# Include automatically generated dependency files
+-include $(wildcard $(ODIR)/*.d $(ODIR)/host/kernel/*.d $(ODIR)/target/*/*.d $(ODIR)/target/*/*/*.d $(ODIR)/target/*/*/*/*.d)

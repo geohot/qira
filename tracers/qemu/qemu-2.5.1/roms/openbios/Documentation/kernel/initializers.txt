@@ -1,0 +1,24 @@
+
+Initializers are called when the forth kernel is started, to do some
+initialization stuff. 
+Pro: If code needs initialization you can keep this in place with the code
+and don't need to patch the kernel itself to do so.
+
+There are 2 types of initializers. "Normal" and "Late" initializers.
+
+Since initializers are only called during startup, they don't need a name.
+
+Definition:
+  initializer      ( xt -- )
+  late-initializer ( xt -- )
+
+Examples:
+  :noname <definition> ; initializer
+
+  :noname
+     some-base initializations
+  ; late-initializer
+ 
+Late initializers are run after all ordinary initializers have
+been executed.
+

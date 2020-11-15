@@ -1,0 +1,18 @@
+<build>
+
+ <!--
+  build description for forth debugging command group
+ 
+  Copyright (C) 2004-2005 by Stefan Reinauer
+  See the file "COPYING" for further information about
+  the copyright and warranty status of this work.
+  -->
+
+ <dictionary name="openbios" target="forth">
+  <object source="client.fs"/>
+  <object source="fcode.fs"/>
+  <object source="firmware.fs"/>
+  <object source="see.fs"/>
+ </dictionary>
+
+</build>

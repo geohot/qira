@@ -1,5 +1,4 @@
 #!/usr/bin/env python2.7
-from __future__ import print_function
 
 # NO MORE RADARE
 # tags should be dynamically generated
@@ -42,15 +41,21 @@ import qira_config
 
 from model import *
 
-import loader
-import analyzer
-
 # the new interface for all things static
+# will only support radare2 for now
 # mostly tags, except for names and functions
 class Static:
-  def __init__(self, path, debug=1):
+  def __init__(self, path, debug=0, static_engine=None):
+    # create the static cache dir
+    try:
+      os.mkdir(qira_config.STATIC_CACHE_BASE)
+    except:
+      pass
+
     self.tags = {}
     self.path = path
+    self.scf = qira_config.STATIC_CACHE_BASE + sha1(open(self.path, "rb").read()).hexdigest()
+    self.r2core = None
     self.debug = debug
 
     # radare doesn't seem to have a concept of names
@@ -67,19 +72,45 @@ class Static:
     # concept from qira_program
     self.base_memory = {}
 
+    #pass static engine as an argument for testing
+    if static_engine is None:
+      static_engine = qira_config.STATIC_ENGINE
+
+    # TODO: clean this up
+    if static_engine == "r2":
+      sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "r2"))
+      import r2pipe 
+      import loader 
+      import analyzer
+      self.r2core = r2pipe.r2pipe(path)
+      # capstone is not working ok yet, so using udis for now
+      self.r2core.cmd("e asm.arch=x86.udis")
+      self.r2core.cmd("aa;af @ main")
+    elif static_engine == "ida":
+      # run the elf loader
+      sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "ida"))
+      import ida
+      class loader():
+        @staticmethod
+        def load_binary(static):
+          ida.init_with_binary(static.path)
+      class analyzer():
+        @staticmethod
+        def analyze_functions(x):
+          dat = ida.fetch_tags()
+          print dat
+    else:
+      # run the elf loader
+      sys.path.append(os.path.join(qira_config.BASEDIR, "static2", "builtin"))
+      import loader
+      import analyzer
     self.analyzer = analyzer
     loader.load_binary(self)
 
     if self.debug >= 1:
-      print("*** elf loaded")
+      print "*** elf loaded"
 
     """
-    # create the static cache dir
-    try:
-      os.mkdir(qira_config.STATIC_CACHE_BASE)
-    except:
-      pass
-    self.scf = qira_config.STATIC_CACHE_BASE + sha1(open(self.path, "rb").read()).hexdigest()
     # check the cache
     if os.path.isfile(self.scf):
       # cache is global_tags + tags
@@ -202,11 +233,6 @@ class Static:
   # TODO: refactor this! 
   def memory(self, address, ln):
     dat = []
-    def ret():
-      if (sys.version_info > (3, 0)):
-        return bytes(dat)
-      else:
-        return ''.join(dat)
     for i in range(ln):
       ri = address+i
 
@@ -217,8 +243,8 @@ class Static:
             dat.append(self.base_memory[(ss,se)][ri-ss])
             break
           except:
-            return ret()
-    return ret()
+            return ''.join(dat)
+    return ''.join(dat)
 
   def add_memory_chunk(self, address, dat):
     #print "add segment",hex(address),len(dat)
@@ -226,7 +252,7 @@ class Static:
     for (laddress, llength) in self.base_memory:
       if address == laddress:
         if self.base_memory[(laddress, llength)] != dat:
-          print("*** WARNING, changing segment",hex(laddress),llength)
+          print "*** WARNING, changing segment",hex(laddress),llength
         return
 
     # segments should have an idea of segment permission
@@ -236,14 +262,14 @@ class Static:
   def process(self):
     self.analyzer.analyze_functions(self)
     if self.debug >= 1:
-      print("*** static found %d functions" % len(self['functions']))
+      print "*** found %d functions" % len(self['functions'])
 
 
 # *** STATIC TEST STUFF ***
 
 if __name__ == "__main__":
   static = Static(sys.argv[1],debug=1)
-  print("arch:",static['arch'])
+  print "arch:",static['arch']
 
   # find main
   static.process()
@@ -259,18 +285,18 @@ if __name__ == "__main__":
 
   # function printer
   for f in sorted(static['functions']):
-    print(static[f.start]['name'] or hex(f.start), f)
+    print static[f.start]['name'] or hex(f.start), f
     for b in sorted(f.blocks):
-      print("  ",b)
+      print "  ",b
       for a in sorted(b.addresses):
-        print("    ",hex(a),static._insert_names(static[a]['instruction']))
+        print "    ",hex(a),static._insert_names(static[a]['instruction'])
 
 
   # print symbols
-  print("symbols")
+  print "symbols"
   names = static.get_tags(['name'])
   for addr in names:
-    print("%8x: %s" % (addr, names[addr]['name']))
+    print "%8x: %s" % (addr, names[addr]['name'])
 
   #print static['functions']
 

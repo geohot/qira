@@ -1,0 +1,19 @@
+<build>
+
+ <!--
+  build description for Open Firmware support packages
+ 
+  Copyright (C) 2004-2005 by Stefan Reinauer
+  See the file "COPYING" for further information about
+  the copyright and warranty status of this work.
+  -->
+ 
+ <dictionary name="openbios" target="forth">
+  <object source="packages.fs"/>
+  <object source="deblocker.fs" condition="PKG_DEBLOCKER"/>
+  <object source="disklabel.fs" condition="PKG_DISKLABEL"/>
+  <object source="terminal-emulator.fs" condition="PKG_TERM_EMUL"/>
+  <object source="obp-tftp.fs" condition="OBP_TFTP"/>
+ </dictionary>
+
+</build>

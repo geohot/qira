@@ -1,0 +1,287 @@
+/******************************************************************************
+ * Copyright (c) 2004, 2008 IBM Corporation
+ * All rights reserved.
+ * This program and the accompanying materials
+ * are made available under the terms of the BSD License
+ * which accompanies this distribution, and is available at
+ * http://www.opensource.org/licenses/bsd-license.php
+ *
+ * Contributors:
+ *     IBM Corporation - initial implementation
+ *****************************************************************************/
+#include <nvram.h>
+
+#define STRING_INIT(str)	\
+	char str[255];		\
+	char * str##_address;	\
+	int  str##_length;
+
+#define STRING_FROM_STACK(str)				\
+	str##_length = TOS.u; POP;				\
+	str##_address = TOS.a; POP;			\
+	memcpy(str, str##_address, str##_length);	\
+	memset(str + str##_length, 0, 255 - str##_length);
+
+PRIM(nvram_X2d_c_X40)
+	unsigned int offset = TOS.u;
+	TOS.u=nvram_read_byte(offset);
+MIRP
+
+PRIM(nvram_X2d_w_X40)
+	unsigned int offset = TOS.u;
+	TOS.u=nvram_read_word(offset);
+MIRP
+
+PRIM(nvram_X2d_l_X40)
+	unsigned int offset = TOS.u;
+	TOS.u=nvram_read_dword(offset);
+MIRP
+
+PRIM(nvram_X2d_x_X40)
+	unsigned int offset = TOS.u;
+	TOS.u=nvram_read_qword(offset);
+MIRP
+
+PRIM(nvram_X2d_c_X21)
+	nvram_write_byte(TOS.u, NOS.u);
+	POP; POP;
+MIRP
+
+PRIM(nvram_X2d_w_X21)
+	nvram_write_word(TOS.u, NOS.u);
+	POP; POP;
+MIRP
+
+PRIM(nvram_X2d_l_X21)
+	nvram_write_dword(TOS.u, NOS.u);
+	POP; POP;
+MIRP
+
+PRIM(nvram_X2d_x_X21)
+	nvram_write_qword(TOS.u, NOS.u);
+	POP; POP;
+MIRP
+
+/* get-nvram-partition ( type -- addr len FAILED? ) */
+PRIM(get_X2d_nvram_X2d_partition)
+	partition_t partition;
+	unsigned int ptype = TOS.u;
+	partition = get_partition(ptype, NULL);
+	if(partition.len && partition.len != -1) {
+		TOS.u = partition.addr;
+		PUSH;
+		TOS.u = partition.len;
+		PUSH;
+		TOS.u = 0; // FALSE
+	} else {
+		TOS.u = -1; // TRUE
+	}
+MIRP
+
+/* get-named-nvram-partition ( name.addr name.len -- addr len FAILED? ) */
+PRIM(get_X2d_named_X2d_nvram_X2d_partition)
+	STRING_INIT(name)
+	partition_t partition;
+
+	STRING_FROM_STACK(name)
+	partition = get_partition(-1, name);
+
+	if(partition.len && partition.len != -1) {
+		PUSH;
+		TOS.u = partition.addr;
+		PUSH;
+		TOS.u = partition.len;
+		PUSH;
+		TOS.u = 0; // FALSE
+	} else {
+		PUSH;
+		TOS.u = -1; // TRUE
+	}
+MIRP
+
+
+
+/* new-nvram-partition ( type name.addr name.len len -- part.offs part.len FALSE | TRUE) */
+PRIM(new_X2d_nvram_X2d_partition)
+	int type, len, i, slen;
+	char name[12], *addr;
+	partition_t partition;
+
+	len = TOS.u; POP;
+	slen = TOS.u; POP;
+	addr = (char *)TOS.u; POP;
+	type = TOS.u; POP;
+
+	for (i=0; i<12; i++) {
+		if(slen>i)
+			name[i]=addr[i];
+		else
+			name[i]=0;
+	}
+
+	partition=new_nvram_partition(type, name, len);
+
+	if(!partition.len) {
+		PUSH; TOS.u = -1; // TRUE
+	} else {
+		PUSH; TOS.u = partition.addr;
+		PUSH; TOS.u = partition.len;
+		PUSH; TOS.u = 0; // FALSE
+	}
+MIRP
+
+/* inrease-nvram-partition ( part.offs part.len new-len -- FALSE | TRUE ) */
+PRIM(increase_X2d_nvram_X2d_partition)
+	int len, ret;
+	partition_t partition;
+
+	// FIXME
+	partition.addr = TOS.u; POP;
+	partition.len  = TOS.u; POP;
+	len = TOS.u; POP;
+
+	ret=increase_nvram_partition_size(partition, len);
+
+	PUSH;
+
+	if(!ret) 
+		TOS.u=-1; // TRUE
+	else
+		TOS.u=0; // FALSE
+
+MIRP
+
+PRIM(internal_X2d_reset_X2d_nvram)
+	reset_nvram();
+MIRP
+
+PRIM(wipe_X2d_nvram)
+	wipe_nvram();
+MIRP
+
+PRIM(nvram_X2d_debug)
+	nvram_debug();
+MIRP
+
+// ( part.start part.len name.addr name.len -- var.addr var.len TRUE | false )
+PRIM(internal_X2d_get_X2d_env)
+	STRING_INIT(name)
+	partition_t part;
+	char *val;
+
+	STRING_FROM_STACK(name)
+	part.len = TOS.u; POP;
+	part.addr = TOS.u; POP;
+
+	val=get_env(part, name);
+	if(val) {
+		PUSH; TOS.a = val;
+		PUSH; TOS.u = strlen(val);
+		PUSH; TOS.u = -1; // TRUE
+	} else {
+		PUSH; TOS.u = 0; // FALSE
+	}
+MIRP
+
+// ( part.start part.len name.addr name.len val.addr val.len -- FALSE|TRUE)
+PRIM(internal_X2d_add_X2d_env)
+	STRING_INIT(name)
+	STRING_INIT(value)
+	partition_t part;
+	int ret;
+
+	STRING_FROM_STACK(value)
+	STRING_FROM_STACK(name)
+	part.len = TOS.u; POP;
+	part.addr = TOS.u; POP;
+
+	ret=add_env(part, name, value);
+	if(ret) {
+		PUSH; TOS.u = -1; // TRUE
+	} else {
+		PUSH; TOS.u = 0; // FALSE
+	}
+MIRP
+
+// ( part.addr part.len name.addr name.len -- FALSE|TRUE)
+PRIM(internal_X2d_del_X2d_env)
+	STRING_INIT(name)
+	partition_t part;
+	int ret;
+
+	STRING_FROM_STACK(name);
+	part.len = TOS.u; POP;
+	part.addr = TOS.u; POP;
+
+	ret=del_env(part, name);
+	if(ret) {
+		PUSH; TOS.u = -1; // TRUE
+	} else {
+		PUSH; TOS.u = 0; // FALSE
+	}
+
+MIRP
+
+// internal-set-env ( part.addr part.len name.addr name.len val.addr val.len -- FALSE|TRUE)
+PRIM(internal_X2d_set_X2d_env)
+	STRING_INIT(name)
+	STRING_INIT(value)
+	partition_t part;
+	int ret;
+
+	STRING_FROM_STACK(value)
+	STRING_FROM_STACK(name)
+	part.len = TOS.u; POP;
+	part.addr = TOS.u; POP;
+
+	ret=set_env(part, name, value);
+	if(ret) {
+		PUSH; TOS.u = -1; // TRUE
+	} else {
+		PUSH; TOS.u = 0; // FALSE
+	}
+MIRP
+
+// ( part.addr part.len -- FALSE|TRUE)
+PRIM(erase_X2d_nvram_X2d_partition)
+	partition_t part;
+	int ret;
+
+	part.len = TOS.u; POP;
+	part.addr = TOS.u; POP;
+
+	ret=clear_nvram_partition(part);
+	if(ret) {
+		PUSH; TOS.u = -1; // TRUE
+	} else {
+		PUSH; TOS.u = 0; // FALSE
+	}
+
+MIRP
+
+// ( part.addr part.len -- FALSE|TRUE)
+PRIM(delete_X2d_nvram_X2d_partition)
+	partition_t part;
+	int ret;
+
+	part.len = TOS.u; POP;
+	part.addr = TOS.u; POP;
+
+	ret=delete_nvram_partition(part);
+	if(ret) {
+		PUSH; TOS.u = -1; // TRUE
+	} else {
+		PUSH; TOS.u = 0; // FALSE
+	}
+
+MIRP
+
+// ( fetch_token store_token size nvram-addr -- )
+PRIM(internal_X2d_nvram_X2d_init)
+	void *nvram_addr = TOS.a; POP;
+	uint32_t nvram_size = TOS.u; POP;
+	uint32_t store_token = TOS.u; POP;
+	long fetch_token = TOS.u; POP;
+
+	nvram_init(fetch_token, store_token, nvram_size, nvram_addr);
+MIRP

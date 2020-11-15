@@ -1,0 +1,81 @@
+CC	=	gcc
+LD	=	ld
+
+KERNEL	=	/usr/src/linux
+#KERNEL	=	/lib/modules/`uname -r`/build
+
+ARCH	=	$(shell uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc64/)
+
+ifeq ($(KERNEL)/.config,$(wildcard $(KERNEL)/.config))
+include $(KERNEL)/.config
+endif
+
+CFLAGS	=	-D__KERNEL__ -I${KERNEL}/include  -Wall	\
+		-Wstrict-prototypes -Wno-trigraphs -O2	\
+		-fomit-frame-pointer -fno-common	\
+		-fno-strict-aliasing -pipe -DMODULE
+
+# comment this if you don't want debugging information
+CFLAGS += -DDEBUG
+
+# see if we need module versions
+ifdef CONFIG_MODVERSIONS
+CFLAGS += -DMODVERSIONS
+endif
+
+ifeq ($(ARCH),alpha)
+CFLAGS	+=	-mno-fp-regs -ffixed-8 -mcpu=ev5 -Wa,-mev6
+LDFLAGS  =	-m elf64alpha
+endif
+
+ifeq ($(ARCH),sparc64)
+CFLAGS	+=	-mno-fpu -mtune=ultrasparc -mmedlow -ffixed-g4 \
+		-fcall-used-g5 -fcall-used-g7
+LDFLAGS	 =	-m elf_sparc64
+endif
+
+ifeq ($(ARCH),i386)
+CFLAGS	+=	-mpreferred-stack-boundary=2 -march=i586
+LDFLAGS  =	-m elf_i386
+endif
+
+ifeq ($(ARCH), x86_64)
+CFLAGS	+=	-mno-red-zone -mcmodel=kernel -fno-reorder-blocks \
+		-finline-limit=2000 -fno-strength-reduce 
+LDFLAGS	 =	-m elf_x86_64
+endif
+
+ifeq ($(ARCH),ia64)
+CFLAGS  +=	-ffixed-r13 -mfixed-range=f10-f15,f32-f127 \
+		-falign-functions=32
+LDFLAGS  =      -m elf64_ia64
+endif
+
+.SUFFIXES: .o .c .h
+
+TARGET	=	bios.o
+OBJS	=	bios_core.o flashchips.o pcisets.o \
+		filesystem.o procfs.o programming.o
+
+all: $(TARGET) comp
+
+$(TARGET): $(OBJS)
+	$(LD) $(LDFLAGS) -r -o $(TARGET) $(OBJS)
+
+clean:
+	-rm -f $(TARGET) $(OBJS) comp *.o
+
+.c.o:
+	$(CC) $(INCLUDES) -c $(INCDIRS) $(CFLAGS) $(X_CFLAGS) $(DEBUGFLAGS) $*.c -o $@
+
+comp:	comp.c
+	$(CC) comp.c -O2 -o comp
+	strip comp
+
+bios_core.o:	bios_core.c bios.h pcisets.h flashchips.h programming.h
+filesystem.o:	filesystem.c bios.h pcisets.h flashchips.h programming.h
+flashchips.o:	flashchips.c bios.h flashchips.h
+pcisets.o:	pcisets.c bios.h pcisets.h flashchips.h programming.h
+procfs.o:	procfs.c bios.h pcisets.h flashchips.h programming.h
+programming.o:	programming.c bios.h pcisets.h flashchips.h programming.h
+

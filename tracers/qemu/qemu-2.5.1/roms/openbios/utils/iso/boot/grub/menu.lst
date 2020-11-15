@@ -1,0 +1,7 @@
+timeout 0
+default 0
+hiddenmenu
+title openbios
+kernel (cd)/openbios.multiboot
+module (cd)/openbios-x86.dict
+boot

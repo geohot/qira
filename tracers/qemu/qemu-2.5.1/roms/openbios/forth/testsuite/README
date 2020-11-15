@@ -1,0 +1,8 @@
+TESTSUITES
+----------
+
+This directory contains additional testsuites for some open 
+firmware components. They are not built per default.
+
+
+tag: testsuites readme

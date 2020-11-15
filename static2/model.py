@@ -1,8 +1,14 @@
-from __future__ import print_function
 from capstone import *
 import capstone # for some unexported (yet) symbols in Capstone 3.0
 import qira_config
 import string
+
+if qira_config.WITH_BAP:
+  import bap
+  from bap import adt, arm, asm, bil
+  from bap.adt import Visitor, visit
+  from binascii import hexlify
+  debug_level = 0
 
 __all__ = ["Tags", "Function", "Block", "Instruction", "DESTTYPE","ABITYPE"]
 
@@ -15,7 +21,14 @@ class DESTTYPE(object):
 
 class Instruction(object):
   def __new__(cls, *args, **kwargs):
-    return CsInsn(*args, **kwargs)
+    if qira_config.WITH_BAP:
+      try:
+        return BapInsn(*args, **kwargs)
+      except Exception as exn:
+        print "bap failed", type(exn).__name__, exn
+        return CsInsn(*args, **kwargs)
+    else:
+      return CsInsn(*args, **kwargs)
 
 class BapInsn(object):
   def __init__(self, raw, address, arch):
@@ -140,6 +153,82 @@ def exists(cont,f):
     return False
 
 
+if qira_config.WITH_BAP:
+  class Jmp_visitor(Visitor):
+    def __init__(self):
+      self.in_condition = False
+      self.jumps = []
+
+    def visit_If(self, exp):
+      was = self.in_condition
+      self.in_condition = True
+      self.run(exp.true)
+      self.run(exp.false)
+      self.in_condition = was
+
+    def visit_Jmp(self, exp):
+      self.jumps.append((exp,
+                         DESTTYPE.cjump if self.in_condition else
+                         DESTTYPE.jump))
+
+  class Access_visitor(Visitor):
+    def __init__(self):
+        self.reads = []
+        self.writes = []
+
+    def visit_Move(self, stmt):
+        self.writes.append(stmt.var.name)
+        self.run(stmt.expr)
+
+    def visit_Var(self, var):
+        self.reads.append(var.name)
+
+  def jumps(bil):
+    return visit(Jmp_visitor(), bil).jumps
+
+  def accesses(bil):
+    r = visit(Access_visitor(), bil)
+    return (r.reads, r.writes)
+
+  #we could use ctypes here, but then we'd need an import
+  def calc_offset(offset, arch):
+    """
+    Takes a 2's complement offset and, depending on the architecture,
+    makes a Python value. See test_calc_offset for examples.
+
+    Note: We may want to take the size of the int here, as x86-64 for
+          example may use 32-bit ints when it uses x86 instructions.
+    """
+    if arch in ['aarch64', 'x86-64']:
+      if (offset >> 63) & 1 == 1:
+        #negative
+        offset_fixed = -(0xFFFFFFFFFFFFFFFF-offset+1)
+      else:
+        offset_fixed = offset
+    else:
+      if offset != offset & 0xFFFFFFFF:
+        if debug_level >= 1:
+          print "[!] Warning: supplied offset 0x{:x} is not 32 bits.".format(offset)
+      offset = offset & 0xFFFFFFFF
+      if (offset >> 31) & 1 == 1:
+        offset_fixed = -(0xFFFFFFFF-offset+1)
+      else:
+        offset_fixed = offset
+    return offset_fixed
+
+  def test_calc_offset():
+    expected = {(0xFFFFFFFF, "x86"): -1,
+                (0xFFFFFFFE, "x86"): -2,
+                (0xFFFFFFFF, "x86-64"): 0xFFFFFFFF,
+                (0xFFFFFFFF, "aarch64"): 0xFFFFFFFF,
+                (0xFFFFFFFFFFFFFFFF, "x86-64"): -1,
+                (0xFFFFFFFFFFFFFFFE, "x86-64"): -2}
+    for k,v in expected.iteritems():
+      v_prime = calc_offset(*k)
+      if v_prime != v:
+        k_fmt = (k[0],hex(k[1]),k[2])
+        print "{0} -> {1:x} expected, got {0} -> {2:x}".format(k_fmt,v,v_prime)
+
 class UnknownRegister(Exception):
   def __init__(self, reg):
     self.reg = reg
@@ -175,7 +264,7 @@ class CsInsn(object):
       raise Exception('arch "{}" not supported by capstone'.format(arch))
     self.md.detail = True
     try:
-      self.i = next(self.md.disasm(self.raw, self.address))
+      self.i = self.md.disasm(self.raw, self.address).next()
       self.decoded = True
       self.regs_read = self.i.regs_read
       self.regs_write = self.i.regs_write
@@ -356,7 +445,7 @@ class CsInsn(object):
       #[a, +, b, -, c] -> sum(a, +b, -c)
       if len(spl) > 2:
         addr = _eval_op_x86(spl[0])
-        for i in range(1, len(spl), 2):
+        for i in xrange(1, len(spl), 2):
           if spl[i] == "+":
             addr += _eval_op_x86(spl[i+1])
           else:
@@ -372,10 +461,7 @@ class CsInsn(object):
         raise IgnoredRegister(exp)
 
       if exp in reginfo: #it's a register
-        if exp == 'rip':
-          return reginfo[exp] + self.i.size
-        else:
-          return reginfo[exp]
+        return reginfo[exp]
 
       try:
         return int(exp, 16)
@@ -418,10 +504,10 @@ class CsInsn(object):
     try:
       fmt, ref = self._get_ref_square_bracket()
     except AssertionError:
-      print("*** Warning: assumption in _get_ref_square_bracket violated")
+      print "*** Warning: assumption in _get_ref_square_bracket violated"
       return self.i.op_str
     except Exception as e:
-      print("unknown exception in _get_operand_s")
+      print "unknown exception in _get_operand_s"
       return self.i.op_str
 
     try:
@@ -430,9 +516,9 @@ class CsInsn(object):
     except IgnoredRegister as e:
       pass
     except UnknownRegister as e:
-      print("_get_operand_s: unknown register {} at clnum {}".format(e.reg, clnum))
+      print "_get_operand_s: unknown register {} at clnum {}".format(e.reg, clnum)
     except Exception as e:
-      print("unknown exception in _get_operand_s", e)
+      print "unknown exception in _get_operand_s", e
 
     return self.i.op_str
 
@@ -505,13 +591,6 @@ class Tags:
     self.backing = {}
     self.static = static
     self.address = address
-
-  def todict(self):
-    ret = {}
-    for k in self.backing:
-      # TODO: add proper type conversions as needed
-      ret[k] = str(self.backing[k])
-    return ret
 
   def __contains__(self, tag):
     return tag in self.backing

@@ -1,0 +1,31 @@
+<build>
+
+ <library name="openbios" type="static" target="target">
+  <object source="aout_load.c" condition="LOADER_AOUT"/>
+  <object source="bindings.c"/>
+  <object source="bootcode_load.c" condition="LOADER_BOOTCODE"/>
+  <object source="bootinfo_load.c" condition="LOADER_BOOTINFO"/>
+  <object source="client.c"/>
+  <object source="console.c"/>
+  <object source="elf_info.c" />
+  <object source="elf_load.c" condition="LOADER_ELF"/>
+  <object source="font_8x8.c" condition="FONT_8X8"/>
+  <object source="font_8x16.c" condition="FONT_8X16"/>
+  <object source="fcode_load.c" condition="LOADER_FCODE"/>  
+  <object source="forth_load.c" condition="LOADER_FORTH"/>
+  <object source="init.c"/>
+  <object source="initprogram.c"/>
+  <object source="ipchecksum.c"/>
+  <object source="load.c"/>
+  <object source="linuxbios_info.c" condition="LINUXBIOS"/>
+  <object source="ofmem_common.c" condition="OFMEM"/>
+  <object source="xcoff_load.c" condition="LOADER_XCOFF"/>
+  <object source="video_common.c"/>
+ </library>
+
+ <dictionary name="openbios" target="forth">
+  <object source="clib.fs"/>
+  <object source="helpers.fs"/>
+ </dictionary>
+
+</build>

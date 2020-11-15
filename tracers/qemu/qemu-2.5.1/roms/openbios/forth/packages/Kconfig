@@ -1,0 +1,16 @@
+
+config PKG_DEBLOCKER
+	bool "Deblocker"
+	default y
+
+config PKG_DISKLABEL
+	bool "Disk Label"
+	default y
+
+config PKG_OBP_TFTP
+	bool "OBP-TFTP"
+	default y
+
+config PKG_TERMINAL_EMULATOR
+	bool "Terminal Emulator"
+	default y

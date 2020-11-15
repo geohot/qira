@@ -1,0 +1,54 @@
+default: all
+
+top_srcdir = ..
+include $(top_srcdir)/test/Makefile.sources
+include $(top_srcdir)/Makefile.win32.common
+
+TEST_LDADD = \
+	$(top_builddir)/pixman/$(CFG_VAR)/$(LIBRARY).lib \
+	$(CFG_VAR)/libutils.lib \
+	$(NULL)
+
+libutils_OBJECTS = $(patsubst %.c, $(CFG_VAR)/%.obj, $(libutils_sources))
+
+SOURCES = $(patsubst %,   %.c,              $(TESTPROGRAMS) $(OTHERPROGRAMS))
+OBJECTS = $(patsubst %.c, $(CFG_VAR)/%.obj, $(SOURCES))
+TESTS   = $(patsubst %,   $(CFG_VAR)/%.exe, $(TESTPROGRAMS))
+OTHERS  = $(patsubst %,   $(CFG_VAR)/%.exe, $(OTHERPROGRAMS))
+
+all: pixman inform $(TESTS) $(OTHERS)
+
+check: pixman inform $(TESTS)
+	@failures=0 ; \
+	total=0 ; \
+	for test in $(TESTS) ; \
+	do \
+		total=`expr $$total + 1` ; \
+		if ./$$test ; \
+		then echo "PASS: $$test" ; \
+		else echo "FAIL: $$test" ; \
+		     failures=`expr $$failures + 1` ; \
+		fi ; \
+	done ; \
+	if test $$failures -eq 0 ; \
+	then banner="All $$total tests passed" ; \
+	else banner="$$failures of $$total tests failed" ; \
+	fi ; \
+	dashes=`echo "$$banner" | sed s/./=/g`; \
+	echo "$$dashes" ; \
+	echo "$$banner" ; \
+	echo "$$dashes" ; \
+	test $$failures -eq 0
+
+$(CFG_VAR)/libutils.lib: $(libutils_OBJECTS)
+	@$(AR) $(PIXMAN_ARFLAGS) -OUT:$@ $^
+
+$(CFG_VAR)/%.exe: $(CFG_VAR)/%.obj $(TEST_LDADD)
+	@$(LD) $(PIXMAN_LDFLAGS) -OUT:$@ $^
+
+$(top_builddir)/pixman/$(CFG_VAR)/$(LIBRARY).lib: pixman
+
+pixman:
+	@$(MAKE) -C $(top_builddir)/pixman -f Makefile.win32
+
+.PHONY: all check pixman

@@ -1,0 +1,49 @@
+#!/bin/sh
+
+set -e
+
+imgloop=
+tmpfile=
+tmploop=
+dmname=
+cowlink=
+
+function cleanup () {
+    set +e
+    [ -n "$cowlink" ] && rm $cowlink
+    [ -n "$dmname" ] && dmsetup remove $dmname
+    [ -n "$tmploop" ] && losetup -d $tmploop
+    [ -n "$tmpfile" ] && rm $tmpfile
+    [ -n "$imgloop" ] && losetup -d $imgloop
+}
+
+trap cleanup EXIT
+
+imgfile=$1 ; shift
+command=$1 ; shift
+if [ -z "$imgfile" -o -z "$command" ] ; then
+    echo Syntax: $0 /path/to/image/file command [args..]
+    exit 1
+fi
+
+# Set up image loop device
+x=`losetup -f` ; losetup -r $x $imgfile ; imgloop=$x
+
+# Create temporary file and set up temporary loop device
+tmpfile=`mktemp $imgfile.XXXXXXXXXX`
+truncate -r $imgfile $tmpfile
+x=`losetup -f` ; losetup $x $tmpfile ; tmploop=$x
+
+# Create snapshot device
+imgsize=`blockdev --getsz $imgloop`
+x=`basename $imgfile` ; echo 0 $imgsize snapshot $imgloop $tmploop N 16 | \
+    dmsetup create $x ; dmname=$x
+chown --reference=$imgfile /dev/mapper/$dmname
+chmod --reference=$imgfile /dev/mapper/$dmname
+
+# Create symlink
+x=$imgfile.cow ; ln -s /dev/mapper/$dmname $x ; cowlink=$x
+
+# Wait until killed
+echo "Created $cowlink"
+$command "$@" $cowlink

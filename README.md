@@ -1,23 +1,11 @@
 # QIRA
 
-[![Build Status](https://travis-ci.org/geohot/qira.svg?branch=master)](https://travis-ci.org/geohot/qira)
+[![Join the chat at https://gitter.im/geohot/qira](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/geohot/qira?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Build Status](https://travis-ci.org/geohot/qira.svg?branch=master)](https://travis-ci.org/geohot/qira)
 
 * QIRA is a competitor to strace and gdb
 * See http://qira.me/ for high level usage information
 * All QIRA code is released under MIT license
 * Other code in this repo released under its respective license
-
-## Supported OS
-
-<pre>
-Ubuntu 14.04 and 16.04 supported out of the box.
-18.04 is having a problem with building QEMU
-See forked QEMU source at https://github.com/geohot/qemu/tree/qira to fix.
-
-Non Linux hosts may run the rest of QIRA, but cannot run the QEMU tracer.
-Very limited support for Mac OS X and Windows natively.
-The Docker image in docker should work everywhere.
-</pre>
 
 ## Installing release
 
@@ -135,13 +123,4 @@ max_clnum -- max changelist number for each fork
 dirtyiaddr -- whether we should update the clnum based on the iaddr or not
 flat -- if we are in flat view
 </pre>
-
-
-## Static
-
-QIRA static has historically been such a trash heap it's gated behind -S. QIRA should not be trying to compete with IDA.
-
-User input and the actual traces of the program should drive creation of the static database. Don't try to recover all CFGs, only what ran.
-
-The basic idea of static is that it exists at change -1 and doesn't change ever. Each address has a set of tags, including things like name.
 

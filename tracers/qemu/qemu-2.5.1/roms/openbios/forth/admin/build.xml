@@ -1,0 +1,25 @@
+<build>
+
+ <!--
+  build description for forth administrative command group
+ 
+  Copyright (C) 2003-2005 by Stefan Reinauer
+  See the file "COPYING" for further information about
+  the copyright and warranty status of this work.
+  -->
+
+ <dictionary name="openbios" target="forth">
+  <object source="devices.fs"/>
+  <object source="nvram.fs"/>
+  <object source="callback.fs"/>
+  <object source="help.fs"/>
+  <object source="iocontrol.fs"/>
+  <object source="banner.fs"/>
+  <object source="reset.fs"/>
+  <object source="script.fs"/>
+  <object source="security.fs"/>
+  <object source="selftest.fs"/>
+  <object source="userboot.fs"/>
+ </dictionary>
+
+</build>

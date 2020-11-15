@@ -78,9 +78,9 @@ $(document).ready(function() {
     }
     if (isend) is_dragging = false;
   }
-  $('#cfg-static').on('wheel', '#outergbox', function(e) {
-    var wdx = e.originalEvent.deltaX;
-    var wdy = e.originalEvent.deltaY;
+  $('#cfg-static').on('mousewheel', '#outergbox', function(e) {
+    var wdx = e.originalEvent.wheelDeltaX;
+    var wdy = e.originalEvent.wheelDeltaY;
     $("#gbox").css("margin-left", fdec($("#gbox").css("margin-left")) + wdx);
     $("#gbox").css("margin-top", fdec($("#gbox").css("margin-top")) + wdy);
   });
@@ -103,20 +103,25 @@ $(document).ready(function() {
       endDrag(e.screenX, e.screenY, true);
     }*/
   });
-  $('body').on('wheel', '.flat', function(e) {
+  $('body').on('mousewheel', '.flat', function(e) {
     var cdr = $(".flat").children();
-    p(e.originalEvent.deltaY);
-    if (e.originalEvent.deltaY > 0) {
-      Session.set('iview', bn_add(Session.get('iview'), -1));
-    } else if (e.originalEvent.deltaY < 0) {
-      Session.set('iview', bn_add(Session.get('iview'), 1));
+    // TODO: HAXX!!!
+    if (e.originalEvent.wheelDelta < 0) {
+      Session.set('iview', get_address_from_class(cdr[16].childNodes[0]));
+    } else if (e.originalEvent.wheelDelta > 0) {
+      Session.set('iview', get_address_from_class(cdr[14].childNodes[0]));
     }
+    /*if (e.originalEvent.wheelDelta < 0) {
+      Session.set('iview', bn_add(Session.get('iview'), -1));
+    } else if (e.originalEvent.wheelDelta > 0) {
+      Session.set('iview', bn_add(Session.get('iview'), 1));
+    }*/
   });
-  $("#idump")[0].addEventListener("wheel", function(e) {
+  $("#idump")[0].addEventListener("mousewheel", function(e) {
     //p("idump mousewheel");
-    if (e.deltaY > 0) {
+    if (e.wheelDelta < 0) {
       Session.set('clnum', Session.get('clnum')+1);
-    } else if (e.deltaY < 0) {
+    } else if (e.wheelDelta > 0) {
       Session.set('clnum', Session.get('clnum')-1);
     }
   });
@@ -126,7 +131,7 @@ Session.setDefault("flat", false);
 
 // keyboard shortcuts
 window.onkeydown = function(e) {
-  if (!$(e.target).is("input") && !((e.ctrlKey || e.metaKey) && e.keyCode === 67)) e.preventDefault();
+  if (!$(e.target).is("input")) e.preventDefault();
   //p(e.keyCode);
   //p(e);
   if (e.ctrlKey == true) return;

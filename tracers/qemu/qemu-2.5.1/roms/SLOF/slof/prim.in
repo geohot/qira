@@ -1,0 +1,114 @@
+/******************************************************************************
+ * Copyright (c) 2004, 2008 IBM Corporation
+ * All rights reserved.
+ * This program and the accompanying materials
+ * are made available under the terms of the BSD License
+ * which accompanies this distribution, and is available at
+ * http://www.opensource.org/licenses/bsd-license.php
+ *
+ * Contributors:
+ *     IBM Corporation - initial implementation
+ *****************************************************************************/
+
+//
+// Copyright 2002,2003,2004  Segher Boessenkool  <segher@kernel.crashing.org>
+//
+
+cod(TIB)
+cod(POCKETS)
+cod(EREGS)
+cod(CIREGS)
+cod(CISTACK)
+// compile buffer for the "structure words in interpret mode" OF extension
+cod(COMP-BUFFER)
+
+cod(PAFLOF-START)
+cod(HEAP-START)
+cod(HEAP-END)
+// flattened device tree start address
+cod(FDT-START)
+// romfs start address
+cod(ROMFS-BASE)
+// if the low level firmware is epapr compliant it will put the
+// epapr magic into r6 before starting paflof
+// epapr-magic is a copy of r6
+cod(EPAPR-MAGIC)
+// ePAPR Initially mapped area size
+cod(EPAPR-IMA-SIZE)
+
+cod(BRANCH) _ADDING _O
+cod(0BRANCH) _ADDING _O
+dfr(BP)
+cod(BREAKPOINT)
+
+cod(LIT) _ADDING _N
+cod(DOTICK)
+
+cod(DUP)
+cod(OVER)
+cod(PICK)
+cod(DROP)
+cod(SWAP)
+
+cod(>R)
+cod(R>)
+cod(R@)
+cod(RPICK)
+
+cod(DEPTH)
+cod(DEPTH!)
+cod(RDEPTH)
+cod(RDEPTH!)
+
+cod(+)
+cod(-)
+cod(*)
+cod(LSHIFT)
+cod(RSHIFT)
+cod(ASHIFT)
+cod(AND)
+cod(OR)
+cod(XOR)
+
+cod(@)
+cod(!)
+cod(C@)
+cod(C!)
+cod(W@)
+cod(W!)
+cod(L@)
+cod(L!)
+cod(X@)
+cod(X!)
+
+cod(UNALIGNED-W@)
+cod(UNALIGNED-W!)
+cod(UNALIGNED-L@)
+cod(UNALIGNED-L!)
+
+cod(<)
+cod(U<)
+cod(0<)
+cod(=)
+cod(0=)
+
+cod(DODO)
+cod(DO?DO) _ADDING _O
+cod(DOLOOP) _ADDING _O
+cod(DO+LOOP) _ADDING _O
+cod(DOLEAVE) _ADDING _O
+cod(DO?LEAVE) _ADDING _O
+
+cod(EXIT)
+cod(SEMICOLON)
+cod(EXECUTE)
+
+cod(MOVE)
+cod(RMOVE)
+cod(MRMOVE)
+cod(RFILL)
+cod(ZCOUNT)
+con(HASH-SIZE HASHSIZE)
+cod(HASH)
+cod(CLEAN-HASH)
+cod(HASH-TABLE)

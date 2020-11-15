@@ -1,0 +1,45 @@
+Source: openbios
+Section: devel
+Priority: optional
+Maintainer: Patrick Mauritz <oxygene@studentenbude.ath.cx>
+Packager: Patrick Mauritz <oxygene@studentenbude.ath.cx>
+Standards-Version: 3.5.2
+Upstream-Source: <URL:http://www.openbios.net>
+Home-Page: <URL:http://www.openbios.net>
+Description: OpenBIOS - OpenFirmware development tools
+Copyright: GPL
+ Copyright 2001-2002 Stefan Reinauer, Segher Boessenkool
+Major-Changes:
+ First release
+Build: sh
+ CC=gcc
+ CFLAGS="-O2 -Wall"
+ cd toke; make; strip toke; cd ..
+ cd detok; make; strip detok; cd ..
+ cd paflof; make; strip paflof; cd ..
+ find toke/examples -name .cvsignore | xargs rm -f
+Clean: sh
+ cd toke; make clean; cd ..
+ cd detok; make clean; cd ..
+ cd paflof; make clean; cd ..
+
+Package: openbios
+Architecture: any
+Depends: [/usr/bin/*]
+Description: OpenBIOS - OpenFirmware development tools
+ It contains:
+  - toke: tokenizer for fcode programs
+  - detok: decompiler for fcode programs
+  - paflof: (yet) incomplete forth environment which will be
+    _the_ core of OpenBIOS
+Install: sh
+ mkdir -p $ROOT/usr/bin
+ mkdir -p $ROOT/usr/share/openbios
+ mkdir -p $ROOT/usr/share/doc/packages/openbios
+ cp toke/toke $ROOT/usr/bin
+ cp detok/detok $ROOT/usr/bin
+ cp paflof/paflof $ROOT/usr/bin
+ cp -a toke/examples $ROOT/usr/share/doc/openbios
+ cp -a forth $ROOT/usr/share/openbios
+ cp toke/README $ROOT/usr/share/doc/openbios/README.toke
+ cp detok/README $ROOT/usr/share/doc/openbios/README.detok

@@ -1,0 +1,131 @@
+/******************************************************************************
+ * Copyright (c) 2004, 2011 IBM Corporation
+ * All rights reserved.
+ * This program and the accompanying materials
+ * are made available under the terms of the BSD License
+ * which accompanies this distribution, and is available at
+ * http://www.opensource.org/licenses/bsd-license.php
+ *
+ * Contributors:
+ *     IBM Corporation - initial implementation
+ *****************************************************************************/
+
+#include <libhvcall.h>
+
+// : hv-putchar ( hvtermno char -- )
+PRIM(hv_X2d_putchar)
+	char c = TOS.n; POP;
+	int hvtermno = TOS.n; POP;
+	hv_putchar(c, hvtermno);
+MIRP
+
+// : hv-getchar ( hvtermno -- char )
+PRIM(hv_X2d_getchar)
+	TOS.n = hv_getchar(TOS.n);
+MIRP
+
+// : hv-haschar ( hvtermno -- res )
+PRIM(hv_X2d_haschar)
+	TOS.n = hv_haschar(TOS.n);
+MIRP
+
+// : hv-reg-crq ( unit qaddr qsize -- res )
+PRIM(hv_X2d_reg_X2d_crq)
+	unsigned long qsize = TOS.u; POP;
+	unsigned long qaddr = TOS.u; POP;
+	unsigned int unit = TOS.u;
+	TOS.n = hv_reg_crq(unit, qaddr, qsize);
+MIRP
+
+// : hv-free-crq ( unit -- )
+PRIM(hv_X2d_free_X2d_crq)
+	unsigned int unit = TOS.u; POP;
+	hv_free_crq(unit);
+MIRP
+
+// : hv-send-crq ( unit msgaddr -- rc )
+PRIM(hv_X2d_send_X2d_crq)
+	uint64_t *msgaddr = (uint64_t *)TOS.u; POP;
+	unsigned int unit = TOS.u;
+	TOS.n = hv_send_crq(unit, msgaddr);
+MIRP
+
+// : hv-put-tce ( liobn ioba tce -- rc )
+PRIM(hv_X2d_put_X2d_tce)
+	uint64_t tce = TOS.u; POP;
+	uint64_t ioba = TOS.u; POP;
+	uint32_t liobn = TOS.u;
+	TOS.u = hv_generic(H_PUT_TCE, liobn, ioba, tce);
+MIRP
+
+PRIM(RB_X40)
+	unsigned long qaddr = TOS.u;
+	TOS.u = hv_logical_ci_load(1, qaddr);
+MIRP
+PRIM(RB_X21)
+	unsigned long qaddr = TOS.u; POP;
+	unsigned char val = TOS.u; POP;
+	hv_logical_ci_store(1, qaddr, val);
+MIRP
+PRIM(RW_X40)
+	unsigned long qaddr = TOS.u;
+	TOS.u = hv_logical_ci_load(2, qaddr);
+MIRP
+PRIM(RW_X21)
+	unsigned long qaddr = TOS.u; POP;
+	unsigned short val = TOS.u; POP;
+	hv_logical_ci_store(2, qaddr, val);
+MIRP
+PRIM(RL_X40)
+	unsigned long qaddr = TOS.u;
+	TOS.u = hv_logical_ci_load(4, qaddr);
+MIRP
+PRIM(RL_X21)
+	unsigned long qaddr = TOS.u; POP;
+	unsigned int val = TOS.u; POP;
+	hv_logical_ci_store(4, qaddr, val);
+MIRP
+PRIM(RX_X40)
+	unsigned long qaddr = TOS.u;
+	TOS.u = hv_logical_ci_load(8, qaddr);
+MIRP
+PRIM(RX_X21)
+	unsigned long qaddr = TOS.u; POP;
+	unsigned long val = TOS.u; POP;
+	hv_logical_ci_store(8, qaddr, val);
+MIRP
+
+PRIM(hv_X2d_logical_X2d_memop)
+	unsigned long op    = TOS.u; POP;
+	unsigned long count = TOS.u; POP;
+	unsigned long esize = TOS.u; POP;
+	unsigned long src   = TOS.u; POP;
+	unsigned long dst   = TOS.u;
+	TOS.u = hv_logical_memop(dst, src, esize, count, op);
+MIRP
+
+PRIM(hv_X2d_cas)
+	unsigned long size   = TOS.u; POP;
+	unsigned long buf    = TOS.u; POP;
+	unsigned long vec    = TOS.u;
+	TOS.u = hv_cas(vec, buf, size);
+MIRP
+
+PRIM(hv_X2d_rtas_X2d_update)
+	unsigned long rtas_entry   = TOS.u; POP;
+	unsigned long rtas_base    = TOS.u;
+	TOS.u = hv_generic(KVMPPC_H_RTAS_UPDATE, rtas_base, rtas_entry);
+MIRP
+
+PRIM(get_X2d_print_X2d_version)
+	unsigned long addr = TOS.u; POP;
+	get_print_banner(addr);
+MIRP
+
+PRIM(check_X2d_and_X2d_patch_X2d_sc1)
+	unsigned long end = TOS.u; POP;
+	unsigned long start = TOS.u; POP;
+	unsigned long patch_ins = TOS.u; POP;
+
+	patch_broken_sc1((void*)start, (void*)end, (void*)patch_ins);
+MIRP

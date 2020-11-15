@@ -1,0 +1,162 @@
+# Kconfig SeaBIOS VGA BIOS configuration
+
+menu "VGA ROM"
+    choice
+        prompt "VGA Hardware Type"
+        default NO_VGABIOS
+
+        config NO_VGABIOS
+            bool "None"
+            help
+                Do not build a VGA BIOS.
+
+        config VGA_STANDARD_VGA
+            depends on QEMU
+            bool "QEMU/Bochs Original IBM 256K VGA"
+            select VGA_STDVGA_PORTS
+            help
+                Build basic VGA BIOS support (pre Super-VGA) for use
+                on emulators.
+
+        config VGA_CIRRUS
+            depends on QEMU
+            bool "QEMU/Bochs Cirrus SVGA"
+            select VGA_STDVGA_PORTS
+            help
+                Build support for Cirrus VGA emulation found on QEMU
+                and Bochs emulators.  This is for emulators; it is not
+                intended for use on real Cirrus hardware.
+
+        config VGA_BOCHS
+            depends on QEMU
+            bool "QEMU/Bochs VBE SVGA"
+            select VGA_STDVGA_PORTS
+            help
+                Build support for Bochs DISPI interface (a custom VBE
+                protocol) found on QEMU and Bochs emulators.
+
+        config VGA_GEODEGX2
+            bool "GeodeGX2"
+            select VGA_STDVGA_PORTS
+            help
+                Build support for Geode GX2 vga.
+
+        config VGA_GEODELX
+            bool "GeodeLX"
+            select VGA_STDVGA_PORTS
+            help
+                Build support for Geode LX vga.
+
+        config VGA_COREBOOT
+            depends on COREBOOT
+            bool "coreboot linear framebuffer"
+            select VGA_EMULATE_TEXT
+            help
+                Build support for a vgabios wrapper around video
+                devices initialized using coreboot native vga init.
+
+    endchoice
+
+    choice
+        depends on VGA_GEODEGX2 || VGA_GEODELX
+        prompt "Output Mode"
+        default VGA_OUTPUT_CRT
+
+        config VGA_OUTPUT_CRT
+            bool "CRT"
+            help
+                Use CRT for output.
+
+        config VGA_OUTPUT_PANEL
+            bool "Flat Panel"
+            help
+                Use flat panel for output.
+
+        config VGA_OUTPUT_CRT_PANEL
+            bool "CRT and Flat Panel"
+            help
+                Use CRT and flat panel for output.
+    endchoice
+
+    config BUILD_VGABIOS
+        bool
+        default !NO_VGABIOS
+
+    config VGA_STDVGA_PORTS
+        bool
+    config VGA_EMULATE_TEXT
+        bool
+        help
+            Support emulating text mode features when only a
+            framebuffer is available.
+
+    config VGA_FIXUP_ASM
+        depends on BUILD_VGABIOS
+        bool "Fixup assembler to work with broken emulators"
+        default y
+        help
+            This option will cause the build to attempt to avoid
+            certain x86 machine instructions that are known to confuse
+            some emulators.  In particular, it works around
+            deficiencies in the Windows vgabios emulator and the
+            x86emu vgabios emulator (frequently used in Xorg).
+
+    config VGA_ALLOCATE_EXTRA_STACK
+        depends on BUILD_VGABIOS
+        bool "Allocate an internal stack for 16bit interrupt entry point"
+        default y
+        help
+            Attempt to allocate (via BIOS PMM call) an internal stack
+            for the legacy 16bit 0x10 interrupt entry point.  This
+            reduces the amount of space on the caller's stack that
+            SeaVGABIOS uses.
+
+    config VGA_EXTRA_STACK_SIZE
+        int
+        default 512
+
+    config VGA_VBE
+        depends on BUILD_VGABIOS
+        bool "Video BIOS Extensions (VBE)"
+        default y
+        help
+            Support VBE.
+
+    config VGA_PCI
+        depends on BUILD_VGABIOS && !VGA_COREBOOT
+        bool "PCI ROM Headers"
+        default y
+        help
+            Build PCI ROM headers so the vga rom can be extracted from
+            a PCI device.
+
+    config OVERRIDE_PCI_ID
+        depends on VGA_PCI
+        bool "Override PCI Vendor and Device IDs"
+        help
+            Specify specific values for the PCI Vendor and Device IDs.
+
+    config VGA_VID
+        depends on VGA_PCI
+        hex
+        prompt "PCI Vendor ID" if OVERRIDE_PCI_ID
+        default 0x1013 if VGA_CIRRUS
+        default 0x1234 if VGA_BOCHS
+        default 0x100b if VGA_GEODEGX2
+        default 0x1022 if VGA_GEODELX
+        default 0x0000
+        help
+            Vendor ID for the PCI ROM
+
+    config VGA_DID
+        depends on VGA_PCI
+        hex
+        prompt "PCI Vendor ID" if OVERRIDE_PCI_ID
+        default 0x00b8 if VGA_CIRRUS
+        default 0x1111 if VGA_BOCHS
+        default 0x0030 if VGA_GEODEGX2
+        default 0x2081 if VGA_GEODELX
+        default 0x0000
+        help
+            Device ID for the PCI ROM
+endmenu

@@ -58,16 +58,16 @@ Deps.autorun(function() { DA("updating sview on fork/cl change");
 });
 
 $(document).ready(function() {
-  $("#strace")[0].addEventListener("wheel", function(e) {
+  $("#strace")[0].addEventListener("mousewheel", function(e) {
     var sv = Session.get('sview');
     var forknum = Session.get("forknum");
     if (traces[forknum] === undefined) return;
     var t = traces[forknum];
-    if (e.deltaY > 0) {
+    if (e.wheelDelta < 0) {
       if (sv[1] < t.length) {
         Session.set('sview', [sv[0]+1, sv[1]+1]);
       }
-    } else if (e.deltaY < 0) {
+    } else if (e.wheelDelta > 0) {
       if (sv[0] > 0) {
         Session.set('sview', [sv[0]-1, sv[1]-1]);
       }

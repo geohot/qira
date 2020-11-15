@@ -1,0 +1,3 @@
+obj-*
+.stgit-*
+config-host.mak

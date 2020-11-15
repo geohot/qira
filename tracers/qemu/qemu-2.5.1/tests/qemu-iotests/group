@@ -1,0 +1,143 @@
+#
+# QA groups control file
+# Defines test groups
+# - do not start group names with a digit
+#
+
+#
+# test-group association ... one line per test
+#
+001 rw auto quick
+002 rw auto quick
+003 rw auto
+004 rw auto quick
+005 img auto quick
+# 006 was removed, do not reuse
+007 snapshot auto
+008 rw auto quick
+009 rw auto quick
+010 rw auto quick
+011 rw auto quick
+012 auto quick
+013 rw auto
+014 rw auto
+015 rw snapshot auto
+# 016 was removed, do not reuse
+017 rw backing auto quick
+018 rw backing auto quick
+019 rw backing auto quick
+020 rw backing auto quick
+021 io auto quick
+022 rw snapshot auto
+023 rw auto
+024 rw backing auto quick
+025 rw auto quick
+026 rw blkdbg auto
+027 rw auto quick
+028 rw backing auto quick
+029 rw auto quick
+030 rw auto backing
+031 rw auto quick
+032 rw auto quick
+033 rw auto quick
+034 rw auto backing quick
+035 rw auto quick
+036 rw auto quick
+037 rw auto backing quick
+038 rw auto backing quick
+039 rw auto quick
+040 rw auto
+041 rw auto backing
+042 rw auto quick
+043 rw auto backing
+044 rw auto
+045 rw auto quick
+046 rw auto aio quick
+047 rw auto quick
+048 img auto quick
+049 rw auto
+050 rw auto backing quick
+051 rw auto
+052 rw auto backing quick
+053 rw auto quick
+054 rw auto quick
+055 rw auto
+056 rw auto backing
+057 rw auto
+058 rw auto quick
+059 rw auto quick
+060 rw auto quick
+061 rw auto
+062 rw auto quick
+063 rw auto quick
+064 rw auto quick
+065 rw auto quick
+066 rw auto quick
+067 rw auto quick
+068 rw auto quick
+069 rw auto quick
+070 rw auto quick
+071 rw auto quick
+072 rw auto quick
+073 rw auto quick
+074 rw auto quick
+075 rw auto quick
+076 auto
+077 rw auto quick
+078 rw auto quick
+079 rw auto
+080 rw auto
+081 rw auto quick
+082 rw auto quick
+083 rw auto
+084 img auto quick
+085 rw auto
+086 rw auto quick
+087 rw auto quick
+088 rw auto quick
+089 rw auto quick
+090 rw auto quick
+091 rw auto
+092 rw auto quick
+093 auto
+094 rw auto quick
+095 rw auto quick
+096 rw auto quick
+097 rw auto backing
+098 rw auto backing quick
+099 rw auto quick
+100 rw auto quick
+101 rw auto quick
+102 rw auto quick
+103 rw auto quick
+104 rw auto
+105 rw auto quick
+107 rw auto quick
+108 rw auto quick
+109 rw auto
+110 rw auto backing quick
+111 rw auto quick
+112 rw auto
+113 rw auto quick
+114 rw auto quick
+115 rw auto
+116 rw auto quick
+118 rw auto
+119 rw auto quick
+120 rw auto quick
+121 rw auto
+122 rw auto
+123 rw auto quick
+124 rw auto backing
+128 rw auto quick
+129 rw auto quick
+130 rw auto quick
+131 rw auto quick
+132 rw auto quick
+134 rw auto quick
+135 rw auto
+136 rw auto
+137 rw auto
+138 rw auto quick
+139 rw auto quick
+144 rw auto quick

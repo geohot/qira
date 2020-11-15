@@ -1,0 +1,31 @@
+<build>
+
+ <!--
+  build description for open firmware device interface
+ 
+  Copyright (C) 2004-2005 by Stefan Reinauer
+  See the file "COPYING" for further information about
+  the copyright and warranty status of this work.
+  -->
+ 
+ <dictionary name="openbios" target="forth">
+  <object source="structures.fs"/>
+  <object source="fcode.fs"/>
+  <object source="property.fs"/>
+  <object source="device.fs"/>
+  <object source="package.fs"/>
+  <object source="other.fs"/>
+  <object source="pathres.fs"/>
+  <object source="preof.fs"/>
+  <object source="font.fs"/>
+  <object source="logo.fs"/>
+  <object source="display.fs"/>
+  <object source="terminal.fs"/>
+  <object source="extra.fs"/>
+  <object source="feval.fs"/>
+  <object source="table.fs"/>
+  <object source="tree.fs"/>
+  <object source="builtin.fs"/>
+ </dictionary>
+
+</build>

@@ -1,0 +1,48 @@
+mainmenu "OpenBIOS Configuration"
+
+config AMD64
+	bool
+	default y
+	help
+	  Building for AMD64 hardware.
+
+config LITTLE_ENDIAN
+	bool
+	default y
+	help
+	  AMD64 is little endian.
+
+
+menu "Kernel binaries (AMD64)"
+
+config IMAGE_ELF
+	bool "ELF image (for LinuxBIOS)"
+	default y
+	help
+	  Build a simple elf image that can be used with LinuxBIOS
+	  This image will be called openbios.elf
+
+config IMAGE_ELF_EMBEDDED
+	bool "ELF image with embedded dictionary"
+	default y
+	help
+	  Build an elf image with embedded dictionary. This image
+	  can easily be used with etherboot. 
+	  The image filename is openbios.full
+
+config IMAGE_ELF_MULTIBOOT
+	bool "Multiboot image"
+	default y
+	help
+	  Build a multiboot image for booting with grub
+
+endmenu
+
+menu "Build hosted UNIX Binary"
+source "arch/unix/Kconfig"
+endmenu
+
+source "kernel/Kconfig"
+source "forth/Kconfig"
+source "libopenbios/Kconfig"
+source "drivers/Kconfig"

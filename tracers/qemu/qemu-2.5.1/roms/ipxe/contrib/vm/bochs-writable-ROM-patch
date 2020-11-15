@@ -1,0 +1,15 @@
+--- memory/memory.cc	18 Oct 2008 18:10:14 -0000	1.71
++++ memory/memory.cc	21 Oct 2008 19:47:07 -0000
+@@ -172,7 +172,11 @@
+             break;
+
+           case 0x0:   // Writes to ROM, Inhibit
+-            BX_DEBUG(("Write to ROM ignored: address 0x" FMT_PHY_ADDRX ", data %02x", a20addr, *data_ptr));
++            if ((a20addr & 0xfffe0000) == 0x000e0000) {
++	      BX_DEBUG(("Write to ROM ignored: address 0x" FMT_PHY_ADDRX ", data %02x", a20addr, *data_ptr));
++	    } else {
++	      BX_MEM_THIS rom[(a20addr & EXROM_MASK) + BIOSROMSZ] = *data_ptr;
++            }
+             break;
+
+           default:

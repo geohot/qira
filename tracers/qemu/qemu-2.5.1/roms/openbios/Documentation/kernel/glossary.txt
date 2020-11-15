@@ -1,0 +1,14 @@
+# tag: glossary of openbios forth 
+
+# dictionary
+LFA == link field address (backlink)
+CFA == code field address ("word type")
+PFA == program field address (definitions)
+
+# forth engine
+TIB == text input buffer
+
+inner interpreter: interprets dictionary, does threading
+outer interpreter: "user" interpreter, reads forth words from user.
+
+

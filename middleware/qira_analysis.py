@@ -1,5 +1,4 @@
 #!/usr/bin/env python2.7
-from __future__ import print_function
 import qira_config
 import qira_program
 import arch
@@ -7,14 +6,6 @@ import time
 import math
 import sys
 import struct
-
-from PIL import Image
-import base64
-try:
-  from StringIO import StringIO
-except ImportError:
-  from io import BytesIO as StringIO
-
 sys.path.append(qira_config.BASEDIR+"/static2")
 import static2
 
@@ -26,7 +17,7 @@ def ghex(a):
 def draw_multigraph(blocks):
   import pydot
 
-  print("generating traces")
+  print "generating traces"
 
   arr = []
   trace = []
@@ -45,7 +36,7 @@ def draw_multigraph(blocks):
 
   graph = pydot.Dot(graph_type='digraph')
 
-  print("adding nodes")
+  print "adding nodes"
   nodes = []
   for a in arr:
     n = pydot.Node(a, shape="box")
@@ -55,8 +46,8 @@ def draw_multigraph(blocks):
   edges = []
   cnts = []
 
-  print("trace size",len(trace))
-  print("realblock count",len(arr))
+  print "trace size",len(trace)
+  print "realblock count",len(arr)
 
   # coalesce loops
   """
@@ -84,12 +75,12 @@ def draw_multigraph(blocks):
     graph.add_edge(e)
   """
 
-  print("adding edges")
+  print "adding edges"
   for i in range(0, len(trace)-1):
     e = pydot.Edge(nodes[trace[i]], nodes[trace[i+1]], label=str(cls[i+1]), headport="n", tailport="s")
     graph.add_edge(e)
 
-  print("drawing png @ /tmp/graph.png")
+  print "drawing png @ /tmp/graph.png"
   graph.write_png('/tmp/graph.png')
   
 
@@ -244,7 +235,7 @@ def do_loop_analysis(blocks):
           # remove the loop from the blocks
           bb = bb[0:i] + bb[i:i+j] + bb[i+j*loopcnt:]
           ab = ab[0:i] + ab[i:i+j] + ab[i+j*loopcnt:]
-          print(loop)
+          print loop
           loops.append(loop)
           did_update = True
           break
@@ -314,7 +305,7 @@ def guess_calling_conv(program,readregs,readstack):
     return ('UNKNOWN',0) #we can't guess the ABI with 0 information
 
   regs = program.tregs[0]
-  readregs = list(map(lambda x: regs[x], readregs)) #convert read regs into strings
+  readregs = map(lambda x: regs[x], readregs) #convert read regs into strings
 
   for abi in filter(lambda x:x[0] != "_",static2.ABITYPE.__dict__):
     if abi == 'UNKNOWN':
@@ -365,14 +356,14 @@ def analyse_calls(trace):
       seen = 0
       init_regs = set()
       uninit_regs = set()
-      for cl in range(clnum+1,endclnum):
+      for cl in xrange(clnum+1,endclnum):
         changes = filter(lambda x:x['type'] in "LS",trace.db.fetch_changes_by_clnum(cl, -1))
-        argchanges = list(filter(lambda x:argrange[0] <= x['address'] <= argrange[1], changes))
+        argchanges = filter(lambda x:argrange[0] <= x['address'] <= argrange[1], changes)
         if len(argchanges) > 0:
           seen = max(max(map(lambda x:x['address'],argchanges)),seen)
         rchanges = filter(lambda x:x['type'] in "RW",trace.db.fetch_changes_by_clnum(cl, -1))
         for rchange in rchanges:
-          regnum = rchange['address']//rsize
+          regnum = rchange['address']/rsize
           if rchange['type'] is 'W' and regnum < nregs:
             init_regs.add(regnum)
             if ((regnum) in uninit_regs) and (rchange['data'] == regs[regnum]):
@@ -404,7 +395,7 @@ def display_call_args(instr,trace,clnum):
 
   ret = []
   i = 0
-  for i in range(min(nargs,len(args))):
+  for i in xrange(min(nargs,len(args))):
     ret += [ghex(regs[program.tregs[0].index(args[i])])]
 
   if len(args) > 0:
@@ -413,7 +404,7 @@ def display_call_args(instr,trace,clnum):
   if i < nargs:
     stack_reg = ["ESP","RSP","SP"][["i386","x86-64","arm"].index(program.static['arch'])]
     esp = regs[program.tregs[0].index(stack_reg)]
-    for j in range(i,nargs):
+    for j in xrange(i,nargs):
       ret += [ghex(struct.unpack("<Q" if program.tregs[1] == 8 else "<I", \
        trace.fetch_raw_memory(clnum, esp+program.tregs[1], program.tregs[1]))[0])]
       esp += program.tregs[1]
@@ -474,6 +465,9 @@ def get_vtimeline_picture(trace, minclnum, maxclnum):
   r = maxclnum-minclnum
   sampling = int(math.ceil(r/50000.0))
 
+  from PIL import Image   # sudo pip install pillow
+  import base64
+  import StringIO
   im_y = int(maxclnum/sampling)
   im = Image.new( 'RGB', (1, im_y), "black")
   px = im.load()
@@ -491,11 +485,11 @@ def get_vtimeline_picture(trace, minclnum, maxclnum):
       if i/sampling < im_y:
         px[0, i/sampling] = (96, 32, 32)
 
-  buf = StringIO()
+  buf = StringIO.StringIO()
   im.save(buf, format='PNG')
 
-  dat = b"data:image/png;base64,"+base64.b64encode(buf.getvalue())
-  return dat.decode('utf-8')
+  dat = "data:image/png;base64,"+base64.b64encode(buf.getvalue())
+  return dat
 
 def analyze(trace, program):
   minclnum = trace.db.get_minclnum()
@@ -566,7 +560,7 @@ if __name__ == "__main__":
   trace = program.add_trace("/tmp/qira_logs/0", 0)
   while not trace.db.did_update():
     time.sleep(0.1)
-  print("loaded")
+  print "loaded"
   program.qira_asm_file = open("/tmp/qira_asm", "r")
   qira_program.Program.read_asm_file(program)
 
@@ -575,7 +569,7 @@ if __name__ == "__main__":
   flow = get_instruction_flow(trace, program, trace.db.get_minclnum(), trace.db.get_maxclnum())
   blocks = get_blocks(flow, True)
   
-  print(slice(trace, 124))
+  print slice(trace, 124)
 
   #print analyze(t, program)
   #print blocks

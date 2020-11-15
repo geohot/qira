@@ -1,0 +1,33 @@
+ToDo-/Buglist 2003/06/04 (0.4pre6)
+----------------------------------
+
+Memory Stuff
+ * devbios does not find any flash chip on some systems even though
+   they are supported. One of the reasons this might happen is that
+   the flash memory area is hidden using the CPUs mtrrs. If you have
+   a Pentium II/III/IV or AMD K6/K7 board, you might try 
+   echo "base=0xffe00000 size=0x200000 type=uncachable" >| /proc/mtrr 
+   before loading the module.
+
+Misc Stuff
+ * port this driver to fit into the linux kernel's
+   mtd device drivers. 
+ * join with ctflasher code
+ * port to *BSD (if anybody wants that)
+ * disable NMI watchdog while flashing, if active
+ 
+PCI Stuff
+ * unshadow functions do not work on certain 440BX/GX chipsets?
+   when loading the module, no system flashchip is detected.
+ * change unshadow functions not to touch low bios area to 
+   be apm and pci bios safe.
+
+Module stuff
+ * /proc/sys/kernel/bios-writable
+
+Flashchip Stuff
+ * Finnish FWH support.
+ * Implement writing for Macronix and AMD.
+   (Catalyst have Intel and AMD compatible chips)
+ * Implement write protection checking some flash chips have.
+ * Test/complete existing support

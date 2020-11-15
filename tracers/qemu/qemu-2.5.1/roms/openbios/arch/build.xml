@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<build>
+ <include href="x86/build.xml"/>
+ <include href="amd64/build.xml"/>
+ <include href="ppc/build.xml"/>
+ <include href="ia64/build.xml"/>
+ <include href="unix/build.xml"/>
+ <include href="sparc32/build.xml"/>
+ <include href="sparc64/build.xml"/>
+</build>

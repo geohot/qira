@@ -1,0 +1,1485 @@
+# -*- makefile -*- : Force emacs to use Makefile mode
+#
+# This file contains various boring housekeeping functions that would
+# otherwise seriously clutter up the main Makefile.
+
+###############################################################################
+#
+# Find a usable "echo -e" substitute.
+#
+TAB 			:= $(shell $(PRINTF) '\t')
+ECHO_E_ECHO		:= $(ECHO)
+ECHO_E_ECHO_E		:= $(ECHO) -e
+ECHO_E_BIN_ECHO 	:= /bin/echo
+ECHO_E_BIN_ECHO_E 	:= /bin/echo -e
+ECHO_E_ECHO_TAB		:= $(shell $(ECHO_E_ECHO) '\t' | cat)
+ECHO_E_ECHO_E_TAB	:= $(shell $(ECHO_E_ECHO_E) '\t' | cat)
+ECHO_E_BIN_ECHO_TAB 	:= $(shell $(ECHO_E_BIN_ECHO) '\t')
+ECHO_E_BIN_ECHO_E_TAB 	:= $(shell $(ECHO_E_BIN_ECHO_E) '\t')
+
+ifeq ($(ECHO_E_ECHO_TAB),$(TAB))
+ECHO_E		:= $(ECHO_E_ECHO)
+endif
+ifeq ($(ECHO_E_ECHO_E_TAB),$(TAB))
+ECHO_E		:= $(ECHO_E_ECHO_E)
+endif
+ifeq ($(ECHO_E_BIN_ECHO_TAB),$(TAB))
+ECHO_E		:= $(ECHO_E_BIN_ECHO)
+endif
+ifeq ($(ECHO_E_BIN_ECHO_E_TAB),$(TAB))
+ECHO_E		:= $(ECHO_E_BIN_ECHO_E)
+endif
+
+.echocheck :
+ifdef ECHO_E
+	@$(TOUCH) $@
+else
+	@$(PRINTF) '%24s : x%sx\n' 'tab' '$(TAB)'
+	@$(PRINTF) '%24s : x%sx\n' '"$(ECHO_E_ECHO) \t"' \
+				    '$(ECHO_E_ECHO_TAB)'
+	@$(PRINTF) '%24s : x%sx\n' '"$(ECHO_E_ECHO_E) \t"' \
+				    '$(ECHO_E_ECHO_E_TAB)'
+	@$(PRINTF) '%24s : x%sx\n' '"$(ECHO_E_BIN_ECHO) \t"' \
+				    '$(ECHO_E_BIN_ECHO_TAB)'
+	@$(PRINTF) '%24s : x%sx\n' '"$(ECHO_E_BIN_ECHO_E) \t"' \
+				    '$(ECHO_E_BIN_ECHO_E_TAB)'
+	@$(ECHO) "No usable \"echo -e\" substitute found"
+	@exit 1
+endif
+MAKEDEPS	+= .echocheck
+VERYCLEANUP	+= .echocheck
+
+echo :
+	@$(ECHO) "Using \"$(ECHO_E)\" for \"echo -e\""
+
+###############################################################################
+#
+# Generate a usable "seq" substitute
+#
+define seq
+	$(shell awk 'BEGIN { for ( i = $(1) ; i <= $(2) ; i++ ) print i }')
+endef
+
+###############################################################################
+#
+# Determine host OS
+#
+HOST_OS		:= $(shell uname -s)
+hostos :
+	@$(ECHO) $(HOST_OS)
+
+###############################################################################
+#
+# Determine compiler
+
+CCDEFS		:= $(shell $(CC) -E -x c -c /dev/null -dM | cut -d" " -f2)
+ccdefs:
+	@$(ECHO) $(CCDEFS)
+
+ifeq ($(filter __ICC,$(CCDEFS)),__ICC)
+CCTYPE		:= icc
+else
+CCTYPE		:= gcc
+endif
+cctype:
+	@$(ECHO) $(CCTYPE)
+
+###############################################################################
+#
+# Check for tools that can cause failed builds
+#
+
+ifeq ($(CCTYPE),gcc)
+GCC_2_96_BANNER := $(shell $(CC) -v 2>&1 | grep -is 'gcc version 2\.96')
+ifneq ($(GCC_2_96_BANNER),)
+$(warning gcc 2.96 is unsuitable for compiling iPXE)
+$(warning Use gcc 2.95 or a newer version instead)
+$(error Unsuitable build environment found)
+endif
+endif
+
+PERL_UNICODE_CHECK := $(shell $(PERL) -e 'use bytes; print chr(255)' | wc -c)
+ifeq ($(PERL_UNICODE_CHECK),2)
+$(warning Your Perl version has a Unicode handling bug)
+$(warning Execute this command before building iPXE:)
+$(warning export LANG=$${LANG%.UTF-8})
+$(error Unsuitable build environment found)
+endif
+
+LD_GOLD_BANNER := $(shell $(LD) -v 2>&1 | grep 'GNU gold')
+ifneq ($(LD_GOLD_BANNER),)
+$(warning GNU gold is unsuitable for building iPXE)
+$(warning Use GNU ld instead)
+$(error Unsuitable build environment found)
+endif
+
+###############################################################################
+#
+# Check if $(eval ...) is available to use
+#
+
+HAVE_EVAL :=
+ifndef NO_EVAL
+$(eval HAVE_EVAL := yes)
+endif
+eval :
+	@$(ECHO) $(HAVE_EVAL)
+
+###############################################################################
+#
+# Check for various tool workarounds
+#
+
+WORKAROUND_CFLAGS :=
+WORKAROUND_ASFLAGS :=
+WORKAROUND_LDFLAGS :=
+
+# Make syntax does not allow use of comma or space in certain places.
+# This ugly workaround is suggested in the manual.
+#
+COMMA	:= ,
+EMPTY	:=
+SPACE	:= $(EMPTY) $(EMPTY)
+HASH	:= \#
+define NEWLINE
+
+
+endef
+
+# Some widespread patched versions of gcc include -fstack-protector by
+# default, even when -ffreestanding is specified.  We therefore need
+# to disable -fstack-protector if the compiler supports it.
+#
+ifeq ($(CCTYPE),gcc)
+SP_TEST = $(CC) -fno-stack-protector -x c -c /dev/null \
+		-o /dev/null >/dev/null 2>&1
+SP_FLAGS := $(shell $(SP_TEST) && $(ECHO) '-fno-stack-protector')
+WORKAROUND_CFLAGS += $(SP_FLAGS)
+endif
+
+# gcc 4.4 generates .eh_frame sections by default, which distort the
+# output of "size".  Inhibit this.
+#
+ifeq ($(CCTYPE),gcc)
+CFI_TEST = $(CC) -fno-dwarf2-cfi-asm -fno-exceptions -fno-unwind-tables \
+		 -fno-asynchronous-unwind-tables -x c -c /dev/null \
+		 -o /dev/null >/dev/null 2>&1
+CFI_FLAGS := $(shell $(CFI_TEST) && \
+	       $(ECHO) '-fno-dwarf2-cfi-asm -fno-exceptions ' \
+		       '-fno-unwind-tables -fno-asynchronous-unwind-tables')
+WORKAROUND_CFLAGS += $(CFI_FLAGS)
+endif
+
+# gcc 4.6 generates spurious warnings if -Waddress is in force.
+# Inhibit this.
+#
+ifeq ($(CCTYPE),gcc)
+WNA_TEST = $(CC) -Wno-address -x c -c /dev/null -o /dev/null >/dev/null 2>&1
+WNA_FLAGS := $(shell $(WNA_TEST) && $(ECHO) '-Wno-address')
+WORKAROUND_CFLAGS += $(WNA_FLAGS)
+endif
+
+# Some versions of gas choke on division operators, treating them as
+# comment markers.  Specifying --divide will work around this problem,
+# but isn't available on older gas versions.
+#
+DIVIDE_TEST = $(AS) --divide /dev/null -o /dev/null 2>/dev/null
+DIVIDE_FLAGS := $(shell $(DIVIDE_TEST) && $(ECHO) '--divide')
+WORKAROUND_ASFLAGS += $(DIVIDE_FLAGS)
+
+###############################################################################
+#
+# Build verbosity
+#
+ifeq ($(V),1)
+Q :=
+QM := @\#
+else
+Q := @
+QM := @
+endif
+
+###############################################################################
+#
+# Checker
+#
+ifeq ($(C),1)
+export REAL_CC := $(CC)
+CC := cgcc
+CFLAGS += -Wno-decl
+endif
+
+###############################################################################
+#
+# Set BIN according to whatever was specified on the command line as
+# the build target.
+#
+
+# Determine how many different BIN directories are mentioned in the
+# make goals.
+#
+BIN_GOALS	:= $(filter bin bin/% bin-%,$(MAKECMDGOALS))
+BIN_GOALS_BINS	:= $(sort $(foreach BG,$(BIN_GOALS),\
+				    $(firstword $(subst /, ,$(BG)))))
+NUM_BINS	:= $(words $(BIN_GOALS_BINS))
+
+ifeq ($(NUM_BINS),0)
+
+# No BIN directory was specified.  Set BIN to "bin" as a sensible
+# default.
+
+BIN		:= bin
+
+else # NUM_BINS == 0
+
+ifeq ($(NUM_BINS),1)
+
+# If exactly one BIN directory was specified, set BIN to match this
+# directory.
+#
+BIN		:= $(firstword $(BIN_GOALS_BINS))
+
+else # NUM_BINS == 1
+
+# More than one BIN directory was specified.  We cannot handle the
+# latter case within a single make invocation, so set up recursive
+# targets for each BIN directory.  Use exactly one target for each BIN
+# directory since running multiple make invocations within the same
+# BIN directory is likely to cause problems.
+#
+# Leave $(BIN) undefined.  This has implications for any target that
+# depends on $(BIN); such targets should be made conditional upon the
+# existence of $(BIN).
+#
+BIN_GOALS_FIRST	:= $(foreach BGB,$(BIN_GOALS_BINS),\
+			     $(firstword $(filter $(BGB)/%,$(BIN_GOALS))))
+BIN_GOALS_OTHER	:= $(filter-out $(BIN_GOALS_FIRST),$(BIN_GOALS))
+
+$(BIN_GOALS_FIRST) : % : BIN_RECURSE
+	$(Q)$(MAKE) --no-print-directory BIN=$(firstword $(subst /, ,$@)) \
+	    $(filter $(firstword $(subst /, ,$@))/%, $(BIN_GOALS))
+$(BIN_GOALS_OTHER) : % : BIN_RECURSE
+	$(Q)$(TRUE)
+.PHONY : BIN_RECURSE
+
+endif # NUM_BINS == 1
+endif # NUM_BINS == 0
+
+ifdef BIN
+
+# Create $(BIN) directory if it doesn't exist yet
+#
+ifeq ($(wildcard $(BIN)),)
+$(shell $(MKDIR) -p $(BIN))
+endif
+
+# Target to allow e.g. "make bin-efi arch"
+#
+$(BIN) :
+	@# Do nothing, silently
+.PHONY : $(BIN)
+
+# Remove everything in $(BIN) for a "make clean"
+#
+CLEANUP	+= $(BIN)/*.* # Avoid picking up directories
+
+endif # defined(BIN)
+
+# Determine whether or not we need to include the dependency files
+#
+NO_DEP_TARGETS	:= $(BIN) clean veryclean
+ifeq ($(MAKECMDGOALS),)
+NEED_DEPS	:= 1
+endif
+ifneq ($(strip $(filter-out $(NO_DEP_TARGETS),$(MAKECMDGOALS))),)
+NEED_DEPS	:= 1
+endif
+
+###############################################################################
+#
+# Select build architecture and platform based on $(BIN)
+#
+# BIN has the form bin[-[arch-]platform]
+
+ARCHS		:= $(patsubst arch/%,%,$(wildcard arch/*))
+PLATFORMS	:= $(patsubst config/defaults/%.h,%,\
+		     $(wildcard config/defaults/*.h))
+archs :
+	@$(ECHO) $(ARCHS)
+
+platforms :
+	@$(ECHO) $(PLATFORMS)
+
+ifdef BIN
+
+# Determine architecture portion of $(BIN), if present
+BIN_ARCH	:= $(strip $(foreach A,$(ARCHS),\
+			     $(patsubst bin-$(A)-%,$(A),\
+			       $(filter bin-$(A)-%,$(BIN)))))
+
+# Determine platform portion of $(BIN), if present
+ifeq ($(BIN_ARCH),)
+BIN_PLATFORM	:= $(patsubst bin-%,%,$(filter bin-%,$(BIN)))
+else
+BIN_PLATFORM	:= $(patsubst bin-$(BIN_ARCH)-%,%,$(BIN))
+endif
+
+# Determine build architecture
+DEFAULT_ARCH	:= i386
+ARCH		:= $(firstword $(BIN_ARCH) $(DEFAULT_ARCH))
+CFLAGS		+= -DARCH=$(ARCH)
+arch :
+	@$(ECHO) $(ARCH)
+.PHONY : arch
+
+# Determine build platform
+DEFAULT_PLATFORM := pcbios
+PLATFORM	:= $(firstword $(BIN_PLATFORM) $(DEFAULT_PLATFORM))
+CFLAGS		+= -DPLATFORM=$(PLATFORM)
+platform :
+	@$(ECHO) $(PLATFORM)
+
+endif # defined(BIN)
+
+# Include architecture-specific Makefile
+ifdef ARCH
+MAKEDEPS	+= arch/$(ARCH)/Makefile
+include arch/$(ARCH)/Makefile
+endif
+
+# Include architecture-specific include path
+ifdef ARCH
+INCDIRS		+= arch/$(ARCH)/include
+INCDIRS		+= arch/$(ARCH)/include/$(PLATFORM)
+endif
+
+###############################################################################
+#
+# Source file handling
+
+# SRCDIRS lists all directories containing source files.
+srcdirs :
+	@$(ECHO) $(SRCDIRS)
+
+# SRCS lists all .c or .S files found in any SRCDIR
+#
+SRCS	+= $(wildcard $(patsubst %,%/*.c,$(SRCDIRS)))
+SRCS	+= $(wildcard $(patsubst %,%/*.S,$(SRCDIRS)))
+srcs :
+	@$(ECHO) $(SRCS)
+
+# AUTO_SRCS lists all files in SRCS that are not mentioned in
+# NON_AUTO_SRCS.  Files should be added to NON_AUTO_SRCS if they
+# cannot be built using the standard build template.
+#
+AUTO_SRCS = $(filter-out $(NON_AUTO_SRCS),$(SRCS))
+autosrcs :
+	@$(ECHO) $(AUTO_SRCS)
+
+# Just about everything else in this section depends upon having
+# $(BIN) set
+
+ifdef BIN
+
+# INCDIRS lists the include path
+incdirs :
+	@$(ECHO) $(INCDIRS)
+
+# Common flags
+#
+CFLAGS		+= $(foreach INC,$(INCDIRS),-I$(INC))
+CFLAGS		+= -Os
+CFLAGS		+= -g
+ifeq ($(CCTYPE),gcc)
+CFLAGS		+= -ffreestanding
+CFLAGS		+= -Wall -W -Wformat-nonliteral
+HOST_CFLAGS	+= -Wall -W -Wformat-nonliteral
+endif
+ifeq ($(CCTYPE),icc)
+CFLAGS		+= -fno-builtin
+CFLAGS		+= -no-ip
+CFLAGS		+= -no-gcc
+CFLAGS		+= -diag-disable 111 # Unreachable code
+CFLAGS		+= -diag-disable 128 # Unreachable loop
+CFLAGS		+= -diag-disable 170 # Array boundary checks
+CFLAGS		+= -diag-disable 177 # Unused functions
+CFLAGS		+= -diag-disable 181 # printf() format checks
+CFLAGS		+= -diag-disable 188 # enum strictness
+CFLAGS		+= -diag-disable 193 # Undefined preprocessor identifiers
+CFLAGS		+= -diag-disable 280 # switch ( constant )
+CFLAGS		+= -diag-disable 310 # K&R parameter lists
+CFLAGS		+= -diag-disable 424 # Extra semicolon
+CFLAGS		+= -diag-disable 589 # Declarations mid-code
+CFLAGS		+= -diag-disable 593 # Unused variables
+CFLAGS		+= -diag-disable 810 # Casting ints to smaller ints
+CFLAGS		+= -diag-disable 981 # Sequence point violations
+CFLAGS		+= -diag-disable 1292 # Ignored attributes
+CFLAGS		+= -diag-disable 1338 # void pointer arithmetic
+CFLAGS		+= -diag-disable 1361 # Variable-length arrays
+CFLAGS		+= -diag-disable 1418 # Missing prototypes
+CFLAGS		+= -diag-disable 1419 # Missing prototypes
+CFLAGS		+= -diag-disable 1599 # Hidden variables
+CFLAGS		+= -Wall -Wmissing-declarations
+endif
+CFLAGS		+= $(WORKAROUND_CFLAGS) $(EXTRA_CFLAGS)
+ASFLAGS		+= $(WORKAROUND_ASFLAGS) $(EXTRA_ASFLAGS)
+LDFLAGS		+= $(WORKAROUND_LDFLAGS) $(EXTRA_LDFLAGS)
+HOST_CFLAGS	+= -O2 -g
+
+# Inhibit -Werror if NO_WERROR is specified on make command line
+#
+ifneq ($(NO_WERROR),1)
+CFLAGS		+= -Werror
+ASFLAGS		+= --fatal-warnings
+HOST_CFLAGS	+= -Werror
+endif
+
+# Function trace recorder state in the last build.  This is needed
+# in order to correctly rebuild whenever the function recorder is
+# enabled/disabled.
+#
+FNREC_STATE	:= $(BIN)/.fnrec.state
+ifeq ($(wildcard $(FNREC_STATE)),)
+FNREC_OLD	:= <invalid>
+else
+FNREC_OLD	:= $(shell cat $(FNREC_STATE))
+endif
+ifeq ($(FNREC_OLD),$(FNREC))
+$(FNREC_STATE) :
+else
+$(FNREC_STATE) : clean
+$(shell $(ECHO) "$(FNREC)" > $(FNREC_STATE))
+endif
+
+VERYCLEANUP	+= $(FNREC_STATE)
+MAKEDEPS	+= $(FNREC_STATE)
+
+ifeq ($(FNREC),1)
+# Enabling -finstrument-functions affects gcc's analysis and leads to spurious
+# warnings about use of uninitialised variables.
+#
+CFLAGS		+= -Wno-uninitialized
+CFLAGS		+= -finstrument-functions
+CFLAGS		+= -finstrument-functions-exclude-file-list=core/fnrec.c
+endif
+
+# Enable per-item sections and section garbage collection.  Note that
+# some older versions of gcc support -fdata-sections but treat it as
+# implying -fno-common, which would break our build.  Some other older
+# versions issue a spurious and uninhibitable warning if
+# -ffunction-sections is used with -g, which would also break our
+# build since we use -Werror.
+#
+ifeq ($(CCTYPE),gcc)
+DS_TEST		= $(ECHO) 'char x;' | \
+		  $(CC) -fdata-sections -S -x c - -o - 2>/dev/null | \
+		  grep -E '\.comm' > /dev/null
+DS_FLAGS	:= $(shell $(DS_TEST) && $(ECHO) '-fdata-sections')
+FS_TEST		= $(CC) -ffunction-sections -g -c -x c /dev/null \
+		  -o /dev/null 2>/dev/null
+FS_FLAGS	:= $(shell $(FS_TEST) && $(ECHO) '-ffunction-sections')
+CFLAGS		+= $(FS_FLAGS) $(DS_FLAGS)
+endif
+LDFLAGS		+= --gc-sections
+
+# Force creation of static binaries (required for OpenBSD, does no
+# harm on other platforms).
+#
+LDFLAGS		+= -static
+
+# compiler.h is needed for our linking and debugging system
+#
+CFLAGS		+= -include include/compiler.h
+
+# CFLAGS for specific object types
+#
+CFLAGS_c	+=
+CFLAGS_S 	+= -DASSEMBLY
+
+# Base object name of the current target
+#
+OBJECT		= $(firstword $(subst ., ,$(@F)))
+
+# CFLAGS for specific object files.  You can define
+# e.g. CFLAGS_rtl8139, and have those flags automatically used when
+# compiling bin/rtl8139.o.
+#
+OBJ_CFLAGS	= $(CFLAGS_$(OBJECT)) -DOBJECT=$(subst -,_,$(OBJECT))
+$(BIN)/%.flags :
+	@$(ECHO) $(OBJ_CFLAGS)
+
+# ICC requires postprocessing objects to fix up table alignments
+#
+ifeq ($(CCTYPE),icc)
+POST_O		= && $(ICCFIX) $@
+POST_O_DEPS	:= $(ICCFIX)
+else
+POST_O		:=
+POST_O_DEPS	:=
+endif
+
+# Rules for specific object types.
+#
+COMPILE_c	= $(CC) $(CFLAGS) $(CFLAGS_c) $(OBJ_CFLAGS)
+RULE_c		= $(Q)$(COMPILE_c) -c $< -o $@ $(POST_O)
+RULE_c_to_ids.o = $(Q)$(ECHO_E) '$(OBJ_IDS_ASM_NL)' | $(ASSEMBLE_S) -o $@
+RULE_c_to_dbg%.o = $(Q)$(COMPILE_c) -DDBGLVL_MAX=$* -c $< -o $@ $(POST_O)
+RULE_c_to_c	= $(Q)$(COMPILE_c) -E -c $< > $@
+RULE_c_to_s	= $(Q)$(COMPILE_c) -S -g0 -c $< -o $@
+
+PREPROCESS_S	= $(CPP) $(CFLAGS) $(CFLAGS_S) $(OBJ_CFLAGS)
+ASSEMBLE_S	= $(AS) $(ASFLAGS)
+RULE_S		= $(Q)$(PREPROCESS_S) $< | $(ASSEMBLE_S) -o $@
+RULE_S_to_dbg%.o = $(Q)$(PREPROCESS_S) -DDBGLVL_MAX=$* $< | $(ASSEMBLE_S) -o $@
+RULE_S_to_s	= $(Q)$(PREPROCESS_S) $< > $@
+
+GENERIC_TARGETS	+= ids.o dbg%.o c s
+
+# List of embedded images included in the last build of embedded.o.
+# This is needed in order to correctly rebuild embedded.o whenever the
+# list of objects changes.
+#
+EMBED		:= $(EMBEDDED_IMAGE) # Maintain backwards compatibility
+EMBEDDED_LIST	:= $(BIN)/.embedded.list
+ifeq ($(wildcard $(EMBEDDED_LIST)),)
+EMBED_OLD := <invalid>
+else
+EMBED_OLD := $(shell cat $(EMBEDDED_LIST))
+endif
+ifneq ($(EMBED_OLD),$(EMBED))
+$(shell $(ECHO) "$(EMBED)" > $(EMBEDDED_LIST))
+endif
+
+$(EMBEDDED_LIST) : $(MAKEDEPS)
+
+VERYCLEANUP	+= $(EMBEDDED_LIST)
+
+EMBEDDED_FILES	:= $(subst $(COMMA), ,$(EMBED))
+EMBED_ALL	:= $(foreach i,$(call seq,1,$(words $(EMBEDDED_FILES))),\
+		     EMBED ( $(i), \"$(word $(i), $(EMBEDDED_FILES))\",\
+			     \"$(notdir $(word $(i),$(EMBEDDED_FILES)))\" ))
+
+embedded_DEPS += $(EMBEDDED_FILES) $(EMBEDDED_LIST)
+
+CFLAGS_embedded = -DEMBED_ALL="$(EMBED_ALL)"
+
+# List of trusted root certificates
+#
+TRUSTED_LIST	:= $(BIN)/.trusted.list
+ifeq ($(wildcard $(TRUSTED_LIST)),)
+TRUST_OLD := <invalid>
+else
+TRUST_OLD := $(shell cat $(TRUSTED_LIST))
+endif
+ifneq ($(TRUST_OLD),$(TRUST))
+$(shell $(ECHO) "$(TRUST)" > $(TRUSTED_LIST))
+endif
+
+$(TRUSTED_LIST) : $(MAKEDEPS)
+
+VERYCLEANUP	+= $(TRUSTED_LIST)
+
+# Trusted root certificate fingerprints
+#
+TRUSTED_CERTS	:= $(subst $(COMMA), ,$(TRUST))
+TRUSTED_FPS	:= $(foreach CERT,$(TRUSTED_CERTS),\
+		     0x$(subst :,$(COMMA) 0x,$(lastword $(subst =, ,\
+			 $(shell $(OPENSSL) x509 -in $(CERT) -noout -sha256 \
+				 -fingerprint))))$(COMMA))
+
+rootcert_DEPS += $(TRUSTED_FILES) $(TRUSTED_LIST)
+
+CFLAGS_rootcert = $(if $(TRUSTED_FPS),-DTRUSTED="$(TRUSTED_FPS)")
+
+# List of embedded certificates
+#
+CERT_LIST := $(BIN)/.certificate.list
+ifeq ($(wildcard $(CERT_LIST)),)
+CERT_OLD := <invalid>
+else
+CERT_OLD := $(shell cat $(CERT_LIST))
+endif
+ifneq ($(CERT_OLD),$(CERT))
+$(shell $(ECHO) "$(CERT)" > $(CERT_LIST))
+endif
+
+$(CERT_LIST) : $(MAKEDEPS)
+
+VERYCLEANUP += $(CERT_LIST)
+
+# Embedded certificates concatenated and then split into one file per
+# certificate (even if original files contained certificate chains)
+#
+CERT_FILES := $(subst $(COMMA), ,$(CERT))
+CERT_CONCAT := $(BIN)/.certificates.pem
+
+ifneq ($(CERT),)
+
+CERT_COUNT := $(shell grep "BEGIN CERTIFICATE" $(CERT_FILES) | wc -l)
+
+$(CERT_CONCAT) : $(CERT_FILES) $(CERT_LIST)
+	$(Q)cat $(CERT_FILES) > $@
+
+# We must use an (otherwise unnecessary) pattern rule here to encode
+# the fact that one "csplit" command generates multiple targets
+CERT_PEMS := $(foreach i,$(call seq,1,$(CERT_COUNT)),\
+	       $(BIN)/.certificate.pem.$(i))
+$(subst .pem.,.%.,$(CERT_PEMS)) : $(BIN)/.certificates.%
+	$(Q)$(CSPLIT) -q -n 1 -f $(BIN)/.certificate.pem. $< \
+		'/BEGIN CERTIFICATE/' '{*}'
+
+CERT_DERS := $(subst .certificate.pem.,.certificate.der.,$(CERT_PEMS))
+$(BIN)/.certificate.der.% : $(BIN)/.certificate.pem.%
+	$(Q)$(OPENSSL) x509 -in $< -outform DER -out $@
+
+CERT_ALL := $(foreach i,$(call seq,1,$(CERT_COUNT)),\
+	      CERT ( $(i), \"$(word $(i),$(CERT_DERS))\" ))
+
+endif
+
+certstore_DEPS += $(CERT_LIST) $(CERT_FILES) $(CERT_PEMS) $(CERT_DERS)
+
+CFLAGS_certstore += -DCERT_ALL="$(CERT_ALL)"
+
+CLEANUP += $(BIN)/.certificate.* $(BIN)/.certificates.*
+
+# (Single-element) list of private keys
+#
+ifdef KEY
+PRIVKEY	:= $(KEY) # Maintain backwards compatibility
+endif
+PRIVKEY_LIST := $(BIN)/.private_key.list
+ifeq ($(wildcard $(PRIVKEY_LIST)),)
+PRIVKEY_OLD := <invalid>
+else
+PRIVKEY_OLD := $(shell cat $(PRIVKEY_LIST))
+endif
+ifneq ($(PRIVKEY_OLD),$(PRIVKEY))
+$(shell $(ECHO) "$(PRIVKEY)" > $(PRIVKEY_LIST))
+endif
+
+$(PRIVKEY_LIST) : $(MAKEDEPS)
+
+VERYCLEANUP += $(PRIVKEY_LIST)
+
+# Embedded private key
+#
+PRIVKEY_INC := $(BIN)/.private_key.der
+
+ifdef PRIVKEY
+$(PRIVKEY_INC) : $(PRIVKEY) $(PRIVKEY_LIST)
+	$(Q)$(OPENSSL) rsa -in $< -outform DER -out $@
+
+privkey_DEPS += $(PRIVKEY_INC)
+endif
+
+CLEANUP += $(BIN)/.private_key.*
+
+privkey_DEPS += $(PRIVKEY_LIST)
+
+CFLAGS_privkey += $(if $(PRIVKEY),-DPRIVATE_KEY="\"$(PRIVKEY_INC)\"")
+
+# (Single-element) list of named configurations
+#
+CONFIG_LIST := $(BIN)/.config.list
+ifeq ($(wildcard $(CONFIG_LIST)),)
+CONFIG_OLD := <invalid>
+else
+CONFIG_OLD := $(shell cat $(CONFIG_LIST))
+endif
+ifneq ($(CONFIG_OLD),$(CONFIG))
+$(shell $(ECHO) "$(CONFIG)" > $(CONFIG_LIST))
+endif
+
+$(CONFIG_LIST) : $(MAKEDEPS)
+
+VERYCLEANUP += $(CONFIG_LIST)
+
+# Named configurations
+#
+ifneq ($(CONFIG),)
+ifneq ($(wildcard config/$(CONFIG)),)
+CFLAGS	+= -DCONFIG=$(CONFIG)
+endif
+CFLAGS	+= -DLOCAL_CONFIG=$(CONFIG)
+endif
+
+config/named.h : $(CONFIG_LIST)
+	$(Q)$(TOUCH) $@
+
+.PRECIOUS : config/named.h
+
+# These files use .incbin inline assembly to include a binary file.
+# Unfortunately ccache does not detect this dependency and caches
+# builds even when the binary file has changed.
+#
+$(BIN)/embedded.% : override CC := env CCACHE_DISABLE=1 $(CC)
+$(BIN)/certstore.% : override CC := env CCACHE_DISABLE=1 $(CC)
+$(BIN)/privkey.% : override CC := env CCACHE_DISABLE=1 $(CC)
+
+# Debug message autocolourisation range
+#
+DBGCOL_LIST	:= $(BIN)/.dbgcol.list
+ifeq ($(wildcard $(DBGCOL_LIST)),)
+DBGCOL_OLD := <invalid>
+else
+DBGCOL_OLD := $(shell cat $(DBGCOL_LIST))
+endif
+ifneq ($(DBGCOL_OLD),$(DBGCOL))
+$(shell $(ECHO) "$(DBGCOL)" > $(DBGCOL_LIST))
+endif
+
+$(DBGCOL_LIST) : $(MAKEDEPS)
+
+VERYCLEANUP += $(DBGCOL_LIST)
+
+DBGCOL_COLOURS := $(subst -, ,$(DBGCOL))
+DBGCOL_MIN := $(word 1,$(DBGCOL_COLOURS))
+DBGCOL_MAX := $(word 2,$(DBGCOL_COLOURS))
+
+debug_DEPS += $(DBGCOL_LIST)
+
+CFLAGS_debug += $(if $(DBGCOL_MIN),-DDBGCOL_MIN=$(DBGCOL_MIN))
+CFLAGS_debug += $(if $(DBGCOL_MAX),-DDBGCOL_MAX=$(DBGCOL_MAX))
+
+# We automatically generate rules for any file mentioned in AUTO_SRCS
+# using the following set of templates.  We use $(eval ...) if
+# available, otherwise we generate separate Makefile fragments and
+# include them.
+
+# deps_template : generate dependency list for a given source file
+#
+# $(1) is the full path to the source file (e.g. "drivers/net/rtl8139.c")
+#
+define deps_template_file
+$(call deps_template_parts,$(1),$(subst .,,$(suffix $(1))),$(basename $(notdir $(1))))
+endef
+#
+# $(1) is the full path to the source file (e.g. "drivers/net/rtl8139.c")
+# $(2) is the source type (e.g. "c")
+# $(3) is the source base name (e.g. "rtl8139")
+#
+define deps_template_parts
+	@$(ECHO) "  [DEPS] $(1)"
+	@$(MKDIR) -p $(BIN)/deps/$(dir $(1))
+	$(Q)$(CPP) $(CFLAGS) $(CFLAGS_$(2)) $(CFLAGS_$(3)) -DOBJECT=$(3) \
+		-Wno-error -M $(1) -MG -MP | \
+		sed 's/\.o\s*:/_DEPS +=/' > $(BIN)/deps/$(1).d
+endef
+
+# rules_template : generate rules for a given source file
+#
+# $(1) is the full path to the source file (e.g. "drivers/net/rtl8139.c")
+#
+define rules_template
+$(call rules_template_parts,$(1),$(subst .,,$(suffix $(1))),$(basename $(notdir $(1))))
+endef
+#
+# $(1) is the full path to the source file (e.g. "drivers/net/rtl8139.c")
+# $(2) is the source type (e.g. "c")
+# $(3) is the source base name (e.g. "rtl8139")
+#
+define rules_template_parts
+$$(BIN)/$(3).o : $(1) $$(MAKEDEPS) $$(POST_O_DEPS) $$($(3)_DEPS)
+	$$(QM)$(ECHO) "  [BUILD] $$@"
+	$$(RULE_$(2))
+BOBJS += $$(BIN)/$(3).o
+$(foreach TGT,$(GENERIC_TARGETS),$(if $(RULE_$(2)_to_$(TGT)),$(NEWLINE)$(call rules_template_target,$(1),$(2),$(3),$(TGT))))
+$$(BIN)/deps/$(1).d : $$($(3)_DEPS)
+TAGS : $$($(3)_DEPS)
+endef
+#
+# $(1) is the full path to the source file (e.g. "drivers/net/rtl8139.c")
+# $(2) is the source type (e.g. "c")
+# $(3) is the source base name (e.g. "rtl8139")
+# $(4) is the destination type (e.g. "dbg%.o")
+#
+define rules_template_target
+$$(BIN)/$(3).$(4) : $(1) $$(MAKEDEPS) $$(POST_O_DEPS) $$($(3)_DEPS)
+	$$(QM)$(ECHO) "  [BUILD] $$@"
+	$$(RULE_$(2)_to_$(4))
+$(TGT)_OBJS += $$(BIN)/$(3).$(4)
+endef
+#
+# $(1) is the full path to the source file (e.g. "drivers/net/rtl8139.c")
+#
+define rules_template_file
+	@$(ECHO) "  [RULES] $(1)"
+	@$(MKDIR) -p $(BIN)/rules/$(dir $(1))
+	@$(ECHO_E) '$(subst $(NEWLINE),\n,$(call rules_template,$(1)))' \
+		 > $(BIN)/rules/$(1).r
+endef
+
+# Generate the dependency files
+#
+$(BIN)/deps/%.d : % $(MAKEDEPS)
+	$(call deps_template_file,$<)
+
+# Calculate list of dependency files
+#
+AUTO_DEPS	= $(patsubst %,$(BIN)/deps/%.d,$(AUTO_SRCS))
+autodeps :
+	@$(ECHO) $(AUTO_DEPS)
+VERYCLEANUP	+= $(BIN)/deps
+
+# Include dependency files
+#
+ifdef NEED_DEPS
+ifneq ($(AUTO_DEPS),)
+-include $(AUTO_DEPS)
+endif
+endif
+
+# Generate the rules files
+#
+$(BIN)/rules/%.r : % $(MAKEDEPS)
+	$(call rules_template_file,$<)
+
+# Calculate list of rules files
+#
+AUTO_RULES	= $(patsubst %,$(BIN)/rules/%.r,$(AUTO_SRCS))
+autorules :
+	@$(ECHO) $(AUTO_RULES)
+VERYCLEANUP	+= $(BIN)/rules
+
+# Evaluate rules (or include rules files)
+#
+ifdef NEED_DEPS
+ifneq ($(AUTO_RULES),)
+ifneq ($(HAVE_EVAL),)
+$(foreach SRC,$(AUTO_SRCS),$(eval $(call rules_template,$(SRC))))
+else
+-include $(AUTO_RULES)
+endif
+endif
+endif
+
+# Files to be parsed using parserom.pl
+#
+ROM_SRCS	= $(foreach SRC,$(AUTO_SRCS),\
+		    $(if $(findstring drivers/,$(SRC)),$(SRC)))
+romsrcs :
+	@$(ECHO) $(ROM_SRCS)
+
+# List of files to be parsed using parserom.pl
+#
+ROM_SRCS_LIST	:= $(BIN)/.rom.list
+ifeq ($(wildcard $(ROM_SRCS_LIST)),)
+ROM_SRCS_OLD := <invalid>
+else
+ROM_SRCS_OLD := $(shell cat $(ROM_SRCS_LIST))
+endif
+ifneq ($(ROM_SRCS_OLD),$(ROM_SRCS))
+$(shell $(ECHO) "$(ROM_SRCS)" > $(ROM_SRCS_LIST))
+endif
+
+$(ROM_SRCS_LIST) : $(MAKEDEPS)
+
+VERYCLEANUP	+= $(ROM_SRCS_LIST)
+
+# ROM definition file
+#
+ROMDEFS		= $(BIN)/.rom.defs
+$(ROMDEFS) : $(ROM_SRCS) $(ROM_SRCS_LIST) $(PARSEROM) $(MAKEDEPS)
+	$(QM)$(ECHO) "  [PARSEROM]"
+	$(Q)$(PERL) $(PARSEROM) $(ROM_SRCS) > $@
+
+VERYCLEANUP	+= $(ROMDEFS)
+
+# Evaluate ROM definition file
+ifdef NEED_DEPS
+ifneq ($(ROM_SRCS),)
+-include $(ROMDEFS)
+endif
+endif
+
+# Device ID tables (using IDs from ROM definition file)
+#
+define obj_pci_id_asm
+	.section ".pci_devlist.$(1)", "a", @progbits
+	.globl pci_devlist_$(1)
+pci_devlist_$(1):
+	.short ( 0x$(1) & 0xffff )
+
+endef
+define obj_isa_id_asm
+endef
+OBJ_IDS_ASM	= $(foreach ROM,$(ROMS_$(OBJECT)),$(call obj_$(ROM_TYPE_$(ROM))_id_asm,$(ROM)))
+OBJ_IDS_ASM_NL	= $(subst $(NEWLINE),\n,$(OBJ_IDS_ASM))
+$(BIN)/%.ids :
+	@$(ECHO_E) '$(OBJ_IDS_ASM_NL)'
+
+BOBJS	+= $(patsubst %,$(BIN)/%.ids.o,$(DRIVERS))
+
+# The following variables are created by the autogenerated rules
+#
+bobjs :
+	@$(ECHO) $(BOBJS)
+drivers_% :
+	@$(ECHO) $(DRIVERS_$*)
+drivers :
+	@$(ECHO) $(DRIVERS)
+.PHONY : drivers
+roms :
+	@$(ECHO) $(ROMS)
+
+# Generate error usage information
+#
+$(BIN)/%.einfo : $(BIN)/%.o
+	$(QM)$(ECHO) "  [EINFO] $@"
+	$(Q)$(OBJCOPY) -O binary -j .einfo --set-section-flags .einfo=alloc \
+		$< $@
+
+EINFOS		:= $(patsubst $(BIN)/%.o,$(BIN)/%.einfo,$(BOBJS))
+$(BIN)/errors : $(EINFOS) $(EINFO)
+	$(QM)$(ECHO) "  [EINFO] $@"
+	$(Q)$(EINFO) $(EINFOS) | sort > $@
+CLEANUP		+= $(BIN)/errors	# Doesn't match the $(BIN)/*.* pattern
+
+# Generate the NIC file from the parsed source files.  The NIC file is
+# only for rom-o-matic.
+#
+$(BIN)/NIC : $(AUTO_DEPS)
+	@$(ECHO) '# This is an automatically generated file, do not edit' > $@
+	@$(ECHO) '# It does not affect anything in the build, ' \
+	     'it is only for rom-o-matic' >> $@
+	@$(ECHO) >> $@
+	@perl -ne 'chomp; print "$$1\n" if /\# NIC\t(.*)$$/' $^ >> $@
+CLEANUP		+= $(BIN)/NIC	# Doesn't match the $(BIN)/*.* pattern
+
+# Select drivers to be included in the all-drivers build
+#
+DRIVERS_ipxe	= $(DRIVERS_net) $(DRIVERS_infiniband) \
+		  $(DRIVERS_xen) $(DRIVERS_hyperv)
+
+# Analyse a target name (e.g. "bin/dfe538--prism2_pci.rom.tmp") and
+# derive the variables:
+# 
+# TGT_ELEMENTS : the elements of the target (e.g. "dfe538 prism2_pci")
+# TGT_PREFIX   : the prefix type (e.g. "pcirom")
+# TGT_DRIVERS  : the driver for each element (e.g. "rtl8139 prism2_pci")
+# TGT_ROM_NAME : the ROM name (e.g. "dfe538")
+#
+CARD_DRIVER	= $(firstword $(DRIVER_$(1)) $(1))
+TGT_ELEMENTS	= $(subst --, ,$(firstword $(subst ., ,$(notdir $@))))
+TGT_ROM_NAME	= $(firstword $(TGT_ELEMENTS))
+TGT_DRIVERS	= $(strip $(if $(DRIVERS_$(TGT_ROM_NAME)), \
+			       $(DRIVERS_$(TGT_ROM_NAME)), \
+			       $(foreach TGT_ELEMENT,$(TGT_ELEMENTS), \
+			         $(call CARD_DRIVER,$(TGT_ELEMENT))) ))
+TGT_PREFIX_NAME	= $(word 2,$(subst ., ,$(notdir $@)))
+TGT_PREFIX	= $(strip $(if $(filter rom,$(TGT_PREFIX_NAME)), \
+			       $(ROM_TYPE_$(TGT_ROM_NAME))rom, \
+			       $(TGT_PREFIX_NAME)))
+
+# Look up ROM IDs for the current target
+# (e.g. "bin/dfe538--prism2_pci.rom.tmp") and derive the variables:
+#
+# TGT_PCI_VENDOR : the PCI vendor ID (e.g. "0x1186")
+# TGT_PCI_DEVICE : the PCI device ID (e.g. "0x1300")
+#
+TGT_PCI_VENDOR	= $(PCI_VENDOR_$(TGT_ROM_NAME))
+TGT_PCI_DEVICE	= $(PCI_DEVICE_$(TGT_ROM_NAME))
+
+# Calculate link-time options for the current target
+# (e.g. "bin/dfe538--prism2_pci.rom.tmp") and derive the variables:
+#
+# TGT_LD_DRIVERS : symbols to require in order to drag in the relevant drivers
+#		   (e.g. "obj_rtl8139 obj_prism2_pci")
+# TGT_LD_IDS :     symbols to define in order to fill in ID structures in the
+#		   ROM header (e.g."pci_vendor_id=0x1186 pci_device_id=0x1300")
+#
+TGT_LD_DRIVERS	= $(subst -,_,$(patsubst %,obj_%,$(TGT_DRIVERS)))
+TGT_LD_IDS	= pci_vendor_id=$(firstword $(TGT_PCI_VENDOR) 0) \
+		  pci_device_id=$(firstword $(TGT_PCI_DEVICE) 0)
+TGT_LD_DEVLIST	= $(foreach ELEM,$(TGT_ELEMENTS),$(if $(PCI_VENDOR_$(ELEM)),\
+		    pci_devlist_$(patsubst 0x%,%,$(PCI_VENDOR_$(ELEM)))$(patsubst 0x%,%,$(PCI_DEVICE_$(ELEM)))))
+TGT_LD_ENTRY	= _$(TGT_PREFIX)_start
+
+# Calculate linker flags based on link-time options for the current
+# target type (e.g. "bin/dfe538--prism2_pci.rom.tmp") and derive the
+# variables:
+#
+# TGT_LD_FLAGS : target-specific flags to pass to linker (e.g.
+#		 "-u obj_zpciprefix -u obj_rtl8139 -u obj_prism2_pci
+#		  --defsym pci_vendor=0x1186 --defsym pci_device=0x1300")
+#
+TGT_LD_FLAGS	= $(foreach SYM,$(TGT_LD_ENTRY) $(TGT_LD_DRIVERS) \
+		    $(TGT_LD_DEVLIST) obj_config,\
+		    -u $(SYM) --defsym check_$(SYM)=$(SYM) ) \
+		  $(patsubst %,--defsym %,$(TGT_LD_IDS)) \
+		  -e $(TGT_LD_ENTRY)
+
+# Calculate list of debugging versions of objects to be included in
+# the target.
+#
+DEBUG_LIST	= $(subst $(COMMA), ,$(DEBUG))
+DEBUG_OBJ_LEVEL	= $(firstword $(word 2,$(subst :, ,$(1))) 1)
+DEBUG_OBJ_BASE	= $(word 1,$(subst :, ,$(1))).dbg$(call DEBUG_OBJ_LEVEL,$(1))
+DEBUG_OBJ	= $(BIN)/$(call DEBUG_OBJ_BASE,$(1)).o
+DEBUG_ORIG_OBJ	= $(BIN)/$(word 1,$(subst :, ,$(1))).o
+DEBUG_OBJS	= $(foreach D,$(DEBUG_LIST),$(call DEBUG_OBJ,$(D)))
+DEBUG_ORIG_OBJS	= $(foreach D,$(DEBUG_LIST),$(call DEBUG_ORIG_OBJ,$(D)))
+BLIB_OBJS	= $(DEBUG_OBJS) $(filter-out $(DEBUG_ORIG_OBJS),$(BOBJS))
+
+# Print out all derived information for a given target.
+#
+$(BIN)/%.info :
+	@$(ECHO) 'Elements             : $(TGT_ELEMENTS)'
+	@$(ECHO) 'Prefix               : $(TGT_PREFIX)'
+	@$(ECHO) 'Drivers              : $(TGT_DRIVERS)'
+	@$(ECHO) 'ROM name             : $(TGT_ROM_NAME)'
+	@$(ECHO)
+	@$(ECHO) 'PCI vendor           : $(TGT_PCI_VENDOR)'
+	@$(ECHO) 'PCI device           : $(TGT_PCI_DEVICE)'
+	@$(ECHO)
+	@$(ECHO) 'LD driver symbols    : $(TGT_LD_DRIVERS)'
+	@$(ECHO) 'LD ID symbols        : $(TGT_LD_IDS)'
+	@$(ECHO) 'LD devlist symbols   : $(TGT_LD_DEVLIST)'
+	@$(ECHO) 'LD entry point       : $(TGT_LD_ENTRY)'
+	@$(ECHO)
+	@$(ECHO) 'LD target flags      : $(TGT_LD_FLAGS)'
+	@$(ECHO)
+	@$(ECHO) 'Debugging objects    : $(DEBUG_OBJS)'
+	@$(ECHO) 'Replaced objects     : $(DEBUG_ORIG_OBJS)'
+
+# List of objects included in the last build of blib.  This is needed
+# in order to correctly rebuild blib whenever the list of objects
+# changes.
+#
+BLIB_LIST	:= $(BIN)/.blib.list
+ifeq ($(wildcard $(BLIB_LIST)),)
+BLIB_OBJS_OLD	:= <invalid>
+else
+BLIB_OBJS_OLD	:= $(shell cat $(BLIB_LIST))
+endif
+ifneq ($(BLIB_OBJS_OLD),$(BLIB_OBJS))
+$(shell $(ECHO) "$(BLIB_OBJS)" > $(BLIB_LIST))
+endif
+
+$(BLIB_LIST) : $(MAKEDEPS)
+
+VERYCLEANUP	+= $(BLIB_LIST)
+
+# Library of all objects
+#
+BLIB		= $(BIN)/blib.a
+$(BLIB) : $(BLIB_OBJS) $(BLIB_LIST) $(MAKEDEPS)
+	$(Q)$(RM) $(BLIB)
+	$(QM)$(ECHO) "  [AR] $@"
+	$(Q)$(AR) r $@ $(sort $(BLIB_OBJS))
+	$(Q)$(RANLIB) $@
+blib : $(BLIB)
+
+# Command to generate build ID.  Must be unique for each $(BIN)/%.tmp,
+# even within the same build run.
+#
+BUILD_ID_CMD	:= perl -e 'printf "0x%08x", int ( rand ( 0xffffffff ) );'
+
+# Build timestamp
+#
+BUILD_TIMESTAMP := $(shell date +%s)
+
+# Build version
+#
+GIT_INDEX := $(if $(GITVERSION),$(if $(wildcard ../.git/index),../.git/index))
+$(BIN)/version.%.o : core/version.c $(MAKEDEPS) $(GIT_INDEX)
+	$(QM)$(ECHO) "  [VERSION] $@"
+	$(Q)$(COMPILE_c) -DBUILD_NAME="\"$*\"" \
+		-DVERSION_MAJOR=$(VERSION_MAJOR) \
+		-DVERSION_MINOR=$(VERSION_MINOR) \
+		-DVERSION_PATCH=$(VERSION_PATCH) \
+		-DVERSION="\"$(VERSION)\"" \
+		-c $< -o $@
+
+# Build an intermediate object file from the objects required for the
+# specified target.
+#
+$(BIN)/%.tmp : $(BIN)/version.%.o $(BLIB) $(MAKEDEPS) $(LDSCRIPT)
+	$(QM)$(ECHO) "  [LD] $@"
+	$(Q)$(LD) $(LDFLAGS) -T $(LDSCRIPT) $(TGT_LD_FLAGS) $< $(BLIB) -o $@ \
+		--defsym _build_id=`$(BUILD_ID_CMD)` \
+		--defsym _build_timestamp=$(BUILD_TIMESTAMP) \
+		-Map $(BIN)/$*.tmp.map
+	$(Q)$(OBJDUMP) -ht $@ | $(PERL) $(SORTOBJDUMP) >> $(BIN)/$*.tmp.map
+
+# Keep intermediate object file (useful for debugging)
+.PRECIOUS : $(BIN)/%.tmp
+
+# Show a linker map for the specified target
+#
+$(BIN)/%.map : $(BIN)/%.tmp
+	@less $(BIN)/$*.tmp.map
+
+# Get objects list for the specified target
+#
+define objs_list
+	$(sort $(foreach OBJ_SYMBOL,\
+		 $(filter obj_%,$(shell $(NM) $(1) | cut -d" " -f3)),\
+		 $(patsubst obj_%,%,$(OBJ_SYMBOL))))
+endef
+$(BIN)/%.objs : $(BIN)/%.tmp
+	$(Q)$(ECHO) $(call objs_list,$<)
+$(BIN)/%.sizes : $(BIN)/%.tmp
+	$(Q)$(SIZE) -t $(foreach OBJ,$(call objs_list,$<),$(wildcard $(BIN)/$(subst _,?,$(OBJ)).o)) | \
+		sort -g
+
+# Get dependency list for the specified target
+#
+define deps_list
+	$(sort $(foreach OBJ,$(call objs_list,$(1)),$($(OBJ)_DEPS)))
+endef
+$(BIN)/%.deps : $(BIN)/%.tmp
+	$(Q)$(ECHO) $(call deps_list,$<)
+
+# Get unneeded source files for the specified target
+#
+define nodeps_list
+	$(sort $(filter-out $(call deps_list,$(1)),\
+		 $(foreach BOBJ,$(BOBJS),\
+		   $($(basename $(notdir $(BOBJ)))_DEPS))))
+endef
+$(BIN)/%.nodeps : $(BIN)/%.tmp
+	$(Q)$(ECHO) $(call nodeps_list,$<)
+
+# Get licensing verdict for the specified target
+#
+define licensable_deps_list
+	$(filter-out config/local/%.h,\
+	  $(filter-out $(BIN)/.%.list,\
+	    $(call deps_list,$(1))))
+endef
+define unlicensed_deps_list
+	$(shell grep -L FILE_LICENCE $(call licensable_deps_list,$(1)))
+endef
+define licence_list
+	$(sort $(foreach LICENCE,\
+		 $(filter __licence__%,$(shell $(NM) $(1) | cut -d" " -f3)),\
+		 $(word 2,$(subst __, ,$(LICENCE)))))
+endef
+$(BIN)/%.licence_list : $(BIN)/%.tmp
+	$(Q)$(ECHO) $(call licence_list,$<)
+$(BIN)/%.licence : $(BIN)/%.tmp
+	$(QM)$(ECHO) "  [LICENCE] $@"
+	$(Q)$(if $(strip $(call unlicensed_deps_list,$<)),\
+		echo -n "Unable to determine licence because the following " ;\
+		echo "files are missing a licence declaration:" ;\
+		echo $(call unlicensed_deps_list,$<);\
+		exit 1,\
+		$(PERL) $(LICENCE) $(call licence_list,$<))
+
+# Extract compression information from intermediate object file
+#
+$(BIN)/%.zinfo : $(BIN)/%.tmp
+	$(QM)$(ECHO) "  [ZINFO] $@"
+	$(Q)$(OBJCOPY) -O binary -j .zinfo $< $@
+
+# Build raw binary file from intermediate object file
+#
+$(BIN)/%.bin : $(BIN)/%.tmp
+	$(QM)$(ECHO) "  [BIN] $@"
+	$(Q)$(OBJCOPY) -O binary -R .zinfo $< $@
+
+# Compress raw binary file
+#
+$(BIN)/%.zbin : $(BIN)/%.bin $(BIN)/%.zinfo $(ZBIN)
+	$(QM)$(ECHO) "  [ZBIN] $@"
+	$(Q)$(ZBIN) $(BIN)/$*.bin $(BIN)/$*.zinfo > $@
+
+# Rules for each media format.  These are generated and placed in an
+# external Makefile fragment.  We could do this via $(eval ...), but
+# that would require make >= 3.80.
+# 
+# Note that there's an alternative way to generate most .rom images:
+# they can be copied from their 'master' ROM image using cp and
+# reprocessed with makerom to add the PCI IDs and ident string.  The
+# relevant rule would look something like:
+#
+#   $(BIN)/dfe538%rom : $(BIN)/rtl8139%rom
+#	cat $< $@
+#	$(FINALISE_rom)
+# 
+# You can derive the ROM/driver relationships using the variables
+# DRIVER_<rom> and/or ROMS_<driver>.
+# 
+# We don't currently do this, because (a) it would require generating
+# yet more Makefile fragments (since you need a rule for each ROM in
+# ROMS), and (b) the linker is so fast that it probably wouldn't make
+# much difference to the overall build time.
+
+# Add NON_AUTO_MEDIA to the media list, so that they show up in the
+# output of "make"
+#
+MEDIA		+= $(NON_AUTO_MEDIA)
+
+media :
+	@$(ECHO) $(MEDIA)
+
+AUTO_MEDIA	= $(filter-out $(NON_AUTO_MEDIA),$(MEDIA))
+automedia :
+	@$(ECHO) $(AUTO_MEDIA)
+
+# media_template : create media rules
+#
+# $(1) is the media name (e.g. "rom")
+#
+define media_template
+$(if $(filter $(1),$(AUTO_MEDIA)),$(call auto_media_template,$(1)))
+LIST_$(1) := $$(if $$(LIST_NAME_$(1)),$$($$(LIST_NAME_$(1))),$$(DRIVERS))
+ALL_$(1) = $$(foreach ITEM,$$(LIST_$(1)),$$(BIN)/$$(ITEM).$(1))
+$$(BIN)/all$(1)s : $$(ALL_$(1))
+$$(BIN)/allall : $$(BIN)/all$(1)s
+all$(1)s : $$(BIN)/all$(1)s
+allall : $$(BIN)/allall
+endef
+#
+# $(1) is the media name (e.g. "rom")
+#
+define auto_media_template
+$$(BIN)/%.$(1) : $$(BIN)/%.$(1).zbin
+	$$(QM)echo "  [FINISH] $$@"
+	$$(Q)$$(CP) $$< $$@
+	$$(Q)$$(if $$(PAD_$(1)),$$(PAD_$(1)) $$@)
+	$$(Q)$$(if $$(FINALISE_$(1)),$$(FINALISE_$(1)) $$@)
+endef
+#
+# $(1) is the media name (e.g. "rom")
+#
+define media_template_file
+	@$(ECHO) "  [MEDIARULES] $(1)"
+	@$(MKDIR) -p $(BIN)/rules/$(dir $(1))
+	@$(ECHO_E) '$(subst $(NEWLINE),\n,$(call media_template,$(1)))' \
+		> $(BIN)/rules/$(1).media.r
+endef
+
+# Generate media rules files
+#
+$(BIN)/rules/%.media.r : $(MAKEDEPS)
+	$(call media_template_file,$*)
+
+# Calculate list of media rules files
+#
+MEDIA_RULES		= $(patsubst %,$(BIN)/rules/%.media.r,$(MEDIA))
+mediarules :
+	@$(ECHO) $(MEDIA_RULES)
+
+# Evaluate media rules (or include media rules files)
+#
+ifdef NEED_DEPS
+ifneq ($(MEDIA_RULES),)
+ifneq ($(HAVE_EVAL),)
+$(foreach MEDIUM,$(MEDIA),$(eval $(call media_template,$(MEDIUM))))
+else
+-include $(MEDIA_RULES)
+endif
+endif
+endif
+
+# Alias for ipxe.%
+#
+$(BIN)/etherboot.% : $(BIN)/ipxe.%
+	ln -sf $(notdir $<) $@
+
+endif # defined(BIN)
+
+###############################################################################
+#
+# The compression utilities
+#
+
+ZBIN_LDFLAGS := -llzma
+
+$(ZBIN) : util/zbin.c $(MAKEDEPS)
+	$(QM)$(ECHO) "  [HOSTCC] $@"
+	$(Q)$(HOST_CC) $(HOST_CFLAGS) $< $(ZBIN_LDFLAGS) -o $@
+CLEANUP += $(ZBIN)
+
+###############################################################################
+#
+# The EFI image converter
+#
+ELF2EFI_CFLAGS	:= -I$(BINUTILS_DIR)/include -I$(BFD_DIR)/include \
+		   -I$(ZLIB_DIR)/include -idirafter include
+ELF2EFI_LDFLAGS	:= -L$(BINUTILS_DIR)/lib -L$(BFD_DIR)/lib -L$(ZLIB_DIR)/lib \
+		   -lbfd -ldl -liberty -lz -Wl,--no-warn-search-mismatch
+
+$(ELF2EFI32) : util/elf2efi.c $(MAKEDEPS)
+	$(QM)$(ECHO) "  [HOSTCC] $@"
+	$(Q)$(HOST_CC) $(HOST_CFLAGS) $(ELF2EFI_CFLAGS) -DEFI_TARGET_IA32 $< \
+		$(ELF2EFI_LDFLAGS) -o $@
+CLEANUP += $(ELF2EFI32)
+
+$(ELF2EFI64) : util/elf2efi.c $(MAKEDEPS)
+	$(QM)$(ECHO) "  [HOSTCC] $@"
+	$(Q)$(HOST_CC) $(HOST_CFLAGS) $(ELF2EFI_CFLAGS) -DEFI_TARGET_X64 $< \
+		$(ELF2EFI_LDFLAGS) -o $@
+CLEANUP += $(ELF2EFI64)
+
+$(EFIROM) : util/efirom.c $(MAKEDEPS)
+	$(QM)$(ECHO) "  [HOSTCC] $@"
+	$(Q)$(HOST_CC) $(HOST_CFLAGS) -idirafter include -o $@ $<
+CLEANUP += $(EFIROM)
+
+$(EFIFATBIN) : util/efifatbin.c $(MAKEDEPS)
+	$(QM)$(ECHO) "  [HOSTCC] $@"
+	$(Q)$(HOST_CC) $(HOST_CFLAGS) -idirafter include -o $@ $<
+CLEANUP += $(EFIFATBIN)
+
+###############################################################################
+#
+# The ICC fixup utility
+#
+$(ICCFIX) : util/iccfix.c $(MAKEDEPS)
+	$(QM)$(ECHO) "  [HOSTCC] $@"
+	$(Q)$(HOST_CC) $(HOST_CFLAGS) -idirafter include -o $@ $<
+CLEANUP += $(ICCFIX)
+
+###############################################################################
+#
+# The error usage information utility
+#
+$(EINFO) : util/einfo.c $(MAKEDEPS)
+	$(QM)$(ECHO) "  [HOSTCC] $@"
+	$(Q)$(HOST_CC) $(HOST_CFLAGS) -idirafter include -o $@ $<
+CLEANUP += $(EINFO)
+
+###############################################################################
+#
+# Local configs
+#
+CONFIG_HEADERS := $(patsubst config/%,%,$(wildcard config/*.h))
+CONFIG_LOCAL_HEADERS := $(foreach HEADER,$(CONFIG_HEADERS),\
+				  config/local/$(HEADER))
+
+$(CONFIG_LOCAL_HEADERS) :
+	$(Q)$(TOUCH) $@
+
+.PRECIOUS : $(CONFIG_LOCAL_HEADERS)
+
+ifneq ($(CONFIG),)
+
+CONFIG_LOCAL_NAMED_HEADERS := $(foreach HEADER,$(CONFIG_HEADERS),\
+					config/local/$(CONFIG)/$(HEADER))
+
+$(CONFIG_LOCAL_NAMED_HEADERS) :
+	$(Q)$(MKDIR) -p $(dir $@)
+	$(Q)$(TOUCH) $@
+
+.PRECIOUS : $(CONFIG_LOCAL_NAMED_HEADERS)
+
+endif
+
+###############################################################################
+#
+# Build the TAGS file(s) for emacs
+#
+TAGS :
+	ctags -e -R -f $@ --exclude=bin
+
+CLEANUP	+= TAGS
+
+###############################################################################
+#
+# Force rebuild for any given target
+#
+%.rebuild :
+	rm -f $*
+	$(Q)$(MAKE) $*
+
+###############################################################################
+#
+# Symbol table checks
+#
+
+ifdef BIN
+
+SYMTAB	= $(BIN)/symtab
+$(SYMTAB) : $(BLIB)
+	$(OBJDUMP) -w -t $< > $@
+
+CLEANUP	+= $(BIN)/symtab
+
+symcheck : $(SYMTAB)
+	$(PERL) $(SYMCHECK) $<
+
+endif # defined(BIN)
+
+###############################################################################
+#
+# Build bochs symbol table
+#
+
+ifdef BIN
+
+$(BIN)/%.bxs : $(BIN)/%.tmp
+	$(NM) $< | cut -d" " -f1,3 > $@
+
+endif # defined(BIN)
+
+###############################################################################
+#
+# Documentation
+#
+
+ifdef BIN
+
+$(BIN)/doxygen.cfg : doxygen.cfg $(MAKEDEPS)
+	$(Q)$(PERL) -pe 's{\@SRCDIRS\@}{$(SRCDIRS)}; ' \
+		-e  's{\@INCDIRS\@}{$(filter-out .,$(INCDIRS))}; ' \
+		-e  's{\@BIN\@}{$(BIN)}; ' \
+		-e  's{\@ARCH\@}{$(ARCH)}; ' \
+		$< > $@
+
+$(BIN)/doc : $(BIN)/doxygen.cfg
+	$(Q)$(DOXYGEN) $<
+
+.PHONY : $(BIN)/doc
+
+doc : $(BIN)/doc
+
+doc-clean :
+	$(Q)$(RM) -r $(BIN)/doc
+
+VERYCLEANUP	+= $(BIN)/doc
+
+docview :
+	@[ -f $(BIN)/doc/html/index.html ] || $(MAKE) $(BIN)/doc
+	@if [ -n "$$BROWSER" ] ; then \
+		( $$BROWSER $(BIN)/doc/html/index.html & ) ; \
+	else \
+		$(ECHO) "Documentation index in $(BIN)/doc/html/index.html" ; \
+	fi
+
+endif # defined(BIN)
+
+###############################################################################
+#
+# Keyboard maps
+#
+
+hci/keymap/keymap_%.c :
+	$(Q)$(PERL) $(GENKEYMAP) $* > $@
+
+###############################################################################
+#
+# Force deletion of incomplete targets
+#
+
+.DELETE_ON_ERROR :
+
+###############################################################################
+#
+# Clean-up
+#
+
+ifeq ($(NUM_BINS),0)
+ALLBINS		:= bin{,-*}
+CLEANUP		:= $(patsubst $(BIN)/%,$(ALLBINS)/%,$(CLEANUP))
+VERYCLEANUP	:= $(patsubst $(BIN)/%,$(ALLBINS)/%,$(VERYCLEANUP))
+endif
+
+clean :
+	$(RM) $(CLEANUP)
+
+veryclean : clean
+	$(RM) -r $(VERYCLEANUP)

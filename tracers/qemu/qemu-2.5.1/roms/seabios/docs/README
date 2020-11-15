@@ -1,0 +1,5 @@
+This directory contains SeaBIOS documentation as found on the SeaBIOS
+wiki.  All the files in this directory (with the exclusion of this
+README file) correspond to a page on the wiki.
+
+The documentation files use markdown syntax.

@@ -1,0 +1,6 @@
+<build condition="AMD64">
+ <dictionary name="openbios-amd64" init="openbios" target="forth">
+  <object source="init.fs"/>
+  <object source="QEMU,VGA.bin" target="fcode" condition="DRIVER_VGA" />
+ </dictionary>
+</build>

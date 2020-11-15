@@ -1,0 +1,16 @@
+<build>
+
+ <!--
+  build description for OpenBIOS test suite
+ 
+  Copyright (C) 2004-2005 by Stefan Reinauer
+  See the file "COPYING" for further information about
+  the copyright and warranty status of this work.
+  -->
+
+ <dictionary name="testsuite" target="forth">
+  <object source="memory-testsuite.fs"/>
+  <object source="splitfunc-testsuite.fs"/>
+ </dictionary>
+
+</build>

@@ -1,0 +1,15 @@
+# -*- makefile -*-
+
+INCLUDES		= -I$(top_srcdir)/include -DBOOTSTRAP
+CFLAGS			= -fPIC
+
+%.so: %.o
+	$(CC) -shared $(CFLAGS) $(filter %.o,$^) -o $@
+
+THISDIR			:= $(notdir $(shell pwd))
+
+all-local:		$(addprefix $(ODIR)/../,$(PLUGINS))
+
+$(ODIR)/../%.so: $(ODIR)/%.so
+	install -d ../$(ODIR)
+	ln -f "../$(THISDIR)"/$< $@

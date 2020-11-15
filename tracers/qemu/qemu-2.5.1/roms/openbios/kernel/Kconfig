@@ -1,0 +1,88 @@
+menu "Kernel Debugging"
+
+config DEBUG
+	bool "Kernel Debugging"
+	default y
+	help
+	  Kernel Debugging
+
+config DEBUG_BOOT
+	bool "Boot messages"
+	depends on DEBUG
+	default y
+	help
+	  early boot code (multiboot parsing etc)
+
+config DEBUG_DSTACK
+	bool "dstack messages"
+	depends on DEBUG
+	default n
+	help
+	  stack debugging. warning: heavy output!
+
+config DEBUG_RSTACK
+	bool "rstack messages"
+	depends on DEBUG
+	default n
+	help
+	  stack debugging. warning: heavy output!
+
+config DEBUG_DICTIONARY
+	bool "Dictionary loading/dumping"
+	depends on DEBUG
+	default n
+	help
+	  print few additional information on dictionary loading/dumping
+
+config DEBUG_INTERNAL
+	bool "Prime Words"
+	depends on DEBUG
+	default n
+	help
+	  print additional information for some prime words, like branches
+
+config DEBUG_INTERPRETER
+	bool "Interpreter"
+	depends on DEBUG
+	default n
+	help
+	  additional information about the unix.c builtin C interpreter
+	  and some other places where it actually does not belong.
+	
+config DEBUG_CONSOLE
+	bool "Console"
+	default y
+	help
+	  use builtin C console code for user interaction. There is no
+	  real alternative to this until someone writes a display/kbd or
+	  serial driver in forth.
+
+config DEBUG_CONSOLE_SERIAL
+	bool "Serial Console"
+	depends on DEBUG_CONSOLE
+	default y
+	help
+	  use serial console.
+
+config SERIAL_PORT
+	int "Serial Port"
+	depends on DEBUG_CONSOLE_SERIAL
+	default "1"
+	help
+	  0 for none, 1 for ttyS0, 2 for ttyS1
+
+config SERIAL_SPEED
+	int "Serial line speed"
+	depends on DEBUG_CONSOLE_SERIAL
+	default "115200"
+	help
+	  supported speeds are: 115200, 57600, 38400, 19200, 9600
+	  
+config DEBUG_CONSOLE_VGA
+	bool "VGA Console"
+	depends on DEBUG_CONSOLE
+	default y
+	help
+	  use vga textmode and keyboard console
+
+endmenu

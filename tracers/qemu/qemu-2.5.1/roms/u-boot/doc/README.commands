@@ -1,0 +1,36 @@
+
+Commands are added to U-Boot by creating a new command structure.
+This is done by first including command.h, then using the U_BOOT_CMD() macro
+to fill in a cmd_tbl_t struct.
+
+U_BOOT_CMD(name,maxargs,repeatable,command,"usage","help")
+
+name:	 is the name of the commad. THIS IS NOT a string.
+maxargs: the maximum number of arguments this function takes
+repeatable: either 0 or 1 to indicate if autorepeat is allowed
+command: Function pointer (*cmd)(struct cmd_tbl_s *, int, int, char *[]);
+usage:	 Short description. This is a string
+help:	 Long description. This is a string
+
+
+**** Behind the scene ******
+
+The structure created is named with a special prefix and placed by
+the linker in a special section using the linker lists mechanism
+(see include/linker_lists.h)
+
+This makes it possible for the final link to extract all commands
+compiled into any object code and construct a static array so the
+command array can be iterated over using the linker lists macros.
+
+The linker lists feature ensures that the linker does not discard
+these symbols when linking full U-Boot even though they are not
+referenced in the source code as such.
+
+If a new board is defined do not forget to define the command section
+by writing in u-boot.lds ($(srctree)/board/boardname/u-boot.lds) these
+3 lines:
+
+	.u_boot_list : {
+		KEEP(*(SORT(.u_boot_list*)));
+	}

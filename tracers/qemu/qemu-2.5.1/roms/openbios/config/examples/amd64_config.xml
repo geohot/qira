@@ -1,0 +1,61 @@
+  <!-- kernel binaries (AMD64) -->
+  <option name="CONFIG_IMAGE_ELF_MULTIBOOT" type="boolean" value="true"/>
+
+  <!-- Kernel Debugging -->
+  <option name="CONFIG_DEBUG" type="boolean" value="true"/>
+  <option name="CONFIG_DEBUG_BOOT" type="boolean" value="true"/>
+  <option name="CONFIG_DEBUG_DSTACK" type="boolean" value="false"/>
+  <option name="CONFIG_DEBUG_RSTACK" type="boolean" value="false"/>
+  <option name="CONFIG_DEBUG_DICTIONARY" type="boolean" value="false"/>
+  <option name="CONFIG_DEBUG_INTERNAL" type="boolean" value="false"/>
+  <option name="CONFIG_DEBUG_INTERPRETER" type="boolean" value="false"/>
+  <option name="CONFIG_DEBUG_CONSOLE" type="boolean" value="true"/>
+  <option name="CONFIG_DEBUG_CONSOLE_SERIAL" type="boolean" value="true"/>
+  <option name="CONFIG_SERIAL_PORT" type="boolean" value="true"/>
+  <option name="CONFIG_SERIAL_SPEED" type="integer" value="115200"/>
+  <option name="CONFIG_DEBUG_CONSOLE_VGA" type="boolean" value="true"/>
+
+
+  <!-- Module Configuration -->
+  <option name="CONFIG_CMDLINE" type="boolean" value="true"/>
+  <option name="CONFIG_DEBLOCKER" type="boolean" value="true"/>
+  <option name="CONFIG_FONT_8X8" type="boolean" value="true"/>
+  <option name="CONFIG_FONT_8X16" type="boolean" value="false"/>
+  <option name="CONFIG_LOADER_AOUT" type="boolean" value="false"/>
+  <option name="CONFIG_LOADER_BOOTINFO" type="boolean" value="false"/>
+  <option name="CONFIG_LOADER_ELF" type="boolean" value="true"/>
+  <option name="CONFIG_LOADER_FCODE" type="boolean" value="false"/>
+  <option name="CONFIG_LOADER_FORTH" type="boolean" value="false"/>
+  <option name="CONFIG_LOADER_XCOFF" type="boolean" value="false"/>
+
+  <!-- Filesystem Configuration -->
+  <option name="CONFIG_DISK_LABEL" type="boolean" value="true"/>
+  <option name="CONFIG_PART_SUPPORT" type="boolean" value="true"/>
+  <option name="CONFIG_PC_PARTS" type="boolean" value="true"/>
+  <option name="CONFIG_HFS" type="boolean" value="false"/>
+  <option name="CONFIG_HFSP" type="boolean" value="true"/>
+  <option name="CONFIG_GRUBFS" type="boolean" value="true"/>
+  <option name="CONFIG_FSYS_EXT2FS" type="boolean" value="true"/>
+  <option name="CONFIG_FSYS_FAT" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_JFS" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_MINIX" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_REISERFS" type="boolean" value="true"/>
+  <option name="CONFIG_FSYS_XFS" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_UFS" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_ISO9660" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_FFS" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_VSTAFS" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_NTFS" type="boolean" value="false"/>
+  <option name="CONFIG_FSYS_AFFS" type="boolean" value="false"/>
+  <option name="CONFIG_DEBUG_FS" type="boolean" value="true"/>
+
+  <!-- Miscellaneous -->
+  <option name="CONFIG_LINUXBIOS" type="boolean" value="true"/>
+
+  <!-- Drivers -->
+  <option name="CONFIG_DRIVER_PCI" type="boolean" value="true"/>
+  <option name="CONFIG_DEBUG_PCI" type="boolean" value="false"/>
+  <option name="CONFIG_DRIVER_IDE" type="boolean" value="true"/>
+  <option name="CONFIG_IDE_NUM_CHANNELS" type="integer" value="4"/>
+  <option name="CONFIG_DEBUG_IDE" type="boolean" value="false"/>
+  <option name="CONFIG_DRIVER_VGA" type="boolean" value="false"/>

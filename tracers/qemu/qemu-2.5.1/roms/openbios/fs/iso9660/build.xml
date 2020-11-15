@@ -1,0 +1,13 @@
+<build>
+ <library name="fs" type="static" target="target">
+  <object source="iso9660_fs.c" condition="ISO9660"/>
+  <object source="iso9660_close.c" condition="ISO9660"/>
+  <object source="iso9660_closedir.c" condition="ISO9660"/>
+  <object source="iso9660_lseek.c" condition="ISO9660"/>
+  <object source="iso9660_mount.c" condition="ISO9660"/>
+  <object source="iso9660_open.c" condition="ISO9660"/>
+  <object source="iso9660_opendir.c" condition="ISO9660"/>
+  <object source="iso9660_read.c" condition="ISO9660"/>
+  <object source="iso9660_readdir.c" condition="ISO9660"/>
+ </library>
+</build>

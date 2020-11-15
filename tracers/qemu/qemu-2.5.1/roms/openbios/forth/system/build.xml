@@ -1,0 +1,16 @@
+<build>
+
+ <!--
+  build description for openbios system bindings
+ 
+  Copyright (C) 2004-2005 by Stefan Reinauer
+  See the file "COPYING" for further information about
+  the copyright and warranty status of this work.
+  -->
+
+ <dictionary name="openbios" target="forth">
+  <object source="main.fs"/>
+  <object source="ciface.fs"/>
+ </dictionary>
+
+</build>

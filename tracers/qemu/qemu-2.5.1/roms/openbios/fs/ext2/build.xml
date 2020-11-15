@@ -1,0 +1,14 @@
+<build>
+ <library name="fs" type="static" target="target">
+  <object source="ext2_close.c" condition="EXT2"/>
+  <object source="ext2_closedir.c" condition="EXT2"/>
+  <object source="ext2_fs.c" condition="EXT2"/>
+  <object source="ext2_lseek.c" condition="EXT2"/>
+  <object source="ext2_mount.c" condition="EXT2"/>
+  <object source="ext2_open.c" condition="EXT2"/>
+  <object source="ext2_opendir.c" condition="EXT2"/>
+  <object source="ext2_read.c" condition="EXT2"/>
+  <object source="ext2_readdir.c" condition="EXT2"/>
+  <object source="ext2_utils.c" condition="EXT2"/>
+ </library>
+</build>

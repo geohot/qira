@@ -1,0 +1,38 @@
+5.3.3.1
+
+ * (is-user-word)
+
+5.3.4 Package access
+
+5.3.6 Display
+ * default-font
+ * set-font
+ * >font
+ * is-install
+ * is-remove
+ * is-selftest
+
+5.3.7 Other
+ * cpeek
+ * wpeek
+ * lpeek
+ * cpoke
+ * wpoke
+ * lpoke
+ * rb@
+ * rw@
+ * rl@
+ * rb!
+ * rw!
+ * rl!
+ * get-msecs
+ * ms
+ * alarm
+ * user-abort
+ * mac-address
+ * display-status
+ * memory-test-suite
+ * mask
+ * diagnostic-mode?
+ * suspend-fcode
+ * set-args

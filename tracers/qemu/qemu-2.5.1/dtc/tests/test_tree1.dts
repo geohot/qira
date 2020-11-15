@@ -1,0 +1,3 @@
+/dts-v1/;
+
+/include/ "test_tree1_body.dtsi"

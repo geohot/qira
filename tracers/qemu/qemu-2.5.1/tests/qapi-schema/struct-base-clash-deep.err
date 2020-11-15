@@ -1,0 +1,1 @@
+tests/qapi-schema/struct-base-clash-deep.json:10: Member name 'name' clashes with base 'Base'

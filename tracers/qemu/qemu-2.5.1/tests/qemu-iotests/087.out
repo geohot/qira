@@ -1,0 +1,85 @@
+QA output created by 087
+Formatting 'TEST_DIR/t.IMGFMT', fmt=IMGFMT size=134217728
+
+=== Missing ID and node-name ===
+
+Testing:
+QMP_VERSION
+{"return": {}}
+{"error": {"class": "GenericError", "desc": "'id' and/or 'node-name' need to be specified for the root node"}}
+{"return": {}}
+{"timestamp": {"seconds":  TIMESTAMP, "microseconds":  TIMESTAMP}, "event": "SHUTDOWN"}
+
+
+=== Duplicate ID ===
+
+Testing:
+QMP_VERSION
+{"return": {}}
+{"return": {}}
+{"error": {"class": "GenericError", "desc": "Device with id 'disk' already exists"}}
+{"error": {"class": "GenericError", "desc": "Device name 'test-node' conflicts with an existing node name"}}
+{"error": {"class": "GenericError", "desc": "node-name=disk is conflicting with a device id"}}
+{"error": {"class": "GenericError", "desc": "Duplicate node name"}}
+{"error": {"class": "GenericError", "desc": "node-name=disk3 is conflicting with a device id"}}
+{"return": {}}
+{"timestamp": {"seconds":  TIMESTAMP, "microseconds":  TIMESTAMP}, "event": "SHUTDOWN"}
+
+
+=== aio=native without O_DIRECT ===
+
+Testing:
+QMP_VERSION
+{"return": {}}
+{"error": {"class": "GenericError", "desc": "aio=native requires cache.direct=true"}}
+{"return": {}}
+{"timestamp": {"seconds":  TIMESTAMP, "microseconds":  TIMESTAMP}, "event": "SHUTDOWN"}
+
+
+=== Encrypted image ===
+
+qemu-img: Encrypted images are deprecated
+Support for them will be removed in a future release.
+You can use 'qemu-img convert' to convert your image to an unencrypted one.
+qemu-img: Encrypted images are deprecated
+Support for them will be removed in a future release.
+You can use 'qemu-img convert' to convert your image to an unencrypted one.
+Formatting 'TEST_DIR/t.IMGFMT', fmt=IMGFMT size=134217728 encryption=on
+Testing: -S
+QMP_VERSION
+{"return": {}}
+Encrypted images are deprecated
+Support for them will be removed in a future release.
+You can use 'qemu-img convert' to convert your image to an unencrypted one.
+{"error": {"class": "GenericError", "desc": "blockdev-add doesn't support encrypted devices"}}
+{"return": {}}
+{"timestamp": {"seconds":  TIMESTAMP, "microseconds":  TIMESTAMP}, "event": "SHUTDOWN"}
+
+Testing:
+QMP_VERSION
+{"return": {}}
+Encrypted images are deprecated
+Support for them will be removed in a future release.
+You can use 'qemu-img convert' to convert your image to an unencrypted one.
+{"error": {"class": "GenericError", "desc": "Guest must be stopped for opening of encrypted image"}}
+{"return": {}}
+{"timestamp": {"seconds":  TIMESTAMP, "microseconds":  TIMESTAMP}, "event": "SHUTDOWN"}
+
+
+=== Missing driver ===
+
+qemu-img: Encrypted images are deprecated
+Support for them will be removed in a future release.
+You can use 'qemu-img convert' to convert your image to an unencrypted one.
+qemu-img: Encrypted images are deprecated
+Support for them will be removed in a future release.
+You can use 'qemu-img convert' to convert your image to an unencrypted one.
+Formatting 'TEST_DIR/t.IMGFMT', fmt=IMGFMT size=134217728 encryption=on
+Testing: -S
+QMP_VERSION
+{"return": {}}
+{"error": {"class": "GenericError", "desc": "Invalid parameter type for 'driver', expected: string"}}
+{"return": {}}
+{"timestamp": {"seconds":  TIMESTAMP, "microseconds":  TIMESTAMP}, "event": "SHUTDOWN"}
+
+*** done

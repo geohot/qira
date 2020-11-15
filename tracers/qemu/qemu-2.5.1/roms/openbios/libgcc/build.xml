@@ -1,0 +1,24 @@
+<build>
+
+ <library name="gcc" type="static" target="target">
+  <object source="ashldi3.c"/>
+  <object source="ashrdi3.c"/>
+  <object source="__lshrdi3.c"/>
+
+  <object source="__divdi3.c"/>
+  <object source="__udivdi3.c"/>
+  <object source="__udivmoddi4.c"/>
+  <object source="__umoddi3.c"/>
+
+  <object source="crtsavres.S" condition="PPC"/>
+
+  <!-- CONDITION="CONFIG_64BITS" -->
+  <object source="__divti3.c" condition="SPARC64"/>
+  <object source="__udivti3.c" condition="SPARC64"/>
+  <object source="__udivmodti4.c" condition="SPARC64"/>
+  <object source="__umodti3.c" condition="SPARC64"/>
+  <object source="multi3.c" condition="SPARC64"/>
+  <object source="__negti2.c" condition="SPARC64"/>
+ </library>
+
+</build>

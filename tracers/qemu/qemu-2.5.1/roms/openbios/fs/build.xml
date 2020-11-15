@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<build>
+
+ <library name="fs" type="static" target="target">
+  <object source="ioglue.c"/>
+ </library>
+	
+ <include href="grubfs/build.xml"/>
+ <include href="hfs/build.xml"/>
+ <include href="hfsplus/build.xml"/>
+ <include href="iso9660/build.xml"/>
+ <include href="ext2/build.xml"/>
+
+</build>

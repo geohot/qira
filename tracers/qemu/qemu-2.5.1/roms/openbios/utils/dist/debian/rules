@@ -1,0 +1,189 @@
+#! /usr/bin/make -f
+# Generated automatically from debian/packages
+# by yada v0.9.9, of Tue, 07 Dec 1999
+# Modified by Piotr Roszatycki <dexter@debian.org>, Mon,  1 Oct 2001 13:14:11 +0200
+
+DEB_HOST_GNU_CPU    := $(shell dpkg-architecture -qDEB_HOST_GNU_CPU)
+DEB_HOST_GNU_TYPE   := $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+DEB_HOST_GNU_SYSTEM := $(shell dpkg-architecture -qDEB_HOST_GNU_SYSTEM)
+
+DEB_BUILD_GNU_CPU    := $(shell dpkg-architecture -qDEB_BUILD_GNU_CPU)
+DEB_BUILD_GNU_TYPE   := $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+DEB_BUILD_GNU_SYSTEM := $(shell dpkg-architecture -qDEB_BUILD_GNU_SYSTEM)
+
+VERSION:=$(shell LC_ALL=C dpkg-parsechangelog | sed -ne 's/^Version: *\([^2]*\)/\1/p')
+
+SHELL=/bin/bash
+
+.PHONY: default
+default:
+	@echo "Specify a target:"; \
+	echo " build              compile the package"; \
+	echo " binary             make all binary packages"; \
+	echo " binary-arch        make all architecture-dependent binary packages"; \
+	echo " binary-indep       make all architecture-independent binary packages"; \
+	echo " clean              clean up the source package"; \
+	echo; \
+	echo " depends            check build-time dependencies"; \
+	echo " install-tree       compile the package and create the install trees"; \
+	echo " clean-install-tree clean up only under debian/"; \
+	echo
+
+# Check build dependencies and conflicts
+
+.PHONY: depends
+depends: chmod-yada debian/depends-stamp
+debian/depends-stamp:
+	@echo 'Checking build conflicts and dependencies; just a minute...'
+	@echo -n 'grep-dctrl...'; v=$$(grep-status -X -F Package 'grep-dctrl' | grep Version | head -1 | sed -e 's/^Version: //'); \
+	if test ! "$$v"; then echo -n 'grep-dctrl (virtual package)...'; v=$$(grep-status -e -F Provides '(^grep-dctrl, |, grep-dctrl$$|^grep-dctrl$$)' | grep Version | head -1 | sed -e 's/^Version: //'); fi; \
+	if test "$$v"; then \
+	    exit 0; \
+	fi; \
+	echo 'Build depends on `grep-dctrl'\'' (any version), which is not satisfied' | fmt; exit 1
+	@echo -n 'yada...'; v=$$(grep-status -X -F Package 'yada' | grep Version | head -1 | sed -e 's/^Version: //'); \
+	if test ! "$$v"; then echo -n 'yada (virtual package)...'; v=$$(grep-status -e -F Provides '(^yada, |, yada$$|^yada$$)' | grep Version | head -1 | sed -e 's/^Version: //'); fi; \
+	if test "$$v"; then \
+	  if dpkg --compare-versions "$$v" '>=' '0.9.9'; then \
+	    exit 0; \
+	  fi; \
+	fi; \
+	echo 'Build depends on `yada'\'' (version >= 0.9.9), which is not satisfied' | fmt; exit 1
+	@echo
+	@echo 'Conflicts and dependencies all satisfied!'
+	touch debian/depends-stamp
+
+# Build the package and prepare the install tree
+
+.PHONY: build-only build
+build-only: debian/build-stamp
+build: chmod-yada build-only
+
+# Make sure these rules and the control file are up-to-date
+
+.PHONY: rules control
+rules: debian/rules
+debian/rules: $(shell which yada) debian/packages
+	$(shell which yada) rebuild rules
+
+control: debian/control
+debian/control: $(shell which yada) debian/packages
+	$(shell which yada) rebuild control
+
+debian/build-stamp: debian/depends-stamp
+	@[ -f $(shell which yada) -a -f debian/rules ]
+	@umask 022 \
+	    && export PACKAGE="openbios" \
+	    && export VERSION="$(VERSION)" \
+	    && export DEB_HOST_GNU_CPU="$(DEB_HOST_GNU_CPU)" \
+	    && export DEB_HOST_GNU_TYPE="$(DEB_HOST_GNU_TYPE)" \
+	    && export DEB_HOST_GNU_SYSTEM="$(DEB_HOST_GNU_SYSTEM)" \
+	    && export DEB_BUILD_GNU_CPU="$(DEB_BUILD_GNU_CPU)" \
+	    && export DEB_BUILD_GNU_TYPE="$(DEB_BUILD_GNU_TYPE)" \
+	    && export DEB_BUILD_GNU_SYSTEM="$(DEB_BUILD_GNU_SYSTEM)" \
+ && (\
+	echo -E 'eval "yada () { perl $$(which yada) \"\$$@\"; }"; set -e; set -v';\
+	echo -E 'CC=gcc';\
+	echo -E 'CFLAGS="-O2 -Wall"';\
+	echo -E 'cd toke; make; strip toke; cd ..';\
+	echo -E 'cd detok; make; strip detok; cd ..';\
+	echo -E 'cd paflof; make; strip paflof; cd ..';\
+	echo -E 'find toke/examples -name .cvsignore | xargs rm -f') | /bin/sh
+	touch debian/build-stamp
+
+.PHONY: install-tree
+install-tree: chmod-yada install-tree-any
+install-tree-any: \
+	debian/tmp-openbios/DEBIAN/control
+
+debian/tmp-openbios/DEBIAN/control: debian/build-stamp debian/control
+	rm -rf debian/tmp-openbios
+	umask 022 && install -d debian/tmp-openbios/DEBIAN
+	install -d debian/tmp-openbios/usr/share/doc/openbios
+	umask 022; $(shell which yada) generate copyright \
+	                       >debian/tmp-openbios/usr/share/doc/openbios/copyright
+	install -m 644 -p debian/changelog \
+	                  debian/tmp-openbios/usr/share/doc/openbios/changelog.Debian
+	@umask 022 \
+	    && export PACKAGE="openbios" \
+	    && export ROOT="$$(pwd)/debian/tmp-openbios" \
+	    && export CONTROL="$$(pwd)/debian/tmp-openbios/DEBIAN" \
+	    && export VERSION="$(VERSION)" \
+	    && export DEB_HOST_GNU_CPU="$(DEB_HOST_GNU_CPU)" \
+	    && export DEB_HOST_GNU_TYPE="$(DEB_HOST_GNU_TYPE)" \
+	    && export DEB_HOST_GNU_SYSTEM="$(DEB_HOST_GNU_SYSTEM)" \
+	    && export DEB_BUILD_GNU_CPU="$(DEB_BUILD_GNU_CPU)" \
+	    && export DEB_BUILD_GNU_TYPE="$(DEB_BUILD_GNU_TYPE)" \
+	    && export DEB_BUILD_GNU_SYSTEM="$(DEB_BUILD_GNU_SYSTEM)" \
+ && (\
+	echo -E 'eval "yada () { perl $$(which yada) \"\$$@\"; }"; set -e; set -v';\
+	echo -E 'mkdir -p $$ROOT/usr/bin';\
+	echo -E 'mkdir -p $$ROOT/usr/share/openbios';\
+	echo -E 'mkdir -p $$ROOT/usr/share/doc/packages/openbios';\
+	echo -E 'cp toke/toke $$ROOT/usr/bin';\
+	echo -E 'cp detok/detok $$ROOT/usr/bin';\
+	echo -E 'cp paflof/paflof $$ROOT/usr/bin';\
+	echo -E 'cp -a toke/examples $$ROOT/usr/share/doc/openbios';\
+	echo -E 'cp -a forth $$ROOT/usr/share/openbios';\
+	echo -E 'cp toke/README $$ROOT/usr/share/doc/openbios/README.toke';\
+	echo -E 'cp detok/README $$ROOT/usr/share/doc/openbios/README.detok') | /bin/sh
+	LD_LIBRARY_PATH="debian/tmp-openbios/lib:debian/tmp-openbios/usr/lib:$$LD_LIBRARY_PATH" dpkg-shlibdeps -pshlibs:openbios -dDepends debian/tmp-openbios/usr/bin/*
+	$(shell which yada) compress openbios
+	$(shell which yada) generate maintscripts openbios
+	find debian/tmp-openbios -type f -print \
+	  | sed -n 's/^debian\/tmp-openbios\(\/etc\/.*\)$$/\1/p' \
+	    > debian/tmp-openbios/DEBIAN/conffiles
+	if test ! -s debian/tmp-openbios/DEBIAN/conffiles; then rm -f debian/tmp-openbios/DEBIAN/conffiles; fi
+	$(shell which yada) rebuild control
+	$(shell which yada) generate substvars openbios
+	umask 022 && dpkg-gencontrol -isp -popenbios -Pdebian/tmp-openbios
+
+# Build package files
+
+.PHONY: binary binary-arch binary-indep
+binary: binary-arch binary-indep
+binary-arch: chmod-yada binary-arch-any
+
+.PHONY: binary-arch-any
+binary-arch-any: \
+	binary-package-openbios
+binary-indep: chmod-yada
+
+.PHONY: binary-package-openbios
+binary-package-openbios: check-root debian/tmp-openbios/DEBIAN/control
+	@[ -f $(shell which yada) -a -f debian/rules ]
+	chown -R 0.0 debian/tmp-openbios
+	chmod -R u=rwX,go=rX debian/tmp-openbios
+	@if [ -d debian/tmp-openbios/usr/doc/openbios ]; then \
+	  echo "*** Yada warning: /usr/doc/openbios should be /usr/share/doc/openbios";\
+	fi
+	dpkg-deb --build debian/tmp-openbios ..
+
+.PHONY: check-root
+check-root:
+	@[ `id -u` = 0 ] || (echo "You must be root to do this!"; false)
+
+.PHONY: chmod-yada
+chmod-yada:
+	@if [ -f debian/yada -a ! -x debian/yada ]; then \
+	  chmod +x debian/yada; \
+	fi
+
+# Clean up afterwards
+
+.PHONY: clean clean-install-tree clean-build
+clean: chmod-yada clean-install-tree clean-build debian/control debian/rules
+
+clean-build:
+	@[ -f $(shell which yada) -a -f debian/rules ]
+	rm -f debian/build-stamp debian/depends-stamp
+	@umask 022 && (\
+	echo -E 'eval "yada () { perl $$(which yada) \"\$$@\"; }"; set -e; set -v';\
+	echo -E 'cd toke; make clean; cd ..';\
+	echo -E 'cd detok; make clean; cd ..';\
+	echo -E 'cd paflof; make clean; cd ..') | /bin/sh
+
+clean-install-tree: chmod-yada debian/rules
+	@[ -f $(shell which yada) -a -f debian/rules ]
+	rm -f debian/install-tree-stamp
+	rm -rf debian/tmp* debian/files* debian/substvars

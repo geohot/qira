@@ -1,0 +1,38 @@
+# usb subsystem core
+common-obj-y += core.o combined-packet.o bus.o libhw.o
+common-obj-$(CONFIG_USB) += desc.o desc-msos.o
+
+# usb host adapters
+common-obj-$(CONFIG_USB_UHCI) += hcd-uhci.o
+common-obj-$(CONFIG_USB_OHCI) += hcd-ohci.o
+common-obj-$(CONFIG_USB_EHCI) += hcd-ehci.o hcd-ehci-pci.o
+common-obj-$(CONFIG_USB_EHCI_SYSBUS) += hcd-ehci-sysbus.o
+common-obj-$(CONFIG_USB_XHCI) += hcd-xhci.o
+common-obj-$(CONFIG_USB_MUSB) += hcd-musb.o
+
+# emulated usb devices
+common-obj-$(CONFIG_USB) += dev-hub.o
+common-obj-$(CONFIG_USB) += dev-hid.o
+common-obj-$(CONFIG_USB_TABLET_WACOM) += dev-wacom.o
+common-obj-$(CONFIG_USB_STORAGE_BOT)  += dev-storage.o
+common-obj-$(CONFIG_USB_STORAGE_UAS)  += dev-uas.o
+common-obj-$(CONFIG_USB_AUDIO)        += dev-audio.o
+common-obj-$(CONFIG_USB_SERIAL)       += dev-serial.o
+common-obj-$(CONFIG_USB_NETWORK)      += dev-network.o
+common-obj-$(CONFIG_USB_BLUETOOTH)    += dev-bluetooth.o
+
+ifeq ($(CONFIG_USB_SMARTCARD),y)
+common-obj-y                          += dev-smartcard-reader.o
+common-obj-$(CONFIG_SMARTCARD)        += ccid-card-passthru.o
+common-obj-$(CONFIG_SMARTCARD)        += ccid-card-emulated.o
+endif
+
+ifeq ($(CONFIG_POSIX),y)
+common-obj-$(CONFIG_USB_STORAGE_MTP)  += dev-mtp.o
+endif
+
+# usb redirection
+common-obj-$(CONFIG_USB_REDIR) += redirect.o quirks.o
+
+# usb pass-through
+common-obj-y += $(patsubst %,host-%.o,$(HOST_USB))

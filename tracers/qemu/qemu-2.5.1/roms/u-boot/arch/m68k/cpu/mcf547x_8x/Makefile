@@ -1,0 +1,11 @@
+#
+# (C) Copyright 2000-2004
+# Wolfgang Denk, DENX Software Engineering, wd@denx.de.
+#
+# SPDX-License-Identifier:	GPL-2.0+
+#
+
+# ccflags-y += -DET_DEBUG
+
+extra-y = start.o
+obj-y	= cpu.o speed.o cpu_init.o pci.o interrupts.o slicetimer.o

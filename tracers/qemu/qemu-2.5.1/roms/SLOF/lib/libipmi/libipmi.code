@@ -1,0 +1,120 @@
+/******************************************************************************
+ * Copyright (c) 2004, 2008 IBM Corporation
+ * All rights reserved.
+ * This program and the accompanying materials
+ * are made available under the terms of the BSD License
+ * which accompanies this distribution, and is available at
+ * http://www.opensource.org/licenses/bsd-license.php
+ *
+ * Contributors:
+ *     IBM Corporation - initial implementation
+ *****************************************************************************/
+
+#include <libipmi.h>
+
+// : ipmi-kcs-cmd  ( in-buf in-len out-buf out-maxlen -- out-len errorcode )
+PRIM(IPMI_X2d_KCS_X2d_CMD)
+	cell maxlen = TOS; POP;
+	cell outbuf = TOS; POP;
+	int len = TOS.n; POP;
+	cell inbuf = TOS;
+	int retval;
+	retval = ipmi_kcs_cmd(inbuf.a, outbuf.a, maxlen.n, (uint32_t *) &len);
+	TOS.n = len;
+	PUSH; TOS.n = retval;
+MIRP
+
+
+PRIM(IPMI_X2d_SYSTEM_X2d_REBOOT)
+	ipmi_system_reboot();
+MIRP
+
+
+PRIM(IPMI_X2d_POWER_X2d_OFF)
+	ipmi_power_off();
+MIRP
+
+
+// : ipmi-oem-stop-bootwatchdog  ( -- errorcode )
+PRIM(IPMI_X2d_OEM_X2d_STOP_X2d_BOOTWATCHDOG)
+	PUSH;
+	TOS.n = ipmi_oem_stop_bootwatchdog();
+MIRP
+
+
+// : ipmi-oem-set-bootwatchdog  ( seconds -- errorcode )
+PRIM(IPMI_X2d_OEM_X2d_SET_X2d_BOOTWATCHDOG)
+	int sec = TOS.n;
+	TOS.n = ipmi_oem_set_bootwatchdog(sec);
+MIRP
+
+
+// : ipmi-oem-reset-bootwatchdog  ( -- errorcode )
+PRIM(IPMI_X2d_OEM_X2d_RESET_X2d_BOOTWATCHDOG)
+	PUSH;
+	TOS.n = ipmi_oem_reset_bootwatchdog();
+MIRP
+
+
+// : ipmi-oem-led-set  ( type instance state -- errorcode )
+PRIM(IPMI_X2d_OEM_X2d_LED_X2d_SET)
+	int state = TOS.n; POP;
+	int instance = TOS.n; POP;
+	int type = TOS.n;
+	TOS.n = ipmi_oem_led_set(type, instance, state);
+MIRP
+
+
+// : ipmi-oem-read-vpd  ( offset length dst -- status )
+PRIM(IPMI_X2d_OEM_X2d_READ_X2d_VPD)
+	cell dest = TOS; POP;
+	int len = TOS.n; POP;
+	int offset = TOS.n;
+	TOS.n = ipmi_oem_read_vpd(dest.a, len, offset);
+MIRP
+
+// : ipmi-oem-write-vpd  ( offset length src -- status )
+PRIM(IPMI_X2d_OEM_X2d_WRITE_X2d_VPD)
+	cell src = TOS; POP;
+	int len = TOS.n; POP;
+	int offset = TOS.n;
+	TOS.n = ipmi_oem_write_vpd(src.a, len, offset);
+MIRP
+
+
+// : ipmi-oem-get-blade-descr  ( buf maxlen -- len status )
+PRIM(IPMI_X2d_OEM_X2d_GET_X2d_BLADE_X2d_DESCR)
+	int maxlen = TOS.n; POP;
+	cell buf = TOS;
+	int len = 0;
+	int retval;
+	retval = ipmi_oem_get_blade_descr(buf.a, maxlen, (uint32_t *) &len);
+	TOS.n = len;
+	PUSH; TOS.n = retval;
+MIRP
+
+
+// : ipmi-oem-bios2sp  ( str-ptr str-len swid type -- errorcode )
+PRIM(IPMI_X2d_OEM_X2d_BIOS2SP)
+	int type = TOS.n; POP;
+	int swid = TOS.n; POP;
+	int len = TOS.n; POP;
+	void* addr = TOS.a;
+	TOS.n = ipmi_oem_bios2sp(swid, type, addr, len);
+MIRP
+
+// : ipmi-set-sensor ( param-1 ... param-n n command sensor - errorcode )
+PRIM(IPMI_X2d_SET_X2d_SENSOR)
+	int sensor = TOS.n; POP;
+	int cmd    = TOS.n; POP;
+	int n      = TOS.n;
+	int i      = n;
+	uint8_t param[10];
+	while (i>0) {
+		i--;
+		POP; param[i]=TOS.n;
+	};
+	TOS.n = ipmi_set_sensor((cmd<<8)+sensor,n,
+		param[0],param[1],param[2],param[3],param[4],
+		param[5],param[6],param[7],param[8],param[9]);
+MIRP

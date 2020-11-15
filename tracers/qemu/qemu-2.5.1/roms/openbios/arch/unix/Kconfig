@@ -1,0 +1,18 @@
+
+config HOST_UNIX
+	bool "Build Hosted Unix binary"
+	default y
+	help
+	  Build a version of the OpenBIOS kernel that runs in a 
+	  Unix-like operating system.
+
+config UNIX_QT
+	depends HOST_UNIX
+	bool "QT frontend for Unix binary"
+	default n
+	help
+	  Enable this option if you wish to add a graphical user 
+	  interface to the openbios hosted unix binary. This option
+	  needs the QT library installed.
+
+source "arch/unix/plugins/Kconfig"

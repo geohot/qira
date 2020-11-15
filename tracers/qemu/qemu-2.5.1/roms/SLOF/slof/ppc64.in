@@ -1,0 +1,96 @@
+/******************************************************************************
+ * Copyright (c) 2004, 2008 IBM Corporation
+ * All rights reserved.
+ * This program and the accompanying materials
+ * are made available under the terms of the BSD License
+ * which accompanies this distribution, and is available at
+ * http://www.opensource.org/licenses/bsd-license.php
+ *
+ * Contributors:
+ *     IBM Corporation - initial implementation
+ *****************************************************************************/
+
+// The Forth code words (primitives) that are specific to PowerPC64.
+
+// CPU register accesses.
+cod(HID0!)
+cod(HID0@)
+cod(HID1!)
+cod(HID1@)
+cod(HID4!)
+cod(HID4@)
+cod(HID5!)
+cod(HID5@)
+cod(MSR@)
+cod(MSR!)
+cod(SDR1@)
+cod(SDR1!)
+cod(PVR@)
+cod(PIR@)
+cod(TBL@)
+cod(TBU@)
+cod(DABR@)
+cod(DABR!)
+cod(HIOR@)
+cod(HIOR!)
+cod(SPRG0@)
+cod(SPRG0!)
+cod(SPRG1@)
+cod(SPRG1!)
+cod(SPRG2@)
+cod(SPRG2!)
+cod(SPRG3@)
+cod(SPRG3!)
+cod(HSPRG0@)
+cod(HSPRG0!)
+cod(HSPRG1@)
+cod(HSPRG1!)
+cod(DEC@)
+cod(DEC!)
+
+cod(MMCR0!)
+cod(PMC1@)
+
+cod(ICBI)
+
+
+// The start address of a binary payload.
+//con(PAYLOAD (type_u)_binary_payload_start)
+
+// Calling the client program.
+con(CLIENT-ENTRY-POINT (type_u)client_entry_point)
+cod(JUMP-CLIENT)
+dfr(CLIENTINTERFACE)
+
+
+con(ROMFS-LOOKUP-ENTRY (type_u) c_romfs_lookup)
+
+// not very elegant... but the only way it works for me
+con(.WRITE-LOG-BYTE-ENTRY (type_u) writeLogByte_wrapper)
+col(WRITE-LOG-BYTE-ENTRY .WRITE-LOG-BYTE-ENTRY @)
+
+cod(CALL-C)
+cod(START-RTAS)
+
+
+cod(FLUSHCACHE)
+// Bit map allocator
+cod(BM-ALLOCATOR-INIT)
+cod(BM-ALLOC)
+cod(BM-FREE)
+
+// Hang.
+cod(CRASH)
+
+var(DAAR 0x00f00000)
+col(DUMBER DAAR @ C! LIT(1) DAAR +!)
+
+dfr(BOOT-EXCEPTION-HANDLER)
+
+col(NICEINIT DOTICK DROP DOTO EMIT DOTICK ((FIND)) DOTO (FIND) DOTICK 2DROP DOTO (REVEAL) LIT((type_u)_binary_OF_fsi_start) LIT((type_u)_binary_OF_fsi_end) OVER - DOTICK EVALUATE CATCH BOOT-EXCEPTION-HANDLER)
+
+static cell xt_SYSTHROW[] = { _0 RDEPTH_X21 DUP LIT(0x100) _X3d _0BRANCH(5) SWAP DROP NICEINIT BRANCH(7) DUP LIT(0x3800) _X3d _0BRANCH(1) CLIENTINTERFACE PRINT_X2d_STATUS QUIT };
+
+// sentinel, leave it here!
+col(LASTWORD )
+

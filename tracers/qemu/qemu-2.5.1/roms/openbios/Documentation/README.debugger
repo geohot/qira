@@ -1,0 +1,50 @@
+The following Forth words can be used for debugging:
+
+   debug <xt> - Mark word for debugging
+   debug-off  - Unmark all words for debugging
+   resume     - Return from subordinate Forth interpreter
+
+The source debugger also implements the following commands when it has been activated:
+
+   Up - Unmark current word for debugging, mark parent and continue
+   Down - Mark next word for debugging
+   Trace - Continue execution until end of word displaying
+           debug information
+   Rstack - Display contents of the Rstack
+   Forth - Launch subordinate Forth interpreter
+
+An example session:
+0 > see boot 
+: boot
+  linefeed parse cr " platform-boot" $find if
+  execute then
+  2drop cr " Booting " type type cr "   ... not supported on this system." type cr
+  ;
+ ok
+0 > debug boot 
+Stepper keys: <space>/<enter> Up Down Trace Rstack Forth
+ ok
+0 > boot 
+: boot  ( Empty ) 
+00000000ffe26b08: linefeed  ( a ) 
+00000000ffe26b10: parse  ( ffec6e24 0 ) 
+00000000ffe26b18: cr 
+ ( ffec6e24 0 ) 
+00000000ffe26b20: (")  ( ffec6e24 0 ffe26b30 d ) 
+00000000ffe26b40: $find  ( ffec6e24 0 ffe31710 ffffffffffffffff ) 
+00000000ffe26b48: do?branch  ( ffec6e24 0 ffe31710 ) 
+00000000ffe26b58: execute [sparc64] Booting file 'cdrom' with parameters ''
+Not a bootable ELF image
+Not a Linux kernel image
+Not a bootable a.out image
+Loading FCode image...
+Loaded 5936 bytes
+entry point is 0x4000
+Evaluating FCode...
+open isn't unique.
+Boot load failed.
+ ( Empty ) 
+00000000ffe26b60: dobranch  ( Empty ) 
+00000000ffe26bf8: (semis) 
+[ Finished boot ]  ok
+0 > 

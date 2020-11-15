@@ -1,0 +1,429 @@
+#!/bin/sh
+
+#
+# MOLPATH is needed if you want to build openbios-mol.elf
+#
+MOLPATH=$HOME/mol-0.9.71
+
+if [ x"$1" = x -o "$1" = "-help" ]; then
+  printf "Usage:\n  $0 [arch-config]...\n"
+  printf "arch-config values supported for native or cross compiled builds:\n"
+  printf " amd64, ppc, sparc32, sparc64, x86\n\n"
+  printf "Add \"unix-\" prefix to compile openbios-unix executable (native only)\n"
+  printf "Add \"builtin-\" prefix to compile openbios-builtin executables\n\n"
+  printf "Without prefixes, builtin and unix targets are selected\n\n"
+  printf "Special targets: mol-ppc briq-ppc pearpc-ppc qemu-ppc qemu-ppc64 xbox-x86\n\n"
+  printf "Example: $0 builtin-sparc32 unix-amd64 builtin-amd64\n"
+  exit 0
+fi
+
+crosscflags()
+{
+    host=$1
+    target=$2
+
+    if test "$host" = "powerpc" -o "$host" = "ppc" \
+        -o "$host" = "mips" -o "$host" = "s390" \
+        -o "$host" = "sparc32" -o "$host" = "sparc64" \
+        -o "$host" = "m68k" -o "$host" = "armv4b"; then
+        hostbigendian="yes"
+    else
+        hostbigendian="no"
+    fi
+
+# host long bits test
+    if test "$host" = "sparc64" -o "$host" = "ia64" \
+        -o "$host" = "amd64" -o "$host" = "x86_64" \
+        -o "$host" = "alpha"; then
+        hostlongbits="64"
+    else
+        hostlongbits="32"
+    fi
+
+    if test "$target" = "powerpc" -o "$target" = "ppc" \
+        -o "$target" = "powerpc64" -o "$target" = "ppc64" \
+        -o "$target" = "mips" -o "$target" = "s390" \
+        -o "$target" = "sparc32" -o "$target" = "sparc64" \
+        -o "$target" = "m68k" -o "$target" = "armv4b"; then
+        targetbigendian="yes"
+    else
+        targetbigendian="no"
+    fi
+
+# target long bits test
+    if test "$target" = "sparc64" -o "$target" = "ia64" \
+        -o "$target" = "amd64"  -o "$target" = "x86_64" \
+        -o "$target" = "powerpc64" -o "$target" = "ppc64" \
+        -o "$target" = "alpha"; then
+        targetlongbits="64"
+    else
+        targetlongbits="32"
+    fi
+
+    if test "$targetbigendian" = "$hostbigendian"; then
+        cflags="-USWAP_ENDIANNESS"
+    else
+        cflags="-DSWAP_ENDIANNESS"
+    fi
+
+    if test "$targetlongbits" = "$hostlongbits"; then
+        cflags="$cflags -DNATIVE_BITWIDTH_EQUALS_HOST_BITWIDTH"
+    elif test "$targetlongbits" -lt "$hostlongbits"; then
+        cflags="$cflags -DNATIVE_BITWIDTH_SMALLER_THAN_HOST_BITWIDTH"
+    else
+        cflags="$cflags -DNATIVE_BITWIDTH_LARGER_THAN_HOST_BITWIDTH"
+    fi
+
+    if test "$target" = "sparc64" -o "$target" = "ia64" \
+         -o "$target" = "amd64" -o "$target" = "x86_64" \
+         -o "$target" = "alpha"; then
+        if test "$host" = "x86"; then
+            cflags="$cflags -DNEED_FAKE_INT128_T"
+        elif test "$host" = "arm"; then
+            cflags="$cflags -DNEED_FAKE_INT128_T"
+        elif test "$host" = "ppc" -a `uname -s` = "Darwin"; then
+            cflags="$cflags -DNEED_FAKE_INT128_T"
+        fi
+    fi
+
+    CROSSCFLAGS=$cflags
+}
+
+archname()
+{
+    HOSTARCH=`uname -m | sed -e s/i.86/x86/ -e s/i86pc/x86/ \
+	-e s/sun4u/sparc64/ -e s/sparc$/sparc32/ \
+	-e s/arm.*/arm/ -e s/sa110/arm/ -e s/x86_64/amd64/ \
+	-e "s/Power Macintosh/ppc/"`
+}
+
+select_prefix()
+{
+    for target_arch ; do
+        TARGETS="${target_arch}-unknown-linux-gnu- ${target_arch}-linux-gnu- ${target_arch}-linux- ${target_arch}-elf- ${target_arch}-eabi-"
+
+        if [ x"$CROSS_COMPILE" != "x" ]; then
+            TARGETS=$CROSS_COMPILE
+        fi
+
+        for TARGET in $TARGETS
+        do
+            if type ${TARGET}gcc > /dev/null 2>&1
+            then
+                return
+            fi
+        done
+        if [ "$ARCH" = "$HOSTARCH" ]; then
+            return
+        fi
+    done
+    echo "ERROR: no $* cross-compiler found !" 1>&2
+    exit 1
+}
+
+config_set_boolean()
+{
+    option=`echo $1 | tr a-z A-Z`
+    echo "<option name=\"$option\" type=\"boolean\" value=\"true\" />"
+}
+
+exists()
+{
+    type "$1" >/dev/null 2>&1
+}
+
+
+SRCDIR=`dirname "$0"`/../..
+BUILDDIR=`pwd`
+
+# make source path absolute
+SRCDIR=`cd "$SRCDIR"; pwd`
+
+if test "x$HOSTARCH" = "x"; then
+    archname
+fi
+
+VERSION=`head $SRCDIR/VERSION`
+
+echo "Configuring OpenBIOS on $HOSTARCH for $*"
+
+if exists toke; then
+    :
+else
+    echo "Unable to locate toke executable from the fcode-utils package - aborting"
+    exit 1
+fi
+
+target_list=""
+for target in $*; do
+    case $target in
+        unix-*|builtin-*|plain-*|mol-ppc|briq-ppc|pearpc-ppc|qemu-ppc|qemu-ppc64|xbox-x86)
+        target_list="$target_list $target"
+        ;;
+        cross-*)
+        echo "\"cross-\" prefix is no longer needed"
+        target=`echo $target | sed s/cross-//g`
+        target_list="$target_list builtin-$target"
+        ;;
+        *)
+        #default: build builtin and if possible, unix target
+        target_list="$target_list builtin-$target unix-$target"
+        ;;
+    esac
+done
+
+arch_list=""
+for target in $target_list; do
+    arch=`echo $target | sed s/.*-//g`
+    if ! test -f $SRCDIR/config/examples/${arch}_config.xml; then
+        echo "Cannot find $SRCDIR/config/examples/${arch}_config.xml" >&2
+        exit 1
+    fi
+    if ! echo $arch_list | grep -q "$arch"; then
+        arch_list="$arch_list $arch"
+    fi
+done
+
+for ARCH in $arch_list; do
+    unix="no"
+    builtin="no"
+    plain="no"
+    mol="no"
+    briq="no"
+    pearpc="no"
+    qemu="no"
+    xbox="no"
+    cross="no"
+
+    for target in $target_list; do
+        case $target in
+            *-$ARCH)
+            :
+            ;;
+            *)
+            continue
+            ;;
+        esac
+        case $target in
+            mol-ppc)
+            mol="yes"
+            ;;
+            briq-ppc)
+            briq="yes"
+            ;;
+            pearpc-ppc)
+            pearpc="yes"
+            ;;
+            builtin-ppc|qemu-ppc|builtin-ppc64|qemu-ppc64)
+            qemu="yes"
+            ;;
+            xbox-x86)
+            xbox="yes"
+            ;;
+            builtin-sparc32)
+            builtin="yes"
+            qemu="yes"
+            ;;
+            builtin-sparc64)
+            builtin="yes"
+            qemu="yes"
+            ;;
+            unix-*)
+            if [ "$ARCH" != "$HOSTARCH" ]; then
+                # Can't cross compile Unix target
+                continue
+            fi
+            unix="yes"
+            ;;
+            builtin-*)
+            builtin="yes"
+            ;;
+            plain-*)
+            plain="yes"
+            ;;
+        esac
+    done
+
+    BASEARCH=$ARCH
+    case $ARCH in
+        amd64)
+        select_prefix x86_64
+        CFLAGS="-fno-builtin"
+        AS_FLAGS=
+        ;;
+
+        ppc)
+        select_prefix powerpc powerpc64
+        if [ "$unix" = "no" ]; then
+            CFLAGS="-m32 -msoft-float -fno-builtin-bcopy -fno-builtin-log2"
+            AS_FLAGS="-m32"
+        else
+            CFLAGS="-fno-builtin"
+            AS_FLAGS=
+        fi
+        ;;
+
+        ppc64)
+        select_prefix powerpc64
+        CFLAGS="-Wa,-a64 -m64 -msoft-float -fno-builtin"
+        AS_FLAGS="-Wa,-a64"
+        BASEARCH=ppc
+        ;;
+
+        sparc32)
+        select_prefix sparc
+        CFLAGS="-Wa,-xarch=v8 -Wa,-32 -m32 -mcpu=supersparc -fno-builtin"
+        AS_FLAGS="-Wa,-xarch=v8 -Wa,-32"
+        ;;
+
+        sparc64)
+        select_prefix sparc64
+        CFLAGS="-Wa,-xarch=v9b -Wa,-64 -m64 -mcpu=ultrasparc -mcmodel=medany -fno-builtin"
+        AS_FLAGS="-Wa,-xarch=v9b -Wa,-64"
+        ;;
+
+        x86)
+        select_prefix i486
+        CFLAGS="-fno-builtin -m32"
+        AS_FLAGS="-Wa,-32"
+        ;;
+    esac
+    if [ "$ARCH" != "$HOSTARCH" -o `uname -s` = "Darwin" ]; then
+        cross="yes"
+    fi
+    crosscflags $HOSTARCH $ARCH
+    OBJDIR=$BUILDDIR/obj-$ARCH
+    ODIRS="$ODIRS $OBJDIR"
+
+    printf "Initializing build tree $OBJDIR..."
+    rm -rf "$OBJDIR"
+    mkdir "$OBJDIR"
+    mkdir -p $OBJDIR/target
+    mkdir -p $OBJDIR/target/include
+    mkdir -p $OBJDIR/target/arch
+    mkdir -p $OBJDIR/target/arch/unix
+    mkdir -p $OBJDIR/target/arch/$ARCH
+    mkdir -p $OBJDIR/target/libgcc
+    mkdir -p $OBJDIR/target/kernel
+    mkdir -p $OBJDIR/target/libopenbios
+    mkdir -p $OBJDIR/target/packages
+    mkdir -p $OBJDIR/target/fs
+    mkdir -p $OBJDIR/target/fs/grubfs
+    mkdir -p $OBJDIR/target/fs/hfs
+    mkdir -p $OBJDIR/target/fs/hfsplus
+    mkdir -p $OBJDIR/target/fs/iso9660
+    mkdir -p $OBJDIR/target/fs/ext2
+    mkdir -p $OBJDIR/target/drivers
+    mkdir -p $OBJDIR/target/libc
+    mkdir -p $OBJDIR/host/include
+    mkdir -p $OBJDIR/host/kernel
+    mkdir -p $OBJDIR/forth
+    ln -s  $SRCDIR/include/arch/$BASEARCH $OBJDIR/target/include/asm
+    #compile the host binary with target settings instead
+    #ln -s $SRCDIR/include/arch/$HOSTARCH $OBJDIR/host/include/asm
+    if [ "$mol" = "yes" ]; then
+        printf "\nUsing MOL path $MOLPATH...\n"
+        mkdir -p $OBJDIR/target/arch/ppc/mol
+        ln -s $MOLPATH/src/shared/osi_calls.h $OBJDIR/target/include/
+        ln -s $MOLPATH/src/shared/osi.h $OBJDIR/target/include/
+        ln -s $MOLPATH/src/shared/prom.h $OBJDIR/target/include/
+        ln -s $MOLPATH/src/include/boothelper_sh.h $OBJDIR/target/include/
+        ln -s $MOLPATH/src/include/video_sh.h $OBJDIR/target/include/
+        ln -s $MOLPATH/src/include/pseudofs_sh.h $OBJDIR/target/include/
+        ln -s $MOLPATH/src/include/kbd_sh.h $OBJDIR/target/include/
+        ln -s $MOLPATH/src/drivers/disk/include/scsi_sh.h $OBJDIR/target/include/
+        ln -s $MOLPATH/src/drivers/disk/include/ablk_sh.h $OBJDIR/target/include/
+    fi
+    if [ "$briq" = "yes" ]; then
+        mkdir -p $OBJDIR/target/arch/ppc/briq
+    fi
+    if [ "$pearpc" = "yes" ]; then
+        mkdir -p $OBJDIR/target/arch/ppc/pearpc
+    fi
+    if [ "$qemu" = "yes" ]; then
+        mkdir -p $OBJDIR/target/arch/ppc/qemu
+    fi
+    if [ "$xbox" = "yes" ]; then
+        mkdir -p $OBJDIR/target/arch/x86/xbox
+    fi
+    echo "ok."
+
+    ODIR=$OBJDIR
+
+    printf "Creating target config.mak..."
+    echo "ARCH=$ARCH" > $ODIR/config.mak
+    if [ "$cross" = "yes" ]; then
+        echo "TARGET=$TARGET" >> $ODIR/config.mak
+    fi
+    echo "CFLAGS=$CFLAGS" >> $ODIR/config.mak
+    echo "AS_FLAGS=$AS_FLAGS" >> $ODIR/config.mak
+    echo "HOSTARCH?=$HOSTARCH" >> $ODIR/config.mak
+    echo "CROSSCFLAGS=$CROSSCFLAGS" >> $ODIR/config.mak
+    echo "VERSION=\"$VERSION\"" >> $ODIR/config.mak
+    echo "SRCDIR=$SRCDIR" >> $ODIR/config.mak
+    echo "ok."
+
+    printf "Creating target rules.mak..."
+    ln -s $SRCDIR/config/xml/rules.xml $ODIR/rules.xml
+    echo "<?xml version=\"1.0\"?><config>" > $ODIR/config.xml
+    # Generic
+    config_set_boolean CONFIG_$ARCH >> $ODIR/config.xml
+    if [ "$BASEARCH" != "$ARCH" ]; then
+        config_set_boolean CONFIG_$BASEARCH >> $ODIR/config.xml
+    fi
+    if [ "$mol" = "yes" ]; then
+        config_set_boolean CONFIG_MOL >> $ODIR/config.xml
+    fi
+    if [ "$briq" = "yes" ]; then
+        config_set_boolean CONFIG_BRIQ >> $ODIR/config.xml
+    fi
+    if [ "$pearpc" = "yes" ]; then
+        config_set_boolean CONFIG_PEARPC >> $ODIR/config.xml
+    fi
+    if [ "$qemu" = "yes" ]; then
+        config_set_boolean CONFIG_QEMU >> $ODIR/config.xml
+    fi
+    if [ "$xbox" = "yes" ]; then
+        config_set_boolean CONFIG_XBOX >> $ODIR/config.xml
+    fi
+    if [ "$targetbigendian" = "yes" ]; then
+        config_set_boolean CONFIG_BIG_ENDIAN >> $ODIR/config.xml
+    else
+        config_set_boolean CONFIG_LITTLE_ENDIAN >> $ODIR/config.xml
+    fi
+    # Kernel binaries
+    if [ "$plain" = "yes" ]; then
+        config_set_boolean CONFIG_IMAGE_ELF >> $ODIR/config.xml
+    fi
+    if [ "$builtin" = "yes" ]; then
+        config_set_boolean CONFIG_IMAGE_ELF_EMBEDDED >> $ODIR/config.xml
+    fi
+    # Build hosted Unix binary?
+    if [ "$unix" = "yes" ]; then
+        config_set_boolean CONFIG_HOST_UNIX >> $ODIR/config.xml
+        #config_set_boolean CONFIG_UNIX_QT >> $ODIR/config.xml
+        #config_set_boolean CONFIG_PLUGINS >> $ODIR/config.xml
+    fi
+    cat $SRCDIR/config/examples/${ARCH}_config.xml >> $ODIR/config.xml
+
+    cd $ODIR
+    echo "</config>" >> $ODIR/config.xml
+    ln -s $SRCDIR/Makefile.target $ODIR/Makefile
+    xsltproc $SRCDIR/config/xml/xinclude.xsl $SRCDIR/build.xml > $ODIR/build-full.xml
+    xsltproc $SRCDIR/config/xml/makefile.xsl $ODIR/build-full.xml > $ODIR/rules.mak
+    echo "ok."
+    printf "Creating config files..."
+    xsltproc $SRCDIR/config/xml/config-c.xsl $ODIR/config.xml > $ODIR/host/include/autoconf.h
+    xsltproc $SRCDIR/config/xml/config-c.xsl $ODIR/config.xml > $ODIR/target/include/autoconf.h
+    xsltproc $SRCDIR/config/xml/config-forth.xsl $ODIR/config.xml > $ODIR/forth/config.fs
+    echo "ok."
+
+    cd $BUILDDIR
+done
+
+if [ "$SRCDIR" != "$BUILDDIR" ]; then
+    ln -s $SRCDIR/Makefile $BUILDDIR
+fi
+
+echo "ODIRS=$ODIRS" >> $BUILDDIR/config-host.mak
+echo "TARGETS=$arch_list" >> $BUILDDIR/config-host.mak

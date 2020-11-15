@@ -1,0 +1,62 @@
+ROM-o-matic web interface for building iPXE ROMs
+------------------------------------------------
+
+This web application generates iPXE images and sends them to a web
+browser.
+
+Available as part of the iPXE source code distribution, which can be
+downlaoded from http://etherboot.org/
+
+Author:  Marty Connor <mdc@etherboot.org>
+License: GPLv2
+Support: http://etherboot.org/mailman/listinfo/ipxe
+         Please send support questions to the iPXE mailing list
+
+System Requirements
+-------------------
+- Apache web server
+- PHP 4+
+- Tools required to build iPXE installed on the server
+  - gcc, mtools, syslinux, perl, etc.
+
+Setup
+-----
+As distributed, it is expected that the rom-o-matic source code
+directory is in the contrib directory of a iPXE source distribution.
+
+The easiest way to do this is to simply put a iPXE source distribution
+in a web server accessible directory.
+
+If this is not the case, you will need to either edit the file
+
+    "globals.php"
+
+or create a file called
+
+    "local-config.php"
+
+containing the following lines:
+
+<?php
+$src_dir = "../../src";
+?>
+
+Then change the line beginning "$src_dir = " to the path of your iPXE
+source code tree.
+
+To make build times shorter, before you run rom-o-matic for the first time
+you should cd to the ipxe "src" directory and enter the following
+commands:
+
+  $ make
+  $ make bin/NIC
+
+This will pro-compile most object files and will make your rom-o-matic
+builds much faster.
+
+Running rom-o-matic from a web browser
+--------------------------------------
+Enter a URL like:
+
+   http://example.com/ipxe-1.x.x/contrib/rom-o-matic
+

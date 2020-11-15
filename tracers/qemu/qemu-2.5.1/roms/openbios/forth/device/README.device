@@ -1,0 +1,22 @@
+The code you find here implements the IEEE 1275-1994 Open Firmware
+device interface.
+
+Chapter     File                    Comment
+<none>      structures.fs           generic structures used by 5.3
+5.3.2       <none>                  defined in user interface
+5.3.3       fcode.fs                complete, partly untested
+5.3.4       package.fs              incomplete
+5.3.5       property.fs             incomplete
+5.3.6       display.fs              incomplete
+5.3.7       other.fs                incomplete
+
+H2 and
+5.3.1.1.1   preof.fs                pre-IEEE-1275-1994 words
+	    split.fs
+	    pathres.fs		    path resolution
+
+	    table.fs		    fcode evaluator
+	    feval.fs		    (byte-load)
+
+
+2003/11/12 Stefan Reinauer <stepan@openbios.org>

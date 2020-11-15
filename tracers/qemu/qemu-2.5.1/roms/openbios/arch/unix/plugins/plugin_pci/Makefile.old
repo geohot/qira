@@ -1,0 +1,21 @@
+# tag: Makefile for OpenBIOS PCI plugin
+#
+# Copyright (C) 2003 Stefan Reinauer
+#
+# See the file "COPYING" for further information about
+# the copyright and warranty status of this work.
+#
+
+PLUGIN_SOURCES = plugin_pci.c
+PLUGIN_NAME    = plugin_pci.so
+
+INCLUDES := -I$(TOPDIR)/include -I$(BUILDDIR) -I..
+VPATH    := $(VPATH):.
+
+all: $(PLUGIN_NAME)
+
+$(PLUGIN_NAME): $(PLUGIN_SOURCES)
+	$(CC) -shared -Wall -Os -fPIC $(INCLUDES) $< -o $(BUILDDIR)/$@
+
+clean:
+	rm -f plugin_*.so

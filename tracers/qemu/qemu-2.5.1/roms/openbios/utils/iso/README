@@ -1,0 +1,5 @@
+The files in this directory are packed into the ISO image created with 
+
+ $ make runiso
+
+

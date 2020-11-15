@@ -1,0 +1,13 @@
+MEDIA = linux
+
+# enable valgrind
+CFLAGS += -UNVALGRIND
+
+INCDIRS += arch/x86/include/linux
+SRCDIRS += interface/linux
+SRCDIRS += drivers/linux
+SRCDIRS += arch/x86/core/linux
+
+$(BIN)/%.linux : $(BIN)/%.linux.tmp
+	$(QM)$(ECHO) "  [FINISH] $@"
+	$(Q)$(CP) $< $@

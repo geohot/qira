@@ -1,0 +1,10 @@
+#!/bin/sh
+
+PREF="."
+for x in 0 1 2 3 4 5 6 7 ; do
+    test -f $PREF/config/configure.in && break
+    PREF="../$PREF"
+done
+ROOT=$( echo $(pwd) | sed "s,\(//*[^/][^/]*\)\{$x\}/*\$,," )
+RELNAME=$( echo $(pwd) | sed "s,^$ROOT/*,,g" )
+echo $RELNAME

@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<xmlmake>
+ <project name="openbios">
+  <include href="kernel/build.xml"/>
+  <include href="forth/build.xml"/>
+  <include href="libc/build.xml"/>
+  <include href="libgcc/build.xml"/>
+  <include href="libopenbios/build.xml"/>
+  <include href="packages/build.xml"/>
+  <include href="drivers/build.xml"/>
+  <include href="fs/build.xml"/>
+  <include href="arch/build.xml"/>
+ </project>
+</xmlmake>

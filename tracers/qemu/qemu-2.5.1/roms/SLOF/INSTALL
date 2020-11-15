@@ -1,0 +1,72 @@
+Slimline Open Firmware - SLOF
+
+Copyright (C) 2005, 2012 IBM Corporation
+
+
+INSTALL ON JS20/JS21
+===============================================================================
+
+ Detailed information about how to use SLOF on JS20 and JS21 can be found in
+ the document FlashingSLOF.pdf
+
+ The JS20 and JS21 blades both have 2 "flashsides". They have a 8MB flash part
+ which is divided into a 4MB "temporary" side and a 4MB "permanent" side.
+
+ The temporary side is the flashside used for the normal operation and the
+ permanent side is used as a backup if the temporary should ever fail.
+
+ Therefore it is important that the permanent flash side is not changed so
+ that if ever required the original firmware can be restored.
+
+ SLOF usually warns or in most cases does not easily allow to overwrite the
+ permanent side.
+
+ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ !                                                       !
+ ! NOTE: WHEN FLASHING A NEW FIRMWARE IMAGE YOU MIGHT    !
+ ! DESTROY YOUR FIRMWARE IMAGE AND LOOSE YOUR WARRANTY!  !
+ !                                                       !
+ ! YOU MAY NEED TO CALL SERVICE, IF THE FIRMWARE IMAGE   !
+ ! IS DESTROYED !                                        !
+ !                                                       !
+ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+REMOVING SLOF FROM JS20/JS21
+===============================================================================
+
+ If you want to boot the original firmware again, you need to boot the blade 
+ from the management module. If auto-boot is enabled you have to press "s"
+ to reach the firmware prompt.
+ On the SLOF command line, type:
+
+  0 > other-firmware
+
+ and it should get you back to running the original firmware. To permanently 
+ get it back, after booting Linux from there, type
+
+  $ update_flash -r
+  $ halt
+ 
+ You will boot on the PERM side. To boot from the TEMP side again, you need to
+ restart the Blade System MGMT Processor.
+
+    Following steps are needed on
+        Management Module -> Blade Tasks -> Power/Restart
+        
+        Power Off Blade
+        Restart Blade System Mgmt Processor 
+        Power On Blade
+
+
+INSTALL ON KVM/QEMU
+===============================================================================
+
+ Recent versions of QEMU should already be shipped with a version of SLOF.
+ To upgrade SLOF in your QEMU installation, back-up the old firmware file
+ .../share/qemu/slof.bin from your QEMU installation, then simply copy the
+ new SLOF image (for example "boot_rom.bin" after building board-qemu) to
+ this location.
+

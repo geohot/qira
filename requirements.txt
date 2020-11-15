@@ -2,12 +2,12 @@ capstone==4.0.1
 certifi==2019.3.9
 chardet==3.0.4
 Click==7.0
-Cython==0.29.6
 Flask==1.0.2
 Flask-SocketIO==3.3.2
 gevent==1.4.0
 greenlet==0.4.15
 hexdump==3.3
+html==1.16
 idna==2.8
 ipaddr==2.2.0
 itsdangerous==1.1.0
@@ -26,3 +26,6 @@ socketIO-client==0.7.2
 urllib3==1.24.1
 websocket-client==0.56.0
 Werkzeug==0.15.1
+
+./qiradb
+

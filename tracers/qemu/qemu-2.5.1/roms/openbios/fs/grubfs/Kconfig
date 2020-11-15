@@ -1,0 +1,83 @@
+config FSYS_EXT2FS
+	depends on GRUBFS
+	bool "EXT2 support"
+	default n
+	help
+	  Include EXT2 filesystem support
+
+config FSYS_FAT
+	depends on GRUBFS
+	bool "(V)FAT support"
+	default n
+	help
+	  Include VFAT/FAT (MSDOS / Windows95) filesystem support
+
+config FSYS_JFS
+	depends on GRUBFS
+	bool "JFS support"
+	default n
+	help
+	  Include JFS support
+
+config FSYS_MINIX
+	depends on GRUBFS
+	bool "Minix filesystem support"
+	default n
+	help
+	  Include Minix filesystem support
+
+config FSYS_REISERFS
+	depends on GRUBFS
+	bool "Reiser filesystem support"
+	default n
+	help
+	  Include Reiser filesystem support
+	  
+config FSYS_XFS
+	depends on GRUBFS
+	bool "XFS support"
+	default n
+	help
+	  Include XFS support
+
+config FSYS_UFS
+	depends on GRUBFS
+	bool "UFS/UFS2 support"
+	default n
+	help
+	  Include UFS/UFS2 support
+
+config FSYS_ISO9660
+	depends on GRUBFS
+	bool "ISO 9660 support"
+	default n
+	help
+	  Include ISO9660 (cdrom) filesystem support
+
+config FSYS_FFS
+	depends on GRUBFS
+	bool "FreeBSD FFS support"
+	default n
+	help
+	  Include FreeBSD FFS filesystem support
+
+config FSYS_VSTAFS
+	depends on GRUBFS
+	bool "VSTA filesystem support"
+	default n
+	help
+	  Include VSTA filesystem support
+
+config FSYS_NTFS
+	depends on GRUBFS
+	bool "NT filesystem support"
+	default n
+	help
+	  Include NTFS filesystem support
+
+config FSYS_AFFS
+	depends on GRUBFS
+	bool "Amiga fast filesystem support"
+	default n
+	help
+	  Include Amiga FFS filesystem support

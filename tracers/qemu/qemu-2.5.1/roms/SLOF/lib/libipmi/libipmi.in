@@ -1,0 +1,24 @@
+/******************************************************************************
+ * Copyright (c) 2004, 2008 IBM Corporation
+ * All rights reserved.
+ * This program and the accompanying materials
+ * are made available under the terms of the BSD License
+ * which accompanies this distribution, and is available at
+ * http://www.opensource.org/licenses/bsd-license.php
+ *
+ * Contributors:
+ *     IBM Corporation - initial implementation
+ *****************************************************************************/
+
+cod(IPMI-KCS-CMD)
+cod(IPMI-SYSTEM-REBOOT)
+cod(IPMI-POWER-OFF)
+cod(IPMI-OEM-STOP-BOOTWATCHDOG)
+cod(IPMI-OEM-SET-BOOTWATCHDOG)
+cod(IPMI-OEM-RESET-BOOTWATCHDOG)
+cod(IPMI-OEM-LED-SET)
+cod(IPMI-OEM-READ-VPD)
+cod(IPMI-OEM-WRITE-VPD)
+cod(IPMI-OEM-GET-BLADE-DESCR)
+cod(IPMI-OEM-BIOS2SP)
+cod(IPMI-SET-SENSOR)

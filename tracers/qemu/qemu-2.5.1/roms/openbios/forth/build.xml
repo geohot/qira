@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+
+<build>
+  <!-- don't change this order -->
+  <include href="bootstrap/build.xml"/>
+  <include href="lib/build.xml"/>
+  <include href="device/build.xml"/>
+  <include href="debugging/build.xml"/>
+  <include href="admin/build.xml"/>
+  <include href="util/build.xml"/>
+  <include href="packages/build.xml"/>
+  <include href="system/build.xml"/>
+</build>

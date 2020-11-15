@@ -1,0 +1,22 @@
+mainmenu "OpenBIOS Configuration"
+
+config IPF
+	bool
+	default y
+	help
+	  Building for IPF hardware.
+
+config LITTLE_ENDIAN
+	bool
+	default y
+	help
+	  IPF is little endian.
+
+menu "Build hosted UNIX Binary"
+source "arch/unix/Kconfig"
+endmenu
+
+source "kernel/Kconfig"
+source "forth/Kconfig"
+source "libopenbios/Kconfig"
+source "drivers/Kconfig"

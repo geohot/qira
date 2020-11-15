@@ -1,0 +1,11 @@
+IEEE 1275-1994 support packages
+-------------------------------
+
+These files create the sub nodes of the /packages node. The nodes
+do normally not need an open or close method since their methods are
+called statically. 
+
+Currently there are the following support packages:
+* deblocker
+* obp-tftp
+*

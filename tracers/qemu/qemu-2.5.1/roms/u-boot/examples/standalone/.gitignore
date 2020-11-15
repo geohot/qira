@@ -1,0 +1,11 @@
+/atmel_df_pow2
+/hello_world
+/interrupt
+/mem_to_mem_idma2intr
+/sched
+/smc91111_eeprom
+/smc911x_eeprom
+/test_burst
+/timer
+*.bin
+*.srec

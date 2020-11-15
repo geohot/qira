@@ -1,0 +1,11 @@
+TODO
+
+booting
+ * support more arches than x86+amd64
+ * compressed + rommable dictionary
+ 
+forth bootstrap
+ * make prompt configurable 
+ * check state-variable when defining a new word.
+
+tag: TODO for the forth system

@@ -1,0 +1,23 @@
+<build condition="HOST_UNIX">
+
+ <dictionary name="openbios-unix" init="openbios" target="forth">
+  <object source="tree.fs"/>
+ </dictionary>
+
+ <executable name="openbios-unix" target="target">
+  <rule>
+	$(call quiet-command,$(CC) $(CFLAGS) -rdynamic $(LIBDL_LDFLAGS) -o $@ $^,"  LINK  $(TARGET_DIR)$@")
+  </rule>
+  <object source="unix.c" flags="-DBOOTSTRAP"/>
+  <object source="boot.c" flags="-DBOOTSTRAP"/>
+  <object source="blk.c"  flags="-DBOOTSTRAP"/>
+  <object source="plugins.c" flags="-DBOOTSTRAP" condition="PLUGINS"/>
+  <external-object source="libbootstrap.a"/>
+  <external-object source="libpackages.a"/>
+  <external-object source="libopenbios.a"/>
+  <external-object source="libdrivers.a"/>
+  <external-object source="libfs.a"/>
+  <external-object source="liblibc.a"/>
+ </executable>
+
+</build>

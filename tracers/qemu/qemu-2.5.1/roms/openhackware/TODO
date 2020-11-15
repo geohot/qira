@@ -1,0 +1,94 @@
+#
+#  <TODO>
+#     
+#  TODO list for Open Hack'Ware.
+#  
+#  Copyright (C) 2005 Jocelyn Mayer (l_indien@magic.fr)
+#  
+#   This program is free software; you can redistribute it and/or
+#   modify it under the terms of the GNU General Public License V2
+#   as published by the Free Software Foundation
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program; if not, write to the Free Software
+#   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+
+This TODO list is still quite unordered.
+Any other ideas are welcome.
+
+* Features needed for 0.5 release:
+ - 2.6 Linux kernel boot for PMac & PREP targets
+ - 2.2 Linux kernel boot for PMac & PREP targets
+
+* Features needed for 1.0 release:
+ - Mac OS X boot for PMac target
+ - Mac OS 9 boot for PMac target
+ - NetBSD boot for PMac & PREP targets
+ - OpenBSD boot for PMac & PREP targets
+ - AIX boot for PREP target
+ - Windows NT boot for PREP target
+ - user should be able to tune the boot process:
+  x choose boot partition
+  x give special arguments to the bootloader
+
+* Short term fixes:
+ - ASAP: as soon as qemu floppy work again, check floppy boot process.
+ - 2.6 kernel boot.
+ - OSX / Darwin boot
+ - video output is mostly broken for PREP target
+   (reported by Bruce Beare (bbeare) <bbeare@cisco.com>)
+
+* Fixes:
+ - fix the OF tree.
+ - fix the bootinfos (seem buggy and are incomplete)
+ - check why OF_blockdev_set_boot_device may be called more than once.
+
+* Features to be tested:
+ - PEF loader
+
+* New features:
+ - User prompt is needed when multiple bootable partitions are found.
+ - in libfs
+  x ext2 support
+  x isofs support
+  x more filesystems ?
+ - in libpart
+  x Fix IBM PREP CDROMs boot for AIX & WinNT for PREP
+  x add more partition mappings (BSD slices and ?)
+ - in libexec
+  x Windows NT xcoff support (code exists but is to be merged and tested)
+  x Add dynamic linker (needed to boot Apple hardware check CDROMs)
+ - new libfilter:
+  x compression & encryption (gzip for OpenBSD boot, ...).
+ - in libc
+  x Add missing string and memory functions
+  x Add filename/URL manipulation routines (canonicalize, ...)
+  x nls support (code exists but isn't merged).
+  x Add hashed objects support with special cases for strings & unicode strings
+    (code exists, need to be tested and integrated).
+ - New architectures support (generic CHRP, MVME, pegasos, ...).
+   To be coordinated with Qemu improvments.
+
+* Future direction for OpenHackWare:
+ - Improve code split & structuration:
+  x split all device drivers
+  x make OF interface _really_ optional: currently, some devices won't be
+    registered/initialized if OF is not present.
+    For this to be, we should have an internal representation for all devices
+    and OF should become just an interface to this internal tree.
+ - Improve memory management.
+ - Add unitary tests for most library functions
+ - Improve exception vectors
+ - Add virtual devices support for RTAS (virtual SCSI & ethernet)
+   (preliminary code exists but is far from being usable).
+ - Use unicode for internal strings (UTF-8 or UTF-32 ?).
+ - Improve build system (current one is really ugly).
+ - Real forth support (preliminary code exists...).
+ - Accurate terminal emulation (some code exists).
+ - Add a generic device cache (related to improved memory management...).

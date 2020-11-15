@@ -1,0 +1,136 @@
+#! /usr/bin/perl -w
+
+# get-pci-ids: extract pci vendor/device ids from linux net drivers
+
+# Copyright (C) 2003 Georg Baum <gbaum@users.sf.net>
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+# 02110-1301, USA.
+
+
+# Known bugs/limitations:
+# - Does not recognize all drivers because some require special cflags.
+#   Fails also on some drivers that do belong to other architectures
+#   than the one of the machine this script is running on.
+#   This is currently not so important because all drivers that have an
+#   Etherboot counterpart are recognized.
+
+
+use strict;
+use File::Basename "dirname";
+use POSIX "uname";
+
+# Where to find the kernel sources
+my $kernel_src = "/usr/src/linux";
+
+if($#ARGV >= 0) {
+	$kernel_src = shift;
+}
+
+# Sanity checks
+if($#ARGV >= 0) {
+	print STDERR "Too many arguments.\n";
+	print STDERR "Usage: get-pci-ids [path to kernel sources]\n";
+	print STDERR "       /usr/src/linux is assumed if no path is given.\n";
+	exit 1;
+}
+
+unless(-f "$kernel_src/include/linux/version.h") {
+	print STDERR "Could not find $kernel_src/include/linux/version.h.\n";
+	print STDERR "$kernel_src is probably no Linux kernel source tree.\n";
+	exit 1;
+}
+
+# Flags that are needed to preprocess the drivers.
+# Some drivers need optimization
+my $cflags="-D__KERNEL__ -I$kernel_src/include -I$kernel_src/net/inet -O2";
+
+# The C preprocessor. It needs to spit out the preprocessed source on stdout.
+my $cpp="gcc -E";
+
+# List of drivers. We parse every .c file. It does not harm if it does not contain a driver.
+my @drivers = split /\s+/, `find $kernel_src/drivers/net -name '*.c' | sort`;
+
+# Kernel version
+my $version = `grep UTS_RELEASE $kernel_src/include/linux/version.h`;
+chomp $version;
+$version =~ s/\s*#define\s+UTS_RELEASE\s+"(\S+)".*$/$1/g;
+
+# Architecture
+my @uname = uname();
+
+
+# Print header
+print "# PCI vendor/device ids extracted from Linux $version on $uname[4] at " . gmtime() . "\n";
+
+my $driver;
+
+# Process the drivers
+foreach $driver (@drivers) {
+
+	# Preprocess to expand macros
+	my $command = "$cpp $cflags -I" . dirname($driver) . " $driver";
+	open  DRIVER, "$command |" or die "Could not execute\n\"$command\".\n";
+
+	# Extract the pci_device_id structure
+	my $found = 0;
+	my $line = "";
+	my @lines;
+	while(<DRIVER>) {
+		if(/^\s*static\s+struct\s+pci_device_id/) {
+			# This file contains a driver. Print the name.
+			$driver =~ s!$kernel_src/drivers/net/!!g;
+			print "\n$driver\n";
+			$found = 1;
+			next;
+		}
+		if($found == 1){
+			if(/\};/ or /{\s*0\s*,?\s*}/) {
+				# End of struct
+				$found = 0;
+			} else {
+				chomp;
+				if(/\}\s*,?\s*\n?$/) {
+					# This line contains a full entry or the last part of it.
+					$_ = $line . $_;
+					$line = "";
+					s/[,\{\};\(\)]//g;	# Strip punctuation
+					s/^\s+//g;		# Eat whitespace at beginning of line
+					tr[A-Z][a-z];		# Convert to lowercase
+					# Push the vendor and device id to @lines if this line is not empty.
+					# We ignore everything else that might be there
+					my ($vendor_id, $device_id, $remainder) = split /\W+/, $_, 3;
+					push @lines, "$vendor_id $device_id\n" if($vendor_id && $device_id);
+				} else {
+					# This line does contain a partial entry. Remember it.
+					$line .= "$_ ";
+				}
+			}
+		}
+	}
+	close DRIVER;		# No "or die", because $cpp fails on some files
+
+	# Now print out the sorted values
+	@lines = sort @lines;
+	my $lastline = "";
+	foreach(@lines) {
+		# Print each vendor/device id combination only once.
+		# Some drivers (e.g. e100) do contain subfamilies
+		print if($_ ne $lastline);
+		$lastline = $_;
+	}
+}
+
+

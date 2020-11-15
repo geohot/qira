@@ -1,0 +1,43 @@
+/******************************************************************************
+ * Copyright (c) 2004, 2011 IBM Corporation
+ * All rights reserved.
+ * This program and the accompanying materials
+ * are made available under the terms of the BSD License
+ * which accompanies this distribution, and is available at
+ * http://www.opensource.org/licenses/bsd-license.php
+ *
+ * Contributors:
+ *     IBM Corporation - initial implementation
+ *****************************************************************************/
+
+/*
+ * libelf Forth wrapper
+ */
+
+#include <libelf.h>
+
+// : elf-load-file  ( fileaddr -- entry type )
+PRIM(ELF_X2d_LOAD_X2d_FILE)
+{
+	void *file_addr = TOS.a;
+	int type;
+	unsigned long entry;
+	type = elf_load_file(file_addr, &entry, elf_forth_claim, flush_cache);
+	TOS.u = entry;
+	PUSH; TOS.n = type;
+}
+MIRP
+
+// : elf-load-file-to-addr  ( fileaddr destaddr -- entry type )
+PRIM(ELF_X2d_LOAD_X2d_FILE_X2d_TO_X2d_ADDR)
+{
+	void *dest_addr = TOS.a; POP;
+	void *file_addr = TOS.a;
+	int type;
+	unsigned long entry;
+	type = elf_load_file_to_addr(file_addr, dest_addr, &entry,
+	                             elf_forth_claim, flush_cache);
+	TOS.u = entry;
+	PUSH; TOS.n = type;
+}
+MIRP
