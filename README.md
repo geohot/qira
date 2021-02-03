@@ -43,7 +43,7 @@ cd qira/docker
 Run:
 <pre>
 sudo docker run -p 3302:3302 -it qira bash
-qira _exec_
+qira _target_
 </pre>
 
 Then, connect to __localhost:3002__
