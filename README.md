@@ -43,10 +43,10 @@ cd qira/docker
 Run:
 <pre>
 sudo docker run -p 3302:3302 -it qira bash
-qira _executable_file_
+qira _exec_
 </pre>
 
-Then, connect to _localhost:3002_
+Then, connect to __localhost:3002__
 
 If you want to copy a file from your filesystem to the container launch: <pre>sudo docker cp _source_ _container_name_:_path_ </pre>
 
