@@ -190,10 +190,9 @@ Graph.prototype.render = function() {
 
     } else {
       // this is a vertex
-      var addr = resp[i].split(' ')[0].split('N')[1].trim();
+      var addr = resp[i].split(' ')[0].split('N')[1].split('\t')[0].trim();
       var pos = resp[i].slice(resp[i].indexOf('pos=')).split('"')[1].split(',');
 
-      //p(addr);
       var r = this.vertices[addr].rendered;
 
       if (r !== undefined) {
