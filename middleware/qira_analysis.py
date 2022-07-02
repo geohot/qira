@@ -373,16 +373,16 @@ def analyse_calls(trace):
         rchanges = filter(lambda x:x['type'] in "RW",trace.db.fetch_changes_by_clnum(cl, -1))
         for rchange in rchanges:
           regnum = rchange['address']//rsize
-          if rchange['type'] is 'W' and regnum < nregs:
+          if rchange['type'] == 'W' and regnum < nregs:
             init_regs.add(regnum)
             if ((regnum) in uninit_regs) and (rchange['data'] == regs[regnum]):
               #if we thought they did an uninitialized read and they just clobbered it and wrote it later,
               #don't consider this a possible argument
               uninit_regs.remove(regnum)
-          elif (rchange['type'] is 'R' and regnum < nregs) and (regnum not in init_regs):
+          elif (rchange['type'] == 'R' and regnum < nregs) and (regnum not in init_regs):
             uninit_regs.add(regnum)
       abi,nargs = guess_calling_conv(program,uninit_regs,((seen-esp)/rsize) if (seen > 0) else 0)
-      if func.abi is 'UNKNOWN':
+      if func.abi == 'UNKNOWN':
         func.abi = abi
       func.nargs = max(nargs,func.nargs)
 
@@ -394,7 +394,7 @@ def display_call_args(instr,trace,clnum):
   program.static.analyzer.make_function_at(program.static,iptr)
 
   func = program.static[iptr]['function']
-  if func.abi is 'UNKNOWN':
+  if func.abi == 'UNKNOWN':
     return ""
 
   endclnum = get_last_instr(trace.dmap,clnum)

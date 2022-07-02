@@ -28,6 +28,8 @@ if __name__ == '__main__':
   parser.add_argument("--web-port", metavar="PORT", help="listen port for web interface. 3002 by default", type=int, default=qira_config.WEB_PORT)
   parser.add_argument("--socat-port", metavar="PORT", help="listen port for socat. 4000 by default", type=int, default=qira_config.SOCAT_PORT)
   parser.add_argument('-S', '--static', help="enable static2", action="store_true")
+  parser.add_argument('--no-run', help="don't run the program", action="store_true")
+  parser.add_argument('--no-delete-runs', help="don't clear the logs", action="store_true")
   #capstone flag in qira_config for now
 
   # parse arguments, first try
@@ -89,14 +91,15 @@ if __name__ == '__main__':
   except:
     is_qira_running = 0
     print("no qira server found, starting it")
-    program.clear()
+    program.clear(not args.no_delete_runs)
 
   # start the binary runner
   if args.server:
     qira_socat.start_bindserver(program, qira_config.SOCAT_PORT, -1, 1, True)
   else:
-    print("**** running",program.program)
-    program.execqira(shouldfork=not is_qira_running)
+    if not args.no_run:
+      print("**** running",program.program)
+      program.execqira(shouldfork=not is_qira_running)
 
   if not is_qira_running:
     # start the http server

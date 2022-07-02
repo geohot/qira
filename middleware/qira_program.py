@@ -285,10 +285,11 @@ class Program:
     else:
       raise Exception("unknown binary type")
 
-  def clear(self):
+  def clear(self, delete_old_runs=True):
     # probably always good to do except in development of middleware
-    print("*** deleting old runs")
-    self.delete_old_runs()
+    if delete_old_runs:
+      print("*** deleting old runs")
+      self.delete_old_runs()
 
     # getting asm from qemu
     self.create_asm_file()

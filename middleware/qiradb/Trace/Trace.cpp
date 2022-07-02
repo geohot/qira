@@ -18,6 +18,8 @@
 #define PAGE_MASK 0xFFFFFFFFFFFFF000LL
 #define INVALID_CLNUM 0xFFFFFFFF
 
+int DEBUG_TRACE = getenv("DEBUG_TRACE") != NULL ? atoi(getenv("DEBUG_TRACE")) : 0;
+
 void *thread_entry(void *trace_class) {
   Trace *t = (Trace *)trace_class;  // best c++ casting
 
@@ -74,12 +76,13 @@ char Trace::get_type_from_flags(uint32_t flags) {
 }
 
 inline void Trace::commit_memory(Clnum clnum, Address a, uint8_t d) {
+  if (DEBUG_TRACE) printf("DEBUG_TRACE: commit_memory at %u address: %llx data: %x\n", clnum, a, d);
   pair<map<Address, MemoryCell>::iterator, bool> ret = memory_.insert(MP(a, MemoryCell()));
   ret.first->second[clnum] = d;
 }
 
 inline MemoryWithValid Trace::get_byte(Clnum clnum, Address a) {
-  //printf("get_byte %u %llx\n", clnum, a);
+  if (DEBUG_TRACE >= 2) printf("DEBUG_TRACE: get_byte %u %llx\n", clnum, a);
   map<Address, MemoryCell>::iterator it = memory_.find(a);
   if (it == memory_.end()) return 0;
 
@@ -130,6 +133,8 @@ bool Trace::remap_backing(uint64_t new_size) {
 }
 
 bool Trace::ConnectToFileAndStart(char *filename, unsigned int trace_index, int register_size, int register_count, bool is_big_endian) {
+  if (DEBUG_TRACE) printf("DEBUG_TRACE: constructing Trace with file %s\n", filename);
+
   trace_index_ = trace_index;
   is_big_endian_ = is_big_endian;
   register_size_ = register_size;
@@ -184,6 +189,7 @@ void Trace::process() {
     // no need to lock this here, because this is the only thread that changes it
     const struct change *c = &backing_[entries_done_];
     char type = get_type_from_flags(c->flags);
+    if (DEBUG_TRACE >= 2) printf("DEBUG_TRACE: parsing change %d with type %c\n", c->clnum, type);
 
     RWLOCK_WRLOCK(db_lock_);
     // clnum_to_entry_number_, instruction_pages_
