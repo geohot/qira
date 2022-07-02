@@ -4,7 +4,6 @@ stream = io.connect(STREAM_URL);
 var current_regs = undefined;
 
 function on_maxclnum(msg) { DS("maxclnum");
-  p("***** onmaxclnum");
   update_maxclnum(msg);
 } stream.on('maxclnum', on_maxclnum);
 
