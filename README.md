@@ -10,13 +10,13 @@
 ## Supported OS
 
 <pre>
-Ubuntu 14.04 and 16.04 supported out of the box.
-18.04 is having a problem with building QEMU
-See forked QEMU source at https://github.com/geohot/qemu/tree/qira to fix.
+Linux (current LTS releases) is the primary supported platform.
+macOS 27 beta is supported for the Python/web UI flow and non-QEMU backends.
 
-Non Linux hosts may run the rest of QIRA, but cannot run the QEMU tracer.
-Very limited support for Mac OS X and Windows natively.
-The Docker image in docker should work everywhere.
+QEMU user tracing only works on Linux because it forwards syscalls to the host kernel.
+On macOS, use alternate backends (for example, PIN where available).
+
+The Docker image in docker provides a Linux environment if you are not on Linux.
 </pre>
 
 ## Installing release
@@ -31,6 +31,9 @@ git clone https://github.com/geohot/qira.git
 cd qira/
 ./install.sh
 </pre>
+
+The installer uses a Python 3 virtual environment (`python3 -m venv`) and installs
+dependencies from `requirements.txt`.
 
 ## Installation Extras
 
@@ -116,7 +119,7 @@ u -- make undefined at iaddr
 
 ## Installation on Windows (experimental)
 
-* Install git and python 2.7.9
+* Install git and Python 3
 * Run install.bat
 
 
@@ -144,4 +147,3 @@ QIRA static has historically been such a trash heap it's gated behind -S. QIRA s
 User input and the actual traces of the program should drive creation of the static database. Don't try to recover all CFGs, only what ran.
 
 The basic idea of static is that it exists at change -1 and doesn't change ever. Each address has a set of tags, including things like name.
-

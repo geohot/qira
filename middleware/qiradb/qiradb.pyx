@@ -1,4 +1,4 @@
-from Trace.Trace cimport Trace
+from qiradb.Trace.Trace cimport Trace
 
 # copied from Trace.h
 SIZE_MASK = 0xFF
@@ -65,4 +65,3 @@ cdef class PyTrace:
             "size": it.flags & SIZE_MASK}
       ret.append(tl)
     return ret
-
