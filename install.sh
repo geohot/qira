@@ -1,18 +1,33 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-# install system deps
-if [ $(which apt-get) ]; then
+if [[ ! -d venv ]]; then
+  python3 -m venv venv
+fi
+
+source venv/bin/activate
+python -m pip install --upgrade pip setuptools wheel
+
+# install system deps (Linux)
+if command -v apt-get >/dev/null 2>&1; then
   echo "installing deps for ubuntu"
-  sudo apt-get -y install git curl python python-dev python3-pip build-essential pkg-config zlib1g-dev libglib2.0-dev libpixman-1-dev
-  sudo pip3 install virtualenv 
- 
+  sudo apt-get update
+  sudo apt-get -y install git curl python3 python3-venv python3-dev python3-pip build-essential pkg-config zlib1g-dev libglib2.0-dev libpixman-1-dev
+elif [[ "$(uname)" == "Darwin" ]]; then
+  echo "installing deps for macOS"
+  if command -v brew >/dev/null 2>&1; then
+    brew install python pkg-config glib pixman
+  else
+    echo "*** Homebrew not found. Install Homebrew, then rerun install.sh ***"
+    exit 1
+  fi
 else
-  echo "*** You'll need to install Ubuntu or get a working build env for qemu and python yourself ***"
+  echo "*** Please install python3, venv support, and build tooling for your platform manually ***"
 fi
 
 # build qemu
 if [[ "$(uname)" == 'Linux' ]]; then
-  if [ $(tracers/qemu/qira-i386 > /dev/null; echo $?) == 1 ]; then
+  if tracers/qemu/qira-i386 >/dev/null 2>&1; then
     echo "QIRA QEMU appears to run okay"
   else
     echo "building QEMU"
@@ -27,11 +42,8 @@ else
   echo "See other backends in qira/tracers, PIN may work on Windows and OS X"
 fi
 
-echo "building python venv"
-virtualenv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip install --upgrade -r requirements.txt
+echo "installing Python dependencies"
+python -m pip install --upgrade -r requirements.txt
 
 echo "running tests"
 ./run_tests.sh
@@ -45,4 +57,3 @@ echo "  Check out README for more info"
 echo "  Or just dive in with 'qira /bin/ls'"
 echo "  And point Chrome to localhost:3002"
 echo "    ~geohot"
-
