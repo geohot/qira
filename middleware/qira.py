@@ -104,7 +104,10 @@ def main():
   else:
     if not args.no_run:
       print("**** running",program.program)
-      program.execqira(shouldfork=not is_qira_running)
+      try:
+        program.execqira(shouldfork=not is_qira_running)
+      except qira_program.TracerNotFound as e:
+        sys.exit("\n%s" % e)
 
   if not is_qira_running:
     # start the http server

@@ -125,8 +125,7 @@ def forkat(forknum, clnum, pending):
   if args.server:
     qira_socat.start_bindserver(program, qira_config.FORK_PORT, forknum, clnum)
   else:
-    if os.fork() == 0:
-      program.execqira(["-qirachild", "%d %d %d" % (forknum, clnum, next_run_id)])
+    program.execqira(["-qirachild", "%d %d %d" % (forknum, clnum, next_run_id)])
 
 
 @socketio.on('deletefork', namespace='/qira')

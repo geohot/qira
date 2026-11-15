@@ -4,6 +4,7 @@ from . import qira_analysis
 
 import os
 import shutil
+import subprocess
 import sys
 import threading
 import time
@@ -25,6 +26,9 @@ def which(prog):
   if os.path.isfile(prog):
     return os.path.realpath(prog)
   raise Exception("binary not found")
+
+class TracerNotFound(Exception):
+  pass
 
 def empty_dir(path):
   """Delete what is in path but keep path itself, so it may be a mount point."""
@@ -384,7 +388,10 @@ class Program:
     self.traces[i] = Trace(fn, i, self, self.tregs[1], len(self.tregs[0]), self.tregs[2])
     return self.traces[i]
 
-  def execqira(self, args=[], shouldfork=True):
+  def execqira(self, args=[], shouldfork=True, stdio=None):
+    """Start the tracer. shouldfork=True runs it as a child process and returns the
+    subprocess.Popen (stdio: a file descriptor for its stdin/stdout/stderr, e.g. a
+    socket); shouldfork=False replaces this process with it."""
     if self.runnable == False:
       return
     if qira_config.USE_PIN:
@@ -393,13 +400,12 @@ class Program:
     else:
       eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
     if not os.path.exists(eargs[0]):
-      print("\nQIRA tracer %s not found" % eargs[0])
-      print("Your install is broken. Check ./install.sh for issues, or point QIRA_TRACER_DIR at the tracers/ folder")
-      sys.exit(-1)
-    if shouldfork:
-      if os.fork() != 0:
-        return
+      raise TracerNotFound("QIRA tracer %s not found\n"
+        "Your install is broken. Check ./install.sh for issues, or point QIRA_TRACER_DIR at the tracers/ folder" % eargs[0])
     #print "***",' '.join(eargs)
+    if shouldfork:
+      # a subprocess instead of os.fork(): this process runs threads (web server, analysis)
+      return subprocess.Popen(eargs, stdin=stdio, stdout=stdio, stderr=stdio)
     os.execvp(eargs[0], eargs)
 
 
