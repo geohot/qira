@@ -33,3 +33,12 @@ venv
 capstone
 tests_auto/binary-autogen
 
+
+# uv / build
+.venv/
+build/
+dist/
+*.egg-info/
+*.so
+__pycache__/
+.pytest_cache/

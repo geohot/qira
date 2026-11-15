@@ -3,17 +3,9 @@
 
 #include <vector>
 #include <map>
-#if __cplusplus == 201103L
-  #include <unordered_map>
-#else
-  //#define USE_BOOST
-  #ifdef USE_BOOST
-    #include <boost/unordered_map.hpp>
-    #define unordered_map boost::unordered_map
-  #else
-    #define unordered_map map
-  #endif
-#endif
+#include <unordered_map>
+#include <functional>
+#include <utility>
 #include <set>
 
 #ifndef _WIN32
@@ -75,6 +67,14 @@ typedef uint64_t Address;
 typedef map<Clnum, uint8_t> MemoryCell;
 typedef map<Clnum, uint64_t> RegisterCell;
 
+// key of addresstype_to_clnums_: (address, change type)
+typedef pair<Address, char> AddressType;
+struct AddressTypeHash {
+  size_t operator()(const AddressType &k) const {
+    return hash<Address>()(k.first) ^ (hash<char>()(k.second) * 0x9E3779B97F4A7C15ULL);
+  }
+};
+
 // copied from qemu_mods/tci.c 
 struct change {
   Address address;
@@ -122,6 +122,7 @@ public:
   bool is_running_;
 private:
   THREAD thread;
+  bool thread_started_;
 
   inline void commit_memory(Clnum clnum, Address a, uint8_t d);
   inline MemoryWithValid get_byte(Clnum clnum, Address a);
@@ -129,7 +130,7 @@ private:
   bool is_big_endian_;
   // the backing of the database
   RWLOCK db_lock_;
-  unordered_map<pair<Address, char>, set<Clnum> > addresstype_to_clnums_;
+  unordered_map<AddressType, set<Clnum>, AddressTypeHash> addresstype_to_clnums_;
   vector<EntryNumber> clnum_to_entry_number_;
   vector<RegisterCell> registers_; int register_size_, register_count_;
   map<Address, MemoryCell> memory_;
