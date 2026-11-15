@@ -1,14 +1,12 @@
-#!/bin/bash -e
-
-source venv/bin/activate
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$(readlink -f "$0")")"
 
 # ned's tests, which are really awesome
 # why weren't these used?
 cd tests_auto
 #./autogen-extras.sh
 #python autogen.py --dwarf --all
-python autogen.py --dwarf
+uv run python autogen.py --dwarf
 cd ../
-cd static2
-python testing.py
-
+uv run python static2/testing.py
