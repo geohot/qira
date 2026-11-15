@@ -1,16 +1,13 @@
-#!/usr/bin/env python2.7
-
-#needed for qira_config
+#!/usr/bin/env python3
+# run from the checkout: uv run python static2/testing.py
 import sys
 import os
-sys.path.insert(0, os.path.join('..','middleware'))
-import qira_config
-import struct
 
 try:
-  from static2 import *
+  from qira.legacy.static2 import *
+  from qira.legacy import qira_config
 except ImportError as e:
-  print("Couldn't import static2 with error `{}'. Are you in the virtualenv?".format(e))
+  print("Couldn't import qira.legacy.static2 with error `{}'. Run it with uv run.".format(e))
   sys.exit()
 import subprocess
 import argparse

@@ -33,3 +33,21 @@ venv
 capstone
 tests_auto/binary-autogen
 
+
+# uv / build
+.venv/
+build/
+dist/
+*.egg-info/
+*.so
+__pycache__/
+.pytest_cache/
+# Selenium Manager's driver cache for the sandbox (SE_CACHE_PATH, see UPGRADE.md rule 4)
+/.cache/
+
+# devenv / direnv / local settings
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+.direnv/
+.env

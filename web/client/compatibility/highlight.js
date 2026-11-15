@@ -104,7 +104,6 @@ Deps.autorun(function() { DA("rehighlight");
   rehighlight();
 });
 
-stream = io.connect(STREAM_URL);
 
 function get_address_from_class(t, type) {
   if (type === undefined) type = "addr";

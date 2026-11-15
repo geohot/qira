@@ -1,4 +1,3 @@
-stream = io.connect(STREAM_URL);
 
 function on_setiaddr(iaddr) { DS("setiaddr");
   update_iaddr(iaddr);

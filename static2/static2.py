@@ -1,6 +1,3 @@
-#!/usr/bin/env python2.7
-from __future__ import print_function
-
 # NO MORE RADARE
 # tags should be dynamically generated
 #   like when you request the 'instruction' tag, it triggers the disassembly
@@ -30,20 +27,13 @@ from __future__ import print_function
 # fhex and ghex shouldn't be used
 # all addresses are numbers
 
-import collections
-import os, sys
+import sys
 import re
-import pickle
-import atexit
-from hashlib import sha1
 
-sys.path.append("../middleware")
-import qira_config
+from .model import *
 
-from model import *
-
-import loader
-import analyzer
+from . import loader
+from . import analyzer
 
 # the new interface for all things static
 # mostly tags, except for names and functions
@@ -113,8 +103,8 @@ class Static:
           continue
         ret[k] = d[k]
       return ret
-    kk = self.tags.keys()
-    vv = map(lambda x: blacklist(self.tags[x].backing), kk)
+    kk = list(self.tags.keys())
+    vv = [blacklist(self.tags[x].backing) for x in kk]
     return self.global_tags.backing, kk, vv
 
   def deserialize(self, dat):
@@ -203,15 +193,14 @@ class Static:
   def memory(self, address, ln):
     dat = []
     def ret():
-      if (sys.version_info > (3, 0)):
-        return bytes(dat)
-      else:
-        return ''.join(dat)
+      return bytes(dat)
+    # snapshot: other threads add chunks while we read
+    chunks = list(self.base_memory.keys())
     for i in range(ln):
       ri = address+i
 
       # hack for "RuntimeError: dictionary changed size during iteration"
-      for (ss, se) in self.base_memory.keys():
+      for (ss, se) in chunks:
         if ss <= ri and ri < se:
           try:
             dat.append(self.base_memory[(ss,se)][ri-ss])
@@ -223,7 +212,7 @@ class Static:
   def add_memory_chunk(self, address, dat):
     #print "add segment",hex(address),len(dat)
     # check for dups
-    for (laddress, llength) in self.base_memory:
+    for (laddress, llength) in list(self.base_memory):
       if address == laddress:
         if self.base_memory[(laddress, llength)] != dat:
           print("*** WARNING, changing segment",hex(laddress),llength)
@@ -242,6 +231,7 @@ class Static:
 # *** STATIC TEST STUFF ***
 
 if __name__ == "__main__":
+  # python -m qira.legacy.static2.static2 <binary>
   static = Static(sys.argv[1],debug=1)
   print("arch:",static['arch'])
 

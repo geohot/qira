@@ -1,3 +1,5 @@
+# cython: language_level=3
+# distutils: language = c++
 from Trace.Trace cimport Trace
 
 # copied from Trace.h
@@ -12,8 +14,11 @@ cdef class PyTrace:
   cdef Trace *t
 
   def __cinit__(self, filename, trace_index, register_size, register_count, is_big_endian):
+    if isinstance(filename, str):
+      filename = filename.encode('utf-8')
     self.t = new Trace()
-    assert self.t.ConnectToFileAndStart(filename.encode('utf-8'), trace_index, register_size, register_count, is_big_endian)
+    if not self.t.ConnectToFileAndStart(filename, trace_index, register_size, register_count, is_big_endian):
+      raise IOError("qiradb: can't open trace %r" % filename)
 
   def __dealloc__(self):
     del self.t
@@ -40,7 +45,9 @@ cdef class PyTrace:
     return ret
 
   def fetch_clnums_by_address_and_type(self, address, ttype, start_clnum, end_clnum, limit):
-    return self.t.FetchClnumsByAddressAndType(address, ord(ttype), start_clnum, end_clnum, limit)
+    if isinstance(ttype, (str, bytes)):
+      ttype = ord(ttype)
+    return self.t.FetchClnumsByAddressAndType(address, ttype, start_clnum, end_clnum, limit)
 
   def fetch_registers(self, clnum):
     if clnum == -1:   # fetch the latest

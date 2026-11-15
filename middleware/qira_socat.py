@@ -1,8 +1,7 @@
-from __future__ import print_function
 import os
 import socket
-import signal
-import qira_config
+import threading
+from . import qira_config
 
 def get_next_run_id():
   ret = -1
@@ -15,6 +14,8 @@ def get_next_run_id():
 bound_ports = {}
 
 def start_bindserver(program, port, parent_id, start_cl, loop = False):
+  """Listen on port; each client gets a tracer run with the connection as its
+  stdin/stdout/stderr (like socat). loop=False serves one client."""
   if port not in bound_ports:
     myss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     myss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -24,37 +25,29 @@ def start_bindserver(program, port, parent_id, start_cl, loop = False):
   else:
     myss = bound_ports[port]
 
-  if os.fork() != 0:
-    return
+  # a thread instead of os.fork(): the web server runs threads in this process
+  t = threading.Thread(target=_serve, args=(myss, program, parent_id, start_cl, loop), daemon=True)
+  t.start()
+  return t
+
+def _serve(myss, program, parent_id, start_cl, loop):
   print("**** socat listening on %s:%s" % myss.getsockname())
-
-  # bindserver runs in a fork
   while 1:
-    (cs, address) = myss.accept()
-    # fork off the child if we are looping
-    if loop:
-      if os.fork() != 0:
-        cs.close()
-        continue
-    run_id = get_next_run_id()
-    fd = cs.fileno()
-    print("**** ID %s CLIENT %s:%s fd: %s" % (run_id, address[0], address[1], fd))
-
-    # python nonblocking is a lie...
-    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
     try:
-      import fcntl
-      fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL, 0) & ~os.O_NONBLOCK)
-    except:
-      pass
-    os.dup2(fd, 0)
-    os.dup2(fd, 1)
-    os.dup2(fd, 2)
-    for i in range(3, fd+1):
-      try:
-        os.close(i)
-      except:
-        pass
+      (cs, address) = myss.accept()
+    except OSError:
+      return  # the listening socket was closed
+    run_id = get_next_run_id()
+    print("**** ID %s CLIENT %s:%s fd: %s" % (run_id, address[0], address[1], cs.fileno()))
+    # python nonblocking is a lie...
+    cs.setblocking(True)
     # fingerprint here
-    program.execqira(["-qirachild", "%d %d %d" % (parent_id, start_cl, run_id)], shouldfork=False)
-
+    try:
+      # Popen restores SIGPIPE to the default in the child, as the legacy fork did
+      program.execqira(["-qirachild", "%d %d %d" % (parent_id, start_cl, run_id)], stdio=cs.fileno())
+    except Exception as e:
+      print("**** socat: %s" % e)
+    finally:
+      cs.close()  # the tracer has its own copy
+    if not loop:
+      return

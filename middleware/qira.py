@@ -1,20 +1,27 @@
-#!/usr/bin/env python2.7
-from __future__ import print_function
 import os
 import sys
-basedir = os.path.dirname(os.path.realpath(__file__))
 import argparse
-import ipaddr
+import ipaddress
 import socket
-import threading
-import time
 
-import qira_config
-import qira_socat
-import qira_program
-import qira_webserver
+from . import qira_config
+from . import qira_socat
+from . import qira_program
+from . import qira_webserver
 
-if __name__ == '__main__':
+def qira_is_running(host, port):
+  """True if something accepts connections on the web port (another QIRA)."""
+  # a wildcard listen address is reached through loopback
+  ip = ipaddress.ip_address(host)
+  if ip.is_unspecified:
+    host = "127.0.0.1" if ip.version == 4 else "::1"
+  try:
+    socket.create_connection((host, port), timeout=1).close()
+    return True
+  except OSError:
+    return False
+
+def main():
   # define arguments
   parser = argparse.ArgumentParser(description = 'Analyze binary. Like "qira /bin/ls /"')
   parser.add_argument('-s', "--server", help="bind on port 4000. like socat", action="store_true")
@@ -47,7 +54,7 @@ if __name__ == '__main__':
   if args.socat_port < 1 or args.socat_port > 65534:
     raise Exception("--socat-port must be a valid port number (1-65534)")
   try:
-    args.host = ipaddr.IPAddress(args.host).exploded
+    args.host = ipaddress.ip_address(args.host).exploded
   except ValueError:
     raise Exception("--web-host must be a valid IPv4/IPv6 address")
 
@@ -72,7 +79,7 @@ if __name__ == '__main__':
     qira_config.WITH_STATIC = True
   if args.flush_cache:
     print("*** flushing caches")
-    os.system("rm -rfv /tmp/qira*")
+    qira_program.flush_caches()
 
   # qemu args from command line
   qemu_args = []
@@ -80,16 +87,14 @@ if __name__ == '__main__':
     qemu_args.append("-gatetrace")
     qemu_args.append(args.gate_trace)
 
-  # creates the file symlink, program is constant through server run
+  # program is constant through server run
   program = qira_program.Program(args.binary, args.args, qemu_args)
 
-  is_qira_running = 1
-  try:
-    socket.create_connection(('127.0.0.1', qira_config.WEB_PORT))
+  is_qira_running = qira_is_running(qira_config.HOST, qira_config.WEB_PORT)
+  if is_qira_running:
     if args.server:
-      raise Exception("can't run as server if QIRA is already running")
-  except:
-    is_qira_running = 0
+      sys.exit("can't run as server if QIRA is already running (port %d is in use)" % qira_config.WEB_PORT)
+  else:
     print("no qira server found, starting it")
     program.clear(not args.no_delete_runs)
 
@@ -99,9 +104,15 @@ if __name__ == '__main__':
   else:
     if not args.no_run:
       print("**** running",program.program)
-      program.execqira(shouldfork=not is_qira_running)
+      try:
+        program.execqira(shouldfork=not is_qira_running)
+      except qira_program.TracerNotFound as e:
+        sys.exit("\n%s" % e)
 
   if not is_qira_running:
     # start the http server
     qira_webserver.run_server(args, program)
+
+if __name__ == '__main__':
+  main()
 

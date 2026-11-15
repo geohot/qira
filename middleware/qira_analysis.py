@@ -1,22 +1,16 @@
-#!/usr/bin/env python2.7
-from __future__ import print_function
-import qira_config
-import qira_program
-import arch
 import time
 import math
-import sys
 import struct
 
+# Load Python's zlib before Pillow. Pillow's manylinux wheel links the system libz.so.1
+# instead of bundling it, and the Nix Python of the devenv shell does not search
+# /lib/x86_64-linux-gnu; once zlib is loaded, the loader finds libz.so.1 by its soname.
+import zlib  # noqa: F401
 from PIL import Image
 import base64
-try:
-  from StringIO import StringIO
-except ImportError:
-  from io import BytesIO as StringIO
+from io import BytesIO
 
-sys.path.append(qira_config.BASEDIR+"/static2")
-import static2
+from . import static2
 
 def ghex(a):
   if a == None:
@@ -381,7 +375,7 @@ def analyse_calls(trace):
               uninit_regs.remove(regnum)
           elif (rchange['type'] == 'R' and regnum < nregs) and (regnum not in init_regs):
             uninit_regs.add(regnum)
-      abi,nargs = guess_calling_conv(program,uninit_regs,((seen-esp)/rsize) if (seen > 0) else 0)
+      abi,nargs = guess_calling_conv(program,uninit_regs,((seen-esp)//rsize) if (seen > 0) else 0)
       if func.abi == 'UNKNOWN':
         func.abi = abi
       func.nargs = max(nargs,func.nargs)
@@ -484,14 +478,14 @@ def get_vtimeline_picture(trace, minclnum, maxclnum):
       if trace.dmap[i] == -1:
         raise Exception("nope")
       c = int((trace.dmap[i]*128.0)/trace.maxd)
-      if i/sampling < im_y:
-        px[0, i/sampling] = (0,c,c)
+      if i//sampling < im_y:
+        px[0, i//sampling] = (0,c,c)
     except:
       # make missing changes red
-      if i/sampling < im_y:
-        px[0, i/sampling] = (96, 32, 32)
+      if i//sampling < im_y:
+        px[0, i//sampling] = (96, 32, 32)
 
-  buf = StringIO()
+  buf = BytesIO()
   im.save(buf, format='PNG')
 
   dat = b"data:image/png;base64,"+base64.b64encode(buf.getvalue())
@@ -516,7 +510,7 @@ def analyze(trace, program):
   #print fxns
 
   #dmap = get_depth_map(fxns, maxclnum)
-  dmap = get_hacked_depth_map(flow)
+  dmap = get_hacked_depth_map(flow, program)
   
   #analyse_calls(program,flow)
   #loops = do_loop_analysis(blocks)
@@ -561,13 +555,17 @@ def slice(trace, inclnum):
   return list(cls)
 
 if __name__ == "__main__":
-  # can run standalone for testing
-  program = qira_program.Program("/tmp/qira_binary", [])
-  trace = program.add_trace("/tmp/qira_logs/0", 0)
+  # can run standalone for testing: python -m qira.legacy.qira_analysis <binary> [run id]
+  # (reads the trace and asm file from QIRA_TRACE_DIR / QIRA_ASM_FILE)
+  import sys
+  from . import qira_config, qira_program
+  program = qira_program.Program(sys.argv[1], [])
+  run_id = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+  trace = program.add_trace(qira_config.TRACE_FILE_BASE+str(run_id), run_id)
   while not trace.db.did_update():
     time.sleep(0.1)
   print("loaded")
-  program.qira_asm_file = open("/tmp/qira_asm", "r")
+  program.qira_asm_file = open(qira_config.ASM_FILE, "r", errors="replace")
   qira_program.Program.read_asm_file(program)
 
   # *** analysis time ***

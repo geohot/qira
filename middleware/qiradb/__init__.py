@@ -1,8 +1,2 @@
-import sys
-
-# only pyximport this
-import pyximport
-py_importer, pyx_importer = pyximport.install()
+# qiradb is a C++ extension built at install time (see setup.py)
 from .qiradb import PyTrace
-sys.meta_path.remove(pyx_importer)
-
