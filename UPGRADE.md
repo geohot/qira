@@ -30,7 +30,7 @@ Each task is written so that it can be handed to Claude with a one-line prompt, 
 
 | # | Task | Branch | Needs in `develop` | Needs from the user first |
 |---|------|--------|--------------------|---------------------------|
-| 1 | [ ] Port `middleware/` to Python 3, refresh `requirements.txt`, get the tests passing in `./venv` | `feature/py3-middleware` | — | — |
+| 1 | [x] Port `middleware/` to Python 3, package it with `pyproject.toml`/uv (installable as a tool), get the tests passing ([report](docs/tasks/1-py3-middleware.md)) | `feature/py3-middleware` | — | — |
 | 2 | [ ] Compare the port's traces of `qira_tests/bin/loop` with `samples/legacy/` and list the differences | `feature/trace-compare-loop` | Task 1 | Legacy tracer binary copied to the host (see Task 2) |
 | 3 | [ ] Assess the QEMU tracer: rebase the qira patches onto current QEMU, or replace the tracer | `feature/tracer-assessment` | — | — |
 | 4 | [ ] Rewrite `install.sh` for Debian 13 (venv-based, no sudo inside) | `feature/install-debian13` | Tasks 1 and 3 | — |
@@ -48,9 +48,12 @@ Tasks 1 and 3 can run in either order. Run one task per session.
 3. **No root.** No `sudo`, no `apt-get install`, nothing written outside the repo and `$TMPDIR`.
    If a system package is missing, list the exact `sudo apt-get install …` line in the report and
    carry on with whatever does not need it.
-4. **Python.** Python 3 only (Debian 13 ships 3.13), using `./venv`
-   (`./venv/bin/python`, `./venv/bin/pip`). Do not run the old `install.sh` (it targets Ubuntu 16.04
-   and calls sudo).
+4. **Python.** Python 3 only (Debian 13 ships 3.13), managed with **uv** since Task 1:
+   `uv sync` creates `.venv/`, `uv run pytest`, `uv run qira …` (or `./qira`). Dependencies live in
+   `pyproject.toml` + `uv.lock`; there is no `requirements.txt` any more. If `uv` is not on `PATH`,
+   install it into `$TMPDIR` (`python3 -m venv $TMPDIR/uvenv && $TMPDIR/uvenv/bin/pip install uv`)
+   and set `UV_CACHE_DIR=$TMPDIR/uv-cache`. Do not run the old `install.sh` (it targets Ubuntu
+   16.04 and calls sudo).
 5. **Legacy reference.** Do not run podman. Never modify or delete anything in `samples/legacy/`;
    it is the reference capture. Put new captures in other folders under `samples/` (the whole
    `samples/` folder is excluded from git via `.git/info/exclude`, so nothing there is committed).
@@ -61,8 +64,8 @@ Tasks 1 and 3 can run in either order. Run one task per session.
    (commands and results), what could not be verified and why, open questions for the user, and
    anything the next task needs to know. If the task is blocked, still commit the report with the
    blocker and the exact command the user has to run.
-8. **Stay in scope.** Do not start the staged plan (pyproject/uv, FastAPI, React, …) inside these
-   tasks. If the work shows that part of this plan is wrong, note it in the report and update the
+8. **Stay in scope.** Do not start the staged plan (FastAPI, React, the `src/qira/core` layout, …)
+   inside these tasks. (Packaging with `pyproject.toml`/uv was pulled into Task 1 on request.) If the work shows that part of this plan is wrong, note it in the report and update the
    relevant section of this file in the same branch.
 
 ### Legacy reference (podman image `qira-legacy`)
@@ -89,8 +92,14 @@ The legacy build (Ubuntu 16.04, Python 2.7, geohot QEMU fork) runs in podman. On
 
 **Branch:** `feature/py3-middleware` · **Report:** `docs/tasks/1-py3-middleware.md`
 
-**Goal:** the legacy backend runs on Python 3.13 in `./venv`, with current dependencies, and the
-test suite passes. Behaviour, the trace format and the Socket.IO events stay the same.
+**Goal:** the legacy backend runs on Python 3.13 with current dependencies, and the test suite
+passes. Behaviour, the trace format and the Socket.IO events stay the same.
+
+**Changed on request (done this way):** instead of `./venv` + `requirements.txt`, QIRA is a uv
+project (`pyproject.toml`, `uv.lock`) that installs as the `qira` package with a `qira` console
+script, so both `uv sync` (development, editable) and `uv tool install .` work. qiradb is compiled
+at install time by `setup.py` (Cython 3) instead of `pyximport`, which is part of Stage 1C step 1.
+The steps below are kept as written; the report says where the result differs.
 
 **Scope**
 
@@ -171,9 +180,17 @@ read-side comparison (step 3) and report the blocker with the commands above.
 
 1. Check the tracer: `ldd tracers/qemu/qira-x86_64` (it was linked on Ubuntu 16.04; list missing
    libraries) and that it runs `qira_tests/bin/loop` on its own.
-2. Capture with the port into its own folder (never `samples/legacy/`):
-   `QIRA_TRACE_DIR=$PWD/samples/port ./qira --web-port 3012 qira_tests/bin/loop > samples/port-console.log 2>&1`,
-   stop it once the trace stops growing. If the sysroot was provided and the port can pass an
+2. Capture with the port into its own folder (never `samples/legacy/`).
+   **Found in Task 1:** the QEMU tracer (`extra/qemu_mods/tci.c`) and the PIN tool hardcode
+   `/tmp/qira_logs/` and `/tmp/qira_asm`; `QIRA_TRACE_DIR`/`QIRA_ASM_FILE` only move what the
+   middleware *reads*. Also, Claude's sandbox cannot write to `/tmp` (only `$TMPDIR`), and every
+   sandboxed command has its own network namespace, so a server and its client must run in the same
+   command. So either the user runs
+   `./qira --web-port 3012 --socat-port 4010 qira_tests/bin/loop > samples/port-console.log 2>&1`,
+   stops it once the trace stops growing, and copies `/tmp/qira_logs/` to `samples/port/`; or the
+   sandbox is configured to allow writing `/tmp/qira_logs` and `/tmp/qira_asm`.
+   The legacy `_base` also lists `/tmp/qira_logs/0_env` as a mapping, so loading a copied trace
+   from another folder misses that one region. If the sysroot was provided and the port can pass an
    ld prefix to QEMU (`-L` / `QEMU_LD_PREFIX`; see how `qira_program.py` uses `libs/` from
    `fetchlibs.sh`), take a second capture with it in `samples/port-xenial/`. That one should match
    the legacy capture closely, the first one shows the effect of Debian 13's libc.
@@ -250,13 +267,16 @@ estimate and risks, the build dependencies, the exact `install.sh` step Task 4 s
   line `sudo apt-get install -y …` with exactly the missing packages and exit non-zero.
   Base set: `python3 python3-venv python3-dev build-essential pkg-config git curl`; tracer
   packages come from Task 3's report.
-* venv: `python3 -m venv venv` (reuse it if present), `venv/bin/pip install --upgrade pip`,
-  `venv/bin/pip install -r requirements.txt`, then import `qiradb` once so it is built.
+* Python env (changed by Task 1): require `uv` (if missing, print how to install it without
+  sudo, e.g. the official installer into `~/.local/bin`, and exit non-zero), then `uv sync --locked`.
+  qiradb is compiled during the sync; `python3-dev` and `build-essential` must be installed.
+  Alternative to the link step below: `uv tool install --force .` (then point `QIRA_TRACER_DIR` at
+  the checkout's `tracers/`, since the installed package does not contain the tracer).
 * Tracer: the step recommended in `docs/tracer-assessment.md`, behind `--with-tracer` (or
   `--no-tracer`, whichever Task 3 recommends as default). Never fails the install when the tracer
   is skipped, but says so.
-* Tests: run `venv/bin/python -m pytest qira_tests` (not the old integration part unless a tracer
-  is present). `--skip-tests` to turn it off.
+* Tests: run `uv run pytest` (not the old integration part unless a tracer is present).
+  `--skip-tests` to turn it off.
 * No system-wide symlink: link `~/.local/bin/qira` (create the folder) and warn if it is not on
   `PATH`. `--no-link` to skip.
 * Remove the Ubuntu and macOS branches; on anything other than Debian/Ubuntu, print what is needed
@@ -290,7 +310,7 @@ the report shows the output.
 | Static analysis | `static2/` | Python 2 era. capstone 4, pyelftools 0.25. Pickle-based cache in `/tmp/qira_static_cache/`. |
 | Frontend | `web/` | jQuery 2, a Meteor shim (`fakemeteor.js`), wcDocker, socket.io client 1.x. |
 | Dependencies | `requirements.txt` | Pinned 2019 versions (Flask 1.0.2, Cython 0.29.6, nose, ipaddr, socketIO-client…). |
-| Install / CI | `install.sh`, `docker/Dockerfile` (ubuntu:16.04), `.travis.yml`, `run_tests.sh` (nose) | Installs `python` (2), builds QEMU. Travis is dead. |
+| Install / CI | `install.sh`, `docker/Dockerfile` (ubuntu:16.04), `.travis.yml`, `run_tests.sh` | Installs `python` (2), builds QEMU. Travis is dead. Since Task 1 the Python side is a uv project (`pyproject.toml`, `uv.lock`, `uv run pytest`); `install.sh` and the Dockerfile still expect `requirements.txt` until Task 4 / Stage 2, so the `qira-legacy` image must be built from a commit before Task 1 (e.g. `862c3aa`). |
 
 ### Trace format (must be preserved or versioned)
 

@@ -23,14 +23,31 @@ The Docker image in docker should work everywhere.
 
 See instructions on [qira.me](http://qira.me/) to install 1.3
 
-## Installing trunk
+## Installing trunk (Debian 13, Python 3)
+
+QIRA is a [uv](https://docs.astral.sh/uv/) project. You need `python3-dev`, `build-essential` and uv.
 
 <pre>
-cd ~/
 git clone https://github.com/geohot/qira.git
 cd qira/
-./install.sh
+uv sync              # creates .venv and compiles qiradb
+uv run pytest        # tests
+./qira /bin/ls /     # or: uv run qira /bin/ls /
 </pre>
+
+Or install the `qira` command as a uv tool:
+
+<pre>
+uv tool install .
+export QIRA_TRACER_DIR=$PWD/tracers   # the tracer is not part of the Python package
+</pre>
+
+Environment variables: `QIRA_TRACE_DIR` (default `/tmp/qira_logs`), `QIRA_ASM_FILE`
+(`/tmp/qira_asm`), `QIRA_STATIC_CACHE_DIR`, `QIRA_TRACER_DIR` (the `tracers/` folder),
+`QIRA_LIBS_DIR` (the `libs/` folder from `fetchlibs.sh`). The QEMU tracer itself always writes
+to `/tmp/qira_logs` and `/tmp/qira_asm`.
+
+`install.sh` still targets Ubuntu 16.04; see UPGRADE.md Task 4.
 
 ## Installation Extras
 
