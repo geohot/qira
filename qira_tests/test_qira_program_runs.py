@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from qira import qira_config, qira_program
+from qira.legacy import qira_config, qira_program
 from conftest import LOOP
 
 TRACER = os.path.join(qira_config.TRACER_DIR, "qemu", "qira-x86_64")

@@ -120,6 +120,7 @@ All checks ran on Debian 13, Python 3.13.5, GCC 14.2, uv 0.13.8.
 5. **The legacy Docker image.** `docker/Dockerfile` and `install.sh` still use `requirements.txt` and
    Python 2. Rebuild `qira-legacy` from a commit before this branch (e.g. `862c3aa`).
 6. **The package name.** The legacy modules are now importable as `qira.*` (e.g. `qira.qira_program`).
+   **Done later:** they moved to `qira.legacy`, see [Follow-ups](#follow-ups-on-featuretask1-followups).
    Stage 0/1D plans `src/qira/core/…`; when that starts, the legacy mapping should move to
    e.g. `qira.legacy` or be replaced as modules land.
 7. **Legacy bugs left as they are** (not Python 3 related; **fixed later**, see
@@ -150,11 +151,13 @@ Done after Task 1 was merged into `develop`, one commit each:
 | `fix: --server refuses to start …` | The bare `except` caught its own "can't run as server" error, so a second `--server` cleared the runs and started another server. `qira_is_running()` catches only `OSError`, closes the probe socket, has a 1 s timeout and probes the `--host` address (loopback for `0.0.0.0`/`::`). |
 | `fix: --flush-cache empties the configured paths …` | Instead of `rm -rfv /tmp/qira*`: `flush_caches()` empties `QIRA_TRACE_DIR` and `QIRA_STATIC_CACHE_DIR` and truncates `QIRA_ASM_FILE`, keeping the paths (mount points). |
 | `fix: start the tracer with subprocess …` | `execqira` returns a `subprocess.Popen` (optional fd for stdio); `forkat` no longer forks (it used to fork twice and leave a copy of the server in the handler); the socat bind server accepts in a daemon thread and runs one tracer per client with the socket as stdio. A missing tracer raises `TracerNotFound` (exit message from the CLI, logged by the server). |
-| `fix: stop creating the global /tmp/qira_binary symlink` | Its only reader was the debug entry of `qira_analysis`, now `python -m qira.qira_analysis <binary> [run id]` with the configured trace/asm paths. |
+| `fix: stop creating the global /tmp/qira_binary symlink` | Its only reader was the debug entry of `qira_analysis`, now `python -m qira.legacy.qira_analysis <binary> [run id]` with the configured trace/asm paths. |
+| `feat: installed copies find the tracer in ~/.local/share/qira (I4)` | A checkout uses its own `tracers/`/`libs/`; an installed copy defaults to `${XDG_DATA_HOME:-~/.local/share}/qira/tracers` and `…/libs` (Task 4 installs the tracer there). Checked with a wheel in a separate venv. |
+| `refactor: install the legacy code as qira.legacy (I6)` | `src/qira/` is the top-level package; `middleware/` → `qira.legacy`, `static2/` → `qira.legacy.static2`, `web/` → `qira.legacy.web`, qiradb → `qira.legacy.qiradb.qiradb`. Console script `qira.legacy.qira:main`; `python -m qira` still works. A stale `build/lib.*` had put the old `qira/*.py` into the wheel; after removing it the wheel holds only `qira/__init__.py`, `qira/__main__.py` and `qira/legacy/…`. |
 
 **Verified** (Claude session started after the sandbox change):
 
-* `uv run pytest`: 34 passed, 1 skipped (the live-tracer test). New: `test_startup.py`, `test_cli.py`,
+* `uv run pytest`: 37 passed, 1 skipped (the live-tracer test). New: `test_startup.py`, `test_cli.py`,
   `test_tracer_launch.py` (a shell script stands in for the tracer), `test_doanalysis_sends_picture`,
   `test_flush_caches*`. The tracer-launch tests also pass with `-W error::DeprecationWarning`.
 * `test_cli.py` fails against the old `qira.py` ("a second server was started"); `test_startup.py`
@@ -165,7 +168,7 @@ Done after Task 1 was merged into `develop`, one commit each:
   and leaves the traces alone.
 * `./qira --flush-cache …` empties `/tmp/qira_logs` (the directory stays), truncates `/tmp/qira_asm`,
   then exits 1 with "QIRA tracer … not found" (no tracer on this host, I2) instead of a traceback.
-* `python -m qira.qira_analysis qira_tests/bin/loop` on a copy of `samples/legacy` (with an empty asm
+* `python -m qira.legacy.qira_analysis qira_tests/bin/loop` on a copy of `samples/legacy` (with an empty asm
   file) runs.
 
 **Not verified:** forkat and `--server`/socat with the real tracer (none on this host); the web UI in

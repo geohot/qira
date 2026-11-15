@@ -5,7 +5,8 @@ Scope: recording Linux and Windows binaries. Other arches/features are out of sc
 
 ## Current state
 - Code is upstream QIRA 1.4 ported to Python 3 (Task 1): a uv project (`pyproject.toml`, `uv.lock`),
-  installed as package `qira` (mapped from middleware/, static2/, web/). QEMU tracer from geohot/qemu (branch qira).
+  installed as package `qira`: `src/qira/` (new code) and `qira.legacy` (mapped from middleware/,
+  static2/, web/). QEMU tracer from geohot/qemu (branch qira).
 - Don't run install.sh: it targets Ubuntu 16.04 and uses sudo.
 - Legacy reference: podman image qira-legacy. You can't run it; reference output is in samples/legacy/.
   Ask me to run anything else against it.

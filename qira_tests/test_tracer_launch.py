@@ -12,7 +12,7 @@ import time
 
 import pytest
 
-from qira import qira_config, qira_program, qira_socat, qira_webserver as ws
+from qira.legacy import qira_config, qira_program, qira_socat, qira_webserver as ws
 from conftest import LOOP
 
 FAKE_TRACER = """#!/bin/sh

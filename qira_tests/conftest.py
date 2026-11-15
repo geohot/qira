@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from qira import qira_config, qira_log
+from qira.legacy import qira_config, qira_log
 
 TESTS = os.path.dirname(os.path.realpath(__file__))
 REPO = os.path.dirname(TESTS)

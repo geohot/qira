@@ -231,7 +231,7 @@ class Static:
 # *** STATIC TEST STUFF ***
 
 if __name__ == "__main__":
-  # python -m qira.static2.static2 <binary>
+  # python -m qira.legacy.static2.static2 <binary>
   static = Static(sys.argv[1],debug=1)
   print("arch:",static['arch'])
 

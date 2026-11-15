@@ -555,7 +555,7 @@ def slice(trace, inclnum):
   return list(cls)
 
 if __name__ == "__main__":
-  # can run standalone for testing: python -m qira.qira_analysis <binary> [run id]
+  # can run standalone for testing: python -m qira.legacy.qira_analysis <binary> [run id]
   # (reads the trace and asm file from QIRA_TRACE_DIR / QIRA_ASM_FILE)
   import sys
   from . import qira_config, qira_program

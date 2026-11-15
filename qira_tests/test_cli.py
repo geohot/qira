@@ -3,7 +3,7 @@ import sys
 
 import pytest
 
-from qira import qira, qira_config, qira_socat, qira_webserver
+from qira.legacy import qira, qira_config, qira_socat, qira_webserver
 from conftest import LOOP
 
 

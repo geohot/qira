@@ -1,4 +1,4 @@
-from qira import static2
+from qira.legacy import static2
 from conftest import LOOP
 
 

@@ -3,8 +3,8 @@ import time
 
 import pytest
 
-from qira import qira_program, qira_webserver as ws
-from qira import qira_webstatic  # registers its routes, as run_server() does before serving
+from qira.legacy import qira_program, qira_webserver as ws
+from qira.legacy import qira_webstatic  # registers its routes, as run_server() does before serving
 from conftest import LOOP, RSP, STACK, wait_for_update
 
 

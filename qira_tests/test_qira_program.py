@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from qira import arch, qira_config, qira_program
+from qira.legacy import arch, qira_config, qira_program
 from conftest import LOOP, wait_for_update
 
 
@@ -74,7 +74,7 @@ def test_trace_strace_and_base(program, loop_trace):
 
 
 def test_missing_strace(program, trace_dir):
-  from qira import qira_log
+  from qira.legacy import qira_log
   from conftest import LOOP_CHANGES
   qira_log.write_log(str(trace_dir / "5"), LOOP_CHANGES)
   t = program.add_trace(str(trace_dir / "5"), 5)

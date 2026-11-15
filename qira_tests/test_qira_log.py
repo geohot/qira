@@ -1,4 +1,4 @@
-from qira import qira_log
+from qira.legacy import qira_log
 from conftest import LOOP_CHANGES
 
 

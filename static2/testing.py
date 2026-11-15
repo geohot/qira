@@ -4,10 +4,10 @@ import sys
 import os
 
 try:
-  from qira.static2 import *
-  from qira import qira_config
+  from qira.legacy.static2 import *
+  from qira.legacy import qira_config
 except ImportError as e:
-  print("Couldn't import qira.static2 with error `{}'. Run it with uv run.".format(e))
+  print("Couldn't import qira.legacy.static2 with error `{}'. Run it with uv run.".format(e))
   sys.exit()
 import subprocess
 import argparse
