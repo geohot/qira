@@ -1,6 +1,5 @@
 // static stuff
 
-stream = io.connect(STREAM_URL);
 
 Deps.autorun(function() { DA("update static view");
   var iview = Session.get('iview');

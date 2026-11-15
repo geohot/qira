@@ -1,4 +1,3 @@
-stream = io.connect(STREAM_URL);
 Session.setDefault('sview', [0,10]);
 
 traces = {}
