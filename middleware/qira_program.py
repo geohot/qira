@@ -26,6 +26,25 @@ def which(prog):
     return os.path.realpath(prog)
   raise Exception("binary not found")
 
+def empty_dir(path):
+  """Delete what is in path but keep path itself, so it may be a mount point."""
+  if not os.path.isdir(path):
+    return
+  for entry in os.scandir(path):
+    if entry.is_dir(follow_symlinks=False):
+      shutil.rmtree(entry.path)
+    else:
+      os.unlink(entry.path)
+
+def flush_caches():
+  """--flush-cache: the traces, the asm file and the static2 cache, at the configured paths."""
+  for path in (qira_config.TRACE_FILE_BASE, qira_config.STATIC_CACHE_BASE):
+    print("*** emptying", path)
+    empty_dir(path)
+  if os.path.isfile(qira_config.ASM_FILE):
+    print("*** truncating", qira_config.ASM_FILE)
+    open(qira_config.ASM_FILE, "w").close()
+
 # things that don't cross the fork
 class Program:
   def __init__(self, prog, args=[], qemu_args=[]):
@@ -336,13 +355,8 @@ class Program:
 
   def delete_old_runs(self):
     # delete the logs
-    # empty the directory instead of removing it, so it may be a mount point
     os.makedirs(qira_config.TRACE_FILE_BASE, exist_ok=True)
-    for entry in os.scandir(qira_config.TRACE_FILE_BASE):
-      if entry.is_dir(follow_symlinks=False):
-        shutil.rmtree(entry.path)
-      else:
-        os.unlink(entry.path)
+    empty_dir(qira_config.TRACE_FILE_BASE)
 
   def get_maxclnum(self):
     ret = {}

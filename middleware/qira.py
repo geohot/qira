@@ -79,7 +79,7 @@ def main():
     qira_config.WITH_STATIC = True
   if args.flush_cache:
     print("*** flushing caches")
-    os.system("rm -rfv /tmp/qira*")
+    qira_program.flush_caches()
 
   # qemu args from command line
   qemu_args = []
