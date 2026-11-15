@@ -1,4 +1,3 @@
-stream = io.connect(STREAM_URL);
 
 
 var current_regs = undefined;

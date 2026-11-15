@@ -1,4 +1,3 @@
-stream = io.connect(STREAM_URL);
 
 // *** the analysis overlay ***
 var overlays = {};

@@ -30,9 +30,12 @@ answer the tracer question. They are listed in the [Task queue](#task-queue-debi
 * **Task 1 is done** on `feature/py3-middleware` ([report](docs/tasks/1-py3-middleware.md)): the
   legacy middleware, qiradb and static2 run on Python 3.13, packaged as a uv project
   (`pyproject.toml`, `uv.lock`, `uv tool install .` works), 21 tests pass, Socket.IO smoke test passes.
-  It is merged into `develop`. Follow-ups on `feature/task1-followups` (not merged yet): the
-  Pillow/zlib startup fix (I10) and the legacy bugs from I7, see the
+  It is merged into `develop`, and so are the follow-ups (`feature/task1-followups`: the
+  Pillow/zlib startup fix, the I7 legacy bugs, I4 and I6), see the
   [report](docs/tasks/1-py3-middleware.md#follow-ups-on-featuretask1-followups).
+* **Web UI** (I8): broken since the socket.io 4 client update, fixed on `feature/ui-fix` (not merged
+  yet) and checked in headless Firefox: instructions, registers, hexdump, data changes, strace and
+  the timeline fill in. `qira_tests/test_ui.py` keeps it checked.
 * **Development environment** (follow-up to Task 1): devenv (`devenv.nix`, `devenv.yaml`,
   `devenv.lock`) provides Python 3.13, uv and the compiler; direnv (`.envrc`) enters it and loads
   the `QIRA_*` settings from `.env` (template `.env.example`). Verified on devserver-01: the shell
@@ -44,9 +47,8 @@ answer the tracer question. They are listed in the [Task queue](#task-queue-debi
 
 ### What is next
 
-1. **User:** merge `feature/task1-followups` into `develop` (and push). Keep `/tmp/qira_logs` and
+1. **User:** merge `feature/ui-fix` into `develop` (and push). Keep `/tmp/qira_logs` and
    `/tmp/qira_asm` present (`~/.config/user-tmpfiles.d/qira.conf` recreates them at login).
-   `/tmp/qira_binary` is no longer used; delete the stale symlink with `rm /tmp/qira_binary`.
 2. **Task 2** (compare traces with the legacy capture) is the recommended next task: it is the only
    check of the port against the reference, and it needs just the podman copy listed in Task 2.
 3. **Task 3** (tracer assessment) has no prerequisites and can run before, after or in a separate
@@ -66,7 +68,7 @@ answer the tracer question. They are listed in the [Task queue](#task-queue-debi
 | I5 | `docker/Dockerfile` and `install.sh` still use Python 2 and `requirements.txt`. | The `qira-legacy` image must be built from a commit before Task 1 (e.g. `862c3aa`). | Task 4 (`install.sh`), Stage 2 (Docker). |
 | I6 | ~~The legacy modules are importable as `qira.*`, clashing with the planned `src/qira/core` layout.~~ **Fixed** on `feature/task1-followups`: `src/qira/` is the top-level package; the legacy code is `qira.legacy` (`middleware/`), `qira.legacy.static2`, `qira.legacy.web`; console script `qira.legacy.qira:main`, `python -m qira` still works. | — | Stage 1D adds `qira.core` next to it and replaces `qira.legacy` modules as they land. |
 | I7 | ~~Legacy bugs: `doanalysis` arguments, bare `except` hiding "already running as server", `--flush-cache` running `rm -rfv /tmp/qira*`, `os.fork()` from a threaded process, the global `/tmp/qira_binary` symlink.~~ **Fixed** on `feature/task1-followups`. | — | Stage 1D/2 still replace this code. |
-| I8 | The web UI (with the socket.io 4 client) was not opened in a real browser. | A UI regression would go unnoticed. | User check on port 3012, or Task 2 with the user. |
+| I8 | ~~The web UI was broken with the socket.io 4 client: each client module opened its own connection, so registers, instructions, memory and data changes never rendered.~~ **Fixed** on `feature/ui-fix` (one shared socket in `early.js`). `qira_tests/test_ui.py` checks the UI in headless Firefox (Selenium); `qira_tests/ui_check.py` inspects a running server. | Firefox and geckodriver are needed for the UI test (it skips without them). | — |
 | I9 | Claude's commands do not go through direnv, so `uv` and the `.env` settings are not loaded automatically. | Commands must set them explicitly. | Rule 4. |
 | I10 | `.venv/` is built against the Nix Python (`/nix/store/…`). | `./qira` also works outside the devenv shell, but after `devenv update` the next shell entry re-syncs `.venv`. Do not mix with a Debian-Python `.venv`. The Nix Python does not search Debian's library paths: Pillow's wheel needs the system `libz.so.1`, so `qira_analysis.py` imports `zlib` before PIL (checked by `qira_tests/test_startup.py`). Other wheels that link system libraries need the same care. | Rule 4. |
 
@@ -119,8 +121,11 @@ Task 1 is done. Tasks 2 and 3 can run in either order (Task 2 is recommended fir
    compiler) is defined in `devenv.nix` and entered with direnv (`.envrc`), which also loads the
    `QIRA_*` settings from `.env` (template: `.env.example`). Claude's commands do not go through
    direnv; start them with
-   `export PATH=$PWD/.devenv/profile/bin:$PATH UV_CACHE_DIR=$TMPDIR/uv-cache UV_PYTHON_DOWNLOADS=never`
-   and use `uv run --env-file .env …`. Claude cannot change the devenv shell itself (the Nix cache
+   `export PATH=$PWD/.devenv/profile/bin:$PATH UV_CACHE_DIR=$TMPDIR/uv-cache UV_PYTHON_DOWNLOADS=never SE_CACHE_PATH=$PWD/.cache/selenium SE_OFFLINE=true`
+   and use `uv run --env-file .env …`. `SE_CACHE_PATH`/`SE_OFFLINE` let the Selenium UI test use the
+   geckodriver kept in `.cache/selenium` (git-ignored); Selenium Manager cannot download it from the
+   sandbox (`raw.githubusercontent.com`, `release-assets.githubusercontent.com` are not allowed), so if
+   the folder is empty the test skips. Claude cannot change the devenv shell itself (the Nix cache
    is not reachable from the sandbox): edit `devenv.nix` and ask the user to enter the shell once.
    Do not run the old `install.sh` (it targets Ubuntu 16.04 and calls sudo).
 5. **Legacy reference.** Do not run podman. Never modify or delete anything in `samples/legacy/`;

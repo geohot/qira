@@ -42,6 +42,8 @@ dist/
 *.so
 __pycache__/
 .pytest_cache/
+# Selenium Manager's driver cache for the sandbox (SE_CACHE_PATH, see UPGRADE.md rule 4)
+/.cache/
 
 # devenv / direnv / local settings
 .devenv*

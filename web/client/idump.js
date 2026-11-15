@@ -1,4 +1,3 @@
-stream = io.connect(STREAM_URL);
 
 // TODO: parameter should be dynamic?
 var backward_context_size = 6;
