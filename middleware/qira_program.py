@@ -285,11 +285,8 @@ class Program:
   def create_asm_file(self):
     if os.name == "nt":
       return
-    try:
-      os.unlink(qira_config.ASM_FILE)
-    except:
-      pass
-    open(qira_config.ASM_FILE, "a").close()
+    # truncate instead of unlink, so ASM_FILE may be a mount point (e.g. a sandbox bind mount)
+    open(qira_config.ASM_FILE, "w").close()
     self.qira_asm_file = open(qira_config.ASM_FILE, "r", errors="replace")
 
   def read_asm_file(self):
@@ -339,8 +336,13 @@ class Program:
 
   def delete_old_runs(self):
     # delete the logs
-    shutil.rmtree(qira_config.TRACE_FILE_BASE)
-    os.mkdir(qira_config.TRACE_FILE_BASE)
+    # empty the directory instead of removing it, so it may be a mount point
+    os.makedirs(qira_config.TRACE_FILE_BASE, exist_ok=True)
+    for entry in os.scandir(qira_config.TRACE_FILE_BASE):
+      if entry.is_dir(follow_symlinks=False):
+        shutil.rmtree(entry.path)
+      else:
+        os.unlink(entry.path)
 
   def get_maxclnum(self):
     ret = {}

@@ -105,3 +105,24 @@ def test_config_env(monkeypatch, tmp_path):
     monkeypatch.undo()
     importlib.reload(qira_config)
   assert qira_config.TRACE_FILE_BASE == "/tmp/qira_logs/"
+
+
+def test_delete_old_runs_keeps_dir(program, trace_dir):
+  # the trace dir may be a mount point (sandbox bind mount), so it is emptied, not removed
+  base = qira_config.TRACE_FILE_BASE
+  ino = os.stat(base).st_ino
+  open(base + "0", "wb").close()
+  os.mkdir(base + "0_images")
+  open(base + "0_images/x", "wb").close()
+  program.delete_old_runs()
+  assert os.listdir(base) == []
+  assert os.stat(base).st_ino == ino
+
+
+def test_create_asm_file_truncates(program):
+  with open(qira_config.ASM_FILE, "w") as f:
+    f.write("0x400000|old\n")
+  ino = os.stat(qira_config.ASM_FILE).st_ino
+  program.create_asm_file()
+  assert os.path.getsize(qira_config.ASM_FILE) == 0
+  assert os.stat(qira_config.ASM_FILE).st_ino == ino
