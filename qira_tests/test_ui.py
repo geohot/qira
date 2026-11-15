@@ -21,6 +21,7 @@ selenium = pytest.importorskip("selenium")
 from selenium import webdriver  # noqa: E402
 from selenium.common.exceptions import WebDriverException  # noqa: E402
 from selenium.webdriver.common.by import By  # noqa: E402
+from selenium.webdriver.firefox.service import Service  # noqa: E402
 from selenium.webdriver.support.ui import WebDriverWait  # noqa: E402
 
 os.environ.setdefault("SE_AVOID_STATS", "true")
@@ -60,13 +61,16 @@ def server(loop_trace, tmp_path):
 
 
 @pytest.fixture
-def browser():
+def browser(tmp_path):
   if not shutil.which("firefox"):
     pytest.skip("firefox not installed")
   opts = webdriver.FirefoxOptions()
   opts.add_argument("-headless")
+  # Firefox hangs at startup if it cannot write $HOME (e.g. in Claude's sandbox)
+  home = tmp_path / "home"
+  home.mkdir()
   try:
-    driver = webdriver.Firefox(options=opts)
+    driver = webdriver.Firefox(options=opts, service=Service(env=dict(os.environ, HOME=str(home))))
   except WebDriverException as e:
     pytest.skip("no geckodriver: %s" % e.msg)
   driver.set_window_size(1600, 1000)
