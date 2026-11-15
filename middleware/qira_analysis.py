@@ -2,6 +2,10 @@ import time
 import math
 import struct
 
+# Load Python's zlib before Pillow. Pillow's manylinux wheel links the system libz.so.1
+# instead of bundling it, and the Nix Python of the devenv shell does not search
+# /lib/x86_64-linux-gnu; once zlib is loaded, the loader finds libz.so.1 by its soname.
+import zlib  # noqa: F401
 from PIL import Image
 import base64
 from io import BytesIO

@@ -65,7 +65,7 @@ answer the tracer question. They are listed in the [Task queue](#task-queue-debi
 | I7 | Legacy bugs kept on purpose: `doanalysis` calls `get_vtimeline_picture` with too few arguments; a bare `except` in `qira.py` hides "already running as server"; `--flush-cache` runs `rm -rfv /tmp/qira*` (this also removes the sandbox mount points' contents and, outside the sandbox, the paths themselves); `os.fork()` from a threaded process. | Small; logged errors, possible DeprecationWarning on fork. | Stage 1D/2 replace this code; fix earlier only if a task trips over it. |
 | I8 | The web UI (with the socket.io 4 client) was not opened in a real browser. | A UI regression would go unnoticed. | User check on port 3012, or Task 2 with the user. |
 | I9 | Claude's commands do not go through direnv, so `uv` and the `.env` settings are not loaded automatically. | Commands must set them explicitly. | Rule 4. |
-| I10 | `.venv/` is built against the Nix Python (`/nix/store/…`). | `./qira` also works outside the devenv shell, but after `devenv update` the next shell entry re-syncs `.venv`. Do not mix with a Debian-Python `.venv`. | Rule 4. |
+| I10 | `.venv/` is built against the Nix Python (`/nix/store/…`). | `./qira` also works outside the devenv shell, but after `devenv update` the next shell entry re-syncs `.venv`. Do not mix with a Debian-Python `.venv`. The Nix Python does not search Debian's library paths: Pillow's wheel needs the system `libz.so.1`, so `qira_analysis.py` imports `zlib` before PIL (checked by `qira_tests/test_startup.py`). Other wheels that link system libraries need the same care. | Rule 4. |
 
 ### Assumptions
 
