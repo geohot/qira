@@ -30,20 +30,23 @@ answer the tracer question. They are listed in the [Task queue](#task-queue-debi
 * **Task 1 is done** on `feature/py3-middleware` ([report](docs/tasks/1-py3-middleware.md)): the
   legacy middleware, qiradb and static2 run on Python 3.13, packaged as a uv project
   (`pyproject.toml`, `uv.lock`, `uv tool install .` works), 21 tests pass, Socket.IO smoke test passes.
-  It is **not yet merged into `develop`**, which Task 2 and Task 4 need.
+  It is merged into `develop`. Follow-ups on `feature/task1-followups` (not merged yet): the
+  Pillow/zlib startup fix (I10) and the legacy bugs from I7, see the
+  [report](docs/tasks/1-py3-middleware.md#follow-ups-on-featuretask1-followups).
 * **Development environment** (follow-up to Task 1): devenv (`devenv.nix`, `devenv.yaml`,
   `devenv.lock`) provides Python 3.13, uv and the compiler; direnv (`.envrc`) enters it and loads
   the `QIRA_*` settings from `.env` (template `.env.example`). Verified on devserver-01: the shell
   loads, `uv sync` builds qiradb with the Nix toolchain, the tests pass.
 * **Sandbox:** `.claude/settings.json` allows writing `/tmp/qira_logs` and `/tmp/qira_asm`, and QIRA
   now empties/truncates those paths instead of deleting them (they are mount points in the sandbox).
-  The setting only takes effect in a **new** Claude session.
+  Verified in a new session (2026-11-15): both paths are writable, and `./qira` plus
+  `smoke_socketio.py` pass against a trace in `/tmp/qira_logs`.
 
 ### What is next
 
-1. **User:** merge `feature/py3-middleware` into `develop` (and push), then restart the Claude session
-   so the sandbox paths apply. Keep `/tmp/qira_logs` and `/tmp/qira_asm` present
-   (`~/.config/user-tmpfiles.d/qira.conf` recreates them at login).
+1. **User:** merge `feature/task1-followups` into `develop` (and push). Keep `/tmp/qira_logs` and
+   `/tmp/qira_asm` present (`~/.config/user-tmpfiles.d/qira.conf` recreates them at login).
+   `/tmp/qira_binary` is no longer used; delete the stale symlink with `rm /tmp/qira_binary`.
 2. **Task 2** (compare traces with the legacy capture) is the recommended next task: it is the only
    check of the port against the reference, and it needs just the podman copy listed in Task 2.
 3. **Task 3** (tracer assessment) has no prerequisites and can run before, after or in a separate
@@ -62,7 +65,7 @@ answer the tracer question. They are listed in the [Task queue](#task-queue-debi
 | I4 | `uv tool install .` does not contain the tracer; `QIRA_TRACER_DIR` must point at a checkout's `tracers/`. | The tool install cannot trace on its own. | Task 4 (default tracer location). |
 | I5 | `docker/Dockerfile` and `install.sh` still use Python 2 and `requirements.txt`. | The `qira-legacy` image must be built from a commit before Task 1 (e.g. `862c3aa`). | Task 4 (`install.sh`), Stage 2 (Docker). |
 | I6 | The legacy modules are importable as `qira.*` (`middleware/` → `qira`, `static2/` → `qira.static2`, `web/` → `qira.web`). | Name clash with the planned `src/qira/core` layout. | Stage 0 step 3 / 1D: move the mapping to `qira.legacy` or replace modules as they land. |
-| I7 | Legacy bugs kept on purpose: `doanalysis` calls `get_vtimeline_picture` with too few arguments; a bare `except` in `qira.py` hides "already running as server"; `--flush-cache` runs `rm -rfv /tmp/qira*` (this also removes the sandbox mount points' contents and, outside the sandbox, the paths themselves); `os.fork()` from a threaded process. | Small; logged errors, possible DeprecationWarning on fork. | Stage 1D/2 replace this code; fix earlier only if a task trips over it. |
+| I7 | ~~Legacy bugs: `doanalysis` arguments, bare `except` hiding "already running as server", `--flush-cache` running `rm -rfv /tmp/qira*`, `os.fork()` from a threaded process, the global `/tmp/qira_binary` symlink.~~ **Fixed** on `feature/task1-followups`. | — | Stage 1D/2 still replace this code. |
 | I8 | The web UI (with the socket.io 4 client) was not opened in a real browser. | A UI regression would go unnoticed. | User check on port 3012, or Task 2 with the user. |
 | I9 | Claude's commands do not go through direnv, so `uv` and the `.env` settings are not loaded automatically. | Commands must set them explicitly. | Rule 4. |
 | I10 | `.venv/` is built against the Nix Python (`/nix/store/…`). | `./qira` also works outside the devenv shell, but after `devenv update` the next shell entry re-syncs `.venv`. Do not mix with a Debian-Python `.venv`. The Nix Python does not search Debian's library paths: Pillow's wheel needs the system `libz.so.1`, so `qira_analysis.py` imports `zlib` before PIL (checked by `qira_tests/test_startup.py`). Other wheels that link system libraries need the same care. | Rule 4. |
