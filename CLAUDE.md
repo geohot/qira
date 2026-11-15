@@ -6,7 +6,8 @@ Scope: recording Linux and Windows binaries. Other arches/features are out of sc
 ## Current state
 - Code is upstream QIRA 1.4: Python 2.7, 2019-pinned deps, QEMU tracer from geohot/qemu (branch qira).
 - Don't run install.sh: it targets Ubuntu 16.04 and uses sudo.
-- Working legacy reference: podman image qira-legacy. Ask before running it.
+- Legacy reference: podman image qira-legacy. You can't run it; reference output is in samples/legacy/.
+  Ask me to run anything else against it.
 
 ## Rules
 - Python 3 only; use ./venv.
