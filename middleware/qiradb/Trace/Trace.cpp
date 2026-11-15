@@ -44,12 +44,13 @@ Trace::Trace() {
   backing_size_ = 0;
   trace_index_ = 0;
   is_running_ = true;
+  thread_started_ = false;
 }
 
 // the destructor isn't thread safe wrt to the accessor functions
 Trace::~Trace() {
   is_running_ = false;
-  THREAD_JOIN(thread);
+  if (thread_started_) THREAD_JOIN(thread);
   // mutex lock isn't required now that the thread stopped
 #ifdef _WIN32
   CloseHandle(fd_);
@@ -76,13 +77,13 @@ char Trace::get_type_from_flags(uint32_t flags) {
 }
 
 inline void Trace::commit_memory(Clnum clnum, Address a, uint8_t d) {
-  if (DEBUG_TRACE) printf("DEBUG_TRACE: commit_memory at %u address: %llx data: %x\n", clnum, a, d);
+  if (DEBUG_TRACE) printf("DEBUG_TRACE: commit_memory at %u address: %" PRIx64 " data: %x\n", clnum, a, d);
   pair<map<Address, MemoryCell>::iterator, bool> ret = memory_.insert(MP(a, MemoryCell()));
   ret.first->second[clnum] = d;
 }
 
 inline MemoryWithValid Trace::get_byte(Clnum clnum, Address a) {
-  if (DEBUG_TRACE >= 2) printf("DEBUG_TRACE: get_byte %u %llx\n", clnum, a);
+  if (DEBUG_TRACE >= 2) printf("DEBUG_TRACE: get_byte %u %" PRIx64 "\n", clnum, a);
   map<Address, MemoryCell>::iterator it = memory_.find(a);
   if (it == memory_.end()) return 0;
 
@@ -112,7 +113,7 @@ bool Trace::remap_backing(uint64_t new_size) {
 #else
   while (1) {
     off_t fs = lseek(fd_, 0, SEEK_END);
-    if ((unsigned int)fs < new_size) {
+    if ((uint64_t)fs < new_size) {
       printf("WARNING: requested %" PRIu64 " bytes, but only %" PRIx64 " are in the file...waiting\n", new_size, fs);
       usleep(100 * 1000);
     } else {
@@ -160,6 +161,7 @@ bool Trace::ConnectToFileAndStart(char *filename, unsigned int trace_index, int 
   }
 
   THREAD_CREATE(thread, thread_entry, this);
+  thread_started_ = true;
   return true;
 }
 
@@ -204,7 +206,7 @@ void Trace::process() {
 
     // addresstype_to_clnums_
     // ** this is 75% of the perf, real unordered_map should improve, but c++11 is hard to build
-    pair<unordered_map<pair<Address, char>, set<Clnum> >::iterator, bool> ret =
+    pair<unordered_map<AddressType, set<Clnum>, AddressTypeHash>::iterator, bool> ret =
       addresstype_to_clnums_.insert(MP(MP(c->address, type), set<Clnum>()));
     ret.first->second.insert(c->clnum);
 
@@ -269,8 +271,8 @@ vector<Clnum> Trace::FetchClnumsByAddressAndType(Address address, char type,
       Clnum start_clnum, Clnum end_clnum, unsigned int limit) {
   RWLOCK_RDLOCK(db_lock_);
   vector<Clnum> ret;
-  pair<Address, char> p = MP(address, type);
-  unordered_map<pair<Address, char>, set<Clnum> >::iterator it = addresstype_to_clnums_.find(p);
+  AddressType p = MP(address, type);
+  unordered_map<AddressType, set<Clnum>, AddressTypeHash>::iterator it = addresstype_to_clnums_.find(p);
   if (it != addresstype_to_clnums_.end()) {
     for (set<Clnum>::iterator it2 = it->second.lower_bound(start_clnum);
          it2 != it->second.end() && *it2 < end_clnum; ++it2) {

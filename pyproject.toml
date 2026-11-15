@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=75", "Cython>=3.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qira"
+dynamic = ["version"]
+description = "QEMU Interactive Runtime Analyser, a timeless debugger"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+dependencies = [
+  "flask>=3.1",
+  "flask-socketio>=5.5",
+  "simple-websocket>=1.1",   # WebSocket transport for async_mode="threading"
+  "capstone>=5.0.6,<6",
+  "pyelftools>=0.33",
+  "pillow>=11",
+]
+
+[project.scripts]
+qira = "qira.qira:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+  "python-socketio[client]>=5.12",   # qira_tests/smoke_socketio.py
+]
+
+[tool.setuptools]
+# The legacy code stays where it is; it is installed as the "qira" package.
+package-dir = { "qira" = "middleware", "qira.static2" = "static2", "qira.web" = "web" }
+packages = ["qira", "qira.qiradb", "qira.static2", "qira.web"]
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }
+
+[tool.setuptools.package-data]
+"qira.web" = ["**/*"]
+
+[tool.uv]
+# rebuild the qiradb extension when its sources change
+cache-keys = [
+  { file = "pyproject.toml" },
+  { file = "setup.py" },
+  { file = "middleware/qiradb/**/*.pyx" },
+  { file = "middleware/qiradb/**/*.pxd" },
+  { file = "middleware/qiradb/**/*.cpp" },
+  { file = "middleware/qiradb/**/*.h" },
+]
+
+[tool.pytest.ini_options]
+testpaths = ["qira_tests"]

@@ -1,8 +1,6 @@
-from __future__ import print_function
 from capstone import *
 import capstone # for some unexported (yet) symbols in Capstone 3.0
-import qira_config
-import string
+from capstone import x86
 
 __all__ = ["Tags", "Function", "Block", "Instruction", "DESTTYPE","ABITYPE"]
 
@@ -134,7 +132,7 @@ class BapInsn(object):
 
 def exists(cont,f):
   try:
-    r = (x for x in cont if f(x)).next()
+    r = next(x for x in cont if f(x))
     return True
   except StopIteration:
     return False

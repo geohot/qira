@@ -1,18 +1,9 @@
-#!/bin/bash -e
-unamestr=$(uname)
-if [[ "$unamestr" == 'Linux' ]]; then
-  DIR=$(dirname $(readlink -f $0))
-elif [[ "$unamestr" == "Darwin" ]]; then
-  cmd=$(which "$0")
-  if [ -L "$cmd" ]; then
-    cmd=$(readlink "$cmd")
-  fi
-  DIR=$(dirname "$cmd")
-else
-  echo "Only Linux and Mac OS X are supported!"
-  exit
-fi
-
+#!/usr/bin/env bash
+# Run QIRA from a source checkout. Installed copies (uv tool install) have their own "qira".
+set -e
+DIR=$(dirname "$(readlink -f "$0")")
 unset PYTHONPATH
-source $DIR/venv/bin/activate
-exec /usr/bin/env python $DIR/middleware/qira.py $*
+if [ -x "$DIR/.venv/bin/qira" ]; then
+  exec "$DIR/.venv/bin/qira" "$@"
+fi
+exec uv run --project "$DIR" qira "$@"

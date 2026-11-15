@@ -1,4 +1,3 @@
-from __future__ import print_function
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
 from elftools.elf.relocation import RelocationSection
