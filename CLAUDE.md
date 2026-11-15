@@ -14,7 +14,11 @@ Scope: recording Linux and Windows binaries. Other arches/features are out of sc
 ## Rules
 - Python 3 only; use uv (`uv sync`, `uv run pytest`, `uv run qira …`). The env is `.venv/`.
 - Dev shell: devenv (`devenv.nix`) + direnv (`.envrc`). Settings (`QIRA_*`) live in `.env` (template `.env.example`);
-  your commands don't go through direnv, so use `uv run --env-file .env …`.
+  your commands don't go through direnv: prefix them with
+  `export PATH=$PWD/.devenv/profile/bin:$PATH UV_CACHE_DIR=$TMPDIR/uv-cache UV_PYTHON_DOWNLOADS=never`
+  and use `uv run --env-file .env …`.
+- Sandbox: `/tmp/qira_logs` and `/tmp/qira_asm` are writable (the tracer's fixed paths). A server and its
+  client must run in the same command. Status, open issues and assumptions: top of UPGRADE.md.
 - Work on feature branches off develop. You commit; I push.
 
 ## Layout
