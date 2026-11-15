@@ -1,4 +1,5 @@
 import argparse
+import time
 
 import pytest
 
@@ -92,3 +93,22 @@ def test_socketio_queries(sio):
 
   sio.emit("getnames", ["0x400536"], namespace="/qira")
   assert received(sio, "names")[0][0] == {"0x400536": "main"}
+
+
+def test_doanalysis_sends_picture(sio):
+  t = ws.program.traces[0]
+  end = time.time() + 10
+  while t.maxclnum is None:  # wait for the analysis thread
+    assert time.time() < end, "analysis thread did not finish"
+    time.sleep(0.05)
+  sio.get_received("/qira")
+  # the synthetic trace has no calls, so its depth map is flat and there is no picture
+  sio.emit("doanalysis", 0, namespace="/qira")
+  assert received(sio, "setpicture") == []
+
+  t.keep_analysis_thread = False
+  t.dmap, t.maxd = [0, 1, 2, 1], 2
+  sio.emit("doanalysis", 0, namespace="/qira")
+  pic = received(sio, "setpicture")[0][0]
+  assert pic["forknum"] == 0 and (pic["minclnum"], pic["maxclnum"]) == (t.minclnum, t.maxclnum)
+  assert pic["data"].startswith("data:image/png;base64,")

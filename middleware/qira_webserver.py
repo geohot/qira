@@ -152,10 +152,14 @@ def slice(forknum, clnum):
 @socket_method
 def analysis(forknum):
   trace = program.traces[forknum]
+  # the analysis thread sets maxclnum last, once dmap/maxd are ready
+  if trace.maxclnum is None:
+    return
 
-  data = qira_analysis.get_vtimeline_picture(trace)
+  data = qira_analysis.get_vtimeline_picture(trace, trace.minclnum, trace.maxclnum)
   if data != None:
-    emit('setpicture', {"forknum":forknum, "data":data})
+    emit('setpicture', {"forknum":forknum, "data":data,
+      "minclnum":trace.minclnum, "maxclnum":trace.maxclnum})
 
 # Flask-SocketIO 5 passes the (usually None) auth payload to connect handlers,
 # which socket_method would treat as "not initialised yet"
