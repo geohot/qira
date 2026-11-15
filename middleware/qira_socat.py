@@ -1,8 +1,7 @@
-from __future__ import print_function
 import os
 import socket
 import signal
-import qira_config
+from . import qira_config
 
 def get_next_run_id():
   ret = -1

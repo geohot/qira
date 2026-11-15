@@ -1,19 +1,16 @@
 # eventually, this can live in a different process
 # or we can break the boundary at static2
 # these calls don't have to be included for qira to work
-from __future__ import print_function
+from . import qira_config
 
-import sys
-import qira_config
+from .qira_webserver import socketio
+from .qira_webserver import socket_method
+from .qira_webserver import app
 
-from qira_webserver import socketio
-from qira_webserver import socket_method
-from qira_webserver import app
+from flask import request
+from flask_socketio import emit
 
-from flask import Flask, Response, redirect, request
-from flask_socketio import SocketIO, emit
-
-from qira_base import *
+from .qira_base import *
 import json
 import os
 
@@ -26,7 +23,7 @@ def init(lprogram):
 @socketio.on('getnames', namespace='/qira')
 @socket_method
 def getnames(addrs):
-  ret = program.static.get_tags(['name'], map(fhex, addrs))
+  ret = program.static.get_tags(['name'], list(map(fhex, addrs)))
   send = {}
   for addr in ret:
     send[ghex(addr)] = ret[addr]['name']
@@ -108,10 +105,7 @@ if qira_config.WITH_STATIC:
         bbb['instruction'] = str(stat['instruction'])
 
     def nl(dat):
-      if (sys.version_info > (3, 0)):
-        return list(map(int, dat))
-      else:
-        return map(ord, dat)
+      return list(dat)
 
     fxn = program.static[fhex(haddr)]['function']
     if fxn == None or flat == True:
@@ -194,15 +188,15 @@ if qira_config.WITH_STATIC:
       # get length of string
       eaddr = iaddr
       try:
-        while program.static.memory(eaddr, 1)[0] != '\x00':
+        while program.static.memory(eaddr, 1)[0] != 0:
           eaddr += 1
       except:
         pass
       strlen = eaddr-iaddr
       if strlen == 0:
         return
-      mstr = program.static.memory(iaddr, strlen)
-      mstr = ''.join(filter(str.isalnum, mstr))
+      mstr = program.static.memory(iaddr, strlen).decode("latin-1")
+      mstr = ''.join(c for c in mstr if c.isascii() and c.isalnum())
 
       program.static[iaddr]['type'] = 'string'
       program.static[iaddr]['len'] = strlen

@@ -1,42 +1,30 @@
-from __future__ import print_function
-from qira_base import *
-import qira_config
-import qira_analysis
+from .qira_base import *
+from . import qira_config
+from . import qira_analysis
 
 import os
 import shutil
 import sys
-import subprocess
 import threading
 import time
-import collections
 from hashlib import sha1
-
-from subprocess import (Popen, PIPE)
-import json
+from urllib.parse import unquote
 
 import struct
-import qiradb
+from . import qiradb
 
-import arch
+from . import arch
 
-# new home of static2
-sys.path.append(qira_config.BASEDIR+"/static2")
-import static2
+from . import static2
+
 def which(prog):
-  try:
-    cmd = ["which", prog]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    res = p.stdout.readlines()
-    if len(res) == 0:
-      raise Exception("binary not found")
-    return os.path.realpath(res[0].strip())
-  except:
-    # fallback mode, look for the binary straight up
-    if os.path.isfile(prog):
-      return os.path.realpath(prog)
-    else:
-      raise Exception("binary not found")
+  # match the behavior of strace and gdb: search PATH, then the plain path
+  res = shutil.which(prog)
+  if res is not None:
+    return os.path.realpath(res)
+  if os.path.isfile(prog):
+    return os.path.realpath(prog)
+  raise Exception("binary not found")
 
 # things that don't cross the fork
 class Program:
@@ -58,7 +46,7 @@ class Program:
 
     # init static
     if qira_config.WITH_STATIC:
-      threading.Thread(target=self.static.process).start()
+      threading.Thread(target=self.static.process, daemon=True).start()
 
     # no traces yet
     self.traces = {}
@@ -83,9 +71,9 @@ class Program:
     self.identify_program()
 
   def identify_program(self):
-    qemu_dir = os.path.dirname(os.path.realpath(__file__))+"/../tracers/qemu/"
-    pin_dir = os.path.dirname(os.path.realpath(__file__))+"/../tracers/pin/"
-    lib_dir = os.path.dirname(os.path.realpath(__file__))+"/../libs/"
+    qemu_dir = qira_config.TRACER_DIR+"qemu/"
+    pin_dir = qira_config.TRACER_DIR+"pin/"
+    lib_dir = qira_config.LIBS_DIR
     self.pinbinary = pin_dir+"pin-latest/pin"
 
     # pmaps is global, but updated by the traces
@@ -146,9 +134,9 @@ class Program:
           print("**** set QEMU_LD_PREFIX to",os.environ['QEMU_LD_PREFIX'])
 
       if self.fb == 0x28:
-        if '/lib/ld-linux.so.3' in progdat:
+        if b'/lib/ld-linux.so.3' in progdat:
           use_lib('armel')
-        elif '/lib/ld-linux-armhf.so.3' in progdat:
+        elif b'/lib/ld-linux-armhf.so.3' in progdat:
           use_lib('armhf')
         self.tregs = arch.ARMREGS
         self.qirabinary = qemu_dir + "qira-arm"
@@ -238,7 +226,7 @@ class Program:
         raise NotImplementedError("ARM/Aarch64 Support is not implemented")
       if not os.path.isfile(self.pintool):
         print("Running a Mach-O FAT (Universal) binary requires PIN support. See tracers/pin_build.sh")
-        exit()
+        sys.exit()
       raise NotImplementedError("Mach-O FAT (Universal) binary not supported")
       self.runnable = True
 
@@ -280,7 +268,7 @@ class Program:
         raise NotImplementedError("ARM/Aarch64 Support is not implemented")
       if not os.path.isfile(self.pintool):
         print("Running a Mach-O binary requires PIN support. See tracers/pin_build.sh")
-        exit()
+        sys.exit()
       self.runnable = True
     else:
       raise Exception("unknown binary type")
@@ -298,11 +286,11 @@ class Program:
     if os.name == "nt":
       return
     try:
-      os.unlink("/tmp/qira_asm")
+      os.unlink(qira_config.ASM_FILE)
     except:
       pass
-    open("/tmp/qira_asm", "a").close()
-    self.qira_asm_file = open("/tmp/qira_asm", "r")
+    open(qira_config.ASM_FILE, "a").close()
+    self.qira_asm_file = open(qira_config.ASM_FILE, "r", errors="replace")
 
   def read_asm_file(self):
     if os.name == "nt":
@@ -356,14 +344,14 @@ class Program:
 
   def get_maxclnum(self):
     ret = {}
-    for t in self.traces:
-      ret[t] = [self.traces[t].db.get_minclnum(), self.traces[t].db.get_maxclnum()]
+    for t, trace in list(self.traces.items()):
+      ret[t] = [trace.db.get_minclnum(), trace.db.get_maxclnum()]
     return ret
 
   def get_pmaps(self):
     ret = {}
-    for t in self.traces:
-      pm = self.traces[t].db.get_pmaps()
+    for trace in list(self.traces.values()):
+      pm = trace.db.get_pmaps()
       for a in pm:
         if a not in ret:
           ret[a] = pm[a]
@@ -390,8 +378,8 @@ class Program:
       eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
     if not os.path.exists(eargs[0]):
       print("\nQIRA tracer %s not found" % eargs[0])
-      print("Your install is broken. Check ./install.sh for issues")
-      exit(-1)
+      print("Your install is broken. Check ./install.sh for issues, or point QIRA_TRACER_DIR at the tracers/ folder")
+      sys.exit(-1)
     if shouldfork:
       if os.fork() != 0:
         return
@@ -419,10 +407,10 @@ class Trace:
     self.mapped = []
 
     self.keep_analysis_thread = True
-    threading.Thread(target=self.analysis_thread).start()
+    threading.Thread(target=self.analysis_thread, daemon=True).start()
 
   def fetch_raw_memory(self, clnum, address, ln):
-    return ''.join(map(chr, self.fetch_memory(clnum, address, ln).values()))
+    return bytes(self.fetch_memory(clnum, address, ln).values())
 
   # proxy the db call and fill in base memory
   def fetch_memory(self, clnum, address, ln):
@@ -435,21 +423,20 @@ class Trace:
         dat[i] = mem[i]&0xFF
       else:
         try:
-          if (sys.version_info > (3, 0)):
-            dat[i] = self.program.static.memory(ri, 1)[0]
-          else:
-            dat[i] = ord(self.program.static.memory(ri, 1)[0])
+          dat[i] = self.program.static.memory(ri, 1)[0]
         except IndexError:
           pass
     return dat
 
   def read_strace_file(self):
     try:
-      f = open(qira_config.TRACE_FILE_BASE+str(int(self.forknum))+"_strace").read()
+      with open(qira_config.TRACE_FILE_BASE+str(int(self.forknum))+"_strace", "rb") as sf:
+        f = sf.read()
     except:
       return "no strace"
 
-    f = ''.join(filter(lambda x: ord(x) < 0x80, f))
+    # only keep ASCII, the tracer prints raw guest bytes in strings
+    f = bytes(x for x in f if x < 0x80).decode("ascii")
     ret = []
     files = {}
     for ff in f.split("\n"):
@@ -542,7 +529,7 @@ class Trace:
     try:
       forkbase = get_forkbase_from_log(self.forknum)
       print("*** using base %d for %d" % (forkbase, self.forknum))
-      f = open(qira_config.TRACE_FILE_BASE+str(forkbase)+"_base", 'r')
+      f = open(qira_config.TRACE_FILE_BASE+str(forkbase)+"_base", 'r', errors="replace")
     except Exception as e:
       print("*** base file issue",e)
       # done
@@ -564,7 +551,6 @@ class Trace:
     images_dir = qira_config.TRACE_FILE_BASE+str(self.forknum)+"_images"
     if os.path.isdir(images_dir):
       try:
-        from urllib import unquote
         for image in os.listdir(images_dir):
           if os.path.isfile(images_dir+"/"+image):
             img_map[unquote(image)] = {0: images_dir+"/"+image}
@@ -576,7 +562,9 @@ class Trace:
       except Exception as e:
         print("Exception while dealing with _images/:", e)
 
-    for ln in f.read().split("\n"):
+    with f:
+      base_lines = f.read().split("\n")
+    for ln in base_lines:
       ln = ln.split(" ")
       if len(ln) < 3:
         continue
@@ -588,7 +576,7 @@ class Trace:
 
       try:
         if fn in img_map:
-          off = max(i for i in img_map[fn].iter_keys() if i <= offset)
+          off = max(i for i in img_map[fn].keys() if i <= offset)
           with open(img_map[fn][off], 'rb') as f:
             f.seek(offset-off)
             dat = f.read(se-ss)

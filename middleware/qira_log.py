@@ -1,4 +1,3 @@
-#!/usr/bin/env python2.7
 import struct
 
 IS_VALID = 0x80000000
@@ -49,17 +48,17 @@ def read_log(f, seek=1, cnt=0):
   return ret
 
 def write_log(fn, dat):
-  # untested
-  ss = [struct.pack("I", len(dat)) + "\x00"*0x14]
+  # header: change_count counts the header entry too, the reader starts at entry 1
+  # (the tracer writes the same, see qemu_mods/tci.c)
+  ss = [struct.pack("I", len(dat) + 1) + b"\x00"*0x14]
   for (address, data, clnum, flags) in dat:
     ss.append(struct.pack("QQII", address, data, clnum, flags))
-  f = open(fn, "wb")
-  f.write(''.join(ss))
-  f.close()
+  with open(fn, "wb") as f:
+    f.write(b''.join(ss))
 
 if __name__ == "__main__":
   import sys
   # standalone this can dump a log
-  for (address, data, clnum, flags) in read_log(open(sys.argv[1])):
+  for (address, data, clnum, flags) in read_log(open(sys.argv[1], "rb")):
     print("%4d: %X -> %X  %X" % (clnum, address, data, flags))
 
