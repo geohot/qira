@@ -26,6 +26,7 @@ qira = "qira.legacy.qira:main"
 dev = [
   "pytest>=8",
   "python-socketio[client]>=5.12",   # qira_tests/smoke_socketio.py
+  "selenium>=4.52.0",
 ]
 
 [tool.setuptools]
