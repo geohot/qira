@@ -18,6 +18,9 @@
     UV_PYTHON_DOWNLOADS = "never";
   };
 
+  # .env is loaded by direnv (.envrc), not by devenv's deprecated dotenv integration
+  dotenv.disableHint = true;
+
   enterShell = ''
     uv sync --quiet
   '';
