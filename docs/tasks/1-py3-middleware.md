@@ -120,15 +120,17 @@ All checks ran on Debian 13, Python 3.13.5, GCC 14.2, uv 0.13.8.
 5. **The legacy Docker image.** `docker/Dockerfile` and `install.sh` still use `requirements.txt` and
    Python 2. Rebuild `qira-legacy` from a commit before this branch (e.g. `862c3aa`).
 6. **The package name.** The legacy modules are now importable as `qira.*` (e.g. `qira.qira_program`).
+   **Done later:** they moved to `qira.legacy`, see [Follow-ups](#follow-ups-on-featuretask1-followups).
    Stage 0/1D plans `src/qira/core/…`; when that starts, the legacy mapping should move to
    e.g. `qira.legacy` or be replaced as modules land.
-7. **Legacy bugs left as they are** (not Python 3 related): the `doanalysis` handler calls
+7. **Legacy bugs left as they are** (not Python 3 related; **fixed later**, see
+   [Follow-ups](#follow-ups-on-featuretask1-followups)): the `doanalysis` handler calls
    `get_vtimeline_picture` with too few arguments (the error is logged); `qira.py` swallows the
    "can't run as server if QIRA is already running" exception in a bare `except`;
    `--flush-cache` runs `rm -rfv /tmp/qira*`; `os.fork()` is used from a threaded process
    (Python 3.12+ may warn; Stage 2 replaces it with subprocesses).
 8. **The legacy `/tmp/qira_binary` symlink** is still created (and silently skipped when `/tmp` is not
-   writable).
+   writable). **Removed later**, see [Follow-ups](#follow-ups-on-featuretask1-followups).
 
 ## For the next tasks
 
@@ -137,3 +139,42 @@ All checks ran on Debian 13, Python 3.13.5, GCC 14.2, uv 0.13.8.
   x86-64 log and `_strace`/`_base` fixtures that Task 2 and Stage 1C can reuse.
 * In the sandbox, start the server and its client in the **same** command, with a `trap` that
   kills the server.
+
+## Follow-ups on `feature/task1-followups`
+
+Done after Task 1 was merged into `develop`, one commit each:
+
+| Commit | Change |
+|--------|--------|
+| `fix: load zlib before Pillow …` | `./qira` failed at startup with `libz.so.1: cannot open shared object file`. Pillow 13's wheel links the system `libz.so.1`; the devenv `.venv` runs on the Nix Python, which does not search `/lib/x86_64-linux-gnu`. pytest hid it by importing `zlib` first. `qira_analysis.py` now imports `zlib` before PIL. `test_startup.py` imports the entry point and runs `--help` in a fresh interpreter. |
+| `fix: doanalysis passes the clnum range …` | The handler called `get_vtimeline_picture(trace)` without `minclnum`/`maxclnum`. It now waits for the analysis thread and sends `minclnum`/`maxclnum` with `setpicture` (the client reads them). |
+| `fix: --server refuses to start …` | The bare `except` caught its own "can't run as server" error, so a second `--server` cleared the runs and started another server. `qira_is_running()` catches only `OSError`, closes the probe socket, has a 1 s timeout and probes the `--host` address (loopback for `0.0.0.0`/`::`). |
+| `fix: --flush-cache empties the configured paths …` | Instead of `rm -rfv /tmp/qira*`: `flush_caches()` empties `QIRA_TRACE_DIR` and `QIRA_STATIC_CACHE_DIR` and truncates `QIRA_ASM_FILE`, keeping the paths (mount points). |
+| `fix: start the tracer with subprocess …` | `execqira` returns a `subprocess.Popen` (optional fd for stdio); `forkat` no longer forks (it used to fork twice and leave a copy of the server in the handler); the socat bind server accepts in a daemon thread and runs one tracer per client with the socket as stdio. A missing tracer raises `TracerNotFound` (exit message from the CLI, logged by the server). |
+| `fix: stop creating the global /tmp/qira_binary symlink` | Its only reader was the debug entry of `qira_analysis`, now `python -m qira.legacy.qira_analysis <binary> [run id]` with the configured trace/asm paths. |
+| `feat: installed copies find the tracer in ~/.local/share/qira (I4)` | A checkout uses its own `tracers/`/`libs/`; an installed copy defaults to `${XDG_DATA_HOME:-~/.local/share}/qira/tracers` and `…/libs` (Task 4 installs the tracer there). Checked with a wheel in a separate venv. |
+| `refactor: install the legacy code as qira.legacy (I6)` | `src/qira/` is the top-level package; `middleware/` → `qira.legacy`, `static2/` → `qira.legacy.static2`, `web/` → `qira.legacy.web`, qiradb → `qira.legacy.qiradb.qiradb`. Console script `qira.legacy.qira:main`; `python -m qira` still works. A stale `build/lib.*` had put the old `qira/*.py` into the wheel; after removing it the wheel holds only `qira/__init__.py`, `qira/__main__.py` and `qira/legacy/…`. |
+
+**Verified** (Claude session started after the sandbox change):
+
+* `uv run pytest`: 37 passed, 1 skipped (the live-tracer test). New: `test_startup.py`, `test_cli.py`,
+  `test_tracer_launch.py` (a shell script stands in for the tracer), `test_doanalysis_sends_picture`,
+  `test_flush_caches*`. The tracer-launch tests also pass with `-W error::DeprecationWarning`.
+* `test_cli.py` fails against the old `qira.py` ("a second server was started"); `test_startup.py`
+  and the doanalysis test fail without their fixes.
+* Plain `./qira --no-run --no-delete-runs … qira_tests/bin/loop` with `samples/legacy` copied into
+  `/tmp/qira_logs` (no `LD_LIBRARY_PATH`): `smoke_socketio.py` PASS. A second
+  `./qira --server` on the same port exits 1 with "can't run as server if QIRA is already running"
+  and leaves the traces alone.
+* `./qira --flush-cache …` empties `/tmp/qira_logs` (the directory stays), truncates `/tmp/qira_asm`,
+  then exits 1 with "QIRA tracer … not found" (no tracer on this host, I2) instead of a traceback.
+* `python -m qira.legacy.qira_analysis qira_tests/bin/loop` on a copy of `samples/legacy` (with an empty asm
+  file) runs.
+
+**Not verified:** forkat and `--server`/socat with the real tracer (none on this host); the web UI in
+a browser (I8). The smoke output shows 32/32 memory bytes at clnum 0 and 1 where the report above
+shows 24/32, reading the same `samples/legacy` trace from `/tmp/qira_logs`; Task 2 should check this.
+
+**Not done here** (they belong to later tasks): hardcoded tracer paths (I1, Stage 1A), the tracer
+itself (I2, Tasks 3/4), tracer location for tool installs (I4, Task 4), Docker/`install.sh` (I5,
+Task 4/Stage 2), the package name (I6, Stage 0/1D), the browser check (I8, user).

@@ -30,20 +30,23 @@ answer the tracer question. They are listed in the [Task queue](#task-queue-debi
 * **Task 1 is done** on `feature/py3-middleware` ([report](docs/tasks/1-py3-middleware.md)): the
   legacy middleware, qiradb and static2 run on Python 3.13, packaged as a uv project
   (`pyproject.toml`, `uv.lock`, `uv tool install .` works), 21 tests pass, Socket.IO smoke test passes.
-  It is **not yet merged into `develop`**, which Task 2 and Task 4 need.
+  It is merged into `develop`. Follow-ups on `feature/task1-followups` (not merged yet): the
+  Pillow/zlib startup fix (I10) and the legacy bugs from I7, see the
+  [report](docs/tasks/1-py3-middleware.md#follow-ups-on-featuretask1-followups).
 * **Development environment** (follow-up to Task 1): devenv (`devenv.nix`, `devenv.yaml`,
   `devenv.lock`) provides Python 3.13, uv and the compiler; direnv (`.envrc`) enters it and loads
   the `QIRA_*` settings from `.env` (template `.env.example`). Verified on devserver-01: the shell
   loads, `uv sync` builds qiradb with the Nix toolchain, the tests pass.
 * **Sandbox:** `.claude/settings.json` allows writing `/tmp/qira_logs` and `/tmp/qira_asm`, and QIRA
   now empties/truncates those paths instead of deleting them (they are mount points in the sandbox).
-  The setting only takes effect in a **new** Claude session.
+  Verified in a new session (2026-11-15): both paths are writable, and `./qira` plus
+  `smoke_socketio.py` pass against a trace in `/tmp/qira_logs`.
 
 ### What is next
 
-1. **User:** merge `feature/py3-middleware` into `develop` (and push), then restart the Claude session
-   so the sandbox paths apply. Keep `/tmp/qira_logs` and `/tmp/qira_asm` present
-   (`~/.config/user-tmpfiles.d/qira.conf` recreates them at login).
+1. **User:** merge `feature/task1-followups` into `develop` (and push). Keep `/tmp/qira_logs` and
+   `/tmp/qira_asm` present (`~/.config/user-tmpfiles.d/qira.conf` recreates them at login).
+   `/tmp/qira_binary` is no longer used; delete the stale symlink with `rm /tmp/qira_binary`.
 2. **Task 2** (compare traces with the legacy capture) is the recommended next task: it is the only
    check of the port against the reference, and it needs just the podman copy listed in Task 2.
 3. **Task 3** (tracer assessment) has no prerequisites and can run before, after or in a separate
@@ -59,13 +62,13 @@ answer the tracer question. They are listed in the [Task queue](#task-queue-debi
 | I1 | The QEMU and PIN tracers hardcode `/tmp/qira_logs/` and `/tmp/qira_asm`. `QIRA_TRACE_DIR`/`QIRA_ASM_FILE` only move what the middleware reads. | One capture at a time per host; captures must be copied out of `/tmp/qira_logs`. | Task 2 works with it; Stage 1A (per-run paths as plugin args) removes it. |
 | I2 | No working tracer on the host. `tracers/qemu/qira-*` are broken symlinks; the only build is the Ubuntu 16.04 binary in `qira-legacy`. | No live tracing until the user copies it (Task 2) or Task 3/4 provide one. | Task 2 (copy), Task 3 (decision), Task 4 (install). |
 | I3 | Claude's sandbox: every command has its own network namespace (a server and its client must run in one command, with a `trap` that stops the server); only the listed domains are reachable (`pypi.org`, `files.pythonhosted.org`, `github.com`), so no `cache.nixos.org`, `gitlab.com` or `download.qemu.org`; sandbox setting changes need a new session; the `/tmp` paths must exist before the session starts. | Claude cannot change the devenv shell (new Nix packages) or download QEMU tarballs; the user enters the shell once after `devenv.nix` changes. | Rules 4 and 9. Add domains in `.claude/settings.json` if a task needs them. |
-| I4 | `uv tool install .` does not contain the tracer; `QIRA_TRACER_DIR` must point at a checkout's `tracers/`. | The tool install cannot trace on its own. | Task 4 (default tracer location). |
+| I4 | `uv tool install .` does not contain the tracer. **Partly fixed** on `feature/task1-followups`: an installed copy now looks in `${XDG_DATA_HOME:-~/.local/share}/qira/tracers/` (and `…/libs/`), a checkout in its own `tracers/`. | Nothing installs a tracer there yet. | Task 4 (install the tracer into that folder). |
 | I5 | `docker/Dockerfile` and `install.sh` still use Python 2 and `requirements.txt`. | The `qira-legacy` image must be built from a commit before Task 1 (e.g. `862c3aa`). | Task 4 (`install.sh`), Stage 2 (Docker). |
-| I6 | The legacy modules are importable as `qira.*` (`middleware/` → `qira`, `static2/` → `qira.static2`, `web/` → `qira.web`). | Name clash with the planned `src/qira/core` layout. | Stage 0 step 3 / 1D: move the mapping to `qira.legacy` or replace modules as they land. |
-| I7 | Legacy bugs kept on purpose: `doanalysis` calls `get_vtimeline_picture` with too few arguments; a bare `except` in `qira.py` hides "already running as server"; `--flush-cache` runs `rm -rfv /tmp/qira*` (this also removes the sandbox mount points' contents and, outside the sandbox, the paths themselves); `os.fork()` from a threaded process. | Small; logged errors, possible DeprecationWarning on fork. | Stage 1D/2 replace this code; fix earlier only if a task trips over it. |
+| I6 | ~~The legacy modules are importable as `qira.*`, clashing with the planned `src/qira/core` layout.~~ **Fixed** on `feature/task1-followups`: `src/qira/` is the top-level package; the legacy code is `qira.legacy` (`middleware/`), `qira.legacy.static2`, `qira.legacy.web`; console script `qira.legacy.qira:main`, `python -m qira` still works. | — | Stage 1D adds `qira.core` next to it and replaces `qira.legacy` modules as they land. |
+| I7 | ~~Legacy bugs: `doanalysis` arguments, bare `except` hiding "already running as server", `--flush-cache` running `rm -rfv /tmp/qira*`, `os.fork()` from a threaded process, the global `/tmp/qira_binary` symlink.~~ **Fixed** on `feature/task1-followups`. | — | Stage 1D/2 still replace this code. |
 | I8 | The web UI (with the socket.io 4 client) was not opened in a real browser. | A UI regression would go unnoticed. | User check on port 3012, or Task 2 with the user. |
 | I9 | Claude's commands do not go through direnv, so `uv` and the `.env` settings are not loaded automatically. | Commands must set them explicitly. | Rule 4. |
-| I10 | `.venv/` is built against the Nix Python (`/nix/store/…`). | `./qira` also works outside the devenv shell, but after `devenv update` the next shell entry re-syncs `.venv`. Do not mix with a Debian-Python `.venv`. | Rule 4. |
+| I10 | `.venv/` is built against the Nix Python (`/nix/store/…`). | `./qira` also works outside the devenv shell, but after `devenv update` the next shell entry re-syncs `.venv`. Do not mix with a Debian-Python `.venv`. The Nix Python does not search Debian's library paths: Pillow's wheel needs the system `libz.so.1`, so `qira_analysis.py` imports `zlib` before PIL (checked by `qira_tests/test_startup.py`). Other wheels that link system libraries need the same care. | Rule 4. |
 
 ### Assumptions
 
@@ -356,9 +359,10 @@ people who only want to *use* QIRA, and a tracer for both (issues I2, I4).
   whichever Task 3 recommends as default). Never fails the install when the tracer is skipped, but
   says so. If Task 3 recommends a Nix-provided QEMU, add it to `devenv.nix` as well, so the dev
   shell can trace.
-* Code change: `qira_config.TRACER_DIR` falls back to that data folder when the checkout's
-  `tracers/` does not exist (installed tool), so `QIRA_TRACER_DIR` is no longer needed. Add the
-  variable to `.env.example`. Test it.
+* Code change: **done** on `feature/task1-followups`. `qira_config.default_dir()` uses that data
+  folder for installed copies (the package is not mapped from a checkout's `middleware/`), so
+  `QIRA_TRACER_DIR` is no longer needed; `.env.example` documents it, `test_default_tracer_dir`
+  covers it.
 * Remove the Ubuntu 14.04/16.04, Arch, Fedora and macOS branches and the `requirements.txt`/venv
   code; on anything other than Debian/Ubuntu, print what is needed and exit.
 * `--skip-tests` turns off a final `uv run pytest` (run from the checkout).
@@ -388,7 +392,7 @@ without `QIRA_TRACER_DIR`, the tests pass, and the report shows the output.
 | Tracer | `tracers/qemu_build.sh` → `geohot/qemu@qira`; patches in `extra/qemu_mods/{tci.c,main.c,strace.c,disas.c}` | QEMU 2.x fork using the TCG interpreter (TCI). Does not build on modern toolchains (README notes 18.04 already fails). `tracers/qemu/qira-*` are symlinks into the `qemu/` clone, so they are broken until it is built; on Debian 13 the only working build is in the `qira-legacy` podman image (see Task queue). |
 | Alternative tracer | `tracers/pin/qirapin.cpp`, `tracers/pin_build.sh` | Intel PIN tool, used on macOS / optional on Linux. Tied to an old PIN release. |
 | Trace database | `middleware/qiradb/` (`Trace/Trace.{h,cpp}`, `qiradb.pyx`) | C++ reader of the mmap'd change log. Since Task 1: built by `setup.py` (Cython 3, C++17) during `uv sync`, `std::unordered_map` on every compiler. Memory history is a `std::map<Clnum,uint8_t>` **per byte**, which uses a lot of RAM. |
-| Middleware | `middleware/*.py` | Since Task 1: Python 3.13, Flask 3 + Flask-SocketIO 5 (threading mode), installed as package `qira`. Still: argparse CLI, process control via `os.fork`/`os.execvp`, global mutable config in `qira_config.py` (paths now overridable with `QIRA_*` variables / `.env`). |
+| Middleware | `middleware/*.py` | Since Task 1: Python 3.13, Flask 3 + Flask-SocketIO 5 (threading mode), installed as package `qira.legacy` (since the Task 1 follow-ups). Still: argparse CLI, process control via `os.fork`/`os.execvp`, global mutable config in `qira_config.py` (paths now overridable with `QIRA_*` variables / `.env`). |
 | Static analysis | `static2/` | Ported to Python 3 in Task 1 (capstone 5, pyelftools 0.33). Pickle-based cache in `/tmp/qira_static_cache/`. |
 | Frontend | `web/` | jQuery 2, a Meteor shim (`fakemeteor.js`), wcDocker, socket.io client 4.8 (updated in Task 1). |
 | Dependencies / dev env | `pyproject.toml`, `uv.lock`, `devenv.nix`, `.envrc`, `.env.example` | Since Task 1: current versions locked by uv; devenv + direnv dev shell; `requirements.txt` removed. |

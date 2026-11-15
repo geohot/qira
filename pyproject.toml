@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-qira = "qira.qira:main"
+qira = "qira.legacy.qira:main"
 
 [dependency-groups]
 dev = [
@@ -29,15 +29,16 @@ dev = [
 ]
 
 [tool.setuptools]
-# The legacy code stays where it is; it is installed as the "qira" package.
-package-dir = { "qira" = "middleware", "qira.static2" = "static2", "qira.web" = "web" }
-packages = ["qira", "qira.qiradb", "qira.static2", "qira.web"]
+# src/qira is the top-level package. The legacy code stays where it is and is installed as
+# qira.legacy (middleware/), qira.legacy.static2 (static2/) and qira.legacy.web (web/).
+package-dir = { "qira" = "src/qira", "qira.legacy" = "middleware", "qira.legacy.static2" = "static2", "qira.legacy.web" = "web" }
+packages = ["qira", "qira.legacy", "qira.legacy.qiradb", "qira.legacy.static2", "qira.legacy.web"]
 
 [tool.setuptools.dynamic]
 version = { file = "VERSION" }
 
 [tool.setuptools.package-data]
-"qira.web" = ["**/*"]
+"qira.legacy.web" = ["**/*"]
 
 [tool.uv]
 # rebuild the qiradb extension when its sources change

@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from qira import arch, qira_config, qira_program
+from qira.legacy import arch, qira_config, qira_program
 from conftest import LOOP, wait_for_update
 
 
@@ -74,7 +74,7 @@ def test_trace_strace_and_base(program, loop_trace):
 
 
 def test_missing_strace(program, trace_dir):
-  from qira import qira_log
+  from qira.legacy import qira_log
   from conftest import LOOP_CHANGES
   qira_log.write_log(str(trace_dir / "5"), LOOP_CHANGES)
   t = program.add_trace(str(trace_dir / "5"), 5)
@@ -126,3 +126,43 @@ def test_create_asm_file_truncates(program):
   program.create_asm_file()
   assert os.path.getsize(qira_config.ASM_FILE) == 0
   assert os.stat(qira_config.ASM_FILE).st_ino == ino
+
+
+def test_flush_caches(trace_dir, tmp_path, monkeypatch):
+  # --flush-cache used to run `rm -rfv /tmp/qira*`; now it empties the configured paths only
+  cache = tmp_path / "static_cache"
+  cache.mkdir()
+  (cache / "abc").write_text("x")
+  monkeypatch.setattr(qira_config, "STATIC_CACHE_BASE", str(cache) + "/")
+  (trace_dir / "0").write_bytes(b"x")
+  (trace_dir / "0_images").mkdir()
+  asm = tmp_path / "qira_asm"
+  asm.write_text("0x400000|old\n")
+  other = tmp_path / "qira_other"
+  other.write_text("keep")
+  ino = os.stat(trace_dir).st_ino
+
+  qira_program.flush_caches()
+
+  assert os.listdir(trace_dir) == [] and os.stat(trace_dir).st_ino == ino
+  assert os.listdir(cache) == []
+  assert asm.read_text() == ""
+  assert other.read_text() == "keep"
+
+
+def test_flush_caches_missing_paths(tmp_path, monkeypatch):
+  monkeypatch.setattr(qira_config, "TRACE_FILE_BASE", str(tmp_path / "nope") + "/")
+  monkeypatch.setattr(qira_config, "STATIC_CACHE_BASE", str(tmp_path / "nope2") + "/")
+  monkeypatch.setattr(qira_config, "ASM_FILE", str(tmp_path / "nope3"))
+  qira_program.flush_caches()
+  assert os.listdir(tmp_path) == []
+
+
+def test_default_tracer_dir():
+  # a checkout: next to middleware/
+  assert qira_config.TRACER_DIR == os.path.join(qira_config.BASEDIR, "tracers", "")
+  assert qira_config.default_dir("libs", "/src/qira/middleware", {}) == "/src/qira/libs"
+  # an installed copy: the per-user data folder
+  site = "/home/u/.local/share/uv/tools/qira/lib/python3.13/site-packages/qira"
+  assert qira_config.default_dir("tracers", site, {"XDG_DATA_HOME": "/xdg"}) == "/xdg/qira/tracers"
+  assert qira_config.default_dir("tracers", site, {}) == os.path.expanduser("~/.local/share/qira/tracers")

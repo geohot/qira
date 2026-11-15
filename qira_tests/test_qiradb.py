@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from qira import qiradb, qira_log
+from qira.legacy import qiradb, qira_log
 from conftest import HELLO_TRACE, LEGACY, LOOP_CHANGES, RBP, RIP, RSP, STACK, wait_for_update
 
 LIMIT = 10000

@@ -125,8 +125,7 @@ def forkat(forknum, clnum, pending):
   if args.server:
     qira_socat.start_bindserver(program, qira_config.FORK_PORT, forknum, clnum)
   else:
-    if os.fork() == 0:
-      program.execqira(["-qirachild", "%d %d %d" % (forknum, clnum, next_run_id)])
+    program.execqira(["-qirachild", "%d %d %d" % (forknum, clnum, next_run_id)])
 
 
 @socketio.on('deletefork', namespace='/qira')
@@ -152,10 +151,14 @@ def slice(forknum, clnum):
 @socket_method
 def analysis(forknum):
   trace = program.traces[forknum]
+  # the analysis thread sets maxclnum last, once dmap/maxd are ready
+  if trace.maxclnum is None:
+    return
 
-  data = qira_analysis.get_vtimeline_picture(trace)
+  data = qira_analysis.get_vtimeline_picture(trace, trace.minclnum, trace.maxclnum)
   if data != None:
-    emit('setpicture', {"forknum":forknum, "data":data})
+    emit('setpicture', {"forknum":forknum, "data":data,
+      "minclnum":trace.minclnum, "maxclnum":trace.maxclnum})
 
 # Flask-SocketIO 5 passes the (usually None) auth payload to connect handlers,
 # which socket_method would treat as "not initialised yet"

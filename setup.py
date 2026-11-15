@@ -3,7 +3,7 @@ from Cython.Build import cythonize
 from setuptools import Extension, setup
 
 qiradb = Extension(
-    "qira.qiradb.qiradb",
+    "qira.legacy.qiradb.qiradb",
     sources=["middleware/qiradb/qiradb.pyx"],
     include_dirs=["middleware/qiradb/Trace"],
     language="c++",

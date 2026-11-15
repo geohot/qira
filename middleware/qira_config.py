@@ -21,9 +21,20 @@ WEB_DIR = os.path.join(PKGDIR, "web")
 if not os.path.isdir(WEB_DIR):
   WEB_DIR = os.path.join(BASEDIR, "web")
 
+def data_dir(environ=os.environ):
+  """Per-user data folder for installed copies: $XDG_DATA_HOME/qira (~/.local/share/qira)."""
+  return os.path.join(environ.get("XDG_DATA_HOME") or os.path.join(os.path.expanduser("~"), ".local", "share"), "qira")
+
+def default_dir(name, pkgdir=PKGDIR, environ=os.environ):
+  """Where tracers/ or libs/ live: next to middleware/ in a source checkout (the package
+  is mapped from it), in data_dir() for an installed copy (uv tool install, a wheel)."""
+  if os.path.basename(pkgdir) == "middleware":
+    return os.path.join(os.path.dirname(pkgdir), name)
+  return os.path.join(data_dir(environ), name)
+
 # tracers/ (qemu/qira-<arch>, pin/) and the libs/ from fetchlibs.sh
-TRACER_DIR = _dir_from_env("QIRA_TRACER_DIR", os.path.join(BASEDIR, "tracers"))
-LIBS_DIR = _dir_from_env("QIRA_LIBS_DIR", os.path.join(BASEDIR, "libs"))
+TRACER_DIR = _dir_from_env("QIRA_TRACER_DIR", default_dir("tracers"))
+LIBS_DIR = _dir_from_env("QIRA_LIBS_DIR", default_dir("libs"))
 
 # NOTE: the QEMU and PIN tracers write to /tmp/qira_logs/ and /tmp/qira_asm themselves,
 # these settings only change where the middleware reads from
