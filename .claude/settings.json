@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "model": "opus",
+  "permissions": {
+    "ask": ["Bash(podman *)"]
+  },
+  "sandbox": {
+    "excludedCommands": ["podman"],
+    "network": {
+      "allowedDomains": ["pypi.org", "files.pythonhosted.org", "github.com"]
+    }
+  }
+}
