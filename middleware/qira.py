@@ -9,6 +9,18 @@ from . import qira_socat
 from . import qira_program
 from . import qira_webserver
 
+def qira_is_running(host, port):
+  """True if something accepts connections on the web port (another QIRA)."""
+  # a wildcard listen address is reached through loopback
+  ip = ipaddress.ip_address(host)
+  if ip.is_unspecified:
+    host = "127.0.0.1" if ip.version == 4 else "::1"
+  try:
+    socket.create_connection((host, port), timeout=1).close()
+    return True
+  except OSError:
+    return False
+
 def main():
   # define arguments
   parser = argparse.ArgumentParser(description = 'Analyze binary. Like "qira /bin/ls /"')
@@ -78,13 +90,11 @@ def main():
   # creates the file symlink, program is constant through server run
   program = qira_program.Program(args.binary, args.args, qemu_args)
 
-  is_qira_running = 1
-  try:
-    socket.create_connection(('127.0.0.1', qira_config.WEB_PORT))
+  is_qira_running = qira_is_running(qira_config.HOST, qira_config.WEB_PORT)
+  if is_qira_running:
     if args.server:
-      raise Exception("can't run as server if QIRA is already running")
-  except:
-    is_qira_running = 0
+      sys.exit("can't run as server if QIRA is already running (port %d is in use)" % qira_config.WEB_PORT)
+  else:
     print("no qira server found, starting it")
     program.clear(not args.no_delete_runs)
 
