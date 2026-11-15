@@ -26,6 +26,7 @@ echo "got $line"
 @pytest.fixture
 def program(trace_dir, tmp_path):
   p = qira_program.Program(LOOP)
+  p.use_plugin = False          # these tests exercise the legacy subprocess/fork path
   fake = tmp_path / "qira-fake"
   fake.write_text(FAKE_TRACER % (tmp_path / "argv"))
   fake.chmod(fake.stat().st_mode | stat.S_IXUSR)
