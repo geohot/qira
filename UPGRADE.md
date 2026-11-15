@@ -10,7 +10,7 @@ replacements exist). The work is done in this order; each step must leave the pr
 
 | Order | Step | Scope | Depends on |
 |-------|------|-------|------------|
-| 1 | Task 5 | Minimal QEMU plugin tracer (x86_64) | Task 3 (done) |
+| 1 | Task 5 | Minimal QEMU plugin tracer (x86_64) — **done** | Task 3 |
 | 2 | Task 2 | Compare the plugin's traces with the legacy capture | Task 5 |
 | 3 | Stage 0 | Baseline, golden traces, repo hygiene, CI | — |
 | 4 | Stage 1 | **Core**: full QEMU plugin tracer (1A), Wine path for Windows (1B), qiradb build + conformance suite (1C), Python 3 core package (1D) | 0 |
@@ -44,24 +44,25 @@ All merged into `develop`. Details and verification are in the task reports.
 | Web UI fix | `feature/ui-fix` | The UI showed no registers, instructions, memory or data changes since the socket.io 4 update: each client module opened its own connection and the replies went to the wrong one. One shared socket in `early.js` fixes it (was I8; checked by the user in a browser). |
 | UI test | `feature/ui-fix` | `qira_tests/test_ui.py` drives the UI in headless Firefox with Selenium; `qira_tests/ui_check.py` inspects a running server (JS errors, pane text, screenshot). |
 | Task 3: tracer assessment | `feature/tracer-assessment` | **Decision proposed: replace the tracer with a QEMU TCG plugin, pinned to QEMU 11.1.x** (plugin API 7); do not rebase the QEMU 2.5.1 fork. Development uses nixpkgs `qemu-user` 11.1.2 (plugins on); `install.sh`/Docker build QEMU from source, since Debian 13's `qemu-user` is static and cannot load plugins. A spike plugin reproduces the legacy `(clnum, pc, size)` sequence of `loop` exactly. [Assessment](docs/tracer-assessment.md), [report](docs/tasks/3-tracer-assessment.md). |
+| Task 5: QEMU plugin tracer | `feature/qemu-plugin-tracer` (not merged yet) | `tracers/qemu-plugin/qira.c` (`libqira.so`) traces x86_64 live in upstream QEMU 11.1.2; the middleware (`qira_program`) runs `qemu-x86_64 -plugin …` and the legacy UI works unchanged. Its `(clnum, pc, size)` sequence for `loop` equals `samples/legacy/0`. Writes trace/asm paths from plugin args, which **fixes I1**. No `R` records, fewer `W`/`L`, no kernel writes/fork yet (Stage 1A). ~324k insn/s. [Report](docs/tasks/5-qemu-plugin-tracer.md). |
 
-Tests: `uv run pytest` → 38 passed, 1 skipped (the live-tracer test). Nothing on this host can trace
-yet: the next step on the critical path is the plugin tracer (Task 5), then its install (Task 4).
+Tests: `uv run pytest` → 42 passed, 1 skipped. `./qira` traces x86_64 binaries live again with the
+plugin (build it with `make -C tracers/qemu-plugin` in the devenv shell). Next on the critical path:
+compare the plugin's trace against the legacy capture (Task 2), then the staged plan.
 
 ### What is next
 
-The order is the table at the top of this file. Next up:
+The order is the table at the top of this file. Task 5 (plugin tracer) is done on
+`feature/qemu-plugin-tracer` (pending merge). Next:
 
-1. ~~User: enter the devenv shell on `feature/qemu-plugin-tracer`~~ — done 2026-11-15:
-   `qemu-x86_64` 11.1.2, `QEMU_PLUGIN_VERSION 7`, glib 2.88 via pkg-config; the spike plugin built
-   in the shell traces `loop`. `.devenv/profile/bin/qemu-x86_64` works from Claude's sandbox too.
-2. **Task 5** (minimal plugin tracer for x86_64). Its use of the legacy middleware is kept small:
-   just enough to trace live and to capture for Task 2.
-3. **Task 2** (compare the plugin capture with the legacy capture).
-4. Then Stage 0 and Stage 1; Stage 1A continues from Task 5 (more architectures, fork/replay,
-   `meta.json`).
+1. **Task 2** — compare the plugin's trace of `loop` with `samples/legacy/` and list the
+   differences. The plugin captures with `QIRA_TRACE_DIR=samples/port ./qira …`; the podman copy of
+   the legacy tracer is optional.
+2. Then Stage 0 and Stage 1; Stage 1A continues from Task 5 (other architectures, `R` records,
+   kernel writes, fork/replay, `meta.json`).
 
 The tracer decision (QEMU TCG plugin, QEMU 11.1.x) was signed off by the user on 2026-11-15.
+
 
 ### Open issues
 
@@ -69,8 +70,8 @@ Fixed issues (I6, I7, I8, and most of I4) were removed from this table; see "Don
 
 | # | Issue | Effect | Handled in |
 |---|-------|--------|------------|
-| I1 | The legacy QEMU and PIN tracers hardcode `/tmp/qira_logs/` and `/tmp/qira_asm`. `QIRA_TRACE_DIR`/`QIRA_ASM_FILE` only move what the middleware reads. | One capture at a time per host; captures must be copied out of `/tmp/qira_logs`. | Task 5: the plugin takes the paths as arguments. |
-| I2 | No working tracer on the host. `tracers/qemu/qira-*` are broken symlinks; the only build is the Ubuntu 16.04 binary in `qira-legacy`, which may not even run on Debian 13 (old shared libraries). | No live tracing; forkat, `--server`/socat and `test_qira_program_runs.py` are untested against a real tracer. | Task 5 (plugin tracer), Task 4 (install). Decision made in Task 3. |
+| I1 | ~~The legacy QEMU/PIN tracers hardcode `/tmp/qira_logs/` and `/tmp/qira_asm`.~~ **Fixed for x86_64** on `feature/qemu-plugin-tracer`: the plugin takes `dir=`/`asm=` arguments and writes straight to the configured paths. The legacy `qira-<arch>` binaries (other arches) still hardcode them. | Gone for the plugin; remains for the legacy arches until Stage 1A. | — |
+| I2 | No working tracer on the host. `tracers/qemu/qira-*` are broken symlinks; the only build is the Ubuntu 16.04 binary in `qira-legacy`, which may not even run on Debian 13 (old shared libraries). | x86_64 traces live via the plugin (Task 5); other arches still have no tracer, and forkat/`--server`/socat are untested against a real tracer. | Task 4 (install QEMU + plugin), Stage 1A (other arches, fork). |
 | I3 | Claude's sandbox: every command has its own network and PID namespace (a server and its client must run in one command, with a `trap` that stops the server); only `pypi.org`, `files.pythonhosted.org` and `github.com` are reachable (no `cache.nixos.org`, `gitlab.com`, `download.qemu.org`, `deb.debian.org`, `raw.githubusercontent.com`); `$HOME` is read-only; sandbox setting changes need a new session; the `/tmp` paths must exist before the session starts. | Claude cannot change the devenv shell (new Nix packages), download QEMU tarballs or Debian packages, or fetch geckodriver (kept in `.cache/selenium` instead). | Rules 4 and 9. The user adds domains to `~/.claude/settings.json` if a task needs them. |
 | I4 | Nothing installs a tracer into `${XDG_DATA_HOME:-~/.local/share}/qira/tracers/`, where an installed copy now looks for it. | `uv tool install .` gives a `qira` that can only open existing traces (`--no-run`). | Task 4 (after Task 6). |
 | I5 | `docker/Dockerfile` and `install.sh` still use Python 2 and `requirements.txt`. | The `qira-legacy` image must be built from a commit before Task 1 (e.g. `862c3aa`). | Stage 2 (Docker), Task 6 (removes the old ones), Task 4 (`install.sh`). |
@@ -106,12 +107,11 @@ removed from this list; their reports stay in `docs/tasks/`.
 
 | # | Task | Branch | Needs in `develop` | Needs from the user first |
 |---|------|--------|--------------------|---------------------------|
-| 5 | [ ] Minimal QEMU plugin tracer for x86_64 | `feature/qemu-plugin-tracer` | Task 3 | — (devenv shell with `qemu-user` entered on 2026-11-15) |
 | 2 | [ ] Compare the plugin's traces of `qira_tests/bin/loop` with `samples/legacy/` and list the differences | `feature/trace-compare-loop` | Task 5 | — (the podman copy of the legacy tracer is optional) |
 | 6 | [ ] Remove the legacy code (everything but `web/`) | `feature/remove-legacy` | Stage 2 | — |
 | 4 | [ ] Install on Debian 13: `install.sh` as a user install of the modern stack (uv tool + QEMU + plugin) | `feature/install-debian13` | Task 6 | — |
 
-Task 5 is next. Stages 0–2 come between Task 2 and Task 6 (see the order at the top). Run one task
+Task 2 is next. Stages 0–2 come between Task 2 and Task 6 (see the order at the top). Run one task
 per session.
 
 ### Rules for every task
@@ -180,60 +180,6 @@ The legacy build (Ubuntu 16.04, Python 2.7, geohot QEMU fork) runs in podman. On
   arguments, which files to copy where).
 
 ---
-
-### Task 5 — Minimal QEMU plugin tracer (x86_64)
-
-**Branch:** `feature/qemu-plugin-tracer` · **Report:** `docs/tasks/5-qemu-plugin-tracer.md`
-
-**Goal:** `./qira qira_tests/bin/loop` traces live on Debian 13 with a plugin in upstream QEMU
-11.1.x, and the legacy middleware and UI show the trace as they did with the legacy tracer
-(fork/replay excluded). This is the first slice of §3 1A; read
-[docs/tracer-assessment.md](docs/tracer-assessment.md) first.
-
-**Before starting:** `devenv.nix` on this branch already has `pkgs.qemu-user pkgs.glib.dev
-pkgs.pkg-config` and exports `QEMU_PLUGIN_INCLUDE`; the user enters the shell once (the Nix cache
-is not reachable from the sandbox), after which `.devenv/profile/bin/qemu-x86_64` exists. Without
-it, develop against QEMU v11.1.3 built from source in `$TMPDIR` as in the assessment (section 6);
-the host has the build dependencies.
-
-**Clean break:** the plugin and its tests are new code that stays. The changes to the legacy
-middleware (step 5) are the minimum needed to trace live and capture for Task 2; they are deleted
-with the rest in Task 6, when `src/qira/core` (Stage 1D) drives the tracer.
-
-**Steps**
-
-1. `tracers/qemu-plugin/`: `qira.c` and a `Makefile` building `libqira.so` with
-   `pkg-config --cflags glib-2.0` and `-I <qemu prefix>/include` (`QEMU_PLUGIN_INCLUDE` to
-   override). Check `qemu_plugin_version` against the pinned API (7) at load time. The spike
-   (`tracers/qemu-plugin/spike/`) is the starting point; delete it when `qira.c` supersedes it.
-2. Plugin arguments: `dir=<trace dir>`, `id=<run id>`, `asm=<file>`, `tracelibs=on`,
-   `gate=0x…`. The plugin writes `<dir>/<id>`, `<dir>/<id>_strace`, `<dir>/<id>_base` (fixes I1).
-3. Records, all at the current clnum (clnum 0 for start-up code, the first main-binary
-   instruction is 1, as in the legacy tracer):
-   `I` (pc, size) for main-binary instructions (all code with `tracelibs=on`); `L`/`S` with values
-   from all code; `W` by diffing the registers listed in `arch.X64REGS` at each instruction
-   boundary, `address = index * 8`, mapped by name (`rax`→`RAX`, …); byte `S` records for kernel
-   writes from a syscall-return table (`read`, `pread64`, `readv`, `recvfrom`, `recvmsg`, `fstat`,
-   `newfstatat`, `getdents64`, … for x86_64). No `R` records (the API cannot see them; list the UI
-   effect in the report).
-4. `<id>_strace`: `"<clnum> <pid> name(args) = ret"` lines, with a name table for x86_64 and the
-   formats `read_strace_file` parses (`open`/`openat`, `mmap`); other calls as `name(0x…, …)`.
-   `<id>_base`: the main binary and the libraries from `openat` + `mmap` tracking, in the legacy
-   `_base` format. `asm`: `qemu_plugin_insn_disas` lines in the format `read_asm_file` parses.
-5. Middleware: `qira_program` uses `qemu-x86_64` (from `TRACER_DIR/qemu/` if present, else from
-   `PATH`, which the devenv shell provides) with `-plugin <libqira.so>,dir=…,id=…,asm=…`
-   instead of `qira-x86_64` and the legacy options. Other architectures keep the legacy path for
-   now (still broken, I2). `forkat` and `--server` report "not supported by the plugin tracer yet"
-   instead of failing silently.
-6. Tests: a pytest that traces `qira_tests/bin/loop` with the plugin (skipped when QEMU or the
-   plugin is missing) and checks the `I` sequence against `samples/legacy/0` when that exists, and
-   the strace and base files; `test_qira_program_runs.py` runs again. Check the UI with
-   `test_ui.py`/`ui_check.py` on a live capture.
-7. Measure throughput (instructions per second) on a longer run, for Stage 1A.
-
-**Done when:** `./qira --web-port 3012 qira_tests/bin/loop` traces live and the UI shows
-instructions, registers, memory, strace and the timeline; the `I` sequence equals
-`samples/legacy/0`; tests pass; the report lists the differences from the legacy trace that remain.
 
 ### Task 2 — Compare the port's trace of `loop` with the legacy capture
 

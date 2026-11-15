@@ -36,6 +36,11 @@ def default_dir(name, pkgdir=PKGDIR, environ=os.environ):
 TRACER_DIR = _dir_from_env("QIRA_TRACER_DIR", default_dir("tracers"))
 LIBS_DIR = _dir_from_env("QIRA_LIBS_DIR", default_dir("libs"))
 
+# QIRA QEMU TCG plugin (tracers/qemu-plugin/libqira.so). Loaded into an upstream
+# qemu-<arch> found in TRACER_DIR/qemu/ or on PATH (the devenv shell provides it).
+# Used for x86_64; other arches fall back to the legacy qira-<arch> for now.
+QEMU_PLUGIN = os.environ.get("QIRA_QEMU_PLUGIN") or os.path.join(TRACER_DIR, "qemu-plugin", "libqira.so")
+
 # NOTE: the QEMU and PIN tracers write to /tmp/qira_logs/ and /tmp/qira_asm themselves,
 # these settings only change where the middleware reads from
 if os.name == "nt":
