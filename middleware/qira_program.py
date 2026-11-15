@@ -75,17 +75,6 @@ class Program:
     self.traces = {}
     self.runnable = False
 
-    # bring this back
-    if self.program != "/tmp/qira_binary":
-      try:
-        os.unlink("/tmp/qira_binary")
-      except:
-        pass
-      try:
-        os.symlink(os.path.realpath(self.program), "/tmp/qira_binary")
-      except:
-        pass
-
     # defaultargs for qira binary
     self.defaultargs = ["-strace", "-D", "/dev/null", "-d", "in_asm", "-singlestep"]+qemu_args
     if qira_config.TRACE_LIBRARIES:

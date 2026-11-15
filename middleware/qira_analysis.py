@@ -555,14 +555,17 @@ def slice(trace, inclnum):
   return list(cls)
 
 if __name__ == "__main__":
-  # can run standalone for testing: python -m qira.qira_analysis
-  from . import qira_program
-  program = qira_program.Program("/tmp/qira_binary", [])
-  trace = program.add_trace("/tmp/qira_logs/0", 0)
+  # can run standalone for testing: python -m qira.qira_analysis <binary> [run id]
+  # (reads the trace and asm file from QIRA_TRACE_DIR / QIRA_ASM_FILE)
+  import sys
+  from . import qira_config, qira_program
+  program = qira_program.Program(sys.argv[1], [])
+  run_id = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+  trace = program.add_trace(qira_config.TRACE_FILE_BASE+str(run_id), run_id)
   while not trace.db.did_update():
     time.sleep(0.1)
   print("loaded")
-  program.qira_asm_file = open("/tmp/qira_asm", "r")
+  program.qira_asm_file = open(qira_config.ASM_FILE, "r", errors="replace")
   qira_program.Program.read_asm_file(program)
 
   # *** analysis time ***

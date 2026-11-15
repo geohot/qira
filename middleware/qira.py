@@ -87,7 +87,7 @@ def main():
     qemu_args.append("-gatetrace")
     qemu_args.append(args.gate_trace)
 
-  # creates the file symlink, program is constant through server run
+  # program is constant through server run
   program = qira_program.Program(args.binary, args.args, qemu_args)
 
   is_qira_running = qira_is_running(qira_config.HOST, qira_config.WEB_PORT)
