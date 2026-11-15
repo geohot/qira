@@ -42,3 +42,10 @@ dist/
 *.so
 __pycache__/
 .pytest_cache/
+
+# devenv / direnv / local settings
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+.direnv/
+.env

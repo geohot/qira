@@ -50,8 +50,11 @@ Tasks 1 and 3 can run in either order. Run one task per session.
    carry on with whatever does not need it.
 4. **Python.** Python 3 only (Debian 13 ships 3.13), managed with **uv** since Task 1:
    `uv sync` creates `.venv/`, `uv run pytest`, `uv run qira …` (or `./qira`). Dependencies live in
-   `pyproject.toml` + `uv.lock`; there is no `requirements.txt` any more. If `uv` is not on `PATH`,
-   install it into `$TMPDIR` (`python3 -m venv $TMPDIR/uvenv && $TMPDIR/uvenv/bin/pip install uv`)
+   `pyproject.toml` + `uv.lock`; there is no `requirements.txt` any more. The shell (Python 3.13, uv,
+   compiler) is defined in `devenv.nix` and entered with direnv (`.envrc`), which also loads the
+   `QIRA_*` settings from `.env` (template: `.env.example`). Claude's commands do not go through
+   direnv: use `uv run --env-file .env …`. If `uv` is not on `PATH`, install it into `$TMPDIR`
+   (`python3 -m venv $TMPDIR/uvenv && $TMPDIR/uvenv/bin/pip install uv`)
    and set `UV_CACHE_DIR=$TMPDIR/uv-cache`. Do not run the old `install.sh` (it targets Ubuntu
    16.04 and calls sudo).
 5. **Legacy reference.** Do not run podman. Never modify or delete anything in `samples/legacy/`;
@@ -189,6 +192,10 @@ read-side comparison (step 3) and report the blocker with the commands above.
    `./qira --web-port 3012 --socat-port 4010 qira_tests/bin/loop > samples/port-console.log 2>&1`,
    stops it once the trace stops growing, and copies `/tmp/qira_logs/` to `samples/port/`; or the
    sandbox is configured to allow writing `/tmp/qira_logs` and `/tmp/qira_asm`.
+   **Decided after Task 1:** the sandbox allows writing `/tmp/qira_logs` and `/tmp/qira_asm`
+   (`sandbox.filesystem.allowWrite` in `.claude/settings.json`; both must exist before the session
+   starts: `mkdir -p /tmp/qira_logs && touch /tmp/qira_asm`). They are mount points there, so QIRA
+   empties them instead of deleting them.
    The legacy `_base` also lists `/tmp/qira_logs/0_env` as a mapping, so loading a copied trace
    from another folder misses that one region. If the sysroot was provided and the port can pass an
    ld prefix to QEMU (`-L` / `QEMU_LD_PREFIX`; see how `qira_program.py` uses `libs/` from

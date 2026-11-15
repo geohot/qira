@@ -105,9 +105,15 @@ All checks ran on Debian 13, Python 3.13.5, GCC 14.2, uv 0.13.8.
    each command runs in its own network namespace (a server started in one command is not
    reachable from the next). Live captures (Task 2) therefore need you to run them, or the sandbox
    has to allow `/tmp/qira_logs` and `/tmp/qira_asm`.
+   **Follow-up:** the sandbox is to allow both paths. They are bind mounts there, so
+   `delete_old_runs()` now empties the trace folder and `create_asm_file()` truncates the asm file
+   instead of deleting them.
 3. **`uv` is not installed on the host.** For this task it ran from `$TMPDIR/uvenv`. Please install
    it (e.g. `curl -LsSf https://astral.sh/uv/install.sh | sh`, which goes to `~/.local/bin`; or
    `pipx install uv`).
+   **Follow-up:** uv now comes from a devenv shell (`devenv.nix`, entered via direnv `.envrc`),
+   and the `QIRA_*` settings from `.env` (template `.env.example`). Nix, devenv and direnv have to
+   be installed by the user (Nix needs sudo).
 4. **Tool install and the tracer.** The installed package does not contain the QEMU tracer. Set
    `QIRA_TRACER_DIR` to the checkout's `tracers/`. Task 3/4 should decide where an installed
    tracer lives (e.g. `~/.local/share/qira`) and make that the default.

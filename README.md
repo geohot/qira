@@ -25,15 +25,21 @@ See instructions on [qira.me](http://qira.me/) to install 1.3
 
 ## Installing trunk (Debian 13, Python 3)
 
-QIRA is a [uv](https://docs.astral.sh/uv/) project. You need `python3-dev`, `build-essential` and uv.
+QIRA is a [uv](https://docs.astral.sh/uv/) project. The development shell is defined with
+[devenv](https://devenv.sh/) (`devenv.nix`); with [direnv](https://direnv.net/) it is entered
+automatically and `.env` is loaded:
 
 <pre>
 git clone https://github.com/geohot/qira.git
 cd qira/
-uv sync              # creates .venv and compiles qiradb
+cp .env.example .env # QIRA_* settings, edit as needed
+direnv allow         # or: devenv shell (runs uv sync: creates .venv and compiles qiradb)
 uv run pytest        # tests
 ./qira /bin/ls /     # or: uv run qira /bin/ls /
 </pre>
+
+Without devenv you need `python3-dev`, `build-essential` and uv; run `uv sync` yourself and pass
+the settings with `uv run --env-file .env qira …`.
 
 Or install the `qira` command as a uv tool:
 
@@ -42,7 +48,7 @@ uv tool install .
 export QIRA_TRACER_DIR=$PWD/tracers   # the tracer is not part of the Python package
 </pre>
 
-Environment variables: `QIRA_TRACE_DIR` (default `/tmp/qira_logs`), `QIRA_ASM_FILE`
+Settings (environment variables, usually set in `.env`): `QIRA_TRACE_DIR` (default `/tmp/qira_logs`), `QIRA_ASM_FILE`
 (`/tmp/qira_asm`), `QIRA_STATIC_CACHE_DIR`, `QIRA_TRACER_DIR` (the `tracers/` folder),
 `QIRA_LIBS_DIR` (the `libs/` folder from `fetchlibs.sh`). The QEMU tracer itself always writes
 to `/tmp/qira_logs` and `/tmp/qira_asm`.

@@ -13,6 +13,8 @@ Scope: recording Linux and Windows binaries. Other arches/features are out of sc
 
 ## Rules
 - Python 3 only; use uv (`uv sync`, `uv run pytest`, `uv run qira …`). The env is `.venv/`.
+- Dev shell: devenv (`devenv.nix`) + direnv (`.envrc`). Settings (`QIRA_*`) live in `.env` (template `.env.example`);
+  your commands don't go through direnv, so use `uv run --env-file .env …`.
 - Work on feature branches off develop. You commit; I push.
 
 ## Layout
