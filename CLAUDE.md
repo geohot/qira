@@ -8,6 +8,7 @@ Scope: recording Linux and Windows binaries. Other arches/features are out of sc
 - Don't run install.sh: it targets Ubuntu 16.04 and uses sudo.
 - Legacy reference: podman image qira-legacy. You can't run it; reference output is in samples/legacy/.
   Ask me to run anything else against it.
+- Work queue: UPGRADE.md "Task queue". When asked to do Task N, follow its rules there.
 
 ## Rules
 - Python 3 only; use ./venv.

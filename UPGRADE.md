@@ -18,6 +18,263 @@ The upgrade is staged. Each stage builds on the previous one and must leave the 
 Optional improvements that are not required for the upgrade (AI assistance, the C++/nanobind
 modernization of qiradb, debugger integrations, …) are listed in [TODO.md](TODO.md).
 
+Before the staged plan starts, four short tasks get the legacy code running on Debian 13 and
+answer the tracer question. They are listed in the [Task queue](#task-queue-debian-13-track) below.
+
+---
+
+## Task queue (Debian 13 track)
+
+Each task is written so that it can be handed to Claude with a one-line prompt, for example
+**"Do Task 2 in UPGRADE.md"**, and finished without anyone at the keyboard.
+
+| # | Task | Branch | Needs in `develop` | Needs from the user first |
+|---|------|--------|--------------------|---------------------------|
+| 1 | [ ] Port `middleware/` to Python 3, refresh `requirements.txt`, get the tests passing in `./venv` | `feature/py3-middleware` | — | — |
+| 2 | [ ] Compare the port's traces of `qira_tests/bin/loop` with `samples/legacy/` and list the differences | `feature/trace-compare-loop` | Task 1 | Legacy tracer binary copied to the host (see Task 2) |
+| 3 | [ ] Assess the QEMU tracer: rebase the qira patches onto current QEMU, or replace the tracer | `feature/tracer-assessment` | — | — |
+| 4 | [ ] Rewrite `install.sh` for Debian 13 (venv-based, no sudo inside) | `feature/install-debian13` | Tasks 1 and 3 | — |
+
+Tasks 1 and 3 can run in either order. Run one task per session.
+
+### Rules for every task
+
+1. **Branch.** Start from the local `develop`: `git switch develop && git switch -c <branch>`.
+   Use the branch name from the table. If the branch already exists, continue on it.
+   If a task listed under "Needs in `develop`" is not merged into `develop`, stop and say so in the
+   final message. Do not branch off another task's branch.
+2. **Commit, don't push.** Commit in small steps on the task branch. The user pushes and merges.
+   The last commit ticks the task's box in the table above and links the task report.
+3. **No root.** No `sudo`, no `apt-get install`, nothing written outside the repo and `$TMPDIR`.
+   If a system package is missing, list the exact `sudo apt-get install …` line in the report and
+   carry on with whatever does not need it.
+4. **Python.** Python 3 only (Debian 13 ships 3.13), using `./venv`
+   (`./venv/bin/python`, `./venv/bin/pip`). Do not run the old `install.sh` (it targets Ubuntu 16.04
+   and calls sudo).
+5. **Legacy reference.** Do not run podman. Never modify or delete anything in `samples/legacy/`;
+   it is the reference capture. Put new captures in other folders under `samples/` (the whole
+   `samples/` folder is excluded from git via `.git/info/exclude`, so nothing there is committed).
+6. **Ports.** The user may have the legacy UI running on port 3002. Use `--web-port 3012` (and
+   `--socat-port 4010`) for anything this task starts, and stop every process it started before
+   finishing.
+7. **Report.** Write `docs/tasks/<n>-<short-name>.md` with: what was done, how it was verified
+   (commands and results), what could not be verified and why, open questions for the user, and
+   anything the next task needs to know. If the task is blocked, still commit the report with the
+   blocker and the exact command the user has to run.
+8. **Stay in scope.** Do not start the staged plan (pyproject/uv, FastAPI, React, …) inside these
+   tasks. If the work shows that part of this plan is wrong, note it in the report and update the
+   relevant section of this file in the same branch.
+
+### Legacy reference (podman image `qira-legacy`)
+
+The legacy build (Ubuntu 16.04, Python 2.7, geohot QEMU fork) runs in podman. Only the user runs it.
+
+* While it runs, the UI is at <http://devserver-01:3002>.
+* `samples/legacy/` is mounted over the container's trace folder (`/tmp/qira_logs`). QIRA normally
+  wipes that folder on start and cannot delete a mount point, so it is started with
+  `--no-delete-runs`.
+* QIRA treats every file in the trace folder as a numbered trace, so nothing else may live there.
+  The console log of a capture is kept next to it, e.g. `samples/loop-console.log`.
+* The user clears old runs between captures with `rm -rf ~/src/qira/samples/legacy/*`.
+  Claude never runs this.
+* Current capture: `samples/legacy/{0,0_base,0_env,0_strace}` from `qira qira_tests/bin/loop`
+  (paths inside the container start with `/qira/`, libc is Ubuntu 16.04's `ld-2.23.so`), console
+  output in `samples/loop-console.log`.
+* If a task needs another legacy capture, it stops and lists exactly what to capture (binary,
+  arguments, which files to copy where).
+
+---
+
+### Task 1 — Port `middleware/` to Python 3
+
+**Branch:** `feature/py3-middleware` · **Report:** `docs/tasks/1-py3-middleware.md`
+
+**Goal:** the legacy backend runs on Python 3.13 in `./venv`, with current dependencies, and the
+test suite passes. Behaviour, the trace format and the Socket.IO events stay the same.
+
+**Scope**
+
+* `middleware/*.py`, `middleware/qiradb/` (Cython + C++), and `static2/` (imported by
+  `qira_program.py` and covered by `test_static2.py`). The `qira` launcher script if needed.
+* `requirements.txt`: pin current versions that install on Python 3.13. Drop what is not used or is
+  in the standard library (`ipaddr` → `ipaddress`, `nose`, check `socketIO-client`, `six`,
+  `certifi`/`chardet`/`idna`/`urllib3` unless something still needs them). Cython 3, capstone 5,
+  pyelftools ≥ 0.33. Add `pytest`.
+* `web/` only where the Socket.IO upgrade forces it (see below). No UI changes.
+* `run_tests.sh`: replace `nosetests -v -s` with `pytest`.
+
+**Steps**
+
+1. Inventory: `grep` for Python 2 constructs (`print ` statements, `xrange`, `iteritems`,
+   `has_key`, `urllib.unquote`, `cPickle`, `string.` helpers, integer `/`, `str`/`bytes` mixing on
+   files, sockets and `struct`). Mind binary I/O in `qira_log.py`, `qira_program.py` (strace and
+   `_base` parsing, `/proc` reads), `qira_socat.py` and `static2/`.
+2. qiradb: make it compile on Debian 13's GCC with Cython 3. Replace the
+   `__cplusplus == 201103L` check in `Trace.h` with `std::unordered_map` + a hash for the pair key,
+   fix `str`/`bytes` in `qiradb.pyx`. `pyximport` may stay for now (a proper wheel build is Stage 1C);
+   if it does not work with Cython 3, add a minimal `setup.py` build instead and document it.
+3. Socket.IO: the browser client is vendored in `web/client/compatibility/socket.io.min.js`
+   (check its version). Flask-SocketIO 5 / python-socketio 5 only talk to JS client 3.x/4.x.
+   Preferred: Flask-SocketIO 5 and replace the vendored client with socket.io 4.x (same file name,
+   no other `web/` changes). Async mode: keep gevent if it works on 3.13, otherwise `threading`.
+   Record the choice in the report.
+4. Make the trace folder configurable: `QIRA_TRACE_DIR` environment variable overrides
+   `TRACE_FILE_BASE` in `qira_config.py` (default unchanged). Task 2 needs this. Same for
+   `QIRA_STATIC_CACHE_DIR`.
+5. Tests: convert `qira_tests/` to pytest. `test_qiradb.py` and `test_static2.py` must pass.
+   `test_qira_program_runs.py` needs the QEMU tracer, which does not exist on this host
+   (`tracers/qemu/qira-*` are broken symlinks): mark it `skipif` when `tracers/qemu/qira-x86_64`
+   does not resolve, with that reason. Add small tests for the code paths touched in step 1 where
+   cheap (strace line parsing, `_base` parsing, `qira_log` read/write round trip).
+6. Smoke test without a tracer: copy `samples/legacy/` to `$TMPDIR/legacy-copy/`, run
+   `QIRA_TRACE_DIR=$TMPDIR/legacy-copy ./qira --no-run --no-delete-runs --web-port 3012 qira_tests/bin/loop`,
+   then check `curl -s localhost:3012/ | grep '<title>qira</title>'` and a Socket.IO round trip
+   with the python-socketio client (connect to namespace `/qira`, request registers/memory at a few
+   clnums, check that replies arrive). Keep that client as `qira_tests/smoke_socketio.py`.
+   If `--no-run` does not load existing traces, say how the port behaves and what the legacy code
+   does in the same case.
+
+**Done when**
+
+* `./venv/bin/pip install -r requirements.txt` works in a fresh venv (`python3 -m venv $TMPDIR/v`).
+* `./venv/bin/python -m pytest qira_tests` passes (tracer test skipped with a reason).
+* `./venv/bin/python -m compileall -q middleware static2` prints nothing.
+* The smoke test in step 6 passes.
+* The report lists what was not checked (the UI in a real browser, tracing a live binary).
+
+### Task 2 — Compare the port's trace of `loop` with the legacy capture
+
+**Branch:** `feature/trace-compare-loop` · **Report:** `docs/tasks/2-trace-compare-loop.md`
+
+**Goal:** a list of every difference between a trace of `qira_tests/bin/loop` taken with the
+Python 3 middleware and `samples/legacy/`, each one explained as expected or as a bug in the port.
+
+**Before going offline, the user provides a tracer.** The geohot QEMU fork does not build on
+Debian 13 (that is Task 3), so copy the binary from the legacy image:
+
+```bash
+cd ~/src/qira
+mkdir -p tracers/qemu/qemu/x86_64-linux-user samples/sysroot-xenial/lib
+podman create --name qira-legacy-cp qira-legacy
+podman cp qira-legacy-cp:/qira/tracers/qemu/qemu/x86_64-linux-user/qemu-x86_64 \
+          tracers/qemu/qemu/x86_64-linux-user/qemu-x86_64
+# optional, gives the same libc as the legacy capture:
+podman cp qira-legacy-cp:/lib/x86_64-linux-gnu samples/sysroot-xenial/lib/
+podman cp qira-legacy-cp:/lib64 samples/sysroot-xenial/lib64
+podman rm qira-legacy-cp
+```
+
+After that `tracers/qemu/qira-x86_64` resolves. If it is missing when the task starts, do only the
+read-side comparison (step 3) and report the blocker with the commands above.
+
+**Steps**
+
+1. Check the tracer: `ldd tracers/qemu/qira-x86_64` (it was linked on Ubuntu 16.04; list missing
+   libraries) and that it runs `qira_tests/bin/loop` on its own.
+2. Capture with the port into its own folder (never `samples/legacy/`):
+   `QIRA_TRACE_DIR=$PWD/samples/port ./qira --web-port 3012 qira_tests/bin/loop > samples/port-console.log 2>&1`,
+   stop it once the trace stops growing. If the sysroot was provided and the port can pass an
+   ld prefix to QEMU (`-L` / `QEMU_LD_PREFIX`; see how `qira_program.py` uses `libs/` from
+   `fetchlibs.sh`), take a second capture with it in `samples/port-xenial/`. That one should match
+   the legacy capture closely, the first one shows the effect of Debian 13's libc.
+3. Read side: load `samples/legacy/0` with the ported qiradb and `qira_log` and check the numbers
+   against `samples/loop-console.log` (max clnum, names found, base addresses).
+4. Write `qira_tests/compare_traces.py <dirA> <dirB>` (kept for later stages) that compares:
+   `logstate` header fields; record counts per type (`I`/`L`/`S`/`R`/`W`, syscall flag);
+   the instruction sequence of the main binary (pc per clnum, normalised by module base from
+   `_base`); register values and memory writes at matched instructions; the syscall list from
+   `_strace` (names, arguments with pointers normalised, return values); the module list in
+   `_base`; `_env`. Output a readable summary plus the first N differing records per category.
+5. Classify each difference: expected (ASLR/base addresses, pid, container paths `/qira/…` vs host
+   paths, libc version, environment/hostname) or caused by the port (different arguments or
+   environment passed to QEMU, parsing differences, wrong `_base`/strace handling). For the second
+   kind, fix it on this branch if it is small and clearly a port bug, otherwise list it as an issue.
+
+**Done when:** the report has a differences table (category, legacy, port, cause, expected?) for
+each capture, the script is committed, and every "caused by the port" item is fixed or listed.
+
+### Task 3 — Assess the QEMU tracer
+
+**Branch:** `feature/tracer-assessment` · **Report:** `docs/tracer-assessment.md`
+(plus a short `docs/tasks/3-tracer-assessment.md` pointing to it)
+
+**Goal:** a decision the user can sign off: **rebase** the qira patches onto current QEMU, or
+**replace** the tracer (QEMU TCG plugin as in §3 1A, or something else). Assessment only: do not
+change the tracer used by the middleware.
+
+**Inputs:** `extra/qemu_mods/` (`tci.c`, `main.c`, `strace.c`, `disas.c`, `gen_patch.sh`),
+`tracers/qemu_build.sh` (clones `geohot/qemu`, branch `qira`, QEMU 2.x with
+`--enable-tcg-interpreter`), the trace format in §1, and §3 1A of this file.
+
+**Questions to answer**
+
+1. How large is the qira delta? Clone `geohot/qemu@qira` and the upstream tag it is based on into
+   `$TMPDIR` (if the network is blocked, work from `extra/qemu_mods/` and say so) and list the
+   changed files and lines, grouped by feature (tracing hooks, kernel-write tracking, strace,
+   `-qirachild` fork/replay, base map, disassembly, gate/filter).
+2. What does a rebase onto the current QEMU release cost? TCI was rewritten in QEMU 6.0 and
+   linux-user/TCG internals moved a lot since 2.x. Estimate per feature, and note that TCI is slow.
+3. Can the plugin API of the current QEMU release do everything the trace format needs?
+   Check `qemu-plugin.h` for: per-instruction callbacks, memory access values, register read,
+   memory read, syscall callbacks, and the register/memory **write** functions needed for
+   fork-at-clnum replay. Name the QEMU version each first appeared in. List gaps and workarounds.
+4. Does Debian 13's `qemu-user` package have plugin support and ship `qemu-plugin.h`?
+   (`apt-get download qemu-user qemu-system-common` and `dpkg -c`/`dpkg -x` into `$TMPDIR`
+   needs no root; or `apt-cache show`.) If yes, the tracer could be a plugin loaded into the
+   distribution's QEMU with no QEMU build at all.
+5. Briefly: other options (DynamoRIO on Linux, Intel PIN's licence and the state of
+   `tracers/pin/`, Valgrind) and why they win or lose against the plugin.
+6. What Debian 13 packages each option needs to build (for Task 4).
+
+**Spike (optional, stop after about two hours of work):** build a minimal plugin that writes
+`I` and `S` records in the 24-byte format for `qira_tests/bin/loop`, using Debian's QEMU if it
+has plugin support, otherwise upstream QEMU built in `$TMPDIR` with
+`--target-list=x86_64-linux-user --enable-plugins`. Compare the instruction count with
+`samples/legacy/0`. Keep spike code under `tracers/qemu-plugin/spike/` and say in the report that
+it is a spike. If build dependencies are missing, stop the spike and list them.
+
+**Done when:** `docs/tracer-assessment.md` has the answers above, a recommendation with effort
+estimate and risks, the build dependencies, the exact `install.sh` step Task 4 should use, and
+§3 1A of this file is updated if the findings change it.
+
+### Task 4 — Rewrite `install.sh` for Debian 13
+
+**Branch:** `feature/install-debian13` · **Report:** `docs/tasks/4-install-debian13.md`
+
+**Goal:** `./install.sh` sets up QIRA on a fresh Debian 13 checkout as a normal user.
+
+**Requirements**
+
+* `#!/usr/bin/env bash`, `set -euo pipefail`, `--help`, idempotent (a second run is quick and safe).
+* **No sudo inside.** Check system packages with `dpkg-query -W`. If any are missing, print one
+  line `sudo apt-get install -y …` with exactly the missing packages and exit non-zero.
+  Base set: `python3 python3-venv python3-dev build-essential pkg-config git curl`; tracer
+  packages come from Task 3's report.
+* venv: `python3 -m venv venv` (reuse it if present), `venv/bin/pip install --upgrade pip`,
+  `venv/bin/pip install -r requirements.txt`, then import `qiradb` once so it is built.
+* Tracer: the step recommended in `docs/tracer-assessment.md`, behind `--with-tracer` (or
+  `--no-tracer`, whichever Task 3 recommends as default). Never fails the install when the tracer
+  is skipped, but says so.
+* Tests: run `venv/bin/python -m pytest qira_tests` (not the old integration part unless a tracer
+  is present). `--skip-tests` to turn it off.
+* No system-wide symlink: link `~/.local/bin/qira` (create the folder) and warn if it is not on
+  `PATH`. `--no-link` to skip.
+* Remove the Ubuntu and macOS branches; on anything other than Debian/Ubuntu, print what is needed
+  and exit.
+* Update the install section of `README.md`.
+
+**Verification**
+
+* `shellcheck install.sh` if installed (otherwise say so).
+* Run it in a fresh clone so the main `./venv` is not touched:
+  `git clone -b feature/install-debian13 . $TMPDIR/qira-install && cd $TMPDIR/qira-install && ./install.sh --no-link`.
+  Run it twice. Then `HOME=$TMPDIR/home ./install.sh` to check the link step.
+* Check the missing-package path: the script appends `$QIRA_EXTRA_PKGS` to its package list, so
+  `QIRA_EXTRA_PKGS=does-not-exist ./install.sh` must print the apt line and exit non-zero.
+
+**Done when:** both runs finish without a sudo prompt, the tests pass inside the fresh clone, and
+the report shows the output.
+
 ---
 
 ## 1. Current-state assessment
@@ -26,7 +283,7 @@ modernization of qiradb, debugger integrations, …) are listed in [TODO.md](TOD
 
 | Component | Location | State |
 |-----------|----------|-------|
-| Tracer | `tracers/qemu_build.sh` → `geohot/qemu@qira`; patches in `extra/qemu_mods/{tci.c,main.c,strace.c,disas.c}` | QEMU 2.x fork using the TCG interpreter (TCI). Does not build on modern toolchains (README notes 18.04 already fails). Prebuilt `tracers/qemu/qira-*` binaries are stale. |
+| Tracer | `tracers/qemu_build.sh` → `geohot/qemu@qira`; patches in `extra/qemu_mods/{tci.c,main.c,strace.c,disas.c}` | QEMU 2.x fork using the TCG interpreter (TCI). Does not build on modern toolchains (README notes 18.04 already fails). `tracers/qemu/qira-*` are symlinks into the `qemu/` clone, so they are broken until it is built; on Debian 13 the only working build is in the `qira-legacy` podman image (see Task queue). |
 | Alternative tracer | `tracers/pin/qirapin.cpp`, `tracers/pin_build.sh` | Intel PIN tool, used on macOS / optional on Linux. Tied to an old PIN release. |
 | Trace database | `middleware/qiradb/` (`Trace/Trace.{h,cpp}`, `qiradb.pyx`, `qiradb.pyxbld`) | C++ reader of the mmap'd change log, built on the fly via `pyximport`. Uses a `#define unordered_map map` fallback unless `__cplusplus == 201103L` exactly (so it is a `std::map` on any modern compiler). Memory history is a `std::map<Clnum,uint8_t>` **per byte**, which uses a lot of RAM. |
 | Middleware | `middleware/*.py` | Mixed Python 2/3 (`#!/usr/bin/env python2.7`, `__future__`, `urllib.unquote`, `str`/`bytes` mix). Flask 1.0 + Flask-SocketIO 3 + gevent. argparse CLI. Process control via `os.fork`/`os.execvp`. Global mutable config in `qira_config.py` with hardcoded `/tmp` paths. |
@@ -79,7 +336,7 @@ can be viewed only from a trace produced elsewhere (e.g. `tests_manual/windows/f
 
 `extra/` (old experiments, meteor server, CDA, website), `tracers/qemu/qira-*` prebuilt binaries,
 `ida/bin` + `ida/libs` prebuilt plugins (replace later, see TODO.md), `.travis.yml`, `run_tests.sh`,
-`install.sh` (replaced by Docker + `uv`), `requirements.txt`, `web/`, `middleware/`, `static2/`
+`install.sh` (replaced by Docker + `uv`; until then Task 4 keeps it working on Debian 13), `requirements.txt`, `web/`, `middleware/`, `static2/`
 (after porting), `fetchlibs.sh` (replace with a documented sysroot/`QEMU_LD_PREFIX` setting).
 
 ### Key risks
@@ -97,8 +354,9 @@ can be viewed only from a trace produced elsewhere (e.g. `tests_manual/windows/f
 
 **Goal:** be able to prove that the new stack produces the same results as the old one.
 
-1. **Golden traces.** Build the legacy image (`docker/Dockerfile`, ubuntu:16.04, with the old
-   QEMU fork) and capture reference traces for `qira_tests/bin/loop`, `qira_tests/bin/hello_trace`
+1. **Golden traces.** The legacy image exists as podman `qira-legacy` (built from
+   `docker/Dockerfile`, ubuntu:16.04, old QEMU fork; see [Legacy reference](#legacy-reference-podman-image-qira-legacy)).
+   A first capture of `loop` is in `samples/legacy/` (local only). Capture reference traces for `qira_tests/bin/loop`, `qira_tests/bin/hello_trace`
    and a selection of `tests_auto/source-autogen/*.c` (loop, forktest, heaptest, test64, echo).
    Store them in `tests/fixtures/golden/<name>/` with the log, `_strace`, `_base` and asm.
    Also export query results (registers/memory at selected clnums) as JSON, so later stages can
