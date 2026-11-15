@@ -4,6 +4,9 @@
   "sandbox": {
     "network": {
       "allowedDomains": ["pypi.org", "files.pythonhosted.org", "github.com"]
+    },
+    "filesystem": {
+      "allowWrite": ["/tmp/qira_asm", "/tmp/qira_logs"]
     }
   }
 }
