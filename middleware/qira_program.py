@@ -390,7 +390,8 @@ class Program:
       eargs = [self.qirabinary]+self.defaultargs+args+[self.program]+self.args
     if not os.path.exists(eargs[0]):
       raise TracerNotFound("QIRA tracer %s not found\n"
-        "Your install is broken. Check ./install.sh for issues, or point QIRA_TRACER_DIR at the tracers/ folder" % eargs[0])
+        "Your install is broken. Check ./install.sh for issues, or point QIRA_TRACER_DIR at a tracers/ folder "
+        "(default: tracers/ of the checkout, or %s for an installed copy)" % (eargs[0], qira_config.default_dir("tracers")))
     #print "***",' '.join(eargs)
     if shouldfork:
       # a subprocess instead of os.fork(): this process runs threads (web server, analysis)

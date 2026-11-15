@@ -156,3 +156,13 @@ def test_flush_caches_missing_paths(tmp_path, monkeypatch):
   monkeypatch.setattr(qira_config, "ASM_FILE", str(tmp_path / "nope3"))
   qira_program.flush_caches()
   assert os.listdir(tmp_path) == []
+
+
+def test_default_tracer_dir():
+  # a checkout: next to middleware/
+  assert qira_config.TRACER_DIR == os.path.join(qira_config.BASEDIR, "tracers", "")
+  assert qira_config.default_dir("libs", "/src/qira/middleware", {}) == "/src/qira/libs"
+  # an installed copy: the per-user data folder
+  site = "/home/u/.local/share/uv/tools/qira/lib/python3.13/site-packages/qira"
+  assert qira_config.default_dir("tracers", site, {"XDG_DATA_HOME": "/xdg"}) == "/xdg/qira/tracers"
+  assert qira_config.default_dir("tracers", site, {}) == os.path.expanduser("~/.local/share/qira/tracers")

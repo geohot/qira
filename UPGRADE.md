@@ -62,7 +62,7 @@ answer the tracer question. They are listed in the [Task queue](#task-queue-debi
 | I1 | The QEMU and PIN tracers hardcode `/tmp/qira_logs/` and `/tmp/qira_asm`. `QIRA_TRACE_DIR`/`QIRA_ASM_FILE` only move what the middleware reads. | One capture at a time per host; captures must be copied out of `/tmp/qira_logs`. | Task 2 works with it; Stage 1A (per-run paths as plugin args) removes it. |
 | I2 | No working tracer on the host. `tracers/qemu/qira-*` are broken symlinks; the only build is the Ubuntu 16.04 binary in `qira-legacy`. | No live tracing until the user copies it (Task 2) or Task 3/4 provide one. | Task 2 (copy), Task 3 (decision), Task 4 (install). |
 | I3 | Claude's sandbox: every command has its own network namespace (a server and its client must run in one command, with a `trap` that stops the server); only the listed domains are reachable (`pypi.org`, `files.pythonhosted.org`, `github.com`), so no `cache.nixos.org`, `gitlab.com` or `download.qemu.org`; sandbox setting changes need a new session; the `/tmp` paths must exist before the session starts. | Claude cannot change the devenv shell (new Nix packages) or download QEMU tarballs; the user enters the shell once after `devenv.nix` changes. | Rules 4 and 9. Add domains in `.claude/settings.json` if a task needs them. |
-| I4 | `uv tool install .` does not contain the tracer; `QIRA_TRACER_DIR` must point at a checkout's `tracers/`. | The tool install cannot trace on its own. | Task 4 (default tracer location). |
+| I4 | `uv tool install .` does not contain the tracer. **Partly fixed** on `feature/task1-followups`: an installed copy now looks in `${XDG_DATA_HOME:-~/.local/share}/qira/tracers/` (and `…/libs/`), a checkout in its own `tracers/`. | Nothing installs a tracer there yet. | Task 4 (install the tracer into that folder). |
 | I5 | `docker/Dockerfile` and `install.sh` still use Python 2 and `requirements.txt`. | The `qira-legacy` image must be built from a commit before Task 1 (e.g. `862c3aa`). | Task 4 (`install.sh`), Stage 2 (Docker). |
 | I6 | The legacy modules are importable as `qira.*` (`middleware/` → `qira`, `static2/` → `qira.static2`, `web/` → `qira.web`). | Name clash with the planned `src/qira/core` layout. | Stage 0 step 3 / 1D: move the mapping to `qira.legacy` or replace modules as they land. |
 | I7 | ~~Legacy bugs: `doanalysis` arguments, bare `except` hiding "already running as server", `--flush-cache` running `rm -rfv /tmp/qira*`, `os.fork()` from a threaded process, the global `/tmp/qira_binary` symlink.~~ **Fixed** on `feature/task1-followups`. | — | Stage 1D/2 still replace this code. |
@@ -359,9 +359,10 @@ people who only want to *use* QIRA, and a tracer for both (issues I2, I4).
   whichever Task 3 recommends as default). Never fails the install when the tracer is skipped, but
   says so. If Task 3 recommends a Nix-provided QEMU, add it to `devenv.nix` as well, so the dev
   shell can trace.
-* Code change: `qira_config.TRACER_DIR` falls back to that data folder when the checkout's
-  `tracers/` does not exist (installed tool), so `QIRA_TRACER_DIR` is no longer needed. Add the
-  variable to `.env.example`. Test it.
+* Code change: **done** on `feature/task1-followups`. `qira_config.default_dir()` uses that data
+  folder for installed copies (the package is not mapped from a checkout's `middleware/`), so
+  `QIRA_TRACER_DIR` is no longer needed; `.env.example` documents it, `test_default_tracer_dir`
+  covers it.
 * Remove the Ubuntu 14.04/16.04, Arch, Fedora and macOS branches and the `requirements.txt`/venv
   code; on anything other than Debian/Ubuntu, print what is needed and exit.
 * `--skip-tests` turns off a final `uv run pytest` (run from the checkout).
