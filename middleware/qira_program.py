@@ -18,6 +18,14 @@ from . import arch
 
 from . import static2
 
+def find_qemu(qemu_arch):
+  """The upstream qemu-<arch> for the plugin tracer: TRACER_DIR/qemu/qemu-<arch>
+  (an install, see Task 4) or on PATH (the devenv shell provides it). None if absent."""
+  cand = qira_config.TRACER_DIR + "qemu/qemu-" + qemu_arch
+  if os.path.exists(cand):
+    return cand
+  return shutil.which("qemu-" + qemu_arch)
+
 def which(prog):
   # match the behavior of strace and gdb: search PATH, then the plain path
   res = shutil.which(prog)
@@ -80,7 +88,20 @@ class Program:
     if qira_config.TRACE_LIBRARIES:
       self.defaultargs.append("-tracelibraries")
 
+    # QEMU plugin tracer (Task 5): set by identify_program for the architectures it covers
+    self.qemu_arch = None
+    self.use_plugin = False
+    self.qemu_bin = None
+
     self.identify_program()
+
+    # prefer the QEMU plugin tracer when it and an upstream qemu-<arch> are available
+    # (x86_64 only for now); otherwise fall back to the legacy qira-<arch> binary.
+    if not qira_config.USE_PIN and self.qemu_arch == "x86_64" and os.path.exists(qira_config.QEMU_PLUGIN):
+      self.qemu_bin = find_qemu(self.qemu_arch)
+      if self.qemu_bin is not None:
+        self.use_plugin = True
+        print("**** using the QEMU plugin tracer:", self.qemu_bin, "+", qira_config.QEMU_PLUGIN)
 
   def identify_program(self):
     qemu_dir = qira_config.TRACER_DIR+"qemu/"
@@ -160,6 +181,7 @@ class Program:
         self.tregs = arch.X64REGS
         self.qirabinary = qemu_dir + "qira-x86_64"
         self.pintool = pin_dir + "obj-intel64/qirapin.so"
+        self.qemu_arch = "x86_64"
       elif self.fb == 0x03:
         use_lib('i386')
         self.tregs = arch.X86REGS
@@ -383,7 +405,12 @@ class Program:
     socket); shouldfork=False replaces this process with it."""
     if self.runnable == False:
       return
-    if qira_config.USE_PIN:
+    if self.use_plugin:
+      if args:
+        # fork-at-clnum (-qirachild) and socat replay are not implemented yet
+        raise NotImplementedError("fork/replay is not supported by the plugin tracer yet")
+      eargs = self.plugin_command()
+    elif qira_config.USE_PIN:
       # is "-injection child" good?
       eargs = [self.pinbinary, "-injection", "child", "-t", self.pintool, "--", self.program]+self.args
     else:
@@ -397,6 +424,30 @@ class Program:
       # a subprocess instead of os.fork(): this process runs threads (web server, analysis)
       return subprocess.Popen(eargs, stdin=stdio, stdout=stdio, stderr=stdio)
     os.execvp(eargs[0], eargs)
+
+  def next_run_id(self):
+    # the next numbered trace in the trace dir (0 after delete_old_runs)
+    ret = -1
+    try:
+      for fn in os.listdir(qira_config.TRACE_FILE_BASE):
+        if "_" not in fn:
+          try:
+            ret = max(ret, int(fn))
+          except ValueError:
+            pass
+    except OSError:
+      pass
+    return ret + 1
+
+  def plugin_command(self):
+    # qemu-<arch> -plugin <libqira.so>,dir=...,run=...,asm=...[,tracelibs=on] program args
+    # The plugin writes straight to the configured trace dir and asm file (fixes I1).
+    trace_dir = qira_config.TRACE_FILE_BASE.rstrip("/") or "/"
+    spec = "%s,dir=%s,run=%d,asm=%s" % (qira_config.QEMU_PLUGIN, trace_dir,
+                                        self.next_run_id(), qira_config.ASM_FILE)
+    if qira_config.TRACE_LIBRARIES:
+      spec += ",tracelibs=on"
+    return [self.qemu_bin, "-plugin", spec, self.program] + self.args
 
 
 class Trace:
