@@ -11,6 +11,8 @@ Scope: recording Linux and Windows binaries. Other arches/features are out of sc
 - Legacy reference: podman image qira-legacy. You can't run it; reference output is in samples/legacy/.
   Ask me to run anything else against it.
 - Work queue: UPGRADE.md "Task queue". When asked to do Task N, follow its rules there.
+- Clean break: the modernized QIRA keeps no legacy code. `qira.legacy` only bridges the gap and is
+  deleted in Task 6; don't build new features on it. Overall order: the table at the top of UPGRADE.md.
 
 ## Rules
 - Python 3 only; use uv (`uv sync`, `uv run pytest`, `uv run qira …`). The env is `.venv/`.
