@@ -4,22 +4,28 @@ This document describes how QIRA moves from its current state (v1.4, Ubuntu 14.0
 modern, supported stack that runs on current Linux distributions and in Docker, and that can trace
 both **Linux** and **Windows** binaries.
 
-The upgrade is staged. Each stage builds on the previous one and must leave the project usable:
+The modernized QIRA is a **clean break**: Python 3 only, new code in `src/qira/`, and no legacy
+code left at the end (the ported legacy code, `qira.legacy`, only bridges the gap until its
+replacements exist). The work is done in this order; each step must leave the project usable:
 
-| Stage | Scope | Depends on |
-|-------|-------|------------|
-| 0 | Baseline, golden traces, repo hygiene | — |
-| 1 | **Core**: QEMU plugin tracer, Wine path for Windows, qiradb build fix, Python 3 core package | 0 |
-| 2 | **Server**: FastAPI + pydantic, click CLI, pydantic-settings/.env, WebSocket streaming, Docker | 1 |
-| 3 | **Frontend**: React + TypeScript, REST + WebSocket | 2 |
-| 4 | qiradb rewrite in Rust (PyO3) | 1 (conformance suite) |
-| 5 | Windows-native tracer (DynamoRIO) | 1, 2 |
+| Order | Step | Scope | Depends on |
+|-------|------|-------|------------|
+| 1 | Task 5 | Minimal QEMU plugin tracer (x86_64) | Task 3 (done) |
+| 2 | Task 2 | Compare the plugin's traces with the legacy capture | Task 5 |
+| 3 | Stage 0 | Baseline, golden traces, repo hygiene, CI | — |
+| 4 | Stage 1 | **Core**: full QEMU plugin tracer (1A), Wine path for Windows (1B), qiradb build + conformance suite (1C), Python 3 core package (1D) | 0 |
+| 5 | Stage 2 | **Server**: FastAPI + pydantic, click CLI, pydantic-settings/.env, WebSocket streaming, Docker; a temporary Socket.IO adapter keeps the current `web/` UI working | 1 |
+| 6 | Task 6 | **Remove the legacy code** (everything but `web/`) | Stage 2 |
+| 7 | Task 4 | Install on Debian 13 (`install.sh`: uv tool + QEMU + plugin) for the modern stack | Task 6 |
+| 8 | Stage 3 | **Update the UI**: React + TypeScript on the v1 API, built and refined while the user tests; removes `web/` and the Socket.IO adapter | 2, Task 6 |
+| 9 | Stage 4 | qiradb rewrite in Rust (PyO3) | 1C (conformance suite) |
+| 10 | Stage 5 | Windows-native tracer (DynamoRIO) | 1, 2 |
 
 Optional improvements that are not required for the upgrade (AI assistance, the C++/nanobind
 modernization of qiradb, debugger integrations, …) are listed in [TODO.md](TODO.md).
 
-Before the staged plan starts, short tasks get the legacy code running on Debian 13 and answer
-the tracer question (Tasks 1 and 3 are done; Tasks 5, 2 and 4 remain). They are listed in the [Task queue](#task-queue-debian-13-track) below.
+Tasks are listed in the [Task queue](#task-queue-debian-13-track); stages have their own sections
+(§2–§7). Tasks 1 and 3 are done.
 
 ---
 
@@ -44,15 +50,18 @@ yet: the next step on the critical path is the plugin tracer (Task 5), then its 
 
 ### What is next
 
-1. **User:** sign off the tracer decision in [docs/tracer-assessment.md](docs/tracer-assessment.md)
-   (plugin, QEMU 11.1.x), or say what to change.
-2. **Task 5** (new: a minimal plugin tracer for x86_64 that the legacy middleware uses) —
-   **recommended next.** It is the critical path: Task 4 has nothing to install without it, and it
-   lets Task 2 run without the podman copy.
-3. **Task 2** (compare traces with the legacy capture) after Task 5, using the plugin tracer's
-   capture; the copy of the legacy tracer from podman becomes optional.
-4. **Task 4** (install on Debian 13) after Task 5.
-5. Then Stage 0, and Stage 1A continues from Task 5 (more architectures, fork/replay, `meta.json`).
+The order is the table at the top of this file. Next up:
+
+1. ~~User: enter the devenv shell on `feature/qemu-plugin-tracer`~~ — done 2026-11-15:
+   `qemu-x86_64` 11.1.2, `QEMU_PLUGIN_VERSION 7`, glib 2.88 via pkg-config; the spike plugin built
+   in the shell traces `loop`. `.devenv/profile/bin/qemu-x86_64` works from Claude's sandbox too.
+2. **Task 5** (minimal plugin tracer for x86_64). Its use of the legacy middleware is kept small:
+   just enough to trace live and to capture for Task 2.
+3. **Task 2** (compare the plugin capture with the legacy capture).
+4. Then Stage 0 and Stage 1; Stage 1A continues from Task 5 (more architectures, fork/replay,
+   `meta.json`).
+
+The tracer decision (QEMU TCG plugin, QEMU 11.1.x) was signed off by the user on 2026-11-15.
 
 ### Open issues
 
@@ -63,8 +72,8 @@ Fixed issues (I6, I7, I8, and most of I4) were removed from this table; see "Don
 | I1 | The legacy QEMU and PIN tracers hardcode `/tmp/qira_logs/` and `/tmp/qira_asm`. `QIRA_TRACE_DIR`/`QIRA_ASM_FILE` only move what the middleware reads. | One capture at a time per host; captures must be copied out of `/tmp/qira_logs`. | Task 5: the plugin takes the paths as arguments. |
 | I2 | No working tracer on the host. `tracers/qemu/qira-*` are broken symlinks; the only build is the Ubuntu 16.04 binary in `qira-legacy`, which may not even run on Debian 13 (old shared libraries). | No live tracing; forkat, `--server`/socat and `test_qira_program_runs.py` are untested against a real tracer. | Task 5 (plugin tracer), Task 4 (install). Decision made in Task 3. |
 | I3 | Claude's sandbox: every command has its own network and PID namespace (a server and its client must run in one command, with a `trap` that stops the server); only `pypi.org`, `files.pythonhosted.org` and `github.com` are reachable (no `cache.nixos.org`, `gitlab.com`, `download.qemu.org`, `deb.debian.org`, `raw.githubusercontent.com`); `$HOME` is read-only; sandbox setting changes need a new session; the `/tmp` paths must exist before the session starts. | Claude cannot change the devenv shell (new Nix packages), download QEMU tarballs or Debian packages, or fetch geckodriver (kept in `.cache/selenium` instead). | Rules 4 and 9. The user adds domains to `~/.claude/settings.json` if a task needs them. |
-| I4 | Nothing installs a tracer into `${XDG_DATA_HOME:-~/.local/share}/qira/tracers/`, where an installed copy now looks for it. | `uv tool install .` gives a `qira` that can only open existing traces (`--no-run`). | Task 4. |
-| I5 | `docker/Dockerfile` and `install.sh` still use Python 2 and `requirements.txt`. | The `qira-legacy` image must be built from a commit before Task 1 (e.g. `862c3aa`). | Task 4 (`install.sh`), Stage 2 (Docker). |
+| I4 | Nothing installs a tracer into `${XDG_DATA_HOME:-~/.local/share}/qira/tracers/`, where an installed copy now looks for it. | `uv tool install .` gives a `qira` that can only open existing traces (`--no-run`). | Task 4 (after Task 6). |
+| I5 | `docker/Dockerfile` and `install.sh` still use Python 2 and `requirements.txt`. | The `qira-legacy` image must be built from a commit before Task 1 (e.g. `862c3aa`). | Stage 2 (Docker), Task 6 (removes the old ones), Task 4 (`install.sh`). |
 | I9 | Claude's commands do not go through direnv, so `uv` and the `.env` settings are not loaded automatically. | Commands must set them explicitly. | Rule 4. |
 | I10 | `.venv/` is built against the Nix Python (`/nix/store/…`), which does not search Debian's library paths. | After `devenv update` the next shell entry re-syncs `.venv`; do not mix with a Debian-Python `.venv`. Wheels that link system libraries need care (Pillow → `libz.so.1`, handled in `qira_analysis.py`, checked by `test_startup.py`). | Rule 4. |
 | I11 | The legacy UI always tries the IDA plugin bridge on `ws://localhost:3003` and logs a connection error when IDA is not running. | Harmless console noise (same as the legacy UI); `ui_check.py` ignores it. | Stage 3 (new frontend) or TODO.md (IDA integration). |
@@ -97,11 +106,13 @@ removed from this list; their reports stay in `docs/tasks/`.
 
 | # | Task | Branch | Needs in `develop` | Needs from the user first |
 |---|------|--------|--------------------|---------------------------|
-| 5 | [ ] Minimal QEMU plugin tracer for x86_64, used by the legacy middleware | `feature/qemu-plugin-tracer` | Task 3 (`feature/tracer-assessment`) | Sign-off of the tracer decision; enter the devenv shell once after `devenv.nix` gets `qemu-user` |
-| 2 | [ ] Compare the port's traces of `qira_tests/bin/loop` with `samples/legacy/` and list the differences | `feature/trace-compare-loop` | Task 5 | — (the podman copy of the legacy tracer is optional) |
-| 4 | [ ] Install on Debian 13: `install.sh` as a user install (uv tool + QEMU + plugin), devenv for development | `feature/install-debian13` | Task 5 | — |
+| 5 | [ ] Minimal QEMU plugin tracer for x86_64 | `feature/qemu-plugin-tracer` | Task 3 | — (devenv shell with `qemu-user` entered on 2026-11-15) |
+| 2 | [ ] Compare the plugin's traces of `qira_tests/bin/loop` with `samples/legacy/` and list the differences | `feature/trace-compare-loop` | Task 5 | — (the podman copy of the legacy tracer is optional) |
+| 6 | [ ] Remove the legacy code (everything but `web/`) | `feature/remove-legacy` | Stage 2 | — |
+| 4 | [ ] Install on Debian 13: `install.sh` as a user install of the modern stack (uv tool + QEMU + plugin) | `feature/install-debian13` | Task 6 | — |
 
-Task 5 is next. Run one task per session.
+Task 5 is next. Stages 0–2 come between Task 2 and Task 6 (see the order at the top). Run one task
+per session.
 
 ### Rules for every task
 
@@ -179,10 +190,15 @@ The legacy build (Ubuntu 16.04, Python 2.7, geohot QEMU fork) runs in podman. On
 (fork/replay excluded). This is the first slice of §3 1A; read
 [docs/tracer-assessment.md](docs/tracer-assessment.md) first.
 
-**Before starting:** `devenv.nix` gets `pkgs.qemu-user pkgs.glib.dev pkgs.pkg-config` (first
-commit), and the user enters the shell once (the Nix cache is not reachable from the sandbox).
-Until then, develop against QEMU v11.1.3 built from source in `$TMPDIR` as in the assessment
-(section 6); the host has the build dependencies.
+**Before starting:** `devenv.nix` on this branch already has `pkgs.qemu-user pkgs.glib.dev
+pkgs.pkg-config` and exports `QEMU_PLUGIN_INCLUDE`; the user enters the shell once (the Nix cache
+is not reachable from the sandbox), after which `.devenv/profile/bin/qemu-x86_64` exists. Without
+it, develop against QEMU v11.1.3 built from source in `$TMPDIR` as in the assessment (section 6);
+the host has the build dependencies.
+
+**Clean break:** the plugin and its tests are new code that stays. The changes to the legacy
+middleware (step 5) are the minimum needed to trace live and capture for Task 2; they are deleted
+with the rest in Task 6, when `src/qira/core` (Stage 1D) drives the tracer.
 
 **Steps**
 
@@ -276,13 +292,51 @@ plugin capture; say so in the report.
 **Done when:** the report has a differences table (category, legacy, port, cause, expected?) for
 each capture, the script is committed, and every "caused by the port" item is fixed or listed.
 
+### Task 6 — Remove the legacy code
+
+**Branch:** `feature/remove-legacy` · **Report:** `docs/tasks/6-remove-legacy.md`
+
+**When:** after Stage 2, once `src/qira/core` (Stage 1D) and the FastAPI server and click CLI
+(Stage 2) do everything the legacy middleware did, and Stage 2's Socket.IO adapter serves the
+current `web/` UI from the new core.
+
+**Goal:** the repository contains only the modernized code (plus `web/`, which Stage 3 replaces).
+No Python 2 code, no QEMU fork, no `qira.legacy`.
+
+**Remove**
+
+* `middleware/` (the `qira.legacy` package) and `static2/`, and their mapping in `pyproject.toml`;
+  the `qira` launcher script and `setup.py` if Stage 1C moved the qiradb build elsewhere.
+* The legacy tracer: `tracers/qemu_build.sh`, `tracers/qemu/qira-*`, `extra/qemu_mods/`,
+  `tracers/pin/` and `tracers/pin_build.sh` (PIN is not carried over), the spike in
+  `tracers/qemu-plugin/spike/`.
+* `extra/` (old experiments, meteor server, CDA, website), `ida/bin` and `ida/libs` (prebuilt
+  plugins; see TODO.md), `fetchlibs.sh` (replaced by the `ld_prefix` setting), `.travis.yml`,
+  `run_tests.sh`, the old `install.sh` (Task 4 writes a new one), the ubuntu:16.04
+  `docker/Dockerfile` (Stage 2 replaced it), `requirements.txt` leftovers.
+* Legacy tests in `qira_tests/` that only test removed code; keep fixtures that the new tests
+  use (move them to `tests/fixtures/`).
+* Mentions in `README.md`, `CLAUDE.md` and this file that describe removed code as current.
+
+**Keep:** `web/` and the Socket.IO adapter (until Stage 3), `samples/` (local only), the golden
+fixtures, `tests_manual/windows/` binaries used by Stage 1B.
+
+**Steps:** list every file to delete with the reason in the report first; delete in small commits
+(one area each); after each, `uv sync`, `uv run pytest`, `uv run qira run qira_tests/bin/loop` and
+the UI check (`test_ui.py` against the adapter) must still pass. `grep -rn "qira.legacy\|middleware/\|static2" --include=*.py --include=*.toml --include=*.nix`
+must find nothing outside docs history.
+
+**Done when:** the checks above pass, `git ls-files` shows no Python 2 or legacy-tracer files, and
+the report lists what was removed and anything kept on purpose.
+
 ### Task 4 — Install on Debian 13 (changed after Task 1)
 
 **Branch:** `feature/install-debian13` · **Report:** `docs/tasks/4-install-debian13.md`
 
-**Why it changed:** development now uses devenv + uv (`devenv.nix`, `.envrc`, `.env`), so
-`install.sh` no longer has to build a Python environment. What is still missing is an install for
-people who only want to *use* QIRA, and a tracer for both (issues I2, I4).
+**Why it changed:** development uses devenv + uv (`devenv.nix`, `.envrc`, `.env`), so `install.sh`
+no longer has to build a Python environment. It runs **after Task 6**, so it installs the modern
+stack (the click CLI from Stage 2, the plugin tracer) and never the legacy code. Stage 2's Docker
+image is the other install path.
 
 **Goal:** on a fresh Debian 13 checkout, `./install.sh` installs a working `qira` command
 (including the tracer) as a normal user, and the devenv shell can trace as well.
@@ -305,8 +359,8 @@ people who only want to *use* QIRA, and a tracer for both (issues I2, I4).
   folder for installed copies (the package is not mapped from a checkout's `middleware/`), so
   `QIRA_TRACER_DIR` is no longer needed; `.env.example` documents it, `test_default_tracer_dir`
   covers it.
-* Remove the Ubuntu 14.04/16.04, Arch, Fedora and macOS branches and the `requirements.txt`/venv
-  code; on anything other than Debian/Ubuntu, print what is needed and exit.
+* Write it from scratch (Task 6 deleted the old one); on anything other than Debian/Ubuntu, print
+  what is needed and exit.
 * `--skip-tests` turns off a final `uv run pytest` (run from the checkout).
 * Update the install section of `README.md` (development: devenv; usage: `./install.sh`).
 
@@ -380,12 +434,12 @@ HTTP: `/hasstatic`, `/gettagsa`, `/gettagss`, `/dot`, static files.
 `qira_program.py:identify_program` detects PE32/PE32+ but only "runs the server". Windows binaries
 can be viewed only from a trace produced elsewhere (e.g. `tests_manual/windows/fibonacci64/`).
 
-### Legacy to retire (after Stage 3)
+### Legacy to retire
 
-`extra/` (old experiments, meteor server, CDA, website), `tracers/qemu/qira-*` prebuilt binaries,
-`ida/bin` + `ida/libs` prebuilt plugins (replace later, see TODO.md), `.travis.yml`, `run_tests.sh`,
-`install.sh` (replaced by Docker + `uv`; until then Task 4 keeps it working on Debian 13), `web/`, `middleware/`, `static2/`
-(after porting), `fetchlibs.sh` (replace with a documented sysroot/`QEMU_LD_PREFIX` setting).
+Clean break: everything legacy is deleted in **Task 6** (after Stage 2): `middleware/`
+(`qira.legacy`), `static2/`, the QEMU fork and its patches, PIN, `extra/`, `ida/bin` + `ida/libs`,
+`fetchlibs.sh`, `.travis.yml`, `run_tests.sh`, the old `install.sh` and Dockerfile. `web/` goes
+in **Stage 3**, together with Stage 2's Socket.IO adapter.
 
 ### Key risks
 
@@ -524,7 +578,7 @@ The full C++20/nanobind modernization has been moved to [TODO.md](TODO.md). The 
 | `middleware/arch.py` | `core/arch.py` | Arch descriptors as frozen dataclasses/pydantic models (`name`, `register_names`, `register_size`, `big_endian`, `call_mnemonics`, `qemu_target`, `capstone_mode`). Remove list mutation such as `arch.MIPSREGS[2:-1] = …`. |
 | `qira_program.identify_program` | `core/binary.py` | Detect ELF / PE / Mach-O with pyelftools + LIEF; return a `BinaryInfo` model. |
 | `qira_program.Program` / `Trace` | `core/program.py`, `core/trace.py` | No global `/tmp/qira_binary` symlink; no threads started from constructors; explicit `TraceStore(path)`. |
-| `qira_program.execqira`, `qira_socat` | `core/tracers/{base,qemu_plugin,wine,pin}.py` | `TracerBackend` interface (`build_command`, `start`, `fork_at`); driven by `asyncio.create_subprocess_exec`, not `os.fork`. PIN is kept as an optional legacy backend. |
+| `qira_program.execqira`, `qira_socat` | `core/tracers/{base,qemu_plugin,wine,pin}.py` | `TracerBackend` interface (`build_command`, `start`, `fork_at`); driven by `asyncio.create_subprocess_exec`, not `os.fork`. PIN is not carried over (removed in Task 6). |
 | `qira_log.py` | `core/log.py` | Reader/writer for change logs + `meta.json` + `_mods`; fixes the Python 2 `write_log`. |
 | `qira_analysis.py` | `core/analysis.py` | Port to Python 3; pure functions over a trace; keep `get_instruction_flow`, `get_hacked_depth_map`, `analyse_calls`, `get_vtimeline_picture`, `slice`. |
 | `static2/` | `core/static/` | Port to Python 3, capstone 5, current pyelftools; replace pickle cache with JSON/SQLite under the configured cache dir. |
@@ -543,7 +597,9 @@ analysis and static pass on the golden fixtures.
 ## 4. Stage 2 — Server (FastAPI)
 
 **Goal:** a FastAPI service with a typed, versioned API, live streaming over WebSockets, and easy
-Docker deployment. The legacy `web/` frontend is not ported to the new API.
+Docker deployment. The legacy `web/` frontend is not ported to the new API; instead a thin,
+temporary **Socket.IO adapter** keeps it working (see below), so there is a usable UI after Task 6
+removes the legacy backend and until Stage 3 replaces `web/`.
 
 ### Configuration (`src/qira/config.py`)
 
@@ -629,6 +685,14 @@ Addresses are sent as hex strings in JSON (64-bit values do not fit in JS number
   per trace and is incremental where possible.
 * Point lookups (registers, memory, instructions) stay on REST; only live data is streamed.
 
+### Socket.IO adapter for `web/` (temporary)
+
+`src/qira/server/legacy_socketio.py`: python-socketio's ASGI app mounted next to FastAPI, namespace
+`/qira`, implementing the events listed in §1 ("Socket.IO surface") on top of `qira.core`, and
+serving `web/` as static files. It contains no logic of its own (each handler calls the core or the
+same functions as the REST endpoints). `qira_tests/test_ui.py` runs against it. Deleted in Stage 3
+together with `web/`.
+
 ### Network services (`--server`)
 
 `qira_socat.py` becomes an asyncio TCP server (`core/tracers/socat.py`): each connection starts a
@@ -659,9 +723,12 @@ published and covered by tests.
 
 ---
 
-## 5. Stage 3 — Frontend (React)
+## 5. Stage 3 — Update the UI (React frontend)
 
-**Goal:** a simple, fast, intuitive UI on top of the v1 API.
+**Goal:** a simple, fast, intuitive UI on top of the v1 API. This is the last step of the
+upgrade proper (Stages 4 and 5 are optional and follow it): it comes after Task 6 and Task 4, and is
+built and refined while the user tests the modernized QIRA, so expect several rounds of changes
+driven by that testing.
 
 ### Stack
 
@@ -709,8 +776,9 @@ status, run stdout. Everything else is fetched over REST on selection change.
   Playwright: it is already in use, works with the system Firefox and needs no browser download,
   which the sandbox cannot do.)
 
-**Done when:** the Selenium smoke test passes in CI against the Docker image; `web/`,
-`middleware/`, `static2/` and the other legacy items listed in §1 are removed.
+**Done when:** the Selenium smoke test passes in CI against the Docker image, the user has signed
+off the UI after testing, and `web/` and the Socket.IO adapter are removed (the rest of the legacy
+code went in Task 6).
 
 ---
 
