@@ -42,6 +42,7 @@ dist/
 *.so
 __pycache__/
 .pytest_cache/
+.coverage
 # local tool caches
 /.cache/
 

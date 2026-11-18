@@ -55,6 +55,34 @@ gateway, local Ollama / vLLM / llama.cpp server, etc.). The context is gathered 
       as tools so the model can explore the trace itself.
 - [ ] Privacy note in the UI: code and trace data are sent to the configured provider.
 
+## Tracers and trace sources
+
+Every source produces the same thing: a QIRA change log + `meta.json` (with `tracer` set) that the
+core, the API and the UI read without knowing where it came from. Each one is a `TracerBackend`
+(live) or an importer (converts a recording), uses the source's maintained SDK, and supports
+threads as in UPGRADE.md 1E.
+
+- [ ] **Frida tracer** (After: 1D, 1E): Stalker-based instruction tracing with the `frida` Python
+      package. Spawn or **attach to a running process**, which QEMU cannot do, on Linux, Windows,
+      macOS and Android/iOS; registers from the Stalker CPU context, memory writes from capstone
+      operand decoding; `Interceptor` hooks for syscalls/API calls; gating to a module or function
+      to keep traces small.
+- [ ] **Windows Time Travel Debugging (TTD) import** (After: 2): record natively with WinDbg / `TTD.exe`
+      (Microsoft, free) and convert the `.run` recording with the TTD Replay API (Microsoft's
+      `TTDReplay` SDK, or the `ttd-bindings` Python bindings). Gives full Windows user-mode traces,
+      including threads, without Wine.
+- [ ] **WinDbg / dbgeng bridge** (After: 2): sync address and clnum between a live WinDbg session and
+      QIRA (`pybag` over dbgeng, or a WinDbg JavaScript extension).
+- [ ] **x64dbg plugin** (After: 2): sync and "open this trace position in QIRA" (x64dbg plugin SDK).
+- [ ] **rr import** (After: 2): replay an `rr` recording through its gdb server and convert it into a
+      QIRA trace; rr's recordings are cheap to take on native Linux x86_64.
+- [ ] **Intel PT** (After: 1D): control-flow-only traces of native Linux programs via `perf` and
+      `libipt`, at near-native speed; shown as instruction-only traces (no data values).
+- [ ] **Qiling / Unicorn backend** (After: 1D): emulate partial code, firmware, UEFI modules or Windows
+      PE files with OS emulation (Qiling), with hooks writing QIRA records.
+- [ ] **Interop formats** (After: 1D): import/export Tenet text traces (IDA Tenet plugin) and drcov
+      coverage (Lighthouse, bncov, Cutter).
+
 ## Debugger and tool integration
 
 - [ ] GDB remote serial protocol stub over a trace (After: 2): `stepi`/`reverse-stepi`,
@@ -63,6 +91,11 @@ gateway, local Ollama / vLLM / llama.cpp server, etc.). The context is gathered 
       the v1 WebSocket (After: 2).
 - [ ] IDA 9 Python plugin that replaces the prebuilt binaries in `ida/` (After: 2).
 - [ ] VS Code / editor integration that replaces `extra/vim/qira.vim` (After: 2).
+- [ ] radare2 / rizin / Cutter: sync over `r2pipe`/`rzpipe` and load QIRA coverage into Cutter
+      (After: 2).
+- [ ] LLDB: the GDB stub above also serves LLDB (`gdb-remote`); document and test it (After: 2).
+- [ ] Shared sync protocol: one documented WebSocket message set (address, clnum, names, comments)
+      for all of these plugins, so each plugin stays thin (After: 2).
 
 ## Symbols, types and source
 
@@ -78,7 +111,6 @@ gateway, local Ollama / vLLM / llama.cpp server, etc.). The context is gathered 
 - [ ] Trace compression (zstd blocks) and pruning/retention policies for `QIRA_TRACE_DIR` (After: 2).
 - [ ] Incremental analysis instead of the full recompute in the analysis loop (After: 1D).
 - [ ] WebGL/OffscreenCanvas timeline for very large traces (After: 3).
-- [ ] Multi-threaded guest support (one log per thread, merged view) (After: 1A).
 
 ## Analysis features
 

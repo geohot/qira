@@ -6,7 +6,8 @@ Scope: recording Linux and Windows binaries. Other arches/features are out of sc
 ## Current state
 - Code is upstream QIRA 1.4 ported to Python 3 (Task 1): a uv project (`pyproject.toml`, `uv.lock`),
   installed as package `qira`: `src/qira/` (new code) and `qira.legacy` (mapped from middleware/,
-  static2/, web/). QEMU tracer from geohot/qemu (branch qira).
+  static2/, web/). Tracer: QEMU 11.1 TCG plugin (`tracers/qemu-plugin/`, x86_64, Task 5); other
+  arches still need the legacy geohot/qemu fork.
 - Don't run install.sh: it targets Ubuntu 16.04 and uses sudo.
 - Legacy reference: podman image qira-legacy. You can't run it; reference output is in samples/legacy/.
   Ask me to run anything else against it.
@@ -23,10 +24,18 @@ Scope: recording Linux and Windows binaries. Other arches/features are out of sc
 - Sandbox: `/tmp/qira_logs` and `/tmp/qira_asm` are writable (the tracer's fixed paths). A server and its
   client must run in the same command. Status, open issues and assumptions: top of UPGRADE.md.
 - Work on feature branches off develop. You commit; I push.
+- Shelf-ware first: use established, maintained tools and libraries for development and testing.
+  Write custom code or libraries only when absolutely necessary, and say why in the commit or report.
+- Tests: every change adds unit tests, and functional tests for planned behaviour; mark each test
+  `unit`, `functional` or `ui` (UPGRADE.md "Testing strategy"). `uv run pytest -m unit` is the quick run.
+- Agents in `.claude/agents/`: shelfware-auditor, cleanup-steward, test-author, trace-verifier,
+  plan-steward ([docs/ai-tooling.md](docs/ai-tooling.md)).
 
 ## Layout
 - middleware/: Python backend (Flask + Socket.IO), entry point middleware/qira.py
 - middleware/qiradb/: Cython trace database, compiled by setup.py during `uv sync`
-- tracers/qemu/: QEMU user-mode tracer
+- tracers/qemu-plugin/: QEMU TCG plugin tracer (libqira.so); tracers/qemu/: legacy QEMU fork tracer
 - tracers/pin/: Intel PIN tracer
 - web/: browser UI on port 3002
+- qira_tests/: pytest suite (markers unit/functional/ui)
+- docker/: images for Debian 13 and Ubuntu 26.04 (build.sh, test.sh)
