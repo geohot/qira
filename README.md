@@ -1,22 +1,24 @@
 # QIRA
 
-[![Build Status](https://travis-ci.org/geohot/qira.svg?branch=master)](https://travis-ci.org/geohot/qira)
-
 * QIRA is a competitor to strace and gdb
 * See http://qira.me/ for high level usage information
 * All QIRA code is released under MIT license
 * Other code in this repo released under its respective license
 
+## Status
+
+This is the Python 3 fork of QIRA, being modernised to run on Debian 13. See
+[UPGRADE.md](UPGRADE.md) for the roadmap and what is done. Tasks 1, 3 and 5 are complete
+(Python 3 port, tracer decision, and the first QEMU 11.1 plugin tracer).
+
 ## Supported OS
 
 <pre>
-Ubuntu 14.04 and 16.04 supported out of the box.
-18.04 is having a problem with building QEMU
-See forked QEMU source at https://github.com/geohot/qemu/tree/qira to fix.
-
-Non Linux hosts may run the rest of QIRA, but cannot run the QEMU tracer.
-Very limited support for Mac OS X and Windows natively.
-The Docker image in docker should work everywhere.
+Debian 13 (x86_64) is the supported host.
+The tracer is the QEMU 11.1 TCG plugin (tracers/qemu-plugin/, libqira.so); x86_64 only today.
+Other architectures still need the legacy QEMU fork and are not ported yet.
+Docker images for debian:13 and ubuntu:26.04 are defined in docker/ (not built in CI yet).
+Windows binaries are view-only (from a trace captured elsewhere) until Stage 1B.
 </pre>
 
 ## Installing release
@@ -34,9 +36,13 @@ git clone https://github.com/geohot/qira.git
 cd qira/
 cp .env.example .env # QIRA_* settings, edit as needed
 direnv allow         # or: devenv shell (runs uv sync: creates .venv and compiles qiradb)
+make -C tracers/qemu-plugin   # build libqira.so (needed before ./qira can trace)
 uv run pytest        # tests
 ./qira /bin/ls /     # or: uv run qira /bin/ls /
 </pre>
+
+The devenv shell provides the plugin-enabled `qemu-user` 11.1.x; the plugin (`libqira.so`) is
+built from `tracers/qemu-plugin/`. Without it, `qira` can only open existing traces.
 
 Without devenv you need `python3-dev`, `build-essential` and uv; run `uv sync` yourself and pass
 the settings with `uv run --env-file .env qira …`.
@@ -45,20 +51,41 @@ Or install the `qira` command as a uv tool:
 
 <pre>
 uv tool install .
-export QIRA_TRACER_DIR=$PWD/tracers   # the tracer is not part of the Python package
 </pre>
 
-Settings (environment variables, usually set in `.env`): `QIRA_TRACE_DIR` (default `/tmp/qira_logs`), `QIRA_ASM_FILE`
-(`/tmp/qira_asm`), `QIRA_STATIC_CACHE_DIR`, `QIRA_TRACER_DIR` (the `tracers/` folder),
-`QIRA_LIBS_DIR` (the `libs/` folder from `fetchlibs.sh`). The QEMU tracer itself always writes
-to `/tmp/qira_logs` and `/tmp/qira_asm`.
+An installed copy looks for the tracer in `${XDG_DATA_HOME:-~/.local/share}/qira/tracers/`;
+nothing installs it there yet, so `uv tool install .` currently gives a `qira` that can only open
+existing traces until Task 4 adds the install step. For tracing, use the devenv shell above.
 
-`install.sh` still targets Ubuntu 16.04; see UPGRADE.md Task 4.
+Settings (environment variables, usually set in `.env`): `QIRA_TRACE_DIR` (default `/tmp/qira_logs`),
+`QIRA_ASM_FILE` (`/tmp/qira_asm`), `QIRA_STATIC_CACHE_DIR`. The QEMU plugin tracer takes its output
+paths as plugin arguments (`dir=`/`asm=`) and writes straight to the configured trace/asm paths;
+only the legacy per-arch binaries still hardcode `/tmp/qira_logs` and `/tmp/qira_asm`.
+`QIRA_TRACER_DIR` is no longer needed (the install location is used instead); `QIRA_LIBS_DIR` (the
+`libs/` folder from `fetchlibs.sh`) is legacy and goes away in Task 6.
 
-## Installation Extras
+`install.sh` still targets Ubuntu 16.04; see [UPGRADE.md](UPGRADE.md) Task 4.
 
-* ./fetchlibs.sh will fetch the libraries for i386, armhf, armel, aarch64, mips, mipsel, and ppc
-* ./tracers/pin_build.sh will install the QIRA PIN plugin, allowing --pin to work
+## Tests
+
+<pre>
+uv run pytest             # everything
+uv run pytest -m unit     # quick unit level
+uv run pytest -m functional
+uv run pytest -m ui       # web UI in headless Firefox (Selenium)
+uv run pytest --cov       # coverage of the qira package
+</pre>
+
+Every test is marked `unit`, `functional` or `ui`; see the Testing strategy in
+[UPGRADE.md](UPGRADE.md).
+
+## Installation Extras (legacy)
+
+These belong to the old stack and are removed in Task 6; they are not supported with the QEMU
+plugin tracer:
+
+* ./fetchlibs.sh fetched the libraries for i386, armhf, armel, aarch64, mips, mipsel, and ppc
+* ./tracers/pin_build.sh installed the QIRA PIN plugin (`--pin`); PIN is not carried over
 
 
 ## Releases
@@ -137,10 +164,12 @@ d -- make data at iaddr
 u -- make undefined at iaddr
 </pre>
 
-## Installation on Windows (experimental)
+## Windows
 
-* Install git and python 2.7.9
-* Run install.bat
+Windows binaries are currently **view-only**: QIRA can display a trace captured elsewhere (e.g.
+`tests_manual/windows/`), but cannot record on Windows yet. Tracing Windows binaries under Wine is
+planned for Stage 1B, and a Windows-native tracer (DynamoRIO) for Stage 5 (see
+[UPGRADE.md](UPGRADE.md)). The old Python 2.7 `install.bat` path is gone.
 
 
 ## Session state
