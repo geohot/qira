@@ -75,7 +75,7 @@ Fixed issues (I6, I7, I8, and most of I4) were removed from this table; see "Don
 |---|-------|--------|------------|
 | I1 | ~~The legacy QEMU/PIN tracers hardcode `/tmp/qira_logs/` and `/tmp/qira_asm`.~~ **Fixed for x86_64** on `feature/qemu-plugin-tracer`: the plugin takes `dir=`/`asm=` arguments and writes straight to the configured paths. The legacy `qira-<arch>` binaries (other arches) still hardcode them. | Gone for the plugin; remains for the legacy arches until Stage 1A. | — |
 | I2 | No working tracer on the host. `tracers/qemu/qira-*` are broken symlinks; the only build is the Ubuntu 16.04 binary in `qira-legacy`, which may not even run on Debian 13 (old shared libraries). | x86_64 traces live via the plugin (Task 5); other arches still have no tracer, and forkat/`--server`/socat are untested against a real tracer. | Task 4 (install QEMU + plugin), Stage 1A (other arches, fork). |
-| I3 | Claude's sandbox: every command has its own network and PID namespace (a server and its client must run in one command, with a `trap` that stops the server); only `pypi.org`, `files.pythonhosted.org` and `github.com` are reachable (no `cache.nixos.org`, `gitlab.com`, `download.qemu.org`, `deb.debian.org`, `raw.githubusercontent.com`); `$HOME` is read-only; sandbox setting changes need a new session; the `/tmp` paths must exist before the session starts. | Claude cannot change the devenv shell (new Nix packages), download QEMU tarballs or Debian packages, or fetch geckodriver (kept in `.cache/selenium` instead). | Rules 4 and 9. The user adds domains to `~/.claude/settings.json` if a task needs them. |
+| I3 | Claude's sandbox: every command has its own network and PID namespace (a server and its client must run in one command, with a `trap` that stops the server); only `pypi.org`, `files.pythonhosted.org` and `github.com` are reachable (no `cache.nixos.org`, `gitlab.com`, `download.qemu.org`, `deb.debian.org`, `raw.githubusercontent.com`); `$HOME` is read-only; sandbox setting changes need a new session; the `/tmp` paths must exist before the session starts. | Claude cannot change the devenv shell (new Nix packages), or download QEMU tarballs or Debian packages (geckodriver comes from the devenv shell). | Rules 4 and 9. The user adds domains to `~/.claude/settings.json` if a task needs them. |
 | I4 | Nothing installs a tracer into `${XDG_DATA_HOME:-~/.local/share}/qira/tracers/`, where an installed copy now looks for it. | `uv tool install .` gives a `qira` that can only open existing traces (`--no-run`). | Task 4 (after Task 6). |
 | I5 | `docker/Dockerfile` and `install.sh` still use Python 2 and `requirements.txt`. | The `qira-legacy` image must be built from a commit before Task 1 (e.g. `862c3aa`). | Stage 2 (Docker), Task 6 (removes the old ones), Task 4 (`install.sh`). |
 | I9 | Claude's commands do not go through direnv, so `uv` and the `.env` settings are not loaded automatically. | Commands must set them explicitly. | Rule 4. |
@@ -136,11 +136,11 @@ Task 2 is next. Stages 0–2 come between Task 2 and Task 6, and Task 7 between 
    compiler) is defined in `devenv.nix` and entered with direnv (`.envrc`), which also loads the
    `QIRA_*` settings from `.env` (template: `.env.example`). Claude's commands do not go through
    direnv; start them with
-   `export PATH=$PWD/.devenv/profile/bin:$PATH UV_CACHE_DIR=$TMPDIR/uv-cache UV_PYTHON_DOWNLOADS=never SE_CACHE_PATH=$PWD/.cache/selenium SE_OFFLINE=true`
-   and use `uv run --env-file .env …`. `SE_CACHE_PATH`/`SE_OFFLINE` let the Selenium UI test use the
-   geckodriver kept in `.cache/selenium` (git-ignored); Selenium Manager cannot download it from the
-   sandbox (`raw.githubusercontent.com`, `release-assets.githubusercontent.com` are not allowed), so if
-   the folder is empty the test skips. Claude cannot change the devenv shell itself (the Nix cache
+   `export PATH=$PWD/.devenv/profile/bin:$PATH UV_CACHE_DIR=$TMPDIR/uv-cache UV_TOOL_DIR=$TMPDIR/uv-tools UV_PYTHON_DOWNLOADS=never`
+   and use `uv run --env-file .env …` (`UV_TOOL_DIR` lets `uvx` run linters such as hadolint and
+   shellcheck from PyPI). The Selenium UI test uses the system Firefox and the `geckodriver` from
+   the devenv shell (nixpkgs); Selenium finds it on `PATH`, so nothing is downloaded at test time.
+   Claude cannot change the devenv shell itself (the Nix cache
    is not reachable from the sandbox): edit `devenv.nix` and ask the user to enter the shell once.
    Do not run the old `install.sh` (it targets Ubuntu 16.04 and calls sudo).
 5. **Legacy reference.** Do not run podman. Never modify or delete anything in `samples/legacy/`;
