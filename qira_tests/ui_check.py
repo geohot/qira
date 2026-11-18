@@ -6,7 +6,7 @@ screenshot. Start the server first (same command in the sandbox), e.g.
   ./qira --no-run --no-delete-runs --host 127.0.0.1 --web-port 3012 qira_tests/bin/loop &
   uv run python qira_tests/ui_check.py --url http://127.0.0.1:3012 --screenshot ui.png
 
-Needs Firefox; Selenium Manager downloads geckodriver (from github.com) on first use.
+Needs Firefox and geckodriver (on PATH in the devenv shell).
 Exit status 1 if the page logged JavaScript errors.
 """
 import argparse

@@ -5,6 +5,8 @@ import pytest
 from qira.legacy import arch, qira_config, qira_program
 from conftest import LOOP, wait_for_update
 
+pytestmark = pytest.mark.unit
+
 
 @pytest.fixture
 def program(trace_dir):

@@ -1,5 +1,9 @@
+import pytest
+
 from qira.legacy import qira_log
 from conftest import LOOP_CHANGES
+
+pytestmark = pytest.mark.unit
 
 
 def test_write_read_round_trip(tmp_path):

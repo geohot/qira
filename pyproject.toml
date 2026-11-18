@@ -25,6 +25,7 @@ qira = "qira.legacy.qira:main"
 [dependency-groups]
 dev = [
   "pytest>=8",
+  "pytest-cov>=7.1.0",                # coverage: uv run pytest --cov
   "python-socketio[client]>=5.12",   # qira_tests/smoke_socketio.py
   "selenium>=4.52.0",                 # qira_tests/test_ui.py, qira_tests/ui_check.py
 ]
@@ -54,3 +55,15 @@ cache-keys = [
 
 [tool.pytest.ini_options]
 testpaths = ["qira_tests"]
+# every test carries one level (UPGRADE.md "Testing strategy"); `uv run pytest` runs them all,
+# `uv run pytest -m unit` is the quick run
+markers = [
+  "unit: one module in isolation; no subprocess, QEMU or network",
+  "functional: real components working together (tracer, CLI, server + client)",
+  "ui: drives the web UI in a browser (Selenium); also functional",
+]
+addopts = "--strict-markers -ra"
+
+[tool.coverage.run]
+source = ["qira"]
+branch = true

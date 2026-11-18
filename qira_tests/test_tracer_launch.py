@@ -15,6 +15,8 @@ import pytest
 from qira.legacy import qira_config, qira_program, qira_socat, qira_webserver as ws
 from conftest import LOOP
 
+pytestmark = pytest.mark.functional
+
 FAKE_TRACER = """#!/bin/sh
 echo "$@" > "%s"
 echo "tracer up"

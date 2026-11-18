@@ -6,6 +6,8 @@ import pytest
 from qira.legacy import qira, qira_config, qira_socat, qira_webserver
 from conftest import LOOP
 
+pytestmark = pytest.mark.unit
+
 
 @pytest.fixture
 def listener():

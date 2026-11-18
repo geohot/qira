@@ -17,6 +17,9 @@
     pkgs.qemu-user
     pkgs.glib.dev
     pkgs.pkg-config
+    # WebDriver for the Selenium UI tests (qira_tests/test_ui.py, ui_check.py); Selenium
+    # uses the one on PATH, so nothing is downloaded at test time. Firefox is the system one.
+    pkgs.geckodriver
   ];
 
   env = {

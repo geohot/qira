@@ -7,6 +7,8 @@ from qira.legacy import qira_program, qira_webserver as ws
 from qira.legacy import qira_webstatic  # registers its routes, as run_server() does before serving
 from conftest import LOOP, RSP, STACK, wait_for_update
 
+pytestmark = pytest.mark.functional
+
 
 @pytest.fixture
 def http():

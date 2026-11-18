@@ -4,7 +4,7 @@ Starts ./qira on the synthetic trace from conftest.py and checks that the panes 
 This caught the socket.io 4 regression where every client module opened its own
 connection, so registers, instructions and memory never rendered.
 
-Skipped when Firefox or geckodriver (fetched by Selenium Manager from github.com) is missing.
+Skipped when Firefox or geckodriver (on PATH in the devenv shell) is missing.
 """
 import os
 import shutil
@@ -23,6 +23,8 @@ from selenium.common.exceptions import WebDriverException  # noqa: E402
 from selenium.webdriver.common.by import By  # noqa: E402
 from selenium.webdriver.firefox.service import Service  # noqa: E402
 from selenium.webdriver.support.ui import WebDriverWait  # noqa: E402
+
+pytestmark = [pytest.mark.functional, pytest.mark.ui]
 
 os.environ.setdefault("SE_AVOID_STATS", "true")
 

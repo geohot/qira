@@ -7,6 +7,9 @@ Nix Python of the devenv shell cannot find unless Python's own zlib is loaded fi
 """
 import subprocess
 import sys
+import pytest
+
+pytestmark = pytest.mark.functional
 
 
 def _fresh(code):
