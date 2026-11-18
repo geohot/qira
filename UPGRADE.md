@@ -147,7 +147,7 @@ removed from this list; their reports stay in `docs/tasks/`.
 
 | # | Task | Branch | Needs in `develop` | Needs from the user first |
 |---|------|--------|--------------------|---------------------------|
-| 2 | [ ] Compare the plugin's traces of `qira_tests/bin/loop` with `samples/legacy/` and list the differences | `feature/trace-compare-loop` | Task 5 | — (the podman copy of the legacy tracer is optional) |
+| 2 | [x] Compare the plugin's traces of `qira_tests/bin/loop` with `samples/legacy/` and list the differences ([report](docs/tasks/2-trace-compare-loop.md)) | `feature/trace-compare-loop` | Task 5 | — (the podman copy of the legacy tracer is optional) |
 | 8 | [ ] Stage 0 CI and packaging: ruff + mypy + pre-commit, GitHub Actions (replacing Travis), `tests/{unit,functional,ui}` layout | `feature/stage0-ci` | Task 5 | Enable GitHub Actions for the repo |
 | 9 | [ ] Stage 0 golden fixtures: reference traces + JSON query exports for the golden binaries | `feature/stage0-golden` | Task 2, Task 8 | Capture the legacy reference with podman (user-only); `autogen.py` not yet ported (Task 7) |
 | 7 | [ ] Port the remaining Python 2 code that is kept (angr tracer, concrete executor, IDA plugin, test scripts) to Python 3 | `feature/py3-residual` | Stage 1 | Enter the devenv shell once if `devenv.nix` gains `bap` (step 4) |
