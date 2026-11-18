@@ -1,0 +1,7 @@
+# hadolint (Dockerfile linter) settings for docker/Dockerfile
+ignored:
+  # apt version pins: the image builds on two bases (debian:13, ubuntu:26.04) with
+  # different package versions; the base tag is the pin
+  - DL3008
+# fail on warnings and errors, not on info notes (e.g. DL3066 for USER qira)
+failure-threshold: warning

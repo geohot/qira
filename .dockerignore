@@ -1,0 +1,19 @@
+# local environments, caches and settings (.env may hold secrets)
+.git
+.venv
+.devenv
+.direnv
+.cache
+.env
+**/__pycache__
+*.egg-info
+build
+dist
+# local captures and build output
+samples
+tests_auto/binary-autogen
+tracers/qemu-plugin/*.so
+tracers/qemu/qemu
+# not needed to build or run the image
+extra
+tests_manual
