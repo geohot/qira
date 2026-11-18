@@ -362,8 +362,8 @@ Python 2 semantics in the files that compile):
 | File(s) | State | Action |
 |---|---|---|
 | `tracers/angr/angr_trace.py` | Python 2 syntax and the angr 7 API (`path_group`, `state.se.any_int`). Broken upstream too (commit "add broken angr tracer"): uses `data` before it is set, and treats angr's VEX register offsets as QIRA register indices. | Rewrite as `src/qira/core/tracers/angr.py` (step 3) |
-| `tracers/concrete_executor/concrete_execution.py`, `bitvector.py` | Python 2 (`print`, `iteritems`, `map` used as a list, memory as `chr` strings). Needs BAP and `static2.model.BapInsn`, which uses `bap`, `asm` and `hexlify` without importing them. Nothing calls `validate_bil`. | Port to `src/qira/core/validate/` (step 4) |
-| `ida/python/qira.py` | Compiles, but Python 2 semantics: `has_key`, `except e:`, `str` frames in the embedded WebSocket server | Port in place; it runs inside IDA, not in the package (step 5) |
+| `tracers/concrete_executor/concrete_execution.py`, `bitvector.py` | Python 2 (`print`, `iteritems`, `map` used as a list, memory as `chr` strings). Needs BAP and `static2.model.BapInsn`, which uses `bap`, `asm` and `hexlify` without importing them. Nothing calls `validate_bil`. | Port `concrete_execution.py` to `src/qira/core/validate/` on **claripy**; **delete `bitvector.py`** (replaced by claripy `BVV`) (step 4) |
+| `ida/python/qira.py` | Compiles, but Python 2 semantics: `has_key`, `except e:`, `str` frames in the embedded WebSocket server | Port to Python 3 as a small **installable project**; **replace the vendored `SimpleWebSocketServer` with the `websockets` library** (step 5) |
 | `tests_manual/ctf/justify_exploit.py`, `stkof_exploit.py`, `exploits/ezhp.py`, `exploits/ezhp_live.py` | Python 2; `telnetlib` (removed in Python 3.13); `str` sockets; hardcoded ports | Port in place (step 6) |
 | `tests_auto/autogen.py` | Parses, but has not been run since Task 1; Stage 0 uses the binaries it builds | Run it and fix what breaks (step 6) |
 | `extra/**`, `tracers/pin/strace/*.py`, `middleware/`, `static2/` (including `BapInsn`) | Python 2 or legacy | Do not port: Task 6 removes them |
@@ -375,11 +375,12 @@ Python 2 semantics in the files that compile):
    is in none of the groups above, put it in the report. Port it only if it is clearly needed;
    otherwise list it as an open question.
 2. **Dependencies.** Add optional extras to `pyproject.toml`: `angr` (angr 9) and `bap` (the `bap`
-   Python bindings). Add a dependency group `manual` with `pwntools` for the CTF scripts. A plain
-   `uv sync` must stay as small as it is now, and tests that need an extra are skipped when it is
-   missing. If angr's pins conflict with the project's (capstone, pyelftools, …), or nothing
-   resolves on Python 3.13, stop there. Put the resolver output in the report and propose a fix;
-   do not loosen the project's own pins without saying so.
+   Python bindings). The concrete executor (step 4) uses **claripy**, which the `angr` extra already
+   installs — no separate dependency. Add a dependency group `manual` with `pwntools` for the CTF
+   scripts. A plain `uv sync` must stay as small as it is now, and tests that need an extra are
+   skipped when it is missing. If angr's pins conflict with the project's (capstone, pyelftools, …),
+   or nothing resolves on Python 3.13, stop there. Put the resolver output in the report and propose
+   a fix; do not loosen the project's own pins without saying so.
 3. **angr tracer** (`core/tracers/angr.py`). Move the old file with `git mv` first so its history
    follows it, then rewrite it for angr 9:
    * Start from `Project`, `factory.entry_state` (argv, env and a concrete stdin from the CLI) and
@@ -397,8 +398,11 @@ Python 2 semantics in the files that compile):
      i386 if a test binary exists.
 4. **Concrete executor** (`core/validate/`). The executor runs each traced instruction's BIL again
    and compares the registers and memory with the trace, so it can check the tracer (Stage 1A).
-   * Port `bitvector.py` and `concrete_execution.py` to Python 3: memory as `bytes`, `items()`,
-     real lists, `logging` instead of `print`, and results returned instead of printed.
+   * **Replace `bitvector.py` with claripy** (`BVV` and its bit-vector operations) everywhere; do
+     not port the custom `ConcreteBitVector` — delete the file. Property-test the claripy
+     replacement against the old semantics (widths, signed ops, shifts, concat/extract) with
+     Hypothesis. Port `concrete_execution.py` to Python 3 on top of claripy: memory as `bytes`,
+     `items()`, real lists, `logging` instead of `print`, and results returned instead of printed.
    * Replace `program.static[addr]['instruction']`: lift the instruction bytes read from the trace
      at that clnum with `bap.disasm`. Replace the `libraries` argument with module ranges from the
      trace (`_base`/pmaps).
@@ -411,11 +415,15 @@ Python 2 semantics in the files that compile):
      `angr` extra already installs them.
 5. **IDA plugin** (`ida/python/qira.py`). Port it to Python 3 for IDA 7.4 and later: `bytes`/`str`
    in the WebSocket handshake and framing, `in` instead of `has_key`, and real `except` clauses.
-   Moving to the IDA 9 API stays in TODO.md. Rule 11: replace the embedded
-   `SimpleWebSocketServer` with the `websockets` library if IDA's bundled Python can install it;
-   otherwise keep it and list this as an open question. IDA is not available here, so test the embedded
-   WebSocket server with stub `idaapi`/`idc` modules and the `websockets` client library: the
-   handshake, a `setaddress` message, and a message from the plugin to the client.
+   Moving to the IDA 9 API stays in TODO.md. Rule 11: **replace the embedded `SimpleWebSocketServer`
+   outright with the `websockets` library** — delete the ~640-line vendored server; there is no
+   fallback. To supply `websockets` to IDA's interpreter, **package the plugin as a small installable
+   distribution** (`ida/pyproject.toml`, e.g. `qira-ida`) that declares `websockets` as a dependency;
+   install it into IDA's bundled Python with that Python's pip (`"$IDADIR"/python3 -m pip install
+   ida/` or `uv pip install --python "$IDADIR"/python3 ./ida`). `websockets` is pure-Python, so no
+   build step. This install target is separate from the main `qira` `.venv`. IDA is not available
+   here, so test the WebSocket server with stub `idaapi`/`idc` modules and the `websockets` client
+   library: the handshake, a `setaddress` message, and a message from the plugin to the client.
 6. **Test scripts.**
    * `tests_manual/ctf/*.py`: port to Python 3 with `bytes`. Use pwntools
      (`remote(...).interactive()`) where they used `telnetlib`. Host and port become arguments; the
@@ -425,8 +433,8 @@ Python 2 semantics in the files that compile):
      (the output goes to `tests_auto/binary-autogen/`, which is git-ignored) and fix what breaks.
 7. **Plan.** Update the §1D table, Task 6's remove and keep lists, and the status section.
 
-**Verification** (unit: `ConcreteBitVector`, the executor on hand-made states, the IDA stub test;
-functional: the angr trace, `check-trace`, the CTF run)
+**Verification** (unit: the claripy bit-vector ops and the executor on hand-made states, the IDA
+stub test; functional: the angr trace, `check-trace`, the CTF run)
 
 * **angr:** after `uv sync --extra angr`, run `qira trace --tracer angr qira_tests/bin/loop`, then
   compare it with the plugin's trace of `loop` using `qira_tests/compare_traces.py` (Task 2).
@@ -435,7 +443,7 @@ functional: the angr trace, `check-trace`, the CTF run)
   differences. Then check that `qira.core` can open the trace and that the UI shows it
   (`--web-port 3012`).
 * **check-trace:** run it on a plugin trace of `loop`, and on a copy with one register record
-  changed; it must report that clnum. Unit tests for `ConcreteBitVector` (widths, signed
+  changed; it must report that clnum. Property tests for the claripy bit-vector ops (widths, signed
   operations, shifts, concat/extract) do not need BAP.
 * **IDA plugin and CTF scripts:** the stub test from step 5. Each CTF script must compile and
   import without errors. If `qira --socat-port 4010` can start `tests_manual/ctf/hitcon/*-stkof`,
