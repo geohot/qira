@@ -24,6 +24,8 @@ from selenium.webdriver.common.by import By  # noqa: E402
 from selenium.webdriver.firefox.service import Service  # noqa: E402
 from selenium.webdriver.support.ui import WebDriverWait  # noqa: E402
 
+pytestmark = [pytest.mark.functional, pytest.mark.ui]
+
 os.environ.setdefault("SE_AVOID_STATS", "true")
 
 

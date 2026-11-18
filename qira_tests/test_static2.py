@@ -1,5 +1,9 @@
+import pytest
+
 from qira.legacy import static2
 from conftest import LOOP
+
+pytestmark = pytest.mark.unit
 
 
 def test_static2_loop():

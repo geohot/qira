@@ -5,6 +5,8 @@ import pytest
 from qira.legacy import qiradb, qira_log
 from conftest import HELLO_TRACE, LEGACY, LOOP_CHANGES, RBP, RIP, RSP, STACK, wait_for_update
 
+pytestmark = pytest.mark.unit
+
 LIMIT = 10000
 
 

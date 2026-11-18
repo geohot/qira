@@ -6,6 +6,8 @@ import pytest
 from qira.legacy import qira_config, qira_program
 from conftest import LOOP
 
+pytestmark = pytest.mark.functional
+
 LEGACY_TRACER = os.path.join(qira_config.TRACER_DIR, "qemu", "qira-x86_64")
 
 

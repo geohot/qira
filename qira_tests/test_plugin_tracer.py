@@ -23,6 +23,7 @@ qemu = shutil.which("qemu-x86_64") or (
     if os.path.exists(qira_config.TRACER_DIR + "qemu/qemu-x86_64") else None)
 
 pytestmark = [
+    pytest.mark.functional,
     pytest.mark.skipif(qemu is None, reason="no qemu-x86_64 (enter the devenv shell)"),
     pytest.mark.skipif(not os.path.exists(qira_config.QEMU_PLUGIN),
                        reason="libqira.so not built (run: make -C tracers/qemu-plugin)"),
