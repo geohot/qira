@@ -14,12 +14,13 @@ replacements exist). The work is done in this order; each step must leave the pr
 | 2 | Task 2 | Compare the plugin's traces with the legacy capture | Task 5 |
 | 3 | Stage 0 | Baseline, golden traces, repo hygiene, CI | — |
 | 4 | Stage 1 | **Core**: full QEMU plugin tracer (1A), Wine path for Windows (1B), qiradb build + conformance suite (1C), Python 3 core package (1D) | 0 |
-| 5 | Stage 2 | **Server**: FastAPI + pydantic, click CLI, pydantic-settings/.env, WebSocket streaming, Docker; a temporary Socket.IO adapter keeps the current `web/` UI working | 1 |
-| 6 | Task 6 | **Remove the legacy code** (everything but `web/`) | Stage 2 |
-| 7 | Task 4 | Install on Debian 13 (`install.sh`: uv tool + QEMU + plugin) for the modern stack | Task 6 |
-| 8 | Stage 3 | **Update the UI**: React + TypeScript on the v1 API, built and refined while the user tests; removes `web/` and the Socket.IO adapter | 2, Task 6 |
-| 9 | Stage 4 | qiradb rewrite in Rust (PyO3) | 1C (conformance suite) |
-| 10 | Stage 5 | Windows-native tracer (DynamoRIO) | 1, 2 |
+| 5 | Task 7 | Port the remaining Python 2 code that is kept: angr tracer, concrete executor (on `qira.core`), IDA plugin, test scripts | Stage 1 |
+| 6 | Stage 2 | **Server**: FastAPI + pydantic, click CLI, pydantic-settings/.env, WebSocket streaming, Docker; a temporary Socket.IO adapter keeps the current `web/` UI working | 1 |
+| 7 | Task 6 | **Remove the legacy code** (everything but `web/`) | Stage 2, Task 7 |
+| 8 | Task 4 | Install on Debian 13 (`install.sh`: uv tool + QEMU + plugin) for the modern stack | Task 6 |
+| 9 | Stage 3 | **Update the UI**: React + TypeScript on the v1 API, built and refined while the user tests; removes `web/` and the Socket.IO adapter | 2, Task 6 |
+| 10 | Stage 4 | qiradb rewrite in Rust (PyO3) | 1C (conformance suite) |
+| 11 | Stage 5 | Windows-native tracer (DynamoRIO) | 1, 2 |
 
 Optional improvements that are not required for the upgrade (AI assistance, the C++/nanobind
 modernization of qiradb, debugger integrations, …) are listed in [TODO.md](TODO.md).
@@ -60,6 +61,8 @@ The order is the table at the top of this file. Task 5 (plugin tracer) is done o
    the legacy tracer is optional.
 2. Then Stage 0 and Stage 1; Stage 1A continues from Task 5 (other architectures, `R` records,
    kernel writes, fork/replay, `meta.json`).
+3. After Stage 1, **Task 7** ports the Python 2 code that is kept (angr tracer, concrete executor,
+   IDA plugin, test scripts); it must be done before Task 6.
 
 The tracer decision (QEMU TCG plugin, QEMU 11.1.x) was signed off by the user on 2026-11-15.
 
@@ -108,11 +111,12 @@ removed from this list; their reports stay in `docs/tasks/`.
 | # | Task | Branch | Needs in `develop` | Needs from the user first |
 |---|------|--------|--------------------|---------------------------|
 | 2 | [ ] Compare the plugin's traces of `qira_tests/bin/loop` with `samples/legacy/` and list the differences | `feature/trace-compare-loop` | Task 5 | — (the podman copy of the legacy tracer is optional) |
-| 6 | [ ] Remove the legacy code (everything but `web/`) | `feature/remove-legacy` | Stage 2 | — |
+| 7 | [ ] Port the remaining Python 2 code that is kept (angr tracer, concrete executor, IDA plugin, test scripts) to Python 3 | `feature/py3-residual` | Stage 1 | Enter the devenv shell once if `devenv.nix` gains `bap` (step 4) |
+| 6 | [ ] Remove the legacy code (everything but `web/`) | `feature/remove-legacy` | Stage 2, Task 7 | — |
 | 4 | [ ] Install on Debian 13: `install.sh` as a user install of the modern stack (uv tool + QEMU + plugin) | `feature/install-debian13` | Task 6 | — |
 
-Task 2 is next. Stages 0–2 come between Task 2 and Task 6 (see the order at the top). Run one task
-per session.
+Task 2 is next. Stages 0–2 come between Task 2 and Task 6, and Task 7 between Stage 1 and Task 6
+(see the order at the top). Run one task per session.
 
 ### Rules for every task
 
@@ -238,13 +242,112 @@ plugin capture; say so in the report.
 **Done when:** the report has a differences table (category, legacy, port, cause, expected?) for
 each capture, the script is committed, and every "caused by the port" item is fixed or listed.
 
+### Task 7 — Port the remaining Python 2 code (angr tracer, concrete executor, IDA plugin, test scripts)
+
+**Branch:** `feature/py3-residual` · **Report:** `docs/tasks/7-py3-residual.md`
+
+**When:** after Stage 1. The task builds on `core/log.py`, `core/trace.py`, `core/arch.py`, the
+`TracerBackend` interface and the `qira trace` click command from 1D. It must come before Task 6,
+which requires that `git ls-files` shows no Python 2. It does not need Stage 2, so it can run
+before, during or after it. Rule 8 does not apply to the `qira.core`/click work this task needs.
+
+**Goal:** every Python file that Task 6 keeps runs on Python 3.13. The angr tracer and the concrete
+executor work again as part of `qira.core`, built on the new core and not on `qira.legacy`.
+
+**Inventory** (2026-11-18: `python3 -m py_compile` over `git ls-files '*.py'`, then a read for
+Python 2 semantics in the files that compile):
+
+| File(s) | State | Action |
+|---|---|---|
+| `tracers/angr/angr_trace.py` | Python 2 syntax and the angr 7 API (`path_group`, `state.se.any_int`). Broken upstream too (commit "add broken angr tracer"): uses `data` before it is set, and treats angr's VEX register offsets as QIRA register indices. | Rewrite as `src/qira/core/tracers/angr.py` (step 3) |
+| `tracers/concrete_executor/concrete_execution.py`, `bitvector.py` | Python 2 (`print`, `iteritems`, `map` used as a list, memory as `chr` strings). Needs BAP and `static2.model.BapInsn`, which uses `bap`, `asm` and `hexlify` without importing them. Nothing calls `validate_bil`. | Port to `src/qira/core/validate/` (step 4) |
+| `ida/python/qira.py` | Compiles, but Python 2 semantics: `has_key`, `except e:`, `str` frames in the embedded WebSocket server | Port in place; it runs inside IDA, not in the package (step 5) |
+| `tests_manual/ctf/justify_exploit.py`, `stkof_exploit.py`, `exploits/ezhp.py`, `exploits/ezhp_live.py` | Python 2; `telnetlib` (removed in Python 3.13); `str` sockets; hardcoded ports | Port in place (step 6) |
+| `tests_auto/autogen.py` | Parses, but has not been run since Task 1; Stage 0 uses the binaries it builds | Run it and fix what breaks (step 6) |
+| `extra/**`, `tracers/pin/strace/*.py`, `middleware/`, `static2/` (including `BapInsn`) | Python 2 or legacy | Do not port: Task 6 removes them |
+
+**Steps**
+
+1. **Inventory.** Repeat the check: `python3 -m py_compile` on every tracked `.py` outside `src/`,
+   plus `uvx ruff check --select E9,F,UP --target-version py313` on the files to port. If a file
+   is in none of the groups above, put it in the report. Port it only if it is clearly needed;
+   otherwise list it as an open question.
+2. **Dependencies.** Add optional extras to `pyproject.toml`: `angr` (angr 9) and `bap` (the `bap`
+   Python bindings). Add a dependency group `manual` with `pwntools` for the CTF scripts. A plain
+   `uv sync` must stay as small as it is now, and tests that need an extra are skipped when it is
+   missing. If angr's pins conflict with the project's (capstone, pyelftools, …), or nothing
+   resolves on Python 3.13, stop there. Put the resolver output in the report and propose a fix;
+   do not loosen the project's own pins without saying so.
+3. **angr tracer** (`core/tracers/angr.py`). Move the old file with `git mv` first so its history
+   follows it, then rewrite it for angr 9:
+   * Start from `Project`, `factory.entry_state` (argv, env and a concrete stdin from the CLI) and
+     `factory.simulation_manager`. Record events with `state.inspect` breakpoints (`instruction`,
+     `mem_read`, `mem_write`, `reg_read`, `reg_write`); do not walk `history.actions`.
+   * Use one clnum per executed instruction. Register records use the `core/arch.py` index
+     (`address = index * regsize`): map angr's register offsets to QIRA's registers by name, and
+     drop the ones QIRA does not track (flags, temporaries).
+   * Record concrete values only (`state.solver.eval`). If the path forks (more than one active
+     state), stop, keep what has been traced so far, and print a warning.
+   * Write the log with `core/log.py`, and `meta.json` with `tracer: "angr"`.
+   * Add it as a `TracerBackend` so that `qira trace --tracer angr BINARY` works. angr runs in the
+     same process and is not live, so the backend writes the whole log when it finishes.
+   * Support the architectures that both `core/arch.py` and angr have. Test on x86_64, and on
+     i386 if a test binary exists.
+4. **Concrete executor** (`core/validate/`). The executor runs each traced instruction's BIL again
+   and compares the registers and memory with the trace, so it can check the tracer (Stage 1A).
+   * Port `bitvector.py` and `concrete_execution.py` to Python 3: memory as `bytes`, `items()`,
+     real lists, `logging` instead of `print`, and results returned instead of printed.
+   * Replace `program.static[addr]['instruction']`: lift the instruction bytes read from the trace
+     at that clnum with `bap.disasm`. Replace the `libraries` argument with module ranges from the
+     trace (`_base`/pmaps).
+   * Add the command `qira check-trace TRACE`. It prints the errors and warnings as a table and
+     exits non-zero if there are errors.
+   * BAP: the Python bindings call the `bap` OCaml executable, and Debian 13 does not package it.
+     If nixpkgs builds it, add it to `devenv.nix` and ask the user to enter the shell once. If it
+     is not available, port and unit-test everything except the lift, skip the BAP test, and say
+     so in the report. The report should also weigh lifting with pyvex/angr instead, since the
+     `angr` extra already installs them.
+5. **IDA plugin** (`ida/python/qira.py`). Port it to Python 3 for IDA 7.4 and later: `bytes`/`str`
+   in the WebSocket handshake and framing, `in` instead of `has_key`, and real `except` clauses.
+   Moving to the IDA 9 API stays in TODO.md. IDA is not available here, so test the embedded
+   WebSocket server with stub `idaapi`/`idc` modules and the `websockets` client library: the
+   handshake, a `setaddress` message, and a message from the plugin to the client.
+6. **Test scripts.**
+   * `tests_manual/ctf/*.py`: port to Python 3 with `bytes`. Use pwntools
+     (`remote(...).interactive()`) where they used `telnetlib`. Host and port become arguments; the
+     default stays the current one (4000, or 2323 for `ezhp_live.py`). Here, test on port 4010
+     (rule 6).
+   * `tests_auto/autogen.py`: run it with `--dwarf` on loop, forktest, heaptest, test64 and echo
+     (the output goes to `tests_auto/binary-autogen/`, which is git-ignored) and fix what breaks.
+7. **Plan.** Update the §1D table, Task 6's remove and keep lists, and the status section.
+
+**Verification**
+
+* **angr:** after `uv sync --extra angr`, run `qira trace --tracer angr qira_tests/bin/loop`, then
+  compare it with the plugin's trace of `loop` using `qira_tests/compare_traces.py` (Task 2).
+  angr replaces libc with SimProcedures, so compare only the main binary's instructions: the pc
+  sequence, and the register values and memory writes at the instructions that match. List the
+  differences. Then check that `qira.core` can open the trace and that the UI shows it
+  (`--web-port 3012`).
+* **check-trace:** run it on a plugin trace of `loop`, and on a copy with one register record
+  changed; it must report that clnum. Unit tests for `ConcreteBitVector` (widths, signed
+  operations, shifts, concat/extract) do not need BAP.
+* **IDA plugin and CTF scripts:** the stub test from step 5. Each CTF script must compile and
+  import without errors. If `qira --socat-port 4010` can start `tests_manual/ctf/hitcon/*-stkof`,
+  run `stkof_exploit.py --port 4010` against it; otherwise give the reason in the report.
+* `uv run pytest` passes both with and without the extras. The inventory check finds no Python 2
+  file outside Task 6's removal list.
+
+**Done when:** these checks pass, `tracers/angr/` and `tracers/concrete_executor/` are gone (moved
+into `src/qira/core/`), and the report lists every file with its result.
+
 ### Task 6 — Remove the legacy code
 
 **Branch:** `feature/remove-legacy` · **Report:** `docs/tasks/6-remove-legacy.md`
 
-**When:** after Stage 2, once `src/qira/core` (Stage 1D) and the FastAPI server and click CLI
-(Stage 2) do everything the legacy middleware did, and Stage 2's Socket.IO adapter serves the
-current `web/` UI from the new core.
+**When:** after Stage 2 and Task 7, once `src/qira/core` (Stage 1D) and the FastAPI server and
+click CLI (Stage 2) do everything the legacy middleware did, Stage 2's Socket.IO adapter serves the
+current `web/` UI from the new core, and Task 7 has ported the Python 2 code that is kept.
 
 **Goal:** the repository contains only the modernized code (plus `web/`, which Stage 3 replaces).
 No Python 2 code, no QEMU fork, no `qira.legacy`.
@@ -265,7 +368,9 @@ No Python 2 code, no QEMU fork, no `qira.legacy`.
 * Mentions in `README.md`, `CLAUDE.md` and this file that describe removed code as current.
 
 **Keep:** `web/` and the Socket.IO adapter (until Stage 3), `samples/` (local only), the golden
-fixtures, `tests_manual/windows/` binaries used by Stage 1B.
+fixtures, `tests_manual/windows/` binaries used by Stage 1B, and what Task 7 ported:
+`ida/python/qira.py`, `tests_manual/ctf/*.py`, `tests_auto/autogen.py` (the angr tracer and the
+concrete executor already live in `src/qira/core/`).
 
 **Steps:** list every file to delete with the reason in the report first; delete in small commits
 (one area each); after each, `uv sync`, `uv run pytest`, `uv run qira run qira_tests/bin/loop` and
@@ -529,6 +634,8 @@ The full C++20/nanobind modernization has been moved to [TODO.md](TODO.md). The 
 | `qira_analysis.py` | `core/analysis.py` | Port to Python 3; pure functions over a trace; keep `get_instruction_flow`, `get_hacked_depth_map`, `analyse_calls`, `get_vtimeline_picture`, `slice`. |
 | `static2/` | `core/static/` | Port to Python 3, capstone 5, current pyelftools; replace pickle cache with JSON/SQLite under the configured cache dir. |
 | `qira_config.py` | `qira/config.py` (stub) | Plain settings object passed in; filled by pydantic-settings in Stage 2. |
+| `tracers/angr/angr_trace.py` | `core/tracers/angr.py` | **Task 7.** Rewritten for angr 9 as a `TracerBackend` (`qira trace --tracer angr`); writes the log with `core/log.py`. |
+| `tracers/concrete_executor/` | `core/validate/` | **Task 7.** BIL concrete executor that checks a trace against the instruction semantics (`qira check-trace`); no `static2` dependency. |
 | — | `core/models.py` | pydantic models shared with the API: `Change`, `RegisterSnapshot`, `MemoryBlock`, `Syscall`, `PageMap`, `Instruction`, `TraceInfo`, `ArchInfo`, `BinaryInfo`, `TraceMeta`. |
 
 Also add a minimal click entry point (`qira trace BINARY [ARGS]...`) so the core can be used without
